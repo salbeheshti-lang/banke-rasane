@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+.next/
+out/
+dist/
+release/
+build/Release/
+
+# Electron
+electron-build/
+*.exe
+*.dmg
+*.AppImage
+*.deb
+*.snap
+
+# Database
+*.db
+*.db-journal
+prisma/dev.db
+prisma/banke-rasane.db
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Cache
+.cache/
+.parcel-cache/
+.turbo/
+
+# Test
+coverage/

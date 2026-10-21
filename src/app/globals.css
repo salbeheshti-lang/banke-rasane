@@ -1,0 +1,170 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap');
+
+:root {
+  --cinema-bg: #0a0a0a;
+  --cinema-surface: #141414;
+  --cinema-surface-2: #1f1f1f;
+  --cinema-border: #2a2a2a;
+  --cinema-primary: #22c55e;
+  --cinema-primary-dark: #16a34a;
+  --cinema-text: #fafafa;
+  --cinema-text-muted: #a1a1aa;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  padding: 0;
+  margin: 0;
+  background: var(--cinema-bg);
+  color: var(--cinema-text);
+  font-family: 'Vazirmatn', 'Tahoma', system-ui, sans-serif;
+  direction: rtl;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--cinema-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--cinema-border);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3a3a3a;
+}
+
+/* Custom utility classes */
+@layer components {
+  .cinema-card {
+    @apply bg-dark-800 border border-dark-600 rounded-2xl transition-all duration-300;
+  }
+  
+  .cinema-card:hover {
+    @apply border-cinema-500/50;
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.15);
+  }
+  
+  .cinema-button {
+    @apply px-4 py-2 rounded-lg bg-cinema-600 hover:bg-cinema-700 text-white font-medium transition-all duration-200;
+  }
+  
+  .cinema-button-secondary {
+    @apply px-4 py-2 rounded-lg bg-dark-700 hover:bg-dark-600 text-white font-medium border border-dark-600 transition-all duration-200;
+  }
+  
+  .cinema-input {
+    @apply bg-dark-900 border border-dark-600 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-cinema-500 transition-colors;
+  }
+  
+  .cinema-genre-card {
+    @apply relative overflow-hidden rounded-2xl bg-dark-800 border border-dark-600 p-6 cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:border-cinema-500/50;
+  }
+  
+  .cinema-genre-card::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: radial-gradient(circle at top right, var(--genre-color, #22c55e)22, transparent 60%);
+  }
+  
+  .cinema-genre-card:hover::before {
+    @apply opacity-100;
+  }
+}
+
+/* Login screen specific */
+.login-bg {
+  background: 
+    radial-gradient(ellipse at top, rgba(34, 197, 94, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at bottom, rgba(22, 163, 74, 0.1) 0%, transparent 50%),
+    linear-gradient(180deg, #0a0a0a 0%, #0f1f0f 100%);
+}
+
+.login-glow {
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.4) 0%, transparent 70%);
+  filter: blur(80px);
+}
+
+/* Animations */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.3); }
+  50% { box-shadow: 0 0 40px rgba(34, 197, 94, 0.6); }
+}
+
+.pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Genre color accents */
+.genre-1 { --genre-color: #22c55e; }
+.genre-2 { --genre-color: #ef4444; }
+.genre-3 { --genre-color: #3b82f6; }
+.genre-4 { --genre-color: #f59e0b; }
+.genre-5 { --genre-color: #8b5cf6; }
+.genre-6 { --genre-color: #ec4899; }
+.genre-7 { --genre-color: #14b8a6; }
+.genre-8 { --genre-color: #f97316; }
+.genre-9 { --genre-color: #6366f1; }
+
+/* Smooth transitions */
+.transition-all {
+  transition-property: all;
+  transition-duration: 300ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Hide scrollbar but keep scrollable */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Loading spinner */
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(34, 197, 94, 0.2);
+  border-top-color: #22c55e;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* RTL specific */
+.rtl-flip {
+  transform: scaleX(-1);
+}
+
+/* Selection mode */
+.program-card.selected {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.5);
+}
+
+/* Print styles for previews */
+@media print {
+  body { background: white; color: black; }
+  .no-print { display: none !important; }
+}

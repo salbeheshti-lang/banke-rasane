@@ -1,0 +1,72 @@
+// Prisma schema for بانک رسانه (Bank Rasane) - TV Program Management
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "windows"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Genre {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  name        String
+  nameFa      String
+  color       String   @default("#22c55e")
+  icon        String?
+  description String?
+  order       Int      @default(0)
+  programs    Program[]
+  
+  @@map("genres")
+}
+
+model Program {
+  id           Int       @id @default(autoincrement())
+  title        String
+  titleEn      String?
+  genreId      Int
+  genre        Genre     @relation(fields: [genreId], references: [id])
+  description  String?
+  duration     Int?      // in minutes
+  episodeCount Int?      @default(1)
+  viewersCount Int?      @default(0)
+  hasImages    Boolean   @default(false)
+  hasVideo     Boolean   @default(false)
+  status       String    @default("published") // draft, published, archived
+  producer     String?
+  director     String?
+  presenter    String?
+  channel      String?
+  airDate      DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  tags         String?   // JSON array as string
+  
+  @@index([genreId])
+  @@index([title])
+  @@index([viewersCount])
+  @@map("programs")
+}
+
+model Report {
+  id        Int      @id @default(autoincrement())
+  title     String
+  type      String   // pdf, excel
+  filters   String?  // JSON string of applied filters
+  filePath  String?
+  count     Int?
+  createdAt DateTime @default(now())
+  
+  @@map("reports")
+}
+
+model Setting {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String?
+  
+  @@map("settings")
+}

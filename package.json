@@ -1,0 +1,113 @@
+{
+  "name": "banke-rasane",
+  "version": "1.1.0",
+  "description": "بانک رسانه - نرم‌افزار مدیریت برنامه‌های تلویزیونی",
+  "main": "electron/main.js",
+  "author": "salbeheshti-lang",
+  "license": "MIT",
+  "scripts": {
+    "dev": "next dev --webpack -p 3000",
+    "build:next": "next build",
+    "build": "bun run build:next && bun run build:electron",
+    "build:electron": "electron-builder --win --x64",
+    "build:portable": "electron-builder --win portable --x64",
+    "build:nsis": "electron-builder --win nsis --x64",
+    "start": "next start -p 3000",
+    "electron:dev": "concurrently \"next dev --webpack -p 3000\" \"wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .\"",
+    "electron:prod": "cross-env NODE_ENV=production electron .",
+    "postinstall": "prisma generate",
+    "db:push": "prisma db push",
+    "db:seed": "bun run scripts/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "exceljs": "^4.4.0",
+    "jspdf": "^2.5.2",
+    "jspdf-autotable": "^3.8.4",
+    "next": "14.2.18",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "prisma": "^5.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.15",
+    "typescript": "^5.6.3",
+    "wait-on": "^8.0.1"
+  },
+  "build": {
+    "appId": "com.salbeheshti.bankeRasane",
+    "productName": "BankResaneh",
+    "copyright": "Copyright © 2026 salbeheshti-lang",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      ".next/**/*",
+      "public/**/*",
+      "prisma/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "prisma/dev.db",
+        "to": "prisma/dev.db"
+      },
+      {
+        "from": "prisma/schema.prisma",
+        "to": "prisma/schema.prisma"
+      },
+      {
+        "from": ".next/standalone",
+        "to": ".next/standalone"
+      },
+      {
+        "from": "node_modules/@prisma/engines",
+        "to": "node_modules/@prisma/engines"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "BankResaneh-Portable-${version}.${ext}",
+      "publisherName": "salbeheshti-lang",
+      "verifyUpdateCodeSignature": false,
+      "signAndEditExecutable": false,
+      "forceCodeSigning": false,
+      "signtoolOptions": {
+        "signingHashAlgorithms": null
+      }
+    },
+    "portable": {
+      "artifactName": "BankResaneh-Portable-${version}.${ext}"
+    },
+    "compression": "maximum",
+    "removePackageScripts": true,
+    "removePackageKeywords": true,
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/@prisma/**",
+      "node_modules/prisma/**",
+      "node_modules/better-sqlite3/**"
+    ]
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

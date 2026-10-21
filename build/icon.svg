@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a0a"/>
+      <stop offset="100%" stop-color="#14532d"/>
+    </linearGradient>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4ade80"/>
+      <stop offset="50%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="128" cy="128" r="120" fill="url(#bg)" stroke="url(#grad)" stroke-width="4"/>
+  
+  <!-- Play icon -->
+  <path d="M 96 80 L 96 176 L 176 128 Z" fill="url(#grad)" filter="url(#glow)"/>
+  
+  <!-- Filmstrip accents -->
+  <rect x="76" y="76" width="4" height="104" fill="url(#grad)" opacity="0.6" rx="2"/>
+  <rect x="176" y="76" width="4" height="104" fill="url(#grad)" opacity="0.6" rx="2"/>
+  
+  <!-- Small dots (film holes) -->
+  <circle cx="78" cy="96" r="3" fill="#0a0a0a"/>
+  <circle cx="78" cy="128" r="3" fill="#0a0a0a"/>
+  <circle cx="78" cy="160" r="3" fill="#0a0a0a"/>
+  <circle cx="178" cy="96" r="3" fill="#0a0a0a"/>
+  <circle cx="178" cy="128" r="3" fill="#0a0a0a"/>
+  <circle cx="178" cy="160" r="3" fill="#0a0a0a"/>
+</svg>
