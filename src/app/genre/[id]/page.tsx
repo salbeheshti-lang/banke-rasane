@@ -52,6 +52,11 @@ export default function GenrePage() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   
   useEffect(() => {
+    document.body.classList.add('app-content');
+    return () => document.body.classList.remove('app-content');
+  }, []);
+  
+  useEffect(() => {
     const t = setTimeout(() => {
       setDebouncedSearch(search);
       setPage(1);
@@ -98,18 +103,14 @@ export default function GenrePage() {
   };
   
   return (
-    <div className="min-h-screen bg-dark-900">
+    <div className="min-h-screen">
       <Sidebar />
       
       <main className="mr-72 p-8">
         {/* Header with genre color */}
         {genre && (
           <header 
-            className="mb-6 p-6 rounded-2xl border relative overflow-hidden"
-            style={{ 
-              borderColor: `${genre.color}40`,
-              background: `linear-gradient(135deg, ${genre.color}15 0%, transparent 70%)`,
-            }}
+            className="liquid-glass mb-6 p-6 relative overflow-hidden"
           >
             <div className="flex items-center gap-4 relative z-10">
               <div 

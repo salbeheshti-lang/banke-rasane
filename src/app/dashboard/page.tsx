@@ -30,6 +30,11 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
+    document.body.classList.add('app-content');
+    return () => document.body.classList.remove('app-content');
+  }, []);
+  
+  useEffect(() => {
     async function loadData() {
       try {
         setLoading(true);
@@ -58,14 +63,32 @@ export default function DashboardPage() {
   }, []);
   
   return (
-    <div className="min-h-screen bg-dark-900">
+    <div className="min-h-screen">
       <Sidebar />
       
       <main className="mr-72 p-8">
         {/* Header */}
         <header className="mb-8 animate-fade-in">
-          <h1 className="text-3xl font-bold text-white mb-2">داشبورد</h1>
-          <p className="text-gray-500">به بانک رسانه خوش آمدید - مرور کلی برنامه‌ها</p>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 
+              className="text-3xl font-bold"
+              style={{ color: 'var(--cream-text)' }}
+            >
+              داشبورد
+            </h1>
+            <span 
+              className="text-sm px-3 py-1 rounded-full"
+              style={{ 
+                background: 'rgba(2, 144, 72, 0.1)',
+                color: 'var(--brand-green-dark)',
+              }}
+            >
+              بانک رسانه
+            </span>
+          </div>
+          <p style={{ color: 'var(--cream-text-muted)' }}>
+            به بانک رسانه خوش آمدید - مرور کلی برنامه‌ها
+          </p>
         </header>
         
         {/* Stats */}
@@ -74,25 +97,25 @@ export default function DashboardPage() {
             <StatCard 
               label="کل برنامه‌ها" 
               value={stats.totalPrograms} 
-              color="#22c55e"
+              color="#029048"
               icon="film"
             />
             <StatCard 
               label="ژانرها" 
               value={stats.totalGenres} 
-              color="#3b82f6"
+              color="#2563eb"
               icon="tag"
             />
             <StatCard 
               label="بیننده‌ها" 
               value={stats.totalViewers} 
-              color="#f59e0b"
+              color="#d97706"
               icon="eye"
             />
             <StatCard 
               label="با تصویر" 
               value={stats.withImages} 
-              color="#ec4899"
+              color="#db2777"
               icon="image"
             />
           </div>
@@ -101,8 +124,17 @@ export default function DashboardPage() {
         {/* Genres grid */}
         <section>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-white">ژانرها</h2>
-            <Link href="/programs" className="text-cinema-400 hover:text-cinema-300 text-sm">
+            <h2 
+              className="text-xl font-bold"
+              style={{ color: 'var(--cream-text)' }}
+            >
+              ژانرها
+            </h2>
+            <Link 
+              href="/programs" 
+              className="text-sm font-medium hover:underline"
+              style={{ color: 'var(--brand-green)' }}
+            >
               مشاهده همه ←
             </Link>
           </div>
@@ -110,15 +142,27 @@ export default function DashboardPage() {
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {Array.from({ length: 9 }).map((_, i) => (
-                <div key={i} className="h-40 bg-dark-800 animate-pulse rounded-2xl"></div>
+                <div 
+                  key={i} 
+                  className="h-44 rounded-2xl animate-pulse"
+                  style={{ background: 'rgba(255, 255, 255, 0.4)' }}
+                ></div>
               ))}
             </div>
           ) : error ? (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 text-red-400">
+            <div 
+              className="rounded-2xl p-6"
+              style={{ 
+                background: 'rgba(220, 38, 38, 0.08)',
+                border: '1px solid rgba(220, 38, 38, 0.2)',
+                color: '#dc2626'
+              }}
+            >
               <p>خطا در بارگذاری: {error}</p>
               <button 
                 onClick={() => window.location.reload()}
-                className="mt-3 px-4 py-2 bg-red-500/20 rounded-lg hover:bg-red-500/30"
+                className="mt-3 px-4 py-2 rounded-lg"
+                style={{ background: 'rgba(220, 38, 38, 0.15)' }}
               >
                 تلاش مجدد
               </button>
@@ -138,22 +182,29 @@ export default function DashboardPage() {
 
 function StatCard({ label, value, color, icon }: { label: string; value: number; color: string; icon: string }) {
   return (
-    <div className="cinema-card p-5 relative overflow-hidden">
+    <div className="liquid-glass p-5 relative overflow-hidden">
       <div 
-        className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-20"
+        className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-25"
         style={{ backgroundColor: color }}
       ></div>
       <div className="relative z-10">
         <div className="flex items-center gap-3 mb-3">
           <div 
             className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ backgroundColor: `${color}20`, color }}
+            style={{ 
+              backgroundColor: `${color}18`, 
+              color,
+              border: `1px solid ${color}30`,
+            }}
           >
             <StatIcon name={icon} />
           </div>
-          <span className="text-gray-400 text-sm">{label}</span>
+          <span style={{ color: 'var(--cream-text-soft)' }} className="text-sm font-medium">{label}</span>
         </div>
-        <div className="text-3xl font-black text-white">
+        <div 
+          className="text-3xl font-black"
+          style={{ color: 'var(--cream-text)' }}
+        >
           {value.toLocaleString('fa-IR')}
         </div>
       </div>
@@ -180,37 +231,54 @@ function GenreCard({ genre, index }: { genre: Genre; index: number }) {
   return (
     <Link
       href={`/genre/${genre.id}`}
-      className={`cinema-genre-card genre-${genre.id} block animate-slide-up`}
-      style={{ animationDelay: `${index * 50}ms` }}
+      className={`liquid-glass genre-${genre.id} block animate-slide-up p-5`}
+      style={{ 
+        animationDelay: `${index * 60}ms`,
+        opacity: 0,
+      }}
     >
       <div className="relative z-10">
         <div className="flex items-start justify-between mb-4">
           <div 
             className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-black"
             style={{ 
-              backgroundColor: `${genre.color}20`, 
+              backgroundColor: `${genre.color}18`, 
               color: genre.color,
-              boxShadow: `0 0 20px ${genre.color}30`,
+              border: `1px solid ${genre.color}30`,
+              boxShadow: `0 4px 16px ${genre.color}20`,
             }}
           >
             {genre.nameFa.charAt(0)}
           </div>
           <div className="text-left">
-            <div className="text-4xl font-black text-white">
+            <div 
+              className="text-4xl font-black"
+              style={{ color: 'var(--cream-text)' }}
+            >
               {genre._count.programs.toLocaleString('fa-IR')}
             </div>
-            <div className="text-gray-500 text-xs">برنامه</div>
+            <div style={{ color: 'var(--cream-text-muted)' }} className="text-xs">برنامه</div>
           </div>
         </div>
         
-        <h3 className="text-white font-bold text-lg mb-1">{genre.nameFa}</h3>
-        <p className="text-gray-500 text-xs">{genre.name}</p>
+        <h3 
+          className="font-bold text-lg mb-1"
+          style={{ color: 'var(--cream-text)' }}
+        >
+          {genre.nameFa}
+        </h3>
+        <p style={{ color: 'var(--cream-text-muted)' }} className="text-xs">{genre.name}</p>
         
         {genre.description && (
-          <p className="text-gray-400 text-sm mt-3 line-clamp-2">{genre.description}</p>
+          <p style={{ color: 'var(--cream-text-soft)' }} className="text-sm mt-3 line-clamp-2">
+            {genre.description}
+          </p>
         )}
         
-        <div className="mt-4 flex items-center text-sm font-medium" style={{ color: genre.color }}>
+        <div 
+          className="mt-4 flex items-center text-sm font-medium"
+          style={{ color: genre.color }}
+        >
           مشاهده برنامه‌ها
           <svg className="w-4 h-4 mr-1 rtl-flip" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />

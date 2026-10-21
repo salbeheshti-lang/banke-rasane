@@ -6,7 +6,7 @@
   "author": "salbeheshti-lang",
   "license": "MIT",
   "scripts": {
-    "dev": "next dev --webpack -p 3000",
+    "dev": "next dev -p 3000",
     "build:next": "next build",
     "build": "bun run build:next && bun run build:electron",
     "build:electron": "electron-builder --win --x64",

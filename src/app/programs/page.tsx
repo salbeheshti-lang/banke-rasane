@@ -49,7 +49,11 @@ export default function ProgramsPage() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showSocialCard, setShowSocialCard] = useState(false);
   
-  // Debounce search
+  useEffect(() => {
+    document.body.classList.add('app-content');
+    return () => document.body.classList.remove('app-content');
+  }, []);
+  
   useEffect(() => {
     const t = setTimeout(() => {
       setDebouncedSearch(search);
@@ -90,9 +94,7 @@ export default function ProgramsPage() {
   
   const toggleSelect = (id: number) => {
     setSelectedIds(prev => 
-      prev.includes(id) 
-        ? prev.filter(x => x !== id) 
-        : [...prev, id]
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     );
   };
   
@@ -110,31 +112,40 @@ export default function ProgramsPage() {
   };
   
   return (
-    <div className="min-h-screen bg-dark-900">
+    <div className="min-h-screen">
       <Sidebar />
       
       <main className="mr-72 p-8">
         {/* Header */}
         <header className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-1">همهٔ برنامه‌ها</h1>
-            <p className="text-gray-500">
+            <h1 
+              className="text-3xl font-bold mb-1"
+              style={{ color: 'var(--cream-text)' }}
+            >
+              همهٔ برنامه‌ها
+            </h1>
+            <p style={{ color: 'var(--cream-text-muted)' }}>
               {total.toLocaleString('fa-IR')} برنامه • صفحه {page.toLocaleString('fa-IR')} از {totalPages.toLocaleString('fa-IR')}
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/dashboard" className="cinema-button-secondary">
+            <Link href="/dashboard" className="btn-secondary text-sm">
               بازگشت
             </Link>
           </div>
         </header>
         
         {/* Toolbar */}
-        <div className="cinema-card p-4 mb-6 space-y-4">
+        <div className="liquid-glass p-4 mb-6 space-y-4">
           {/* Search and view mode */}
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex-1 min-w-[200px] relative">
-              <svg className="w-5 h-5 absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg 
+                className="w-5 h-5 absolute right-3 top-1/2 -translate-y-1/2" 
+                style={{ color: 'var(--cream-text-muted)' }}
+                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
@@ -142,14 +153,20 @@ export default function ProgramsPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="جستجو در عنوان، توضیحات، تهیه‌کننده..."
-                className="cinema-input w-full pr-10"
+                className="glass-input pr-10"
               />
             </div>
             
-            <div className="flex items-center gap-2 bg-dark-900 rounded-lg p-1">
+            <div 
+              className="flex items-center gap-2 rounded-xl p-1"
+              style={{ 
+                background: 'rgba(255, 255, 255, 0.5)',
+                border: '1px solid rgba(2, 144, 72, 0.15)',
+              }}
+            >
               <button
                 onClick={() => setView('grid')}
-                className={`p-2 rounded-md transition-colors ${view === 'grid' ? 'bg-cinema-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                className={`p-2 rounded-lg transition-colors ${view === 'grid' ? 'bg-brand-500 text-white' : 'text-ink-600 hover:text-brand-600'}`}
                 title="نمایش شبکه‌ای"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -158,7 +175,7 @@ export default function ProgramsPage() {
               </button>
               <button
                 onClick={() => setView('list')}
-                className={`p-2 rounded-md transition-colors ${view === 'list' ? 'bg-cinema-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                className={`p-2 rounded-lg transition-colors ${view === 'list' ? 'bg-brand-500 text-white' : 'text-ink-600 hover:text-brand-600'}`}
                 title="نمایش لیستی"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -169,11 +186,16 @@ export default function ProgramsPage() {
             
             <button
               onClick={() => setSelectionMode(!selectionMode)}
-              className={`px-4 py-2 rounded-lg border transition-colors ${
-                selectionMode
-                  ? 'bg-cinema-600/20 border-cinema-600 text-cinema-400'
-                  : 'border-dark-600 text-gray-400 hover:text-white'
-              }`}
+              className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+              style={selectionMode ? {
+                background: 'rgba(2, 144, 72, 0.15)',
+                border: '1px solid rgba(2, 144, 72, 0.3)',
+                color: 'var(--brand-green-dark)',
+              } : {
+                background: 'rgba(255, 255, 255, 0.6)',
+                border: '1px solid rgba(2, 144, 72, 0.15)',
+                color: 'var(--cream-text-soft)',
+              }}
             >
               {selectionMode ? '✓ حالت انتخاب' : 'انتخاب چندتایی'}
             </button>
@@ -181,7 +203,7 @@ export default function ProgramsPage() {
           
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-gray-500 text-sm ml-2">فیلتر:</span>
+            <span style={{ color: 'var(--cream-text-muted)' }} className="text-sm ml-2">فیلتر:</span>
             {([
               { key: 'all', label: 'همه' },
               { key: 'without-viewers', label: 'بدون بیننده' },
@@ -191,23 +213,27 @@ export default function ProgramsPage() {
               <button
                 key={f.key}
                 onClick={() => { setFilter(f.key); setPage(1); }}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                  filter === f.key
-                    ? 'bg-cinema-600 text-white'
-                    : 'bg-dark-700 text-gray-400 hover:text-white'
-                }`}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
+                style={filter === f.key ? {
+                  background: 'linear-gradient(135deg, var(--brand-green) 0%, var(--brand-green-dark) 100%)',
+                  color: 'white',
+                } : {
+                  background: 'rgba(255, 255, 255, 0.5)',
+                  color: 'var(--cream-text-soft)',
+                }}
               >
                 {f.label}
               </button>
             ))}
             
-            <div className="w-px h-6 bg-dark-600 mx-2"></div>
+            <div className="w-px h-6 bg-brand-500/20 mx-2"></div>
             
-            <span className="text-gray-500 text-sm ml-2">مرتب‌سازی:</span>
+            <span style={{ color: 'var(--cream-text-muted)' }} className="text-sm ml-2">مرتب‌سازی:</span>
             <select
               value={sort}
               onChange={(e) => { setSort(e.target.value as SortMode); setPage(1); }}
-              className="cinema-input text-sm py-1.5"
+              className="glass-input text-sm py-1.5"
+              style={{ width: 'auto' }}
             >
               <option value="newest">جدیدترین</option>
               <option value="oldest">قدیمی‌ترین</option>
@@ -218,7 +244,8 @@ export default function ProgramsPage() {
             <select
               value={genreId}
               onChange={(e) => { setGenreId(e.target.value); setPage(1); }}
-              className="cinema-input text-sm py-1.5"
+              className="glass-input text-sm py-1.5"
+              style={{ width: 'auto' }}
             >
               <option value="all">همه ژانرها</option>
               <option value="1">دکور برنامه‌ها</option>
@@ -235,14 +262,25 @@ export default function ProgramsPage() {
           
           {/* Selection toolbar */}
           {selectionMode && (
-            <div className="flex items-center gap-3 pt-3 border-t border-dark-700">
-              <span className="text-cinema-400 font-medium">
+            <div 
+              className="flex items-center gap-3 pt-3"
+              style={{ borderTop: '1px solid rgba(2, 144, 72, 0.1)' }}
+            >
+              <span style={{ color: 'var(--brand-green-dark)' }} className="font-medium">
                 {selectedIds.length.toLocaleString('fa-IR')} برنامه انتخاب شده
               </span>
-              <button onClick={selectAll} className="text-sm text-gray-400 hover:text-white">
+              <button 
+                onClick={selectAll} 
+                className="text-sm hover:underline"
+                style={{ color: 'var(--cream-text-soft)' }}
+              >
                 {selectedIds.length === programs.length ? 'لغو همه' : 'انتخاب همه'}
               </button>
-              <button onClick={clearSelection} className="text-sm text-gray-400 hover:text-white">
+              <button 
+                onClick={clearSelection} 
+                className="text-sm hover:underline"
+                style={{ color: 'var(--cream-text-soft)' }}
+              >
                 پاک کردن
               </button>
               
@@ -259,7 +297,7 @@ export default function ProgramsPage() {
                   />
                   <button
                     onClick={() => setShowSocialCard(true)}
-                    className="cinema-button text-sm"
+                    className="btn-primary text-sm"
                   >
                     کارت شبکه اجتماعی
                   </button>
@@ -275,8 +313,11 @@ export default function ProgramsPage() {
             <div className="spinner"></div>
           </div>
         ) : programs.length === 0 ? (
-          <div className="text-center py-20 text-gray-500">
-            <svg className="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div 
+            className="text-center py-20"
+            style={{ color: 'var(--cream-text-muted)' }}
+          >
+            <svg className="w-16 h-16 mx-auto mb-4 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <p>برنامه‌ای یافت نشد</p>
@@ -313,17 +354,17 @@ export default function ProgramsPage() {
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="cinema-button-secondary disabled:opacity-30"
+              className="btn-secondary text-sm disabled:opacity-30"
             >
               قبلی
             </button>
-            <span className="text-gray-400 px-4">
+            <span style={{ color: 'var(--cream-text-soft)' }} className="px-4">
               {page.toLocaleString('fa-IR')} / {totalPages.toLocaleString('fa-IR')}
             </span>
             <button
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
-              className="cinema-button-secondary disabled:opacity-30"
+              className="btn-secondary text-sm disabled:opacity-30"
             >
               بعدی
             </button>

@@ -37,14 +37,16 @@ export default function ProgramList({
 }) {
   return (
     <div
-      className={`cinema-card p-4 flex items-center gap-4 cursor-pointer ${selected ? 'selected' : ''}`}
+      className={`liquid-glass program-card p-4 flex items-center gap-4 cursor-pointer ${selected ? 'selected' : ''}`}
       onClick={selectionMode ? onToggleSelect : undefined}
     >
       {/* Selection checkbox */}
       {selectionMode && (
-        <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-          selected ? 'bg-cinema-500 border-cinema-500' : 'border-white/50'
-        }`}>
+        <div 
+          className={`w-6 h-6 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+            selected ? 'bg-brand-500 border-brand-500' : 'border-brand-500/40 bg-white/40'
+          }`}
+        >
           {selected && (
             <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -57,7 +59,8 @@ export default function ProgramList({
       <div 
         className="w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0"
         style={{ 
-          background: `linear-gradient(135deg, ${program.genre.color}30, ${program.genre.color}10)`,
+          background: `linear-gradient(135deg, ${program.genre.color}25, ${program.genre.color}10)`,
+          border: `1px solid ${program.genre.color}30`,
         }}
       >
         <span 
@@ -74,24 +77,35 @@ export default function ProgramList({
           <span 
             className="text-xs px-2 py-0.5 rounded-full font-medium"
             style={{ 
-              backgroundColor: `${program.genre.color}20`,
+              backgroundColor: `${program.genre.color}18`,
               color: program.genre.color,
             }}
           >
             {program.genre.nameFa}
           </span>
-          <span className="text-gray-600 text-xs">#{toFa(program.id)}</span>
+          <span style={{ color: 'var(--cream-text-muted)' }} className="text-xs">#{toFa(program.id)}</span>
           {program.hasImages && (
-            <span className="bg-cinema-500/20 text-cinema-400 text-xs px-1.5 py-0.5 rounded">تصویر</span>
+            <span 
+              className="text-xs px-1.5 py-0.5 rounded"
+              style={{ 
+                background: 'rgba(2, 144, 72, 0.15)',
+                color: 'var(--brand-green-dark)',
+              }}
+            >
+              تصویر
+            </span>
           )}
         </div>
         
-        <h3 className="text-white font-bold text-sm mb-1 truncate">
+        <h3 
+          className="font-bold text-sm mb-1 truncate"
+          style={{ color: 'var(--cream-text)' }}
+        >
           {program.title}
         </h3>
         
         {program.description && (
-          <p className="text-gray-500 text-xs truncate">
+          <p style={{ color: 'var(--cream-text-soft)' }} className="text-xs truncate">
             {program.description}
           </p>
         )}
@@ -100,22 +114,22 @@ export default function ProgramList({
       {/* Stats */}
       <div className="flex items-center gap-6 flex-shrink-0">
         <div className="text-center">
-          <div className="text-gray-500 text-xs">دقیقه</div>
-          <div className="text-white font-bold text-sm">{toFa(program.duration)}</div>
+          <div style={{ color: 'var(--cream-text-muted)' }} className="text-xs">دقیقه</div>
+          <div style={{ color: 'var(--cream-text)' }} className="font-bold text-sm">{toFa(program.duration)}</div>
         </div>
         <div className="text-center">
-          <div className="text-gray-500 text-xs">قسمت</div>
-          <div className="text-white font-bold text-sm">{toFa(program.episodeCount)}</div>
+          <div style={{ color: 'var(--cream-text-muted)' }} className="text-xs">قسمت</div>
+          <div style={{ color: 'var(--cream-text)' }} className="font-bold text-sm">{toFa(program.episodeCount)}</div>
         </div>
         <div className="text-center">
-          <div className="text-gray-500 text-xs">بیننده</div>
-          <div className="text-white font-bold text-sm">{toFa(program.viewersCount)}</div>
+          <div style={{ color: 'var(--cream-text-muted)' }} className="text-xs">بیننده</div>
+          <div style={{ color: 'var(--cream-text)' }} className="font-bold text-sm">{toFa(program.viewersCount)}</div>
         </div>
       </div>
       
       {/* Producer */}
       {program.producer && (
-        <div className="text-gray-400 text-xs text-left flex-shrink-0 max-w-[120px] truncate">
+        <div style={{ color: 'var(--cream-text-muted)' }} className="text-xs text-left flex-shrink-0 max-w-[120px] truncate">
           {program.producer}
         </div>
       )}

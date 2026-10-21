@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import Image from 'next/image';
 
 const navItems = [
   { href: '/dashboard', label: 'داشبورد', icon: 'home' },
@@ -11,15 +12,15 @@ const navItems = [
 ];
 
 const genres = [
-  { id: 1, label: 'دکور برنامه‌ها', color: '#22c55e' },
-  { id: 2, label: 'ریلیتی شو', color: '#ef4444' },
-  { id: 3, label: 'مستندها', color: '#3b82f6' },
-  { id: 4, label: 'برنامه‌های خبری', color: '#f59e0b' },
-  { id: 5, label: 'مصاحبه‌ها', color: '#8b5cf6' },
-  { id: 6, label: 'برنامه‌های کودک', color: '#ec4899' },
-  { id: 7, label: 'ورزشی', color: '#14b8a6' },
-  { id: 8, label: 'موسیقی و کنسرت', color: '#f97316' },
-  { id: 9, label: 'آموزشی', color: '#6366f1' },
+  { id: 1, label: 'دکور برنامه‌ها', color: '#029048' },
+  { id: 2, label: 'ریلیتی شو', color: '#dc2626' },
+  { id: 3, label: 'مستندها', color: '#2563eb' },
+  { id: 4, label: 'برنامه‌های خبری', color: '#d97706' },
+  { id: 5, label: 'مصاحبه‌ها', color: '#7c3aed' },
+  { id: 6, label: 'برنامه‌های کودک', color: '#db2777' },
+  { id: 7, label: 'ورزشی', color: '#0d9488' },
+  { id: 8, label: 'موسیقی و کنسرت', color: '#ea580c' },
+  { id: 9, label: 'آموزشی', color: '#4f46e5' },
 ];
 
 export default function Sidebar() {
@@ -27,25 +28,47 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   
   return (
-    <aside className={`fixed right-0 top-0 h-screen bg-dark-900 border-l border-dark-700 transition-all duration-300 z-40 ${collapsed ? 'w-20' : 'w-72'}`}>
-      {/* Logo */}
-      <div className="p-5 border-b border-dark-700 flex items-center justify-between">
+    <aside 
+      className={`fixed right-0 top-0 h-screen transition-all duration-300 z-40 ${collapsed ? 'w-20' : 'w-72'}`}
+      style={{
+        background: 'rgba(255, 255, 255, 0.55)',
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+        borderLeft: '1px solid rgba(2, 144, 72, 0.15)',
+        boxShadow: '-4px 0 24px rgba(2, 144, 72, 0.06)',
+      }}
+    >
+      {/* Logo header */}
+      <div 
+        className="p-5 flex items-center justify-between"
+        style={{ borderBottom: '1px solid rgba(2, 144, 72, 0.1)' }}
+      >
         <Link href="/dashboard" className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cinema-400 to-cinema-700 flex items-center justify-center flex-shrink-0">
-            <svg viewBox="0 0 24 24" className="w-6 h-6 text-white" fill="currentColor">
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          </div>
-          {!collapsed && (
-            <div>
-              <h1 className="text-white font-bold text-lg leading-tight">بانک رسانه</h1>
-              <p className="text-gray-500 text-xs">Bank Rasane v1.1</p>
+          {!collapsed ? (
+            <div className="flex items-center gap-2">
+              <Image
+                src="/banke-rasane-logo.png"
+                alt="بانک رسانه"
+                width={120}
+                height={32}
+                priority
+              />
+            </div>
+          ) : (
+            <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0">
+              <Image
+                src="/banke-rasane-logo.png"
+                alt="بانک رسانه"
+                width={40}
+                height={40}
+                className="object-cover"
+              />
             </div>
           )}
         </Link>
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="text-gray-500 hover:text-white p-1"
+          className="text-ink-500 hover:text-brand-600 p-1 transition-colors"
         >
           <svg className={`w-5 h-5 transition-transform ${collapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -64,12 +87,18 @@ export default function Sidebar() {
                 href={item.href}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
                   isActive
-                    ? 'bg-cinema-600/20 text-cinema-400 border border-cinema-600/30'
-                    : 'text-gray-400 hover:bg-dark-800 hover:text-white'
+                    ? 'text-brand-700'
+                    : 'text-ink-700 hover:text-brand-600'
                 }`}
+                style={isActive ? {
+                  background: 'linear-gradient(135deg, rgba(2, 144, 72, 0.12) 0%, rgba(2, 144, 72, 0.06) 100%)',
+                  border: '1px solid rgba(2, 144, 72, 0.2)',
+                } : {
+                  border: '1px solid transparent',
+                }}
               >
                 <NavIcon name={item.icon} />
-                {!collapsed && <span className="font-medium">{item.label}</span>}
+                {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
               </Link>
             );
           })}
@@ -78,17 +107,20 @@ export default function Sidebar() {
         {/* Genres section */}
         {!collapsed && (
           <div className="mt-6">
-            <h3 className="text-gray-600 text-xs font-bold uppercase px-3 mb-2">ژانرها</h3>
-            <div className="space-y-1">
+            <h3 className="text-ink-500 text-xs font-bold uppercase px-3 mb-2 tracking-wider">ژانرها</h3>
+            <div className="space-y-0.5">
               {genres.map((g) => (
                 <Link
                   key={g.id}
                   href={`/genre/${g.id}`}
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 hover:bg-dark-800 hover:text-white transition-all group"
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-ink-700 hover:bg-white/60 transition-all group"
                 >
                   <div 
-                    className="w-2 h-2 rounded-full flex-shrink-0 group-hover:scale-125 transition-transform"
-                    style={{ backgroundColor: g.color }}
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0 group-hover:scale-125 transition-transform"
+                    style={{ 
+                      backgroundColor: g.color,
+                      boxShadow: `0 0 8px ${g.color}80`,
+                    }}
                   ></div>
                   <span className="text-sm">{g.label}</span>
                 </Link>
@@ -99,13 +131,16 @@ export default function Sidebar() {
       </nav>
       
       {/* User info / exit */}
-      <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-dark-700">
+      <div 
+        className="absolute bottom-0 left-0 right-0 p-3"
+        style={{ borderTop: '1px solid rgba(2, 144, 72, 0.1)' }}
+      >
         <Link
           href="/"
-          className="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 hover:bg-red-500/10 hover:text-red-400 transition-all"
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-ink-600 hover:bg-red-50 hover:text-red-600 transition-all"
         >
           <NavIcon name="exit" />
-          {!collapsed && <span className="font-medium">خروج</span>}
+          {!collapsed && <span className="font-medium text-sm">خروج</span>}
         </Link>
       </div>
     </aside>
