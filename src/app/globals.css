@@ -1,9 +1,8 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* ========================================
-   IRANSans / Vazirmatn Font
-   ======================================== */
+/* Vazirmatn font - similar to IRANSans */
 @font-face {
   font-family: 'IRANSans';
   src: url('/fonts/Vazirmatn-Thin.woff2') format('woff2');
@@ -78,22 +77,23 @@
   --cream-bg: #FAF6ED;
   --cream-bg-soft: #F5EFE0;
   --cream-bg-deep: #EFE7D2;
+  --cream-card: rgba(255, 255, 255, 0.55);
+  --cream-card-border: rgba(2, 144, 72, 0.18);
   --cream-text: #1a2e22;
   --cream-text-soft: #4a5d52;
   --cream-text-muted: #7a8a80;
   
-  /* Glass */
+  /* Glass effect */
   --glass-blur: 16px;
   --glass-bg: rgba(255, 255, 255, 0.45);
   --glass-bg-hover: rgba(255, 255, 255, 0.65);
   --glass-border: rgba(255, 255, 255, 0.6);
-  
-  /* Required by fullstack-dev theme */
-  --background: #FAF6ED;
-  --foreground: #1a2e22;
+  --glass-shadow: 0 8px 32px rgba(2, 144, 72, 0.08);
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 html, body {
   padding: 0;
@@ -106,9 +106,22 @@ html, body {
 }
 
 /* ========================================
+   APP CONTENT - Light Cream Theme with Subtle Texture
+   ======================================== */
+body.app-content {
+  background-color: var(--cream-bg);
+  background-image: 
+    radial-gradient(circle at 0% 0%, rgba(2, 144, 72, 0.04) 0%, transparent 40%),
+    radial-gradient(circle at 100% 100%, rgba(2, 144, 72, 0.03) 0%, transparent 40%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.4 0 0 0 0 0.5 0 0 0 0 0.4 0 0 0 0.02 0'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23n)'/%3E%3C/svg%3E");
+  color: var(--cream-text);
+  min-height: 100vh;
+}
+
+/* ========================================
    LOGIN SCREEN - Cinematic Dark Green
    ======================================== */
-.login-screen {
+body.login-screen {
   background: 
     radial-gradient(ellipse at top right, rgba(2, 144, 72, 0.25) 0%, transparent 50%),
     radial-gradient(ellipse at bottom left, rgba(2, 144, 72, 0.18) 0%, transparent 50%),
@@ -119,36 +132,23 @@ html, body {
   overflow: hidden;
 }
 
-.login-screen::before {
+body.login-screen::before {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
   opacity: 0.4;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.08 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.08 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
   z-index: 1;
 }
 
-.login-screen::after {
+body.login-screen::after {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
   background: radial-gradient(ellipse at center, transparent 30%, rgba(0, 0, 0, 0.5) 100%);
   z-index: 2;
-}
-
-/* ========================================
-   APP CONTENT - Light Cream Theme
-   ======================================== */
-.app-content {
-  background-color: var(--cream-bg);
-  background-image: 
-    radial-gradient(circle at 0% 0%, rgba(2, 144, 72, 0.04) 0%, transparent 40%),
-    radial-gradient(circle at 100% 100%, rgba(2, 144, 72, 0.03) 0%, transparent 40%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.4 0 0 0 0 0.5 0 0 0 0 0.4 0 0 0 0.02 0'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23n)'/%3E%3C/svg%3E");
-  color: var(--cream-text);
-  min-height: 100vh;
 }
 
 /* ========================================
@@ -168,45 +168,98 @@ html, body {
 }
 
 /* ========================================
-   LIQUID GLASS
+   LIQUID GLASS COMPONENTS
    ======================================== */
-.liquid-glass {
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur)) saturate(180%);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
-  border: 1px solid var(--glass-border);
-  box-shadow: 
-    0 8px 32px rgba(2, 144, 72, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.7),
-    inset 0 -1px 0 rgba(2, 144, 72, 0.05);
-  border-radius: 20px;
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.liquid-glass::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 50%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, transparent 100%);
-  pointer-events: none;
-  border-radius: 20px 20px 0 0;
-}
-
-.liquid-glass:hover {
-  background: var(--glass-bg-hover);
-  box-shadow: 
-    0 12px 40px rgba(2, 144, 72, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  transform: translateY(-2px);
+@layer components {
+  .liquid-glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+    border: 1px solid var(--glass-border);
+    box-shadow: 
+      var(--glass-shadow),
+      inset 0 1px 0 rgba(255, 255, 255, 0.7),
+      inset 0 -1px 0 rgba(2, 144, 72, 0.05);
+    border-radius: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .liquid-glass::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, transparent 100%);
+    pointer-events: none;
+    border-radius: 20px 20px 0 0;
+  }
+  
+  .liquid-glass:hover {
+    background: var(--glass-bg-hover);
+    box-shadow: 
+      0 12px 40px rgba(2, 144, 72, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8),
+      inset 0 -1px 0 rgba(2, 144, 72, 0.08);
+    transform: translateY(-2px);
+  }
+  
+  .btn-primary {
+    background: linear-gradient(135deg, var(--brand-green) 0%, var(--brand-green-dark) 100%);
+    color: white;
+    font-weight: 600;
+    padding: 12px 28px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 
+      0 4px 16px rgba(2, 144, 72, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+  
+  .btn-secondary {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    color: var(--cream-text);
+    font-weight: 500;
+    padding: 10px 20px;
+    border-radius: 12px;
+    border: 1px solid var(--cream-card-border);
+    box-shadow: 0 2px 8px rgba(2, 144, 72, 0.05);
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+  
+  .glass-input {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--cream-card-border);
+    border-radius: 12px;
+    padding: 10px 16px;
+    color: var(--cream-text);
+    font-family: inherit;
+    transition: all 0.2s ease;
+    width: 100%;
+  }
+  
+  .glass-input:focus {
+    outline: none;
+    border-color: var(--brand-green);
+    background: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 0 0 4px rgba(2, 144, 72, 0.1);
+  }
 }
 
 /* ========================================
-   LOGIN AMBIENT LIGHTS
+   LOGIN SCREEN SPECIFICS
    ======================================== */
 .login-ambient-light {
   position: absolute;
@@ -257,7 +310,7 @@ html, body {
 }
 
 /* ========================================
-   LOGO MOTION - Light sweep loop
+   LOGO MOTION - Light sweep loop on logo and title
    ======================================== */
 .logo-motion {
   position: relative;
@@ -306,6 +359,19 @@ html, body {
 }
 
 /* ========================================
+   GENRE COLOR ACCENTS
+   ======================================== */
+.genre-1 { --genre-color: #029048; }
+.genre-2 { --genre-color: #dc2626; }
+.genre-3 { --genre-color: #2563eb; }
+.genre-4 { --genre-color: #d97706; }
+.genre-5 { --genre-color: #7c3aed; }
+.genre-6 { --genre-color: #db2777; }
+.genre-7 { --genre-color: #0d9488; }
+.genre-8 { --genre-color: #ea580c; }
+.genre-9 { --genre-color: #4f46e5; }
+
+/* ========================================
    ANIMATIONS
    ======================================== */
 @keyframes fade-in {
@@ -341,19 +407,19 @@ html, body {
 }
 
 /* ========================================
-   GENRE COLORS
+   PROGRAM CARD - Selected state
    ======================================== */
-.genre-1 { --genre-color: #029048; }
-.genre-2 { --genre-color: #dc2626; }
-.genre-3 { --genre-color: #2563eb; }
-.genre-4 { --genre-color: #d97706; }
-.genre-5 { --genre-color: #7c3aed; }
-.genre-6 { --genre-color: #db2777; }
-.genre-7 { --genre-color: #0d9488; }
-.genre-8 { --genre-color: #ea580c; }
-.genre-9 { --genre-color: #4f46e5; }
+.program-card.selected {
+  border: 2px solid var(--brand-green) !important;
+  background: rgba(2, 144, 72, 0.08) !important;
+  box-shadow: 0 0 0 2px var(--brand-green), 0 8px 32px rgba(2, 144, 72, 0.2) !important;
+}
 
-/* Line clamp */
+/* ========================================
+   UTILITY
+   ======================================== */
+.rtl-flip { transform: scaleX(-1); }
+
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -361,7 +427,5 @@ html, body {
   overflow: hidden;
 }
 
-/* RTL flip */
-.rtl-flip {
-  transform: scaleX(-1);
-}
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }

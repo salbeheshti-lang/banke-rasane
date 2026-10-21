@@ -1,6 +1,6 @@
 {
   "name": "banke-rasane",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "بانک رسانه - نرم‌افزار مدیریت برنامه‌های تلویزیونی",
   "main": "electron/main.js",
   "author": "salbeheshti-lang",
