@@ -5,6 +5,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -30,19 +33,17 @@ jobs:
         Copy-Item -Path ".next\static" -Destination ".next\standalone\.next\static" -Recurse -Force
         Copy-Item -Path "public" -Destination ".next\standalone\public" -Recurse -Force
     
-    - name: Build Electron EXE (skip native rebuild)
+    - name: Build Electron EXE
       shell: pwsh
-      run: npx electron-builder --win nsis --x64 --config.npmRebuild=false --config.win.signAndEditExecutable=false
+      run: npx electron-builder --win nsis --x64 --config.npmRebuild=false --config.win.signAndEditExecutable=false --config.publish=null
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
-    - name: Upload EXE to release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: dist/BankResaneh-Setup-*.exe
-        tag_name: v2.0.0
-        name: "BankResaneh v2.0.0"
-        body: "بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی"
-        prerelease: false
+    - name: Upload EXE to GitHub Release
+      shell: pwsh
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        $exe = Get-ChildItem "dist\BankResaneh-Setup-*.exe" | Select-Object -First 1
+        Write-Host "Uploading: $($exe.Name) ($($exe.Length / 1MB) MB)"
+        gh release upload v2.0.0 $exe.FullName --clobber
