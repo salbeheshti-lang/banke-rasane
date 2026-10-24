@@ -35,9 +35,7 @@ jobs:
     
     - name: Build Electron EXE
       shell: pwsh
-      run: npx electron-builder --win nsis --x64 --config.npmRebuild=false --config.win.signAndEditExecutable=false --config.publish=null
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: npx electron-builder --win nsis --x64 --publish never --config.npmRebuild=false --config.win.signAndEditExecutable=false
     
     - name: Upload EXE to GitHub Release
       shell: pwsh
@@ -45,5 +43,5 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         $exe = Get-ChildItem "dist\BankResaneh-Setup-*.exe" | Select-Object -First 1
-        Write-Host "Uploading: $($exe.Name) ($($exe.Length / 1MB) MB)"
+        Write-Host "Uploading: $($exe.Name) ($([math]::Round($exe.Length / 1MB)) MB)"
         gh release upload v2.0.0 $exe.FullName --clobber
