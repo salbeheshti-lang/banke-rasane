@@ -35,7 +35,7 @@ jobs:
     
     - name: Build Electron EXE
       shell: pwsh
-      run: npx electron-builder --win nsis --x64 --publish never --config.npmRebuild=false --config.win.signAndEditExecutable=false
+      run: npx electron-builder --win nsis --x64 --publish never --config.npmRebuild=false
     
     - name: Upload EXE to GitHub Release
       shell: pwsh

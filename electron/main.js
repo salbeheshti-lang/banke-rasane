@@ -1,7 +1,5 @@
 // Electron Main Process — بانک رسانه
-// Spawns the Next.js standalone server and opens a BrowserWindow pointing to it.
-
-const { app, BrowserWindow, Menu, shell } = require('electron');
+const { app, BrowserWindow, shell, dialog } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 const http = require('http');
@@ -10,249 +8,146 @@ const fs = require('fs');
 let mainWindow = null;
 let nextServer = null;
 const NEXT_PORT = 3000;
-const NEXT_URL = `http://localhost:${NEXT_PORT}`;
+const NEXT_URL = `http://127.0.0.1:${NEXT_PORT}`;
 
-// Path to the Next.js standalone server (built by `next build`)
+function getLogPath() {
+  return path.join(app.getPath('userData'), 'bankresaneh.log');
+}
+
+function log(msg) {
+  const line = `[${new Date().toISOString()}] ${msg}\n`;
+  console.log(line.trim());
+  try { fs.appendFileSync(getLogPath(), line); } catch(e) {}
+}
+
 function getNextServerPath() {
-  // In production (packaged), the server lives in resources/next-service-dist
-  const possiblePaths = [
+  const paths = [
     path.join(process.resourcesPath || '', 'next-service-dist', 'server.js'),
     path.join(__dirname, '..', '.next', 'standalone', 'server.js'),
     path.join(__dirname, '..', 'next-service-dist', 'server.js'),
   ];
-  for (const p of possiblePaths) {
-    if (fs.existsSync(p)) return p;
+  for (const p of paths) {
+    if (fs.existsSync(p)) { log('Found server: ' + p); return p; }
   }
-  console.error('Next.js server not found in any of:', possiblePaths);
+  log('Server NOT FOUND. Paths checked: ' + JSON.stringify(paths));
+  log('resourcesPath: ' + process.resourcesPath);
+  log('__dirname: ' + __dirname);
   return null;
 }
 
-// Path to the static files (public, .next/static)
 function getStaticDir() {
-  const possiblePaths = [
+  const paths = [
     path.join(process.resourcesPath || '', 'next-service-dist'),
     path.join(__dirname, '..', '.next', 'standalone'),
     path.join(__dirname, '..', 'next-service-dist'),
   ];
-  for (const p of possiblePaths) {
-    if (fs.existsSync(path.join(p, 'public'))) return p;
+  for (const p of paths) {
+    if (fs.existsSync(path.join(p, 'server.js'))) { log('Static dir: ' + p); return p; }
   }
-  return possiblePaths[0];
+  return paths[0];
 }
 
-// Start the Next.js standalone server
 function startNextServer() {
   return new Promise((resolve, reject) => {
     const serverPath = getNextServerPath();
-    if (!serverPath) {
-      reject(new Error('Next.js server not found'));
-      return;
-    }
+    if (!serverPath) { reject(new Error('Server file not found')); return; }
 
     const staticDir = getStaticDir();
-    console.log('Starting Next.js server from:', serverPath);
-    console.log('Static dir:', staticDir);
+    const userData = app.getPath('userData');
+    const dbDir = path.join(userData, 'db');
+    const dbPath = path.join(dbDir, 'custom.db');
+
+    try {
+      if (!fs.existsSync(dbDir)) { fs.mkdirSync(dbDir, {recursive: true}); log('Created db dir: ' + dbDir); }
+    } catch(e) { log('Error creating db dir: ' + e.message); }
+
+    // Copy initial database if exists
+    const bundledDb = path.join(staticDir, 'db', 'custom.db');
+    if (!fs.existsSync(dbPath) && fs.existsSync(bundledDb)) {
+      try { fs.copyFileSync(bundledDb, dbPath); log('Copied initial db'); } catch(e) { log('Could not copy db: ' + e.message); }
+    }
+
+    log('Starting server: ' + serverPath);
+    log('cwd: ' + staticDir);
+    log('db: ' + dbPath);
 
     const env = {
       ...process.env,
       NODE_ENV: 'production',
       PORT: String(NEXT_PORT),
-      HOSTNAME: '0.0.0.0',
-      DATABASE_URL: process.env.DATABASE_URL || `file:${path.join(staticDir, 'db', 'custom.db')}`,
+      HOSTNAME: '127.0.0.1',
+      DATABASE_URL: 'file:' + dbPath,
     };
 
-    nextServer = spawn(process.execPath, [serverPath], {
-      cwd: staticDir,
-      env,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
+    nextServer = spawn(process.execPath, [serverPath], { cwd: staticDir, env, stdio: ['ignore','pipe','pipe'] });
 
-    nextServer.stdout.on('data', (data) => {
-      console.log(`[next] ${data.toString().trim()}`);
-    });
-    nextServer.stderr.on('data', (data) => {
-      console.error(`[next] ${data.toString().trim()}`);
-    });
-    nextServer.on('error', (err) => {
-      console.error('Failed to start Next.js server:', err);
-      reject(err);
-    });
-    nextServer.on('exit', (code) => {
-      console.log(`Next.js server exited with code ${code}`);
-    });
+    let output = '';
+    nextServer.stdout.on('data', (d) => { const t = d.toString().trim(); log('[server] ' + t); output += t + '\n'; });
+    nextServer.stderr.on('data', (d) => { const t = d.toString().trim(); log('[err] ' + t); output += t + '\n'; });
+    nextServer.on('error', (err) => { log('Process error: ' + err.message); reject(err); });
+    nextServer.on('exit', (code) => { log('Server exit code: ' + code); if(code !== 0 && code !== null) reject(new Error('Exit ' + code + ': ' + output)); });
 
-    // Wait for the server to be ready
     let attempts = 0;
-    const maxAttempts = 60;
-    const checkInterval = setInterval(() => {
+    const interval = setInterval(() => {
       attempts++;
-      http.get(NEXT_URL, (res) => {
+      http.get('http://127.0.0.1:' + NEXT_PORT, (res) => {
         if (res.statusCode === 200 || res.statusCode === 302) {
-          clearInterval(checkInterval);
-          console.log(`Next.js server is ready at ${NEXT_URL}`);
-          resolve();
+          clearInterval(interval); log('Server ready!'); resolve();
         }
       }).on('error', () => {
-        // Server not ready yet
-        if (attempts >= maxAttempts) {
-          clearInterval(checkInterval);
-          reject(new Error('Next.js server failed to start within 30 seconds'));
+        if (attempts >= 60) {
+          clearInterval(interval);
+          log('Server failed after 60 attempts. Output: ' + output);
+          reject(new Error('Server failed to start.\nOutput: ' + output));
         }
       });
     }, 500);
   });
 }
 
-// Create the main application window
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1440,
-    height: 900,
-    minWidth: 1024,
-    minHeight: 700,
+    width: 1440, height: 900, minWidth: 1024, minHeight: 700,
     title: 'بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی',
-    backgroundColor: '#010a05',
-    show: false, // Don't show until ready
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      sandbox: true,
-    },
+    backgroundColor: '#010a05', show: false,
+    webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true },
     icon: path.join(__dirname, 'icon.ico'),
   });
-
-  // Show window when ready (prevents white flash)
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
-    mainWindow.maximize();
-  });
-
-  // Load the Next.js app
+  mainWindow.once('ready-to-show', () => { mainWindow.show(); mainWindow.maximize(); });
   mainWindow.loadURL(NEXT_URL);
-
-  // Open external links in the default browser (not inside Electron)
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('http://localhost') || url.startsWith(NEXT_URL)) {
-      return { action: 'allow' };
-    }
-    shell.openExternal(url);
-    return { action: 'deny' };
+  mainWindow.webContents.setWindowOpenHandler(({url}) => {
+    if (url.startsWith('http://127.0.0.1') || url.startsWith('http://localhost')) return {action:'allow'};
+    shell.openExternal(url); return {action:'deny'};
   });
-
-  // Handle navigation to external URLs
-  mainWindow.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith(NEXT_URL) && !url.startsWith('http://localhost')) {
-      event.preventDefault();
-      shell.openExternal(url);
-    }
-  });
-
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
+  mainWindow.on('closed', () => { mainWindow = null; });
 }
 
-// Build the application menu
-function buildMenu() {
-  const template = [
-    {
-      label: 'فایل',
-      submenu: [
-        {
-          label: 'خروج',
-          accelerator: 'CmdOrCtrl+Q',
-          click: () => app.quit(),
-        },
-      ],
-    },
-    {
-      label: 'نمایش',
-      submenu: [
-        { role: 'reload', label: 'بارگذاری مجدد' },
-        { role: 'toggleDevTools', label: 'ابزار توسعه' },
-        { type: 'separator' },
-        { role: 'resetZoom', label: 'بزرگنمایی پیش‌فرض' },
-        { role: 'zoomIn', label: 'بزرگ‌نمایی' },
-        { role: 'zoomOut', label: 'کوچک‌نمایی' },
-        { type: 'separator' },
-        { role: 'togglefullscreen', label: 'تمام‌صفحه' },
-      ],
-    },
-    {
-      label: 'کمک',
-      submenu: [
-        {
-          label: 'دربارهٔ بانک رسانه',
-          click: () => {
-            if (mainWindow) {
-              mainWindow.webContents.send('show-about');
-            }
-          },
-        },
-        {
-          label: 'گزارش مشکل',
-          click: () => shell.openExternal('https://github.com/salbeheshti-lang/banke-rasane/issues'),
-        },
-      ],
-    },
-  ];
-
-  const menu = Menu.buildFromTemplate(template);
-  Menu.setApplicationMenu(menu);
-}
-
-// App lifecycle
 app.whenReady().then(async () => {
-  console.log('بانک رسانه در حال راه‌اندازی...');
+  log('Starting بانک رسانه...');
+  log('App: ' + app.getAppPath());
+  log('UserData: ' + app.getPath('userData'));
+  log('Exec: ' + process.execPath);
+  log('Resources: ' + process.resourcesPath);
+
+  // Debug: list resource files
+  try {
+    const rp = process.resourcesPath;
+    if (rp && fs.existsSync(rp)) {
+      log('Resources: ' + fs.readdirSync(rp).join(', '));
+      const nsd = path.join(rp, 'next-service-dist');
+      if (fs.existsSync(nsd)) log('next-service-dist: ' + fs.readdirSync(nsd).join(', '));
+    }
+  } catch(e) { log('Debug error: ' + e.message); }
+
   try {
     await startNextServer();
     createWindow();
-    buildMenu();
-  } catch (err) {
-    console.error('Failed to start application:', err);
-    // Show an error dialog and quit
-    const { dialog } = require('electron');
-    dialog.showErrorBox(
-      'خطا در راه‌اندازی بانک رسانه',
-      `برنامه نتوانست سرور را راه‌اندازی کند.\n\nخطا: ${err.message}\n\nلطفاً با پشتیبانی تماس بگیرید.`
-    );
+  } catch(err) {
+    log('FATAL: ' + err.message);
+    dialog.showErrorBox('خطا در راه‌اندازی', 'خطا: ' + err.message + '\n\nفایل لاگ: ' + getLogPath());
     app.quit();
   }
 });
 
-app.on('window-all-closed', () => {
-  // On macOS, keep the app running
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
-
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
-});
-
-// Clean up the Next.js server when quitting
-app.on('before-quit', () => {
-  if (nextServer) {
-    console.log('Stopping Next.js server...');
-    nextServer.kill('SIGTERM');
-    // Force kill after 3 seconds
-    setTimeout(() => {
-      if (nextServer) {
-        nextServer.kill('SIGKILL');
-      }
-    }, 3000);
-  }
-});
-
-// Handle certificate errors (for development)
-app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
-  if (url.startsWith('http://localhost')) {
-    event.preventDefault();
-    callback(true);
-  } else {
-    callback(false);
-  }
-});
+app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+app.on('before-quit', () => { if (nextServer) { nextServer.kill('SIGTERM'); setTimeout(() => { if(nextServer) nextServer.kill('SIGKILL'); }, 3000); } });
