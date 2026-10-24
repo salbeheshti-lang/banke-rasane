@@ -71,19 +71,29 @@ function startNextServer() {
     log('cwd: ' + staticDir);
     log('db: ' + dbPath);
 
+    // CRITICAL FIX: ELECTRON_RUN_AS_NODE=1 makes the Electron binary
+    // behave like a regular Node.js binary. Without this, spawning
+    // process.execPath (BankResaneh.exe) with server.js as argument
+    // causes Electron to load main.js again instead of running server.js,
+    // creating an infinite recursive loop.
     const env = {
       ...process.env,
+      ELECTRON_RUN_AS_NODE: '1',
       NODE_ENV: 'production',
       PORT: String(NEXT_PORT),
       HOSTNAME: '127.0.0.1',
       DATABASE_URL: 'file:' + dbPath,
+      // Prevent Electron from trying to load any UI
+      ELECTRON_DISABLE_SECURITY_WARNINGS: 'true',
     };
 
+    // Use process.execPath (the Electron binary) but with ELECTRON_RUN_AS_NODE=1
+    // which makes it act as plain Node.js
     nextServer = spawn(process.execPath, [serverPath], { cwd: staticDir, env, stdio: ['ignore','pipe','pipe'] });
 
     let output = '';
-    nextServer.stdout.on('data', (d) => { const t = d.toString().trim(); log('[server] ' + t); output += t + '\n'; });
-    nextServer.stderr.on('data', (d) => { const t = d.toString().trim(); log('[err] ' + t); output += t + '\n'; });
+    nextServer.stdout.on('data', (d) => { const t = d.toString().trim(); if(t) { log('[server] ' + t); output += t + '\n'; } });
+    nextServer.stderr.on('data', (d) => { const t = d.toString().trim(); if(t) { log('[err] ' + t); output += t + '\n'; } });
     nextServer.on('error', (err) => { log('Process error: ' + err.message); reject(err); });
     nextServer.on('exit', (code) => { log('Server exit code: ' + code); if(code !== 0 && code !== null) reject(new Error('Exit ' + code + ': ' + output)); });
 
@@ -128,6 +138,16 @@ app.whenReady().then(async () => {
   log('UserData: ' + app.getPath('userData'));
   log('Exec: ' + process.execPath);
   log('Resources: ' + process.resourcesPath);
+
+  // Clear old log on each start (keep last start only)
+  try {
+    const logPath = getLogPath();
+    if (fs.existsSync(logPath)) {
+      const oldLog = fs.readFileSync(logPath, 'utf8');
+      fs.writeFileSync(logPath + '.prev', oldLog);
+      fs.writeFileSync(logPath, '');
+    }
+  } catch(e) {}
 
   // Debug: list resource files
   try {
