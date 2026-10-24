@@ -30,9 +30,9 @@ jobs:
         Copy-Item -Path ".next\static" -Destination ".next\standalone\.next\static" -Recurse -Force
         Copy-Item -Path "public" -Destination ".next\standalone\public" -Recurse -Force
     
-    - name: Build Electron EXE
+    - name: Build Electron EXE (skip native rebuild)
       shell: pwsh
-      run: npx electron-builder --win --x64
+      run: npx electron-builder --win nsis --x64 --config.npmRebuild=false --config.win.signAndEditExecutable=false
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
