@@ -256,6 +256,53 @@ function ShowImageGallery({ images, showName }: { images: string[]; showName: st
 // ============================================
 // MAIN APP
 // ============================================
+// ============================================
+// LOCAL PERSISTENCE — user edits are saved in localStorage so they survive a refresh.
+// ============================================
+type Overrides = {
+  added: TalkShow[];                       // shows created by the user
+  edited: Record<number, TalkShow>;        // edits to shows from the base JSON
+  deleted: number[];                       // base shows hidden by the user
+};
+
+const OVERRIDES_KEY = 'bankresaneh_overrides_v1';
+
+function loadOverrides(): Overrides {
+  if (typeof window === 'undefined') return { added: [], edited: {}, deleted: [] };
+  try {
+    const raw = window.localStorage.getItem(OVERRIDES_KEY);
+    if (!raw) return { added: [], edited: {}, deleted: [] };
+    const o = JSON.parse(raw);
+    return {
+      added: Array.isArray(o.added) ? o.added : [],
+      edited: o.edited && typeof o.edited === 'object' ? o.edited : {},
+      deleted: Array.isArray(o.deleted) ? o.deleted : [],
+    };
+  } catch {
+    return { added: [], edited: {}, deleted: [] };
+  }
+}
+
+function saveOverrides(o: Overrides) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(OVERRIDES_KEY, JSON.stringify(o));
+  } catch {
+    // Storage full or unavailable — silently ignore (edits stay in-memory only).
+  }
+}
+
+// Merge base shows with the user's overrides: drop deleted ones, replace edited ones, prepend added ones.
+function applyOverrides(base: TalkShow[], o: Overrides): TalkShow[] {
+  const deleted = new Set(o.deleted);
+  const out: TalkShow[] = [];
+  for (const s of base) {
+    if (deleted.has(s.num)) continue;
+    out.push(o.edited[s.num] || s);
+  }
+  return [...o.added, ...out];
+}
+
 export default function Home() {
   const [screen, setScreen] = useState<'login' | 'app'>('login');
   const [currentView, setCurrentView] = useState<'dashboard' | 'programs' | 'genre' | 'reports' | 'add'>('dashboard');
@@ -263,6 +310,10 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [talkShows, setTalkShows] = useState<TalkShow[]>([]);
+  // Base data (raw from JSON, never mutated) used to recompute the merged list.
+  const [baseShows, setBaseShows] = useState<TalkShow[]>([]);
+  // User changes persisted to localStorage so add/edit/delete survive a refresh.
+  const [overrides, setOverrides] = useState<Overrides>({ added: [], edited: {}, deleted: [] });
   const [uploadedShows, setUploadedShows] = useState<number[]>([]);
   const [selectedShow, setSelectedShow] = useState<TalkShow | null>(null);
   const [editingShow, setEditingShow] = useState<TalkShow | null>(null);
@@ -281,15 +332,59 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    // Load persisted overrides first, then merge them with the base JSON data.
+    const saved = loadOverrides();
+    setOverrides(saved);
     fetch('/talk-shows-data.json')
       .then(r => r.json())
-      .then(data => setTalkShows(data))
+      .then((data: TalkShow[]) => {
+        setBaseShows(data);
+        setTalkShows(applyOverrides(data, saved));
+      })
       .catch(e => console.error('Failed to load data:', e));
   }, []);
+
+  // Recompute the merged list whenever overrides change (e.g. after an edit).
+  useEffect(() => {
+    if (baseShows.length > 0) {
+      setTalkShows(applyOverrides(baseShows, overrides));
+    }
+  }, [baseShows, overrides]);
 
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
+  };
+
+  // Persist a new set of overrides to state + localStorage in one place.
+  const commitOverrides = (next: Overrides) => {
+    setOverrides(next);
+    saveOverrides(next);
+  };
+
+  // Add a brand-new show, or update an existing one (created/edited by the user).
+  const handleSaveShow = (show: TalkShow, isEdit: boolean) => {
+    if (isEdit) {
+      const inAdded = overrides.added.find(s => s.num === show.num);
+      const next: Overrides = inAdded
+        ? { ...overrides, added: overrides.added.map(s => s.num === show.num ? show : s) }
+        : { ...overrides, edited: { ...overrides.edited, [show.num]: show } };
+      commitOverrides(next);
+      showToast(`برنامه «${show.name}» بروزرسانی شد`);
+    } else {
+      commitOverrides({ ...overrides, added: [show, ...overrides.added] });
+      showToast(`برنامه «${show.name}» اضافه شد`);
+    }
+  };
+
+  // Delete a show (hides it from the list; user-added ones are removed outright).
+  const handleDeleteShow = (num: number) => {
+    const inAdded = overrides.added.find(s => s.num === num);
+    const next: Overrides = inAdded
+      ? { ...overrides, added: overrides.added.filter(s => s.num !== num) }
+      : { ...overrides, deleted: Array.from(new Set([...overrides.deleted, num])) };
+    commitOverrides(next);
+    showToast('برنامه حذف شد');
   };
 
   // Push the current view onto the history stack, then go to `to`.
@@ -356,7 +451,7 @@ export default function Home() {
         {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} />}
         {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} />}
         {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} onExport={(shows, format) => setExportPreview({ shows, format })} />}
-        {currentView === 'add' && <AddEditView talkShows={talkShows} setTalkShows={setTalkShows} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} />}
+        {currentView === 'add' && <AddEditView talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} />}
       </main>
 
       {isMobile && (
@@ -376,6 +471,7 @@ export default function Home() {
           show={selectedShow}
           onClose={() => setSelectedShow(null)}
           onEdit={(s) => { setSelectedShow(null); setEditingShow(s); navigate('add'); }}
+          onDelete={handleDeleteShow}
           onPublish={(s) => setPublishShows([s])}
           onExport={(s, fmt) => setExportPreview({ shows: [s], format: fmt })}
           isUploaded={uploadedShows.includes(selectedShow.num)}
@@ -1838,15 +1934,17 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
 // ============================================
 // SHOW DETAILS MODAL — with Persian description, links, publish, export
 // ============================================
-function ShowDetailsModal({ show, onClose, onEdit, onPublish, onExport, isUploaded }: {
+function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport, isUploaded }: {
   show: TalkShow;
   onClose: () => void;
   onEdit: (s: TalkShow) => void;
+  onDelete: (num: number) => void;
   onPublish: (s: TalkShow) => void;
   onExport: (s: TalkShow, fmt: 'pdf' | 'excel') => void;
   isUploaded: boolean;
 }) {
   const thumb = getShowThumbnail(show);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -2054,7 +2152,42 @@ function ShowDetailsModal({ show, onClose, onEdit, onPublish, onExport, isUpload
             >
               📊 گزارش Excel
             </button>
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="px-4 py-2 rounded-xl text-sm font-medium"
+              style={{ background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}
+            >
+              🗑 حذف برنامه
+            </button>
           </div>
+
+          {/* Delete confirmation */}
+          {confirmDelete && (
+            <div
+              className="mb-4 p-4 rounded-xl flex items-center justify-between gap-3"
+              style={{ background: 'rgba(220, 38, 38, 0.08)', border: '1px solid rgba(220, 38, 38, 0.25)' }}
+            >
+              <span className="text-sm font-medium" style={{ color: '#dc2626' }}>
+                این برنامه حذف شود؟ (قابل بازگشت نیست)
+              </span>
+              <div className="flex gap-2 flex-shrink-0">
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium"
+                  style={{ background: 'rgba(122, 138, 128, 0.15)', color: '#4a5d52', border: '1px solid rgba(122, 138, 128, 0.3)' }}
+                >
+                  انصراف
+                </button>
+                <button
+                  onClick={() => { onDelete(show.num); onClose(); }}
+                  className="px-3 py-1.5 rounded-lg text-sm font-bold"
+                  style={{ background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)', color: 'white' }}
+                >
+                  بله، حذف کن
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Decor details */}
           <div>
@@ -2101,9 +2234,9 @@ function DetailField({ label, value }: { label: string; value: string }) {
 // ============================================
 // ADD/EDIT VIEW
 // ============================================
-function AddEditView({ talkShows, setTalkShows, editingShow, setEditingShow, onDone, showToast }: {
+function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, showToast }: {
   talkShows: TalkShow[];
-  setTalkShows: (s: TalkShow[]) => void;
+  onSave: (show: TalkShow, isEdit: boolean) => void;
   editingShow: TalkShow | null;
   setEditingShow: (s: TalkShow | null) => void;
   onDone: () => void;
@@ -2209,11 +2342,9 @@ function AddEditView({ talkShows, setTalkShows, editingShow, setEditingShow, onD
       form.socialPost = `🎬 ${form.name}\n\n📝 ${form.descriptionFa}\n\n#بانک_رسانه #تاک_شو`;
     }
     if (editingShow) {
-      setTalkShows(talkShows.map(s => s.num === editingShow.num ? form as TalkShow : s));
-      showToast(`برنامه «${form.name}» بروزرسانی شد`);
+      onSave(form as TalkShow, true);
     } else {
-      setTalkShows([...talkShows, form as TalkShow]);
-      showToast(`برنامه «${form.name}» اضافه شد`);
+      onSave(form as TalkShow, false);
     }
     onDone();
   };
