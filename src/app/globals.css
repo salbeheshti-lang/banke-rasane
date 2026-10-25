@@ -207,6 +207,45 @@ html, body {
   transform: translateY(0) scale(1);
 }
 
+/* White variant — used for the login button (high contrast on the dark hero).
+   Dark green text so "ورود به برنامه" is clearly legible. */
+.btn-enter-white {
+  position: relative;
+  padding: 16px 52px;
+  border-radius: 16px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #016035;
+  cursor: pointer;
+  overflow: hidden;
+  background: linear-gradient(135deg, #ffffff 0%, #f4faf7 55%, #e7f2ec 100%);
+  border: 1px solid rgba(2, 144, 72, 0.5);
+  box-shadow:
+    0 12px 40px rgba(2, 144, 72, 0.38),
+    0 4px 12px rgba(2, 144, 72, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0 rgba(2, 144, 72, 0.12);
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+.btn-enter-white:hover {
+  transform: translateY(-2px) scale(1.02);
+  background: linear-gradient(135deg, #ffffff 0%, #eaf6ef 55%, #d8efe3 100%);
+  box-shadow:
+    0 18px 56px rgba(2, 144, 72, 0.48),
+    0 6px 20px rgba(2, 144, 72, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    inset 0 -1px 0 rgba(2, 144, 72, 0.14);
+}
+.btn-enter-white:active {
+  transform: translateY(0) scale(1);
+}
+
+/* Hide scrollbar utility — used for horizontal filter chip rows on mobile */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
 /* ============================================
    PREMIUM GENRE CARD — solid gradient like button
    Each genre has its own rich color gradient
