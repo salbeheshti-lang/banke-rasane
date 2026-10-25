@@ -59,3 +59,18 @@ Stage Summary:
   5. "متن/PDF/وب" source badges removed from program images (grid + list).
   6. Login button is now white with dark-green, clearly-legible "ورود به برنامه" text.
 - Dev server still running (PID 4199) via start-stop-daemon; accessible at the preview gateway (port 81).
+
+---
+Task ID: 3
+Agent: main (Z.ai Code)
+Task: User reported the "ورود به برنامه" (login) button is invisible. Build the white button as previously described.
+
+Work Log:
+- Root-caused the issue. The `.btn-enter-white` CSS class (added in task 2) WAS in `src/app/globals.css` (3 occurrences confirmed), but Turbopack's HMR had NOT recompiled the CSS chunk after the class was added — fetching the served CSS (`/_next/static/chunks/src_app_globals_91e4631d.css`) showed ZERO occurrences of `btn-enter-white`. Result: the `<button class="btn-enter-white group">` rendered with only the browser's default button styles — no padding, no white background — so it collapsed to ~24px tall (just the text line) and was effectively invisible against the dark green hero.
+- Verified via agent-browser: button bounding box was 116×24 (text only, padding missing); after fix it's 237×61 (correct: 16px padding + 18px font).
+- Fix: cleared `.next/cache` and restarted the dev server (start-stop-daemon stop/start) to force a full CSS recompile. Re-confirmed the served CSS now contains all 3 `btn-enter-white` occurrences.
+- Browser-verified on both desktop (1280×800) and mobile (390×844): button now renders at 237×61px, centered, with the white gradient background + dark-green `#016035` "ورود به برنامه" text + green arrow. No console/page errors; dev.log clean.
+
+Stage Summary:
+- Login button is now visible and styled as intended (white pill, dark-green bold text, green arrow) on both desktop and mobile.
+- Root cause was a Turbopack HMR miss on a newly-added CSS class; resolved by a dev-server restart (clean recompile). Dev server running (PID 6967) at the preview gateway (port 81).
