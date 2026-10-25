@@ -1,0 +1,9 @@
+name = "banke-rasane-api"
+main = "index.js"
+compatibility_date = "2024-09-23"
+account_id = "34fe29bd9259dcb2c47fd320f40b2eac"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "banke-rasane-db"
+database_id = "11e0df45-db9c-4c11-af42-4c5ed1ea1036"
