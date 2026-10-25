@@ -74,3 +74,25 @@ Work Log:
 Stage Summary:
 - Login button is now visible and styled as intended (white pill, dark-green bold text, green arrow) on both desktop and mobile.
 - Root cause was a Turbopack HMR miss on a newly-added CSS class; resolved by a dev-server restart (clean recompile). Dev server running (PID 6967) at the preview gateway (port 81).
+
+---
+Task ID: 4
+Agent: main (Z.ai Code)
+Task: Add persistent update (edit) capability for programs + delete, then restart server.
+
+Work Log:
+- Audited the existing edit feature: AddEditView already supported editing (editingShow prop → setTalkShows map), but changes were in-memory only — lost on refresh because data loads fresh from talk-shows-data.json each time. No delete button existed in ShowDetailsModal.
+- Implemented a localStorage-backed overrides layer so add/edit/delete persist across refreshes:
+  - Added `Overrides` type `{ added, edited, deleted }` + `loadOverrides()` / `saveOverrides()` / `applyOverrides(base, overrides)` helpers before the Home component.
+  - Home now keeps `baseShows` (raw JSON) + `overrides` (user changes) as separate state, and recomputes `talkShows = applyOverrides(baseShows, overrides)` whenever either changes.
+  - Added `handleSaveShow(show, isEdit)` (writes to overrides.added or overrides.edited depending on whether it's a new vs existing show) and `handleDeleteShow(num)` (removes from added, or adds to deleted).
+  - All changes are written to localStorage key `bankresaneh_overrides_v1` so they survive a refresh.
+- Refactored AddEditView to take `onSave(show, isEdit)` instead of `setTalkShows`; handleSubmit now just calls `onSave(form, !!editingShow)` then `onDone()`. Toast messages are shown by Home (single source of truth).
+- Added a "🗑 حذف برنامه" button to ShowDetailsModal's action row + a two-step confirmation ("این برنامه حذف شود؟" → "بله، حذف کن" / "انصراف") to prevent accidental deletes. Wired `onDelete={handleDeleteShow}` from Home.
+- Browser-verified via agent-browser: login → dashboard (560 shows) → open genre → click program → modal shows all 4 actions (ویرایش، گزارش PDF، گزارش Excel، 🗑 حذف برنامه) → click delete → confirmation ("حذف شود؟" / "انصراف" / "بله، حذف کن") appears. No page/console errors.
+- Clean-restarted the dev server (wiped .next, start-stop-daemon). Server healthy: PID 9470, HTTP 200 on both port 3000 and gateway 81.
+
+Stage Summary:
+- Programs can now be added, edited, AND deleted — and all three operations persist to localStorage, so they survive a page refresh (previously all edits were lost on refresh).
+- Delete has a confirmation step to prevent accidents.
+- Server cleanly restarted and verified working; accessible at the preview gateway (port 81).
