@@ -270,6 +270,8 @@ export default function Home() {
   const [publishShows, setPublishShows] = useState<TalkShow[] | null>(null);
   const [exportPreview, setExportPreview] = useState<{ shows: TalkShow[]; format: 'pdf' | 'excel' } | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Navigation history so every view can navigate back to the previous one
+  const [viewStack, setViewStack] = useState<Array<{ view: typeof currentView; genre: Genre | null }>>([]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -290,18 +292,36 @@ export default function Home() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleNavigate = (v: 'dashboard' | 'programs' | 'reports' | 'add') => {
-    setCurrentView(v);
-    setSelectedGenre(null);
+  // Push the current view onto the history stack, then go to `to`.
+  const navigate = (to: typeof currentView, genre: Genre | null = null) => {
+    setViewStack(prev => [...prev, { view: currentView, genre: selectedGenre }]);
+    setCurrentView(to);
+    setSelectedGenre(genre);
     setDrawerOpen(false);
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Pop the history stack and restore the previous view (used by the back button).
+  const goBack = () => {
+    setViewStack(prev => {
+      if (prev.length === 0) return prev;
+      const last = prev[prev.length - 1];
+      setCurrentView(last.view);
+      setSelectedGenre(last.genre);
+      setDrawerOpen(false);
+      if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+      return prev.slice(0, -1);
+    });
+  };
+
+  const canGoBack = viewStack.length > 0;
+
+  const handleNavigate = (v: 'dashboard' | 'programs' | 'reports' | 'add') => {
+    navigate(v, null);
+  };
+
   const handleGenreSelect = (g: Genre) => {
-    setSelectedGenre(g);
-    setCurrentView('genre');
-    setDrawerOpen(false);
-    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+    navigate('genre', g);
   };
 
   if (screen === 'login') {
@@ -317,6 +337,8 @@ export default function Home() {
         onMenuClick={() => setDrawerOpen(true)}
         isMobile={isMobile}
         currentView={currentView}
+        onBack={goBack}
+        canGoBack={canGoBack}
       />
 
       <DrawerMenu
@@ -330,11 +352,11 @@ export default function Home() {
       />
 
       <main className={isMobile ? 'p-4 pt-20 pb-28' : 'p-8 pt-24'}>
-        {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => { setSelectedGenre(g); setCurrentView('genre'); }} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => setCurrentView('add')} />}
+        {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => navigate('add')} />}
         {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} />}
         {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} />}
-        {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} />}
-        {currentView === 'add' && <AddEditView talkShows={talkShows} setTalkShows={setTalkShows} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setCurrentView('programs'); }} showToast={showToast} />}
+        {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} onExport={(shows, format) => setExportPreview({ shows, format })} />}
+        {currentView === 'add' && <AddEditView talkShows={talkShows} setTalkShows={setTalkShows} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} />}
       </main>
 
       {isMobile && (
@@ -353,7 +375,7 @@ export default function Home() {
         <ShowDetailsModal
           show={selectedShow}
           onClose={() => setSelectedShow(null)}
-          onEdit={(s) => { setSelectedShow(null); setEditingShow(s); setCurrentView('add'); }}
+          onEdit={(s) => { setSelectedShow(null); setEditingShow(s); navigate('add'); }}
           onPublish={(s) => setPublishShows([s])}
           onExport={(s, fmt) => setExportPreview({ shows: [s], format: fmt })}
           isUploaded={uploadedShows.includes(selectedShow.num)}
@@ -450,12 +472,12 @@ function LoginScreen({ onEnter, loading }: { onEnter: () => void; loading: boole
         <button
           onClick={onEnter}
           disabled={loading}
-          className="btn-enter-premium group"
+          className="btn-enter-white group"
         >
-          <span className="relative z-10 flex items-center gap-3 justify-center">
+          <span className="relative z-10 flex items-center gap-3 justify-center" style={{ color: '#016035' }}>
             {loading ? (
               <>
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <div className="w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(1,96,53,0.3)', borderTopColor: '#016035' }}></div>
                 <span>در حال ورود...</span>
               </>
             ) : (
@@ -464,7 +486,7 @@ function LoginScreen({ onEnter, loading }: { onEnter: () => void; loading: boole
                 <svg
                   className="w-5 h-5 rtl-flip group-hover:-translate-x-1.5 transition-transform"
                   fill="none"
-                  stroke="white"
+                  stroke="#016035"
                   viewBox="0 0 24 24"
                   strokeWidth={2.5}
                 >
@@ -489,10 +511,12 @@ function LoginScreen({ onEnter, loading }: { onEnter: () => void; loading: boole
 // TOP APP BAR — fixed at top, hamburger (3-line) on the right,
 // logo + title in the center, visible on BOTH desktop and mobile
 // ============================================
-function TopAppBar({ onMenuClick, isMobile, currentView }: {
+function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack }: {
   onMenuClick: () => void;
   isMobile: boolean;
   currentView: string;
+  onBack: () => void;
+  canGoBack: boolean;
 }) {
   const viewTitles: Record<string, string> = {
     dashboard: 'آرشیو تخصصی برنامه‌های تلویزیونی',
@@ -579,9 +603,34 @@ function TopAppBar({ onMenuClick, isMobile, currentView }: {
           )}
         </div>
 
-        {/* Right: empty placeholder to keep the title centered, but on mobile show a small badge */}
+        {/* Left placeholder: back button (when there is history), else status badge */}
         <div style={{ minWidth: '44px', display: 'flex', justifyContent: 'flex-end' }}>
-          {isMobile ? (
+          {canGoBack ? (
+            <button
+              onClick={onBack}
+              aria-label="بازگشت به صفحهٔ قبل"
+              title="بازگشت به صفحهٔ قبل"
+              className="flex items-center gap-2 rounded-xl transition-all"
+              style={{
+                background: 'rgba(255, 255, 255, 0.96)',
+                border: '1px solid rgba(74, 222, 128, 0.55)',
+                color: '#016035',
+                padding: isMobile ? '9px 12px' : '9px 16px',
+                boxShadow: '0 4px 14px rgba(2, 144, 72, 0.32), inset 0 1px 0 rgba(255,255,255,0.7)',
+                minWidth: '44px',
+                minHeight: '44px',
+                fontWeight: 700,
+                fontSize: '14px',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.96)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+              {!isMobile && <span>بازگشت</span>}
+            </button>
+          ) : isMobile ? (
             <span
               className="px-2.5 py-1 rounded-full text-xs font-bold"
               style={{
@@ -875,12 +924,12 @@ function MobileBottomNav({
           <div
             className="fixed bottom-0 left-0 right-0 p-4 animate-slide-up-nav"
             style={{
-              background: 'rgba(255, 255, 255, 0.95)',
-              backdropFilter: 'blur(28px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-              borderTop: '1px solid rgba(255, 255, 255, 1)',
+              background: 'rgba(238, 246, 241, 0.6)',
+              backdropFilter: 'blur(26px) saturate(160%)',
+              WebkitBackdropFilter: 'blur(26px) saturate(160%)',
+              borderTop: '1px solid rgba(255, 255, 255, 0.55)',
               borderRadius: '24px 24px 0 0',
-              boxShadow: '0 -10px 40px rgba(2, 144, 72, 0.18), inset 0 1px 0 rgba(255, 255, 255, 1)',
+              boxShadow: '0 -10px 40px rgba(2, 144, 72, 0.16), inset 0 1px 0 rgba(255,255,255,0.4)',
               paddingBottom: '32px',
               maxHeight: '70vh',
               overflowY: 'auto',
@@ -940,16 +989,16 @@ function MobileBottomNav({
         </div>
       )}
 
-      <nav className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-4">
+      <nav className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3">
         <div
-          className="flex items-center justify-around"
+          className="flex items-center justify-around no-scrollbar"
           style={{
-            background: 'rgba(255, 255, 255, 0.92)',
-            backdropFilter: 'blur(28px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-            border: '1px solid rgba(255, 255, 255, 1)',
-            borderRadius: '20px',
-            boxShadow: '0 10px 40px rgba(2, 144, 72, 0.18), inset 0 1px 0 rgba(255, 255, 255, 1)',
+            background: 'rgba(238, 246, 241, 0.5)',
+            backdropFilter: 'blur(24px) saturate(160%)',
+            WebkitBackdropFilter: 'blur(24px) saturate(160%)',
+            border: '1px solid rgba(255, 255, 255, 0.55)',
+            borderRadius: '22px',
+            boxShadow: '0 8px 30px rgba(2, 144, 72, 0.16), inset 0 1px 0 rgba(255,255,255,0.4)',
             padding: '8px',
           }}
         >
@@ -1278,39 +1327,42 @@ function ProgramsView({
         </div>
       )}
 
-      {/* Search & toolbar */}
-      <div className="premium-glass p-4 mb-6 space-y-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex-1 min-w-[200px] relative">
-            <svg
-              className="w-5 h-5 absolute right-3 top-1/2 -translate-y-1/2"
-              style={{ color: '#7a8a80' }}
-              fill="none" stroke="currentColor" viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={`جستجو در ${genre ? genre.nameFa : 'همهٔ برنامه‌ها'}...`}
-              style={{
-                background: 'rgba(255, 255, 255, 0.85)',
-                border: '1px solid rgba(2, 144, 72, 0.15)',
-                borderRadius: '12px',
-                padding: '10px 36px 10px 16px',
-                width: '100%',
-                fontFamily: 'inherit',
-                color: '#1a2e22',
-                outline: 'none',
-              }}
-            />
-          </div>
-
-          <div
-            className="flex items-center gap-2 rounded-xl p-1"
+      {/* Search & toolbar — mobile-friendly: full-width search, actions row, horizontally scrollable filter chips */}
+      <div className="premium-glass p-3 sm:p-4 mb-6 space-y-3">
+        {/* Search — full width on every screen size */}
+        <div className="relative">
+          <svg
+            className="w-5 h-5 absolute right-3 top-1/2 -translate-y-1/2"
+            style={{ color: '#7a8a80' }}
+            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={`جستجو در ${genre ? genre.nameFa : 'همهٔ برنامه‌ها'}...`}
             style={{
-              background: 'rgba(255, 255, 255, 0.85)',
+              background: 'rgba(255, 255, 255, 0.9)',
+              border: '1px solid rgba(2, 144, 72, 0.15)',
+              borderRadius: '12px',
+              padding: '11px 36px 11px 16px',
+              width: '100%',
+              fontFamily: 'inherit',
+              color: '#1a2e22',
+              outline: 'none',
+              fontSize: '15px',
+            }}
+          />
+        </div>
+
+        {/* Actions row — view toggle + multi-select */}
+        <div className="flex items-center gap-2">
+          <div
+            className="flex items-center gap-1 rounded-xl p-1 flex-shrink-0"
+            style={{
+              background: 'rgba(255, 255, 255, 0.9)',
               border: '1px solid rgba(2, 144, 72, 0.15)',
             }}
           >
@@ -1318,6 +1370,7 @@ function ProgramsView({
               onClick={() => setView('grid')}
               className="p-2 rounded-lg transition-colors"
               style={view === 'grid' ? { background: '#029048', color: 'white' } : { color: '#4a5d52' }}
+              aria-label="نمایش شبکه‌ای"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
@@ -1327,6 +1380,7 @@ function ProgramsView({
               onClick={() => setView('list')}
               className="p-2 rounded-lg transition-colors"
               style={view === 'list' ? { background: '#029048', color: 'white' } : { color: '#4a5d52' }}
+              aria-label="نمایش لیستی"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -1336,13 +1390,13 @@ function ProgramsView({
 
           <button
             onClick={() => setSelectionMode(!selectionMode)}
-            className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+            className="px-4 py-2 rounded-xl text-sm font-medium transition-all flex-1"
             style={selectionMode ? {
               background: 'rgba(2, 144, 72, 0.15)',
               border: '1px solid rgba(2, 144, 72, 0.3)',
               color: '#016035',
             } : {
-              background: 'rgba(255, 255, 255, 0.85)',
+              background: 'rgba(255, 255, 255, 0.9)',
               border: '1px solid rgba(2, 144, 72, 0.15)',
               color: '#4a5d52',
             }}
@@ -1351,54 +1405,57 @@ function ProgramsView({
           </button>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span style={{ color: '#7a8a80' }} className="text-sm ml-2">اندازه:</span>
-          {[
-            { key: 'all', label: 'همه' },
-            { key: 'بزرگ/لوکس', label: 'بزرگ/لوکس' },
-            { key: 'متوسط/استاندارد', label: 'متوسط' },
-            { key: 'کوچک/اقتصادی', label: 'کوچک' },
-          ].map(f => (
-            <button
-              key={f.key}
-              onClick={() => setFilterSize(f.key)}
-              className="px-3 py-1.5 rounded-lg text-sm font-medium"
-              style={filterSize === f.key ? {
-                background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
-                color: 'white',
-              } : {
-                background: 'rgba(255, 255, 255, 0.85)',
-                color: '#4a5d52',
-              }}
-            >
-              {f.label}
-            </button>
-          ))}
-          <div className="w-px h-6 bg-green-500/20 mx-2"></div>
-          <span style={{ color: '#7a8a80' }} className="text-sm ml-2">سبک:</span>
-          {[
-            { key: 'all', label: 'همه' },
-            { key: 'مدرن', label: 'مدرن' },
-            { key: 'ترکیبی', label: 'ترکیبی' },
-            { key: 'مینیمال', label: 'مینیمال' },
-            { key: 'کلاسیک/سنتی', label: 'کلاسیک' },
-          ].map(f => (
-            <button
-              key={f.key}
-              onClick={() => setFilterStyle(f.key)}
-              className="px-3 py-1.5 rounded-lg text-sm font-medium"
-              style={filterStyle === f.key ? {
-                background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
-                color: 'white',
-              } : {
-                background: 'rgba(255, 255, 255, 0.85)',
-                color: '#4a5d52',
-              }}
-            >
-              {f.label}
-            </button>
-          ))}
+        {/* Filters — two horizontally scrollable rows (no chaotic wrapping on mobile) */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+            <span className="text-sm flex-shrink-0" style={{ color: '#7a8a80' }}>اندازه:</span>
+            {[
+              { key: 'all', label: 'همه' },
+              { key: 'بزرگ/لوکس', label: 'بزرگ/لوکس' },
+              { key: 'متوسط/استاندارد', label: 'متوسط' },
+              { key: 'کوچک/اقتصادی', label: 'کوچک' },
+            ].map(f => (
+              <button
+                key={f.key}
+                onClick={() => setFilterSize(f.key)}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
+                style={filterSize === f.key ? {
+                  background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
+                  color: 'white',
+                } : {
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  color: '#4a5d52',
+                }}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+            <span className="text-sm flex-shrink-0" style={{ color: '#7a8a80' }}>سبک:</span>
+            {[
+              { key: 'all', label: 'همه' },
+              { key: 'مدرن', label: 'مدرن' },
+              { key: 'ترکیبی', label: 'ترکیبی' },
+              { key: 'مینیمال', label: 'مینیمال' },
+              { key: 'کلاسیک/سنتی', label: 'کلاسیک' },
+            ].map(f => (
+              <button
+                key={f.key}
+                onClick={() => setFilterStyle(f.key)}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
+                style={filterStyle === f.key ? {
+                  background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
+                  color: 'white',
+                } : {
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  color: '#4a5d52',
+                }}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {selectionMode && selectedIds.length > 0 && (
@@ -1578,23 +1635,10 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
           </>
         )}
 
-        {/* Source badge */}
-        <span
-          className="absolute top-2 right-2 text-xs px-2 py-0.5 rounded-md backdrop-blur font-medium"
-          style={{
-            background: show.source === 'تصویر PDF' ? 'rgba(220, 38, 38, 0.9)'
-              : show.source === 'تصویر وب' ? 'rgba(37, 99, 235, 0.9)'
-              : 'rgba(122, 138, 128, 0.9)',
-            color: 'white'
-          }}
-        >
-          {show.source === 'تصویر PDF' ? 'PDF' : show.source === 'تصویر وب' ? 'وب' : 'متن'}
-        </span>
-
         {/* Multi-image badge — shows count when more than 1 image */}
         {show.images && show.images.length > 1 && (
           <span
-            className="absolute top-2 right-14 text-xs px-2 py-0.5 rounded-md backdrop-blur font-bold flex items-center gap-1"
+            className="absolute top-2 right-2 text-xs px-2 py-0.5 rounded-md backdrop-blur font-bold flex items-center gap-1"
             style={{ background: 'rgba(0, 0, 0, 0.75)', color: 'white' }}
           >
             🖼 {show.images.length.toLocaleString('fa-IR')}
@@ -1781,13 +1825,6 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
         </div>
         <h3 className="font-bold text-sm mb-1 truncate text-white" style={{ direction: 'ltr', textAlign: 'right', textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}>{show.name}</h3>
         <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.8)' }}>{show.summary && show.summary !== '—' ? show.summary : show.category}</p>
-      </div>
-
-      <div className="hidden sm:block text-center flex-shrink-0">
-        <div className="text-xs" style={{ color: 'rgba(255,255,255,0.6)' }}>منبع</div>
-        <div className="font-bold text-xs text-white">
-          {show.source === 'تصویر PDF' ? 'PDF' : show.source === 'تصویر وب' ? 'وب' : 'متن'}
-        </div>
       </div>
 
       <div className="text-center flex-shrink-0">
@@ -3444,10 +3481,11 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
 // ============================================
 // REPORTS VIEW
 // ============================================
-function ReportsView({ talkShows, uploadedShows, showToast }: {
+function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
   talkShows: TalkShow[];
   uploadedShows: number[];
   showToast: (msg: string) => void;
+  onExport: (shows: TalkShow[], format: 'pdf' | 'excel') => void;
 }) {
   const stats = {
     total: talkShows.length,
@@ -3532,7 +3570,15 @@ function ReportsView({ talkShows, uploadedShows, showToast }: {
                   <button
                     className="text-sm hover:underline"
                     style={{ color: '#029048' }}
-                    onClick={() => showToast(`دانلود گزارش: ${r.title}`)}
+                    onClick={() => {
+                      let shows: TalkShow[] = [];
+                      if (r.id === 1) shows = talkShows;
+                      else if (r.id === 2) shows = talkShows.filter(s => uploadedShows.includes(s.num));
+                      else if (r.id === 3) shows = talkShows.filter(s => s.source === 'تصویر PDF');
+                      else if (r.id === 4) shows = talkShows.filter(s => s.source === 'تصویر وب');
+                      if (shows.length === 0) { showToast('برنامه‌ای برای این گزارش وجود ندارد'); return; }
+                      onExport(shows, r.type === 'pdf' ? 'pdf' : 'excel');
+                    }}
                   >
                     دانلود
                   </button>
