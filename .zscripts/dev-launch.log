@@ -92,3 +92,8 @@ Use 'kill 8258' to stop it.
  GET / 200 in 34ms (compile: 4ms, render: 30ms)
  GET / 200 in 29ms (compile: 1903µs, render: 27ms)
  GET / 200 in 39ms (compile: 4ms, render: 34ms)
+ GET / 200 in 36ms (compile: 3ms, render: 33ms)
+ GET / 200 in 38ms (compile: 5ms, render: 33ms)
+ GET / 200 in 52ms (compile: 2ms, render: 50ms)
+ GET / 200 in 156ms (compile: 30ms, render: 126ms)
+ GET / 200 in 43ms (compile: 3ms, render: 40ms)
