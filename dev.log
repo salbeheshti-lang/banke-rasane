@@ -4,13 +4,15 @@
 - Environments: .env
 
 ✓ Starting...
-✓ Ready in 706ms
-○ Compiling / ...
- GET / 200 in 5.1s (compile: 4.8s, render: 299ms)
- GET / 200 in 44ms (compile: 4ms, render: 40ms)
- GET / 200 in 151ms (compile: 8ms, render: 143ms)
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+✓ Ready in 744ms
+ GET / 200 in 3.0s (compile: 2.7s, render: 252ms)
+ GET / 200 in 2.8s (compile: 2.7s, render: 58ms)
+ GET / 200 in 55ms (compile: 3ms, render: 52ms)
  GET / 200 in 34ms (compile: 4ms, render: 30ms)
- GET / 200 in 34ms (compile: 4ms, render: 30ms)
- GET / 200 in 38ms (compile: 3ms, render: 35ms)
- GET / 200 in 74ms (compile: 2ms, render: 72ms)
- GET / 200 in 39ms (compile: 4ms, render: 35ms)
+ GET / 200 in 29ms (compile: 1903µs, render: 27ms)
+ GET / 200 in 39ms (compile: 4ms, render: 34ms)
