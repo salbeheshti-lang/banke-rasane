@@ -92,3 +92,4 @@ Use 'kill 1765' to stop it.
  GET / 200 in 24ms (compile: 2ms, render: 21ms)
  GET / 200 in 41ms (compile: 1889µs, render: 39ms)
  GET / 200 in 39ms (compile: 3ms, render: 35ms)
+ GET / 200 in 30ms (compile: 3ms, render: 27ms)
