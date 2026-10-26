@@ -207,39 +207,65 @@ html, body {
   transform: translateY(0) scale(1);
 }
 
-/* White variant — used for the login button (high contrast on the dark hero).
-   Dark green text so "ورود به برنامه" is clearly legible. */
+/* Liquid-glass matte green — used for the login button.
+   Translucent green body with a frosted specular highlight on top,
+   a soft outer glow to separate it from the dark green hero,
+   and white text for strong contrast. */
 .btn-enter-white {
   position: relative;
   padding: 16px 52px;
-  border-radius: 16px;
+  border-radius: 18px;
   font-size: 18px;
   font-weight: 800;
-  color: #016035;
+  color: #ffffff;
   cursor: pointer;
   overflow: hidden;
-  background: linear-gradient(135deg, #ffffff 0%, #f4faf7 55%, #e7f2ec 100%);
-  border: 1px solid rgba(2, 144, 72, 0.5);
+  /* Frosted glass: translucent green base + backdrop blur (visual approximation) */
+  background:
+    /* top specular highlight — the "glass" sheen */
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.08) 42%, rgba(255, 255, 255, 0) 58%),
+    /* soft inner glow */
+    radial-gradient(120% 80% at 50% 0%, rgba(74, 222, 128, 0.35) 0%, rgba(74, 222, 128, 0) 60%),
+    /* main matte green body */
+    linear-gradient(135deg, #0e9d5a 0%, #029048 48%, #016b35 100%);
+  border: 1px solid rgba(134, 239, 172, 0.55);
   box-shadow:
-    0 12px 40px rgba(2, 144, 72, 0.38),
-    0 4px 12px rgba(2, 144, 72, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.95),
-    inset 0 -1px 0 rgba(2, 144, 72, 0.12);
+    /* outer glow — separates the button from the dark hero */
+    0 14px 44px rgba(2, 144, 72, 0.55),
+    0 6px 18px rgba(16, 185, 129, 0.35),
+    /* matte top inner highlight (frosted, not glossy) */
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    /* matte bottom inner shadow (grounds the button) */
+    inset 0 -2px 6px rgba(1, 60, 30, 0.5),
+    /* subtle frosted grain via inner ring */
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   letter-spacing: 0.5px;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 2px rgba(1, 60, 30, 0.5);
+  /* slight frosted feel */
+  backdrop-filter: blur(2px) saturate(115%);
+  -webkit-backdrop-filter: blur(2px) saturate(115%);
 }
 .btn-enter-white:hover {
   transform: translateY(-2px) scale(1.02);
-  background: linear-gradient(135deg, #ffffff 0%, #eaf6ef 55%, #d8efe3 100%);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.1) 42%, rgba(255, 255, 255, 0) 58%),
+    radial-gradient(120% 80% at 50% 0%, rgba(134, 239, 172, 0.45) 0%, rgba(134, 239, 172, 0) 60%),
+    linear-gradient(135deg, #10b981 0%, #04a252 48%, #027940 100%);
   box-shadow:
-    0 18px 56px rgba(2, 144, 72, 0.48),
-    0 6px 20px rgba(2, 144, 72, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 1),
-    inset 0 -1px 0 rgba(2, 144, 72, 0.14);
+    0 20px 60px rgba(2, 144, 72, 0.65),
+    0 8px 24px rgba(16, 185, 129, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -2px 6px rgba(1, 60, 30, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 .btn-enter-white:active {
   transform: translateY(0) scale(1);
+  box-shadow:
+    0 8px 24px rgba(2, 144, 72, 0.45),
+    0 3px 10px rgba(16, 185, 129, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 2px 8px rgba(1, 60, 30, 0.6);
 }
 
 /* Hide scrollbar utility — used for horizontal filter chip rows on mobile */

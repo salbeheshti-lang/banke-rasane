@@ -570,10 +570,10 @@ function LoginScreen({ onEnter, loading }: { onEnter: () => void; loading: boole
           disabled={loading}
           className="btn-enter-white group"
         >
-          <span className="relative z-10 flex items-center gap-3 justify-center" style={{ color: '#016035' }}>
+          <span className="relative z-10 flex items-center gap-3 justify-center" style={{ color: '#ffffff' }}>
             {loading ? (
               <>
-                <div className="w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(1,96,53,0.3)', borderTopColor: '#016035' }}></div>
+                <div className="w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(255,255,255,0.35)', borderTopColor: '#ffffff' }}></div>
                 <span>در حال ورود...</span>
               </>
             ) : (
@@ -582,7 +582,7 @@ function LoginScreen({ onEnter, loading }: { onEnter: () => void; loading: boole
                 <svg
                   className="w-5 h-5 rtl-flip group-hover:-translate-x-1.5 transition-transform"
                   fill="none"
-                  stroke="#016035"
+                  stroke="#ffffff"
                   viewBox="0 0 24 24"
                   strokeWidth={2.5}
                 >

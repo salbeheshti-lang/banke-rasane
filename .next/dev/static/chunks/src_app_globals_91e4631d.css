@@ -4249,30 +4249,32 @@ html, body {
 }
 
 .btn-enter-white {
-  color: #016035;
+  color: #fff;
   cursor: pointer;
   letter-spacing: .5px;
-  text-shadow: 0 1px #ffffffd9;
-  background: linear-gradient(135deg, #fff 0%, #f4faf7 55%, #e7f2ec 100%);
-  border: 1px solid #02904880;
-  border-radius: 16px;
+  text-shadow: 0 1px 2px #013c1e80;
+  -webkit-backdrop-filter: blur(2px) saturate(115%);
+  background: linear-gradient(#ffffff47 0%, #ffffff14 42%, #fff0 58%), radial-gradient(120% 80% at 50% 0, #4ade8059 0%, #4ade8000 60%), linear-gradient(135deg, #0e9d5a 0%, #029048 48%, #016b35 100%);
+  border: 1px solid #86efac8c;
+  border-radius: 18px;
   padding: 16px 52px;
   font-size: 18px;
   font-weight: 800;
   transition: all .35s cubic-bezier(.4, 0, .2, 1);
   position: relative;
   overflow: hidden;
-  box-shadow: 0 12px 40px #02904861, 0 4px 12px #02904838, inset 0 1px #fffffff2, inset 0 -1px #0290481f;
+  box-shadow: 0 14px 44px #0290488c, 0 6px 18px #10b98159, inset 0 1px #fff6, inset 0 -2px 6px #013c1e80, inset 0 0 0 1px #ffffff0f;
 }
 
 .btn-enter-white:hover {
-  background: linear-gradient(135deg, #fff 0%, #eaf6ef 55%, #d8efe3 100%);
+  background: linear-gradient(#ffffff57 0%, #ffffff1a 42%, #fff0 58%), radial-gradient(120% 80% at 50% 0, #86efac73 0%, #86efac00 60%), linear-gradient(135deg, #10b981 0%, #04a252 48%, #027940 100%);
   transform: translateY(-2px)scale(1.02);
-  box-shadow: 0 18px 56px #0290487a, 0 6px 20px #0290484d, inset 0 1px #fff, inset 0 -1px #02904824;
+  box-shadow: 0 20px 60px #029048a6, 0 8px 24px #10b98173, inset 0 1px #ffffff80, inset 0 -2px 6px #013c1e80, inset 0 0 0 1px #ffffff14;
 }
 
 .btn-enter-white:active {
   transform: translateY(0)scale(1);
+  box-shadow: 0 8px 24px #02904873, 0 3px 10px #10b9814d, inset 0 1px #ffffff4d, inset 0 2px 8px #013c1e99;
 }
 
 .no-scrollbar::-webkit-scrollbar {
