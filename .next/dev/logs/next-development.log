@@ -1,7 +1,2 @@
-[00:00:01.381] Server  LOG     ✓ Ready in 1011ms
-[00:00:04.463] Server  LOG     ○ Compiling /test ...
-[00:00:09.515] Browser WARN    Image with src "/banke-rasane-logo.png" has either width or height modified, but not the other. If you use CSS to change the size of your image, also include the styles 'width: "auto"' or 'height: "auto"' to maintain the aspect ratio.
-[00:01:36.581] Browser WARN    Image with src "/banke-rasane-logo.png" has either width or height modified, but not the other. If you use CSS to change the size of your image, also include the styles 'width: "auto"' or 'height: "auto"' to maintain the aspect ratio.
-[00:29:45.615] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:29:45.900] Browser WARN    Image with src "/banke-rasane-logo.png" has either width or height modified, but not the other. If you use CSS to change the size of your image, also include the styles 'width: "auto"' or 'height: "auto"' to maintain the aspect ratio.
-[00:31:14.207] Server  LOG     ✓ Compiled in 131ms
+[00:00:00.855] Server  LOG     ✓ Ready in 634ms
+[00:00:13.859] Server  LOG     ○ Compiling / ...

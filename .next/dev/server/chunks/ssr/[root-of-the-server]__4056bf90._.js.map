@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 14, "column": 0}, "map": {"version":3,"sources":["file:///home/z/my-project/src/app/test/page.tsx"],"sourcesContent":["export default function TestPage() {\n  return (\n    <div style={{ background: '#029048', color: 'white', minHeight: '100vh', padding: 40, fontFamily: 'sans-serif', direction: 'rtl' }}>\n      <h1 style={{ fontSize: 32 }}>✅ صفحه تست — اگه اینو می‌بینی، پراکسی کار می‌کنه!</h1>\n      <p style={{ fontSize: 18, marginTop: 20 }}>این یه صفحه‌ی ساده بدون JavaScript پیچیده‌ست.</p>\n      <p style={{ marginTop: 20, color: '#a8e6c1' }}>اگه صفحه‌ی اصلی سفیده ولی این صفحه کار می‌کنه، مشکل از کد login page هست.</p>\n      <p style={{ marginTop: 20, color: '#a8e6c1' }}>اگه این صفحه هم سفیده، مشکل از پراکسی preview هست.</p>\n    </div>\n  );\n}\n"],"names":[],"mappings":";;;;;;AAAe,SAAS;IACtB,qBACE,8OAAC;QAAI,OAAO;YAAE,YAAY;YAAW,OAAO;YAAS,WAAW;YAAS,SAAS;YAAI,YAAY;YAAc,WAAW;QAAM;;0BAC/H,8OAAC;gBAAG,OAAO;oBAAE,UAAU;gBAAG;0BAAG;;;;;;0BAC7B,8OAAC;gBAAE,OAAO;oBAAE,UAAU;oBAAI,WAAW;gBAAG;0BAAG;;;;;;0BAC3C,8OAAC;gBAAE,OAAO;oBAAE,WAAW;oBAAI,OAAO;gBAAU;0BAAG;;;;;;0BAC/C,8OAAC;gBAAE,OAAO;oBAAE,WAAW;oBAAI,OAAO;gBAAU;0BAAG;;;;;;;;;;;;AAGrD"}}]
-}
