@@ -176,3 +176,8 @@ Use 'kill 1765' to stop it.
  GET /preview 404 in 217ms (compile: 118ms, render: 99ms)
  GET /preview 404 in 215ms (compile: 128ms, render: 88ms)
  GET /preview 404 in 177ms (compile: 7ms, render: 170ms)
+ GET / 200 in 83ms (compile: 36ms, render: 47ms)
+ GET / 200 in 127ms (compile: 52ms, render: 74ms)
+ GET / 200 in 63ms (compile: 2ms, render: 61ms)
+ GET / 200 in 29ms (compile: 4ms, render: 25ms)
+error: script "dev" was terminated by signal SIGKILL (Forced quit)
