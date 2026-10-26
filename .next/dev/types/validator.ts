@@ -56,15 +56,6 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
-// Validate ../../../src/app/preview/page.tsx
-{
-  type __IsExpected<Specific extends AppPageConfig<"/preview">> = Specific
-  const handler = {} as typeof import("../../../src/app/preview/page.js")
-  type __Check = __IsExpected<typeof handler>
-  // @ts-ignore
-  type __Unused = __Check
-}
-
 // Validate ../../../src/app/api/export-pdf/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/export-pdf">> = Specific
