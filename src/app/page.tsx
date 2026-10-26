@@ -319,6 +319,7 @@ export default function Home() {
   const [editingShow, setEditingShow] = useState<TalkShow | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [publishShows, setPublishShows] = useState<TalkShow[] | null>(null);
+  const [showBotConfig, setShowBotConfig] = useState(false);
   const [exportPreview, setExportPreview] = useState<{ shows: TalkShow[]; format: 'pdf' | 'excel' } | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   // Navigation history so every view can navigate back to the previous one
@@ -487,6 +488,15 @@ export default function Home() {
             showToast(`${publishShows.length.toLocaleString('fa-IR')} برنامه به ${platform} منتشر شد`);
             setPublishShows(null);
           }}
+          onOpenBotConfig={() => setShowBotConfig(true)}
+        />
+      )}
+
+      {/* Bot config modal (Telegram / Bale token + chat ID) */}
+      {showBotConfig && (
+        <BotConfigModal
+          onClose={() => setShowBotConfig(false)}
+          onSaved={() => { setShowBotConfig(false); showToast('تنظیمات ربات ذخیره شد'); }}
         />
       )}
 
@@ -3035,6 +3045,42 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
 // ============================================
 // PUBLISH MODAL — preview social media post before publishing
 // ============================================
+
+// ----- Social bot configuration (Telegram / Bale) -----
+// Persisted in localStorage so the user enters their bot token + chat ID once.
+type SocialBotConfig = {
+  platform: 'telegram' | 'bale';
+  token: string;
+  chatId: string;
+};
+
+const BOT_CONFIG_KEY = 'bankresaneh_bot_config_v1';
+
+function loadBotConfig(): SocialBotConfig | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(BOT_CONFIG_KEY);
+    if (!raw) return null;
+    const c = JSON.parse(raw);
+    if ((c.platform === 'telegram' || c.platform === 'bale') && typeof c.token === 'string' && typeof c.chatId === 'string') {
+      return c;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function saveBotConfig(cfg: SocialBotConfig | null) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (cfg) window.localStorage.setItem(BOT_CONFIG_KEY, JSON.stringify(cfg));
+    else window.localStorage.removeItem(BOT_CONFIG_KEY);
+  } catch {
+    // ignore storage errors
+  }
+}
+
 const SOCIAL_PLATFORMS = [
   { id: 'telegram', name: 'تلگرام', color: '#0088cc', icon: '✈' },
   { id: 'bale', name: 'بله', color: '#ffaa00', icon: '💬' },
@@ -3044,10 +3090,11 @@ const SOCIAL_PLATFORMS = [
   { id: 'instagram', name: 'اینستاگرام', color: '#e1306c', icon: '📷' },
 ];
 
-function PublishModal({ shows, onClose, onConfirm }: {
+function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
   shows: TalkShow[];
   onClose: () => void;
   onConfirm: (platform: string) => void;
+  onOpenBotConfig: () => void;
 }) {
   const [selectedPlatform, setSelectedPlatform] = useState<string>('');
   const [postText, setPostText] = useState(
@@ -3055,6 +3102,49 @@ function PublishModal({ shows, onClose, onConfirm }: {
       ? `🎬 ${shows[0].name}\n\n📝 ${shows[0].descriptionFa}\n\n🏷 ${shows[0].category.replace(/^\d+\.\s*/, '')}\n\n🔗 تماشا: ${shows[0].youtube}\n\n#بانک_رسانه #تاک_شو #برنامه_تلویزیونی`
       : `🎬 ${shows.length.toLocaleString('fa-IR')} برنامهٔ منتخب بانک رسانه\n\n${shows.map(s => `• ${s.name} — ${s.descriptionFa.substring(0, 60)}...`).join('\n\n')}\n\n#بانک_رسانه #تاک_شو`
   );
+  // Direct-send state (Telegram / Bale only)
+  const [botConfig, setBotConfig] = useState<SocialBotConfig | null>(() => loadBotConfig());
+  const [sending, setSending] = useState(false);
+  const [sendResult, setSendResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  const directSendSupported = selectedPlatform === 'تلگرام' || selectedPlatform === 'بله';
+
+  // Send the post directly to the selected channel via the /api/publish-social route.
+  const handleDirectSend = async () => {
+    if (!botConfig || !botConfig.token || !botConfig.chatId) {
+      setSendResult({ ok: false, msg: 'ابتدا تنظیمات ربات را وارد کنید' });
+      return;
+    }
+    setSending(true);
+    setSendResult(null);
+    try {
+      // Pick the first available image (real program image if present)
+      const imageUrl = shows.length === 1 && shows[0].images && shows[0].images.length > 0
+        ? shows[0].images[0]
+        : undefined;
+      const res = await fetch('/api/publish-social', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platform: botConfig.platform,
+          token: botConfig.token,
+          chatId: botConfig.chatId,
+          text: postText,
+          imageUrl,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setSendResult({ ok: true, msg: `✅ پست به ${selectedPlatform} ارسال شد` });
+      } else {
+        setSendResult({ ok: false, msg: `❌ ${data.error || 'ارسال ناموفق'}` });
+      }
+    } catch {
+      setSendResult({ ok: false, msg: '❌ خطای شبکه هنگام ارسال' });
+    } finally {
+      setSending(false);
+    }
+  };
 
   const handlePublish = async () => {
     if (!selectedPlatform) return;
@@ -3289,22 +3379,271 @@ function PublishModal({ shows, onClose, onConfirm }: {
           </div>
 
           {/* Action buttons */}
-          <div className="flex gap-3">
+          <div className="space-y-3">
+            {/* Direct send (Telegram / Bale only) */}
+            {directSendSupported && (
+              <div
+                className="p-3 rounded-xl"
+                style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.18)' }}
+              >
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold" style={{ color: '#1a2e22' }}>📡 ارسال مستقیم به {selectedPlatform}</div>
+                    <div className="text-xs" style={{ color: '#7a8a80' }}>
+                      {botConfig
+                        ? `ربات ${botConfig.platform === 'telegram' ? 'تلگرام' : 'بله'} پیکربندی شده — مقصد: ${botConfig.chatId}`
+                        : 'برای ارسال مستقیم، ابتدا توکن ربات و شناسهٔ کانال را وارد کنید'}
+                    </div>
+                  </div>
+                  <button
+                    onClick={onOpenBotConfig}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium flex-shrink-0"
+                    style={{ background: 'rgba(2,144,72,0.12)', color: '#016035', border: '1px solid rgba(2,144,72,0.3)' }}
+                  >
+                    {botConfig ? '⚙ تنظیمات ربات' : '＋ پیکربندی ربات'}
+                  </button>
+                </div>
+                <button
+                  onClick={handleDirectSend}
+                  disabled={!botConfig || sending}
+                  className="btn-enter-premium w-full mt-3"
+                  style={{ opacity: botConfig && !sending ? 1 : 0.5, cursor: botConfig && !sending ? 'pointer' : 'not-allowed' }}
+                >
+                  {sending ? '⏳ در حال ارسال...' : `📡 ارسال مستقیم به ${selectedPlatform}`}
+                </button>
+                {sendResult && (
+                  <div
+                    className="mt-2 text-xs font-medium px-3 py-2 rounded-lg"
+                    style={{
+                      background: sendResult.ok ? 'rgba(2,144,72,0.12)' : 'rgba(220,38,38,0.1)',
+                      color: sendResult.ok ? '#016035' : '#dc2626',
+                    }}
+                  >
+                    {sendResult.msg}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Manual fallback (download image + copy text + open platform) */}
+            <div className="flex gap-3">
+              <button
+                onClick={handlePublish}
+                disabled={!selectedPlatform}
+                className="btn-enter-premium flex-1"
+                style={{ opacity: selectedPlatform ? 1 : 0.5, cursor: selectedPlatform ? 'pointer' : 'not-allowed' }}
+              >
+                {selectedPlatform ? `📤 انتشار دستی در ${selectedPlatform}` : 'ابتدا پلتفرم را انتخاب کنید'}
+              </button>
+              <button
+                onClick={onClose}
+                className="px-6 py-3 rounded-xl text-sm font-medium"
+                style={{ background: 'rgba(122,138,128,0.15)', color: '#4a5d52', border: '1px solid rgba(122,138,128,0.3)' }}
+              >
+                انصراف
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// BOT CONFIG MODAL — configure Telegram/Bale bot token + chat ID
+// ============================================
+function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const initial = loadBotConfig();
+  const [platform, setPlatform] = useState<'telegram' | 'bale'>(initial?.platform || 'telegram');
+  const [token, setToken] = useState(initial?.token || '');
+  const [chatId, setChatId] = useState(initial?.chatId || '');
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [showToken, setShowToken] = useState(false);
+
+  const handleTest = async () => {
+    if (!token) { setTestResult({ ok: false, msg: 'توکن را وارد کنید' }); return; }
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const res = await fetch(`/api/publish-social?platform=${platform}&token=${encodeURIComponent(token)}`);
+      const data = await res.json();
+      if (data.ok) {
+        setTestResult({ ok: true, msg: `✅ ربات «@${data.bot.username}» شناسایی شد` });
+      } else {
+        setTestResult({ ok: false, msg: `❌ ${data.error || 'توکن نامعتبر'}` });
+      }
+    } catch {
+      setTestResult({ ok: false, msg: '❌ خطای شبکه' });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const handleSave = () => {
+    if (!token || !chatId) return;
+    saveBotConfig({ platform, token, chatId });
+    onSaved();
+  };
+
+  const handleClear = () => {
+    saveBotConfig(null);
+    setToken('');
+    setChatId('');
+    setTestResult(null);
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-content" style={{ maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.1)' }}>
+          <h2 className="text-xl font-bold" style={{ color: '#1a2e22' }}>⚙ تنظیمات ربات انتشار</h2>
+          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#7a8a80' }}>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {/* Intro help */}
+          <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.15)', color: '#4a5d52' }}>
+            برای ارسال مستقیم پست‌ها به کانال یا گروه، یک ربات بسازید و آن را ادمین مقصد کنید:
+            <ul className="mt-2 space-y-1 text-xs" style={{ color: '#7a8a80' }}>
+              <li>• تلگرام: ربات <code style={{ direction: 'ltr' }}>@BotFather</code> → /newbot</li>
+              <li>• بله: ربات <code style={{ direction: 'ltr' }}>@BotFather@</code> → ساخت ربات جدید</li>
+              <li>• سپس ربات را به کانال/گروه ادمین کنید</li>
+            </ul>
+          </div>
+
+          {/* Platform picker */}
+          <div>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>پلتفرم</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setPlatform('telegram')}
+                className="p-3 rounded-xl text-center transition-all"
+                style={platform === 'telegram' ? { background: '#0088cc', color: 'white', border: '2px solid #0088cc' } : { background: '#0088cc15', color: '#0088cc', border: '1px solid #0088cc30' }}
+              >
+                <div className="text-2xl mb-1">✈</div>
+                <div className="text-sm font-bold">تلگرام</div>
+              </button>
+              <button
+                onClick={() => setPlatform('bale')}
+                className="p-3 rounded-xl text-center transition-all"
+                style={platform === 'bale' ? { background: '#ffaa00', color: 'white', border: '2px solid #ffaa00' } : { background: '#ffaa0015', color: '#ffaa00', border: '1px solid #ffaa0030' }}
+              >
+                <div className="text-2xl mb-1">💬</div>
+                <div className="text-sm font-bold">بله</div>
+              </button>
+            </div>
+          </div>
+
+          {/* Bot token */}
+          <div>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>توکن ربات (Bot Token)</label>
+            <div className="flex gap-2">
+              <input
+                type={showToken ? 'text' : 'password'}
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                placeholder="123456789:ABCdefGhIjKlMnOpQrStUvWxYz"
+                dir="ltr"
+                style={{
+                  flex: 1,
+                  padding: '10px 14px',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(2,144,72,0.15)',
+                  background: 'rgba(255,255,255,0.9)',
+                  color: '#1a2e22',
+                  fontFamily: 'monospace',
+                  outline: 'none',
+                  textAlign: 'left',
+                }}
+              />
+              <button
+                onClick={() => setShowToken(!showToken)}
+                className="px-3 rounded-xl text-sm font-medium"
+                style={{ background: 'rgba(122,138,128,0.15)', color: '#4a5d52', border: '1px solid rgba(122,138,128,0.3)' }}
+              >
+                {showToken ? '🙈 پنهان' : '👁 نمایش'}
+              </button>
+            </div>
+          </div>
+
+          {/* Chat ID */}
+          <div>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>شناسهٔ مقصد (Chat ID)</label>
+            <input
+              type="text"
+              value={chatId}
+              onChange={(e) => setChatId(e.target.value)}
+              placeholder="@channelusername یا -1001234567890"
+              dir="ltr"
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                borderRadius: '12px',
+                border: '1px solid rgba(2,144,72,0.15)',
+                background: 'rgba(255,255,255,0.9)',
+                color: '#1a2e22',
+                fontFamily: 'monospace',
+                outline: 'none',
+                textAlign: 'left',
+              }}
+            />
+            <p className="text-xs mt-1" style={{ color: '#7a8a80' }}>
+              برای کانال: نام کاربری کانال (مثل @mychannel) یا Chat ID عددی. برای چت خصوصی: Chat ID عددی شما.
+            </p>
+          </div>
+
+          {/* Test button */}
+          <button
+            onClick={handleTest}
+            disabled={testing || !token}
+            className="px-4 py-2 rounded-xl text-sm font-medium w-full"
+            style={{
+              background: testing || !token ? 'rgba(122,138,128,0.15)' : 'rgba(2,144,72,0.12)',
+              color: testing || !token ? '#7a8a80' : '#016035',
+              border: '1px solid ' + (testing || !token ? 'rgba(122,138,128,0.3)' : 'rgba(2,144,72,0.3)'),
+              cursor: testing || !token ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {testing ? '⏳ در حال بررسی...' : '🔍 تست اتصال ربات'}
+          </button>
+          {testResult && (
+            <div
+              className="text-sm font-medium px-3 py-2 rounded-lg"
+              style={{
+                background: testResult.ok ? 'rgba(2,144,72,0.12)' : 'rgba(220,38,38,0.1)',
+                color: testResult.ok ? '#016035' : '#dc2626',
+              }}
+            >
+              {testResult.msg}
+            </div>
+          )}
+
+          {/* Save / clear */}
+          <div className="flex gap-3 pt-2">
             <button
-              onClick={handlePublish}
-              disabled={!selectedPlatform}
+              onClick={handleSave}
+              disabled={!token || !chatId}
               className="btn-enter-premium flex-1"
-              style={{ opacity: selectedPlatform ? 1 : 0.5, cursor: selectedPlatform ? 'pointer' : 'not-allowed' }}
+              style={{ opacity: token && chatId ? 1 : 0.5, cursor: token && chatId ? 'pointer' : 'not-allowed' }}
             >
-              {selectedPlatform ? `✓ انتشار در ${selectedPlatform}` : 'ابتدا پلتفرم را انتخاب کنید'}
+              ✓ ذخیره تنظیمات
             </button>
-            <button
-              onClick={onClose}
-              className="px-6 py-3 rounded-xl text-sm font-medium"
-              style={{ background: 'rgba(122,138,128,0.15)', color: '#4a5d52', border: '1px solid rgba(122,138,128,0.3)' }}
-            >
-              انصراف
-            </button>
+            {initial && (
+              <button
+                onClick={handleClear}
+                className="px-4 py-2 rounded-xl text-sm font-medium"
+                style={{ background: 'rgba(220,38,38,0.12)', color: '#dc2626', border: '1px solid rgba(220,38,38,0.3)' }}
+              >
+                🗑 پاک کردن
+              </button>
+            )}
           </div>
         </div>
       </div>
