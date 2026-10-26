@@ -91,3 +91,12 @@ https://nextjs.org/telemetry
  GET / 200 in 102ms (compile: 54ms, render: 48ms)
  GET /preview 200 in 420ms (compile: 330ms, render: 91ms)
  GET /preview 200 in 33ms (compile: 2ms, render: 30ms)
+ GET / 200 in 49ms (compile: 4ms, render: 45ms)
+✓ Compiled in 149ms
+ GET /preview 404 in 328ms (compile: 143ms, render: 186ms)
+ GET /preview 404 in 216ms (compile: 13ms, render: 203ms)
+ GET /preview 404 in 215ms (compile: 32ms, render: 183ms)
+ GET /preview 404 in 216ms (compile: 89ms, render: 127ms)
+ GET /preview 404 in 217ms (compile: 118ms, render: 99ms)
+ GET /preview 404 in 215ms (compile: 128ms, render: 88ms)
+ GET /preview 404 in 177ms (compile: 7ms, render: 170ms)
