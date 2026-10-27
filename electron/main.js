@@ -1,9 +1,21 @@
 // Electron Main Process — بانک رسانه
-const { app, BrowserWindow, shell, dialog } = require('electron');
+const { app, BrowserWindow, shell, dialog, ipcMain, Menu } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
+
+// Auto-updater — checks GitHub releases for new versions
+// Repo is configured in package.json under "build.publish"
+let autoUpdater = null;
+try {
+  const { autoUpdater: updater } = require('electron-updater');
+  autoUpdater = updater;
+  autoUpdater.autoDownload = false; // ask user before downloading
+  autoUpdater.autoInstallOnAppQuit = true;
+} catch (e) {
+  console.log('electron-updater not available:', e.message);
+}
 
 let mainWindow = null;
 let nextServer = null;
@@ -162,12 +174,94 @@ app.whenReady().then(async () => {
   try {
     await startNextServer();
     createWindow();
+    setupAutoUpdater();
   } catch(err) {
     log('FATAL: ' + err.message);
     dialog.showErrorBox('خطا در راه‌اندازی', 'خطا: ' + err.message + '\n\nفایل لاگ: ' + getLogPath());
     app.quit();
   }
 });
+
+// ===== Auto-updater setup =====
+function setupAutoUpdater() {
+  if (!autoUpdater) return;
+  // Only check for updates in packaged builds (not dev)
+  if (!app.isPackaged) return;
+
+  // Listen for events and forward them to the renderer
+  autoUpdater.on('checking-for-update', () => {
+    log('Update: checking for update...');
+    if (mainWindow) mainWindow.webContents.send('update-status', { event: 'checking' });
+  });
+  autoUpdater.on('update-available', (info) => {
+    log('Update available: ' + info.version);
+    if (mainWindow) {
+      mainWindow.webContents.send('update-status', { event: 'available', version: info.version, releaseNotes: info.releaseNotes });
+      // Ask the user whether to download
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'نسخهٔ جدید موجود است',
+        message: `نسخهٔ ${info.version} از بانک رسانه منتشر شده است.`,
+        detail: 'آیا می‌خواهید آن را دانلود و نصب کنید؟',
+        buttons: ['بله، دانلود کن', 'الآن نه'],
+        defaultId: 0,
+        cancelId: 1,
+      }).then(({ response }) => {
+        if (response === 0) {
+          log('Update: user accepted, downloading...');
+          autoUpdater.downloadUpdate();
+        }
+      });
+    }
+  });
+  autoUpdater.on('update-not-available', () => {
+    log('Update: you are on the latest version');
+    if (mainWindow) mainWindow.webContents.send('update-status', { event: 'up-to-date' });
+  });
+  autoUpdater.on('download-progress', (progress) => {
+    log(`Update download: ${progress.percent.toFixed(1)}%`);
+    if (mainWindow) mainWindow.webContents.send('update-status', { event: 'progress', percent: progress.percent });
+  });
+  autoUpdater.on('update-downloaded', () => {
+    log('Update downloaded — will install on quit');
+    if (mainWindow) {
+      mainWindow.webContents.send('update-status', { event: 'downloaded' });
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'آمادهٔ نصب',
+        message: 'دانلود نسخهٔ جدید کامل شد.',
+        detail: 'برای نصب، برنامه بسته و دوباره باز می‌شود. ادامه می‌دهید؟',
+        buttons: ['نصب و ری‌استارت', 'بعداً'],
+        defaultId: 0,
+        cancelId: 1,
+      }).then(({ response }) => {
+        if (response === 0) {
+          setImmediate(() => autoUpdater.quitAndInstall());
+        }
+      });
+    }
+  });
+  autoUpdater.on('error', (err) => {
+    log('Update error: ' + err.message);
+    if (mainWindow) mainWindow.webContents.send('update-status', { event: 'error', message: err.message });
+  });
+
+  // Allow the renderer to trigger a manual check (e.g. from a "Check for updates" button)
+  ipcMain.handle('check-for-updates', async () => {
+    if (!autoUpdater) return { ok: false, message: 'auto-updater not available' };
+    try {
+      await autoUpdater.checkForUpdates();
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, message: e.message };
+    }
+  });
+
+  // Check on startup (a few seconds after the window shows, to not block login)
+  setTimeout(() => {
+    autoUpdater.checkForUpdates().catch(e => log('Update check failed: ' + e.message));
+  }, 5000);
+}
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 app.on('before-quit', () => { if (nextServer) { nextServer.kill('SIGTERM'); setTimeout(() => { if(nextServer) nextServer.kill('SIGKILL'); }, 3000); } });

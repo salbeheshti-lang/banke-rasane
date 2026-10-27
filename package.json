@@ -1,6 +1,6 @@
 {
   "name": "banke-rasane",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "author": "بانک رسانه",
   "description": "آرشیو تخصصی برنامه‌های تلویزیونی",
@@ -15,7 +15,7 @@
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
     "electron:dev": "next build && electron electron/main.js",
-    "electron:build": "next build && electron-builder --win --x64",
+    "electron:build": "next build && electron-builder --win nsis --x64",
     "electron:start": "electron electron/main.js"
   },
   "build": {
@@ -29,7 +29,8 @@
     "files": [
       "electron/main.js",
       "electron/icon.ico",
-      "electron/logo.png"
+      "electron/logo.png",
+      "node_modules/electron-updater/**/*"
     ],
     "extraResources": [
       {
@@ -51,16 +52,11 @@
     "win": {
       "target": [
         {
-          "target": "portable",
-          "arch": ["x64"]
-        },
-        {
           "target": "nsis",
           "arch": ["x64"]
         }
       ],
-      "icon": "electron/icon.ico",
-      "artifactName": "BankResaneh-Portable-${version}.${ext}"
+      "icon": "electron/icon.ico"
     },
     "nsis": {
       "oneClick": false,
@@ -68,10 +64,14 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "بانک رسانه",
-      "artifactName": "BankResaneh-Setup-${version}.${ext}"
+      "artifactName": "BankResaneh-Setup-${version}.${ext}",
+      "differentialPackage": true
     },
-    "portable": {
-      "artifactName": "BankResaneh-Portable-${version}.${ext}"
+    "publish": {
+      "provider": "github",
+      "owner": "salbeheshti-lang",
+      "repo": "banke-rasane",
+      "releaseType": "release"
     }
   },
   "dependencies": {
@@ -115,6 +115,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
+    "electron-updater": "^6.8.11",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.23.2",
     "input-otp": "^1.4.2",
@@ -146,13 +147,14 @@
     "@tailwindcss/postcss": "^4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "autoprefixer": "^10.6.2",
     "bun-types": "^1.3.4",
     "electron": "33",
     "electron-builder": "25",
     "eslint": "^9",
     "eslint-config-next": "^16.1.1",
-    "tailwindcss": "^4",
-    "tw-animate-css": "^1.3.5",
+    "postcss": "^8.5.32",
+    "tailwindcss": "3",
     "typescript": "^5"
   }
 }

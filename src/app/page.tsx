@@ -256,6 +256,53 @@ function ShowImageGallery({ images, showName }: { images: string[]; showName: st
 // ============================================
 // MAIN APP
 // ============================================
+// ============================================
+// LOCAL PERSISTENCE — user edits are saved in localStorage so they survive a refresh.
+// ============================================
+type Overrides = {
+  added: TalkShow[];                       // shows created by the user
+  edited: Record<number, TalkShow>;        // edits to shows from the base JSON
+  deleted: number[];                       // base shows hidden by the user
+};
+
+const OVERRIDES_KEY = 'bankresaneh_overrides_v1';
+
+function loadOverrides(): Overrides {
+  if (typeof window === 'undefined') return { added: [], edited: {}, deleted: [] };
+  try {
+    const raw = window.localStorage.getItem(OVERRIDES_KEY);
+    if (!raw) return { added: [], edited: {}, deleted: [] };
+    const o = JSON.parse(raw);
+    return {
+      added: Array.isArray(o.added) ? o.added : [],
+      edited: o.edited && typeof o.edited === 'object' ? o.edited : {},
+      deleted: Array.isArray(o.deleted) ? o.deleted : [],
+    };
+  } catch {
+    return { added: [], edited: {}, deleted: [] };
+  }
+}
+
+function saveOverrides(o: Overrides) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(OVERRIDES_KEY, JSON.stringify(o));
+  } catch {
+    // Storage full or unavailable — silently ignore (edits stay in-memory only).
+  }
+}
+
+// Merge base shows with the user's overrides: drop deleted ones, replace edited ones, prepend added ones.
+function applyOverrides(base: TalkShow[], o: Overrides): TalkShow[] {
+  const deleted = new Set(o.deleted);
+  const out: TalkShow[] = [];
+  for (const s of base) {
+    if (deleted.has(s.num)) continue;
+    out.push(o.edited[s.num] || s);
+  }
+  return [...o.added, ...out];
+}
+
 export default function Home() {
   const [screen, setScreen] = useState<'login' | 'app'>('login');
   const [currentView, setCurrentView] = useState<'dashboard' | 'programs' | 'genre' | 'reports' | 'add'>('dashboard');
@@ -263,13 +310,20 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [talkShows, setTalkShows] = useState<TalkShow[]>([]);
+  // Base data (raw from JSON, never mutated) used to recompute the merged list.
+  const [baseShows, setBaseShows] = useState<TalkShow[]>([]);
+  // User changes persisted to localStorage so add/edit/delete survive a refresh.
+  const [overrides, setOverrides] = useState<Overrides>({ added: [], edited: {}, deleted: [] });
   const [uploadedShows, setUploadedShows] = useState<number[]>([]);
   const [selectedShow, setSelectedShow] = useState<TalkShow | null>(null);
   const [editingShow, setEditingShow] = useState<TalkShow | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [publishShows, setPublishShows] = useState<TalkShow[] | null>(null);
+  const [showBotConfig, setShowBotConfig] = useState(false);
   const [exportPreview, setExportPreview] = useState<{ shows: TalkShow[]; format: 'pdf' | 'excel' } | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Navigation history so every view can navigate back to the previous one
+  const [viewStack, setViewStack] = useState<Array<{ view: typeof currentView; genre: Genre | null }>>([]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -279,29 +333,91 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    // Load persisted overrides first, then merge them with the base JSON data.
+    const saved = loadOverrides();
+    setOverrides(saved);
     fetch('/talk-shows-data.json')
       .then(r => r.json())
-      .then(data => setTalkShows(data))
+      .then((data: TalkShow[]) => {
+        setBaseShows(data);
+        setTalkShows(applyOverrides(data, saved));
+      })
       .catch(e => console.error('Failed to load data:', e));
   }, []);
+
+  // Recompute the merged list whenever overrides change (e.g. after an edit).
+  useEffect(() => {
+    if (baseShows.length > 0) {
+      setTalkShows(applyOverrides(baseShows, overrides));
+    }
+  }, [baseShows, overrides]);
 
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleNavigate = (v: 'dashboard' | 'programs' | 'reports' | 'add') => {
-    setCurrentView(v);
-    setSelectedGenre(null);
+  // Persist a new set of overrides to state + localStorage in one place.
+  const commitOverrides = (next: Overrides) => {
+    setOverrides(next);
+    saveOverrides(next);
+  };
+
+  // Add a brand-new show, or update an existing one (created/edited by the user).
+  const handleSaveShow = (show: TalkShow, isEdit: boolean) => {
+    if (isEdit) {
+      const inAdded = overrides.added.find(s => s.num === show.num);
+      const next: Overrides = inAdded
+        ? { ...overrides, added: overrides.added.map(s => s.num === show.num ? show : s) }
+        : { ...overrides, edited: { ...overrides.edited, [show.num]: show } };
+      commitOverrides(next);
+      showToast(`برنامه «${show.name}» بروزرسانی شد`);
+    } else {
+      commitOverrides({ ...overrides, added: [show, ...overrides.added] });
+      showToast(`برنامه «${show.name}» اضافه شد`);
+    }
+  };
+
+  // Delete a show (hides it from the list; user-added ones are removed outright).
+  const handleDeleteShow = (num: number) => {
+    const inAdded = overrides.added.find(s => s.num === num);
+    const next: Overrides = inAdded
+      ? { ...overrides, added: overrides.added.filter(s => s.num !== num) }
+      : { ...overrides, deleted: Array.from(new Set([...overrides.deleted, num])) };
+    commitOverrides(next);
+    showToast('برنامه حذف شد');
+  };
+
+  // Push the current view onto the history stack, then go to `to`.
+  const navigate = (to: typeof currentView, genre: Genre | null = null) => {
+    setViewStack(prev => [...prev, { view: currentView, genre: selectedGenre }]);
+    setCurrentView(to);
+    setSelectedGenre(genre);
     setDrawerOpen(false);
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Pop the history stack and restore the previous view (used by the back button).
+  const goBack = () => {
+    setViewStack(prev => {
+      if (prev.length === 0) return prev;
+      const last = prev[prev.length - 1];
+      setCurrentView(last.view);
+      setSelectedGenre(last.genre);
+      setDrawerOpen(false);
+      if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+      return prev.slice(0, -1);
+    });
+  };
+
+  const canGoBack = viewStack.length > 0;
+
+  const handleNavigate = (v: 'dashboard' | 'programs' | 'reports' | 'add') => {
+    navigate(v, null);
+  };
+
   const handleGenreSelect = (g: Genre) => {
-    setSelectedGenre(g);
-    setCurrentView('genre');
-    setDrawerOpen(false);
-    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+    navigate('genre', g);
   };
 
   if (screen === 'login') {
@@ -317,6 +433,8 @@ export default function Home() {
         onMenuClick={() => setDrawerOpen(true)}
         isMobile={isMobile}
         currentView={currentView}
+        onBack={goBack}
+        canGoBack={canGoBack}
       />
 
       <DrawerMenu
@@ -330,11 +448,11 @@ export default function Home() {
       />
 
       <main className={isMobile ? 'p-4 pt-20 pb-28' : 'p-8 pt-24'}>
-        {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => { setSelectedGenre(g); setCurrentView('genre'); }} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => setCurrentView('add')} />}
+        {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => navigate('add')} />}
         {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} />}
         {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} />}
-        {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} />}
-        {currentView === 'add' && <AddEditView talkShows={talkShows} setTalkShows={setTalkShows} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setCurrentView('programs'); }} showToast={showToast} />}
+        {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} onExport={(shows, format) => setExportPreview({ shows, format })} />}
+        {currentView === 'add' && <AddEditView talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} />}
       </main>
 
       {isMobile && (
@@ -353,7 +471,8 @@ export default function Home() {
         <ShowDetailsModal
           show={selectedShow}
           onClose={() => setSelectedShow(null)}
-          onEdit={(s) => { setSelectedShow(null); setEditingShow(s); setCurrentView('add'); }}
+          onEdit={(s) => { setSelectedShow(null); setEditingShow(s); navigate('add'); }}
+          onDelete={handleDeleteShow}
           onPublish={(s) => setPublishShows([s])}
           onExport={(s, fmt) => setExportPreview({ shows: [s], format: fmt })}
           isUploaded={uploadedShows.includes(selectedShow.num)}
@@ -369,6 +488,15 @@ export default function Home() {
             showToast(`${publishShows.length.toLocaleString('fa-IR')} برنامه به ${platform} منتشر شد`);
             setPublishShows(null);
           }}
+          onOpenBotConfig={() => setShowBotConfig(true)}
+        />
+      )}
+
+      {/* Bot config modal (Telegram / Bale token + chat ID) */}
+      {showBotConfig && (
+        <BotConfigModal
+          onClose={() => setShowBotConfig(false)}
+          onSaved={() => { setShowBotConfig(false); showToast('تنظیمات ربات ذخیره شد'); }}
         />
       )}
 
@@ -450,12 +578,12 @@ function LoginScreen({ onEnter, loading }: { onEnter: () => void; loading: boole
         <button
           onClick={onEnter}
           disabled={loading}
-          className="btn-enter-premium group"
+          className="btn-enter-white group"
         >
-          <span className="relative z-10 flex items-center gap-3 justify-center">
+          <span className="relative z-10 flex items-center gap-3 justify-center" style={{ color: '#ffffff' }}>
             {loading ? (
               <>
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <div className="w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(255,255,255,0.35)', borderTopColor: '#ffffff' }}></div>
                 <span>در حال ورود...</span>
               </>
             ) : (
@@ -464,7 +592,7 @@ function LoginScreen({ onEnter, loading }: { onEnter: () => void; loading: boole
                 <svg
                   className="w-5 h-5 rtl-flip group-hover:-translate-x-1.5 transition-transform"
                   fill="none"
-                  stroke="white"
+                  stroke="#ffffff"
                   viewBox="0 0 24 24"
                   strokeWidth={2.5}
                 >
@@ -489,10 +617,12 @@ function LoginScreen({ onEnter, loading }: { onEnter: () => void; loading: boole
 // TOP APP BAR — fixed at top, hamburger (3-line) on the right,
 // logo + title in the center, visible on BOTH desktop and mobile
 // ============================================
-function TopAppBar({ onMenuClick, isMobile, currentView }: {
+function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack }: {
   onMenuClick: () => void;
   isMobile: boolean;
   currentView: string;
+  onBack: () => void;
+  canGoBack: boolean;
 }) {
   const viewTitles: Record<string, string> = {
     dashboard: 'آرشیو تخصصی برنامه‌های تلویزیونی',
@@ -579,9 +709,34 @@ function TopAppBar({ onMenuClick, isMobile, currentView }: {
           )}
         </div>
 
-        {/* Right: empty placeholder to keep the title centered, but on mobile show a small badge */}
+        {/* Left placeholder: back button (when there is history), else status badge */}
         <div style={{ minWidth: '44px', display: 'flex', justifyContent: 'flex-end' }}>
-          {isMobile ? (
+          {canGoBack ? (
+            <button
+              onClick={onBack}
+              aria-label="بازگشت به صفحهٔ قبل"
+              title="بازگشت به صفحهٔ قبل"
+              className="flex items-center gap-2 rounded-xl transition-all"
+              style={{
+                background: 'rgba(255, 255, 255, 0.96)',
+                border: '1px solid rgba(74, 222, 128, 0.55)',
+                color: '#016035',
+                padding: isMobile ? '9px 12px' : '9px 16px',
+                boxShadow: '0 4px 14px rgba(2, 144, 72, 0.32), inset 0 1px 0 rgba(255,255,255,0.7)',
+                minWidth: '44px',
+                minHeight: '44px',
+                fontWeight: 700,
+                fontSize: '14px',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.96)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+              {!isMobile && <span>بازگشت</span>}
+            </button>
+          ) : isMobile ? (
             <span
               className="px-2.5 py-1 rounded-full text-xs font-bold"
               style={{
@@ -875,12 +1030,12 @@ function MobileBottomNav({
           <div
             className="fixed bottom-0 left-0 right-0 p-4 animate-slide-up-nav"
             style={{
-              background: 'rgba(255, 255, 255, 0.95)',
-              backdropFilter: 'blur(28px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-              borderTop: '1px solid rgba(255, 255, 255, 1)',
+              background: 'rgba(238, 246, 241, 0.6)',
+              backdropFilter: 'blur(26px) saturate(160%)',
+              WebkitBackdropFilter: 'blur(26px) saturate(160%)',
+              borderTop: '1px solid rgba(255, 255, 255, 0.55)',
               borderRadius: '24px 24px 0 0',
-              boxShadow: '0 -10px 40px rgba(2, 144, 72, 0.18), inset 0 1px 0 rgba(255, 255, 255, 1)',
+              boxShadow: '0 -10px 40px rgba(2, 144, 72, 0.16), inset 0 1px 0 rgba(255,255,255,0.4)',
               paddingBottom: '32px',
               maxHeight: '70vh',
               overflowY: 'auto',
@@ -940,16 +1095,16 @@ function MobileBottomNav({
         </div>
       )}
 
-      <nav className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-4">
+      <nav className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3">
         <div
-          className="flex items-center justify-around"
+          className="flex items-center justify-around no-scrollbar"
           style={{
-            background: 'rgba(255, 255, 255, 0.92)',
-            backdropFilter: 'blur(28px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-            border: '1px solid rgba(255, 255, 255, 1)',
-            borderRadius: '20px',
-            boxShadow: '0 10px 40px rgba(2, 144, 72, 0.18), inset 0 1px 0 rgba(255, 255, 255, 1)',
+            background: 'rgba(238, 246, 241, 0.5)',
+            backdropFilter: 'blur(24px) saturate(160%)',
+            WebkitBackdropFilter: 'blur(24px) saturate(160%)',
+            border: '1px solid rgba(255, 255, 255, 0.55)',
+            borderRadius: '22px',
+            boxShadow: '0 8px 30px rgba(2, 144, 72, 0.16), inset 0 1px 0 rgba(255,255,255,0.4)',
             padding: '8px',
           }}
         >
@@ -1016,7 +1171,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd }: {
     { label: 'کل برنامه‌ها', value: talkShows.length, color: '#029048', icon: 'film' },
     { label: 'ژانرها', value: GENRES.length, color: '#2563eb', icon: 'tag' },
     { label: 'آپلود شده در فضای مجازی', value: uploadedCount, color: '#7c3aed', icon: 'cloud' },
-    { label: 'با تصویر (PDF + وب)', value: 149 + 23, color: '#db2777', icon: 'image' },
+    { label: 'با تصویر', value: talkShows.filter(s => s.images && s.images.length > 0).length, color: '#db2777', icon: 'image' },
   ];
 
   return (
@@ -1278,39 +1433,42 @@ function ProgramsView({
         </div>
       )}
 
-      {/* Search & toolbar */}
-      <div className="premium-glass p-4 mb-6 space-y-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex-1 min-w-[200px] relative">
-            <svg
-              className="w-5 h-5 absolute right-3 top-1/2 -translate-y-1/2"
-              style={{ color: '#7a8a80' }}
-              fill="none" stroke="currentColor" viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={`جستجو در ${genre ? genre.nameFa : 'همهٔ برنامه‌ها'}...`}
-              style={{
-                background: 'rgba(255, 255, 255, 0.85)',
-                border: '1px solid rgba(2, 144, 72, 0.15)',
-                borderRadius: '12px',
-                padding: '10px 36px 10px 16px',
-                width: '100%',
-                fontFamily: 'inherit',
-                color: '#1a2e22',
-                outline: 'none',
-              }}
-            />
-          </div>
-
-          <div
-            className="flex items-center gap-2 rounded-xl p-1"
+      {/* Search & toolbar — mobile-friendly: full-width search, actions row, horizontally scrollable filter chips */}
+      <div className="premium-glass p-3 sm:p-4 mb-6 space-y-3">
+        {/* Search — full width on every screen size */}
+        <div className="relative">
+          <svg
+            className="w-5 h-5 absolute right-3 top-1/2 -translate-y-1/2"
+            style={{ color: '#7a8a80' }}
+            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={`جستجو در ${genre ? genre.nameFa : 'همهٔ برنامه‌ها'}...`}
             style={{
-              background: 'rgba(255, 255, 255, 0.85)',
+              background: 'rgba(255, 255, 255, 0.9)',
+              border: '1px solid rgba(2, 144, 72, 0.15)',
+              borderRadius: '12px',
+              padding: '11px 36px 11px 16px',
+              width: '100%',
+              fontFamily: 'inherit',
+              color: '#1a2e22',
+              outline: 'none',
+              fontSize: '15px',
+            }}
+          />
+        </div>
+
+        {/* Actions row — view toggle + multi-select */}
+        <div className="flex items-center gap-2">
+          <div
+            className="flex items-center gap-1 rounded-xl p-1 flex-shrink-0"
+            style={{
+              background: 'rgba(255, 255, 255, 0.9)',
               border: '1px solid rgba(2, 144, 72, 0.15)',
             }}
           >
@@ -1318,6 +1476,7 @@ function ProgramsView({
               onClick={() => setView('grid')}
               className="p-2 rounded-lg transition-colors"
               style={view === 'grid' ? { background: '#029048', color: 'white' } : { color: '#4a5d52' }}
+              aria-label="نمایش شبکه‌ای"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
@@ -1327,6 +1486,7 @@ function ProgramsView({
               onClick={() => setView('list')}
               className="p-2 rounded-lg transition-colors"
               style={view === 'list' ? { background: '#029048', color: 'white' } : { color: '#4a5d52' }}
+              aria-label="نمایش لیستی"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -1336,13 +1496,13 @@ function ProgramsView({
 
           <button
             onClick={() => setSelectionMode(!selectionMode)}
-            className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+            className="px-4 py-2 rounded-xl text-sm font-medium transition-all flex-1"
             style={selectionMode ? {
               background: 'rgba(2, 144, 72, 0.15)',
               border: '1px solid rgba(2, 144, 72, 0.3)',
               color: '#016035',
             } : {
-              background: 'rgba(255, 255, 255, 0.85)',
+              background: 'rgba(255, 255, 255, 0.9)',
               border: '1px solid rgba(2, 144, 72, 0.15)',
               color: '#4a5d52',
             }}
@@ -1351,54 +1511,57 @@ function ProgramsView({
           </button>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span style={{ color: '#7a8a80' }} className="text-sm ml-2">اندازه:</span>
-          {[
-            { key: 'all', label: 'همه' },
-            { key: 'بزرگ/لوکس', label: 'بزرگ/لوکس' },
-            { key: 'متوسط/استاندارد', label: 'متوسط' },
-            { key: 'کوچک/اقتصادی', label: 'کوچک' },
-          ].map(f => (
-            <button
-              key={f.key}
-              onClick={() => setFilterSize(f.key)}
-              className="px-3 py-1.5 rounded-lg text-sm font-medium"
-              style={filterSize === f.key ? {
-                background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
-                color: 'white',
-              } : {
-                background: 'rgba(255, 255, 255, 0.85)',
-                color: '#4a5d52',
-              }}
-            >
-              {f.label}
-            </button>
-          ))}
-          <div className="w-px h-6 bg-green-500/20 mx-2"></div>
-          <span style={{ color: '#7a8a80' }} className="text-sm ml-2">سبک:</span>
-          {[
-            { key: 'all', label: 'همه' },
-            { key: 'مدرن', label: 'مدرن' },
-            { key: 'ترکیبی', label: 'ترکیبی' },
-            { key: 'مینیمال', label: 'مینیمال' },
-            { key: 'کلاسیک/سنتی', label: 'کلاسیک' },
-          ].map(f => (
-            <button
-              key={f.key}
-              onClick={() => setFilterStyle(f.key)}
-              className="px-3 py-1.5 rounded-lg text-sm font-medium"
-              style={filterStyle === f.key ? {
-                background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
-                color: 'white',
-              } : {
-                background: 'rgba(255, 255, 255, 0.85)',
-                color: '#4a5d52',
-              }}
-            >
-              {f.label}
-            </button>
-          ))}
+        {/* Filters — two horizontally scrollable rows (no chaotic wrapping on mobile) */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+            <span className="text-sm flex-shrink-0" style={{ color: '#7a8a80' }}>اندازه:</span>
+            {[
+              { key: 'all', label: 'همه' },
+              { key: 'بزرگ/لوکس', label: 'بزرگ/لوکس' },
+              { key: 'متوسط/استاندارد', label: 'متوسط' },
+              { key: 'کوچک/اقتصادی', label: 'کوچک' },
+            ].map(f => (
+              <button
+                key={f.key}
+                onClick={() => setFilterSize(f.key)}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
+                style={filterSize === f.key ? {
+                  background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
+                  color: 'white',
+                } : {
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  color: '#4a5d52',
+                }}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+            <span className="text-sm flex-shrink-0" style={{ color: '#7a8a80' }}>سبک:</span>
+            {[
+              { key: 'all', label: 'همه' },
+              { key: 'مدرن', label: 'مدرن' },
+              { key: 'ترکیبی', label: 'ترکیبی' },
+              { key: 'مینیمال', label: 'مینیمال' },
+              { key: 'کلاسیک/سنتی', label: 'کلاسیک' },
+            ].map(f => (
+              <button
+                key={f.key}
+                onClick={() => setFilterStyle(f.key)}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
+                style={filterStyle === f.key ? {
+                  background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
+                  color: 'white',
+                } : {
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  color: '#4a5d52',
+                }}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {selectionMode && selectedIds.length > 0 && (
@@ -1578,23 +1741,10 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
           </>
         )}
 
-        {/* Source badge */}
-        <span
-          className="absolute top-2 right-2 text-xs px-2 py-0.5 rounded-md backdrop-blur font-medium"
-          style={{
-            background: show.source === 'تصویر PDF' ? 'rgba(220, 38, 38, 0.9)'
-              : show.source === 'تصویر وب' ? 'rgba(37, 99, 235, 0.9)'
-              : 'rgba(122, 138, 128, 0.9)',
-            color: 'white'
-          }}
-        >
-          {show.source === 'تصویر PDF' ? 'PDF' : show.source === 'تصویر وب' ? 'وب' : 'متن'}
-        </span>
-
         {/* Multi-image badge — shows count when more than 1 image */}
         {show.images && show.images.length > 1 && (
           <span
-            className="absolute top-2 right-14 text-xs px-2 py-0.5 rounded-md backdrop-blur font-bold flex items-center gap-1"
+            className="absolute top-2 right-2 text-xs px-2 py-0.5 rounded-md backdrop-blur font-bold flex items-center gap-1"
             style={{ background: 'rgba(0, 0, 0, 0.75)', color: 'white' }}
           >
             🖼 {show.images.length.toLocaleString('fa-IR')}
@@ -1783,13 +1933,6 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
         <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.8)' }}>{show.summary && show.summary !== '—' ? show.summary : show.category}</p>
       </div>
 
-      <div className="hidden sm:block text-center flex-shrink-0">
-        <div className="text-xs" style={{ color: 'rgba(255,255,255,0.6)' }}>منبع</div>
-        <div className="font-bold text-xs text-white">
-          {show.source === 'تصویر PDF' ? 'PDF' : show.source === 'تصویر وب' ? 'وب' : 'متن'}
-        </div>
-      </div>
-
       <div className="text-center flex-shrink-0">
         <div className="text-xs" style={{ color: 'rgba(255,255,255,0.6)' }}>شماره</div>
         <div className="font-bold text-sm text-white">#{show.num.toLocaleString('fa-IR')}</div>
@@ -1801,15 +1944,17 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
 // ============================================
 // SHOW DETAILS MODAL — with Persian description, links, publish, export
 // ============================================
-function ShowDetailsModal({ show, onClose, onEdit, onPublish, onExport, isUploaded }: {
+function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport, isUploaded }: {
   show: TalkShow;
   onClose: () => void;
   onEdit: (s: TalkShow) => void;
+  onDelete: (num: number) => void;
   onPublish: (s: TalkShow) => void;
   onExport: (s: TalkShow, fmt: 'pdf' | 'excel') => void;
   isUploaded: boolean;
 }) {
   const thumb = getShowThumbnail(show);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -2017,14 +2162,48 @@ function ShowDetailsModal({ show, onClose, onEdit, onPublish, onExport, isUpload
             >
               📊 گزارش Excel
             </button>
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="px-4 py-2 rounded-xl text-sm font-medium"
+              style={{ background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}
+            >
+              🗑 حذف برنامه
+            </button>
           </div>
+
+          {/* Delete confirmation */}
+          {confirmDelete && (
+            <div
+              className="mb-4 p-4 rounded-xl flex items-center justify-between gap-3"
+              style={{ background: 'rgba(220, 38, 38, 0.08)', border: '1px solid rgba(220, 38, 38, 0.25)' }}
+            >
+              <span className="text-sm font-medium" style={{ color: '#dc2626' }}>
+                این برنامه حذف شود؟ (قابل بازگشت نیست)
+              </span>
+              <div className="flex gap-2 flex-shrink-0">
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium"
+                  style={{ background: 'rgba(122, 138, 128, 0.15)', color: '#4a5d52', border: '1px solid rgba(122, 138, 128, 0.3)' }}
+                >
+                  انصراف
+                </button>
+                <button
+                  onClick={() => { onDelete(show.num); onClose(); }}
+                  className="px-3 py-1.5 rounded-lg text-sm font-bold"
+                  style={{ background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)', color: 'white' }}
+                >
+                  بله، حذف کن
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Decor details */}
           <div>
             <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>مشخصات دکور و صحنه</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <DetailField label="دسته‌بندی" value={show.category} />
-              <DetailField label="منبع داده" value={show.source} />
               <DetailField label="اندازهٔ استودیو" value={show.size} />
               <DetailField label="تماشاگر" value={show.viewers} />
               <DetailField label="سبک دکور" value={show.style} />
@@ -2064,9 +2243,9 @@ function DetailField({ label, value }: { label: string; value: string }) {
 // ============================================
 // ADD/EDIT VIEW
 // ============================================
-function AddEditView({ talkShows, setTalkShows, editingShow, setEditingShow, onDone, showToast }: {
+function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, showToast }: {
   talkShows: TalkShow[];
-  setTalkShows: (s: TalkShow[]) => void;
+  onSave: (show: TalkShow, isEdit: boolean) => void;
   editingShow: TalkShow | null;
   setEditingShow: (s: TalkShow | null) => void;
   onDone: () => void;
@@ -2077,7 +2256,7 @@ function AddEditView({ talkShows, setTalkShows, editingShow, setEditingShow, onD
       num: Math.max(0, ...talkShows.map(s => s.num)) + 1,
       name: '',
       category: '',
-      source: 'متن',
+      source: '',
       size: 'متوسط/استاندارد',
       viewers: 'بدون تماشاگر',
       style: 'مدرن',
@@ -2172,11 +2351,9 @@ function AddEditView({ talkShows, setTalkShows, editingShow, setEditingShow, onD
       form.socialPost = `🎬 ${form.name}\n\n📝 ${form.descriptionFa}\n\n#بانک_رسانه #تاک_شو`;
     }
     if (editingShow) {
-      setTalkShows(talkShows.map(s => s.num === editingShow.num ? form as TalkShow : s));
-      showToast(`برنامه «${form.name}» بروزرسانی شد`);
+      onSave(form as TalkShow, true);
     } else {
-      setTalkShows([...talkShows, form as TalkShow]);
-      showToast(`برنامه «${form.name}» اضافه شد`);
+      onSave(form as TalkShow, false);
     }
     onDone();
   };
@@ -2237,16 +2414,6 @@ function AddEditView({ talkShows, setTalkShows, editingShow, setEditingShow, onD
             value={form.category || ''}
             onChange={v => setForm({ ...form, category: v })}
             options={GENRES.map(g => ({ value: g.nameFa, label: g.nameFa }))}
-          />
-          <FormSelect
-            label="منبع داده"
-            value={form.source || ''}
-            onChange={v => setForm({ ...form, source: v })}
-            options={[
-              { value: 'تصویر PDF', label: 'تصویر PDF' },
-              { value: 'تصویر وب', label: 'تصویر وب' },
-              { value: 'متن', label: 'تحلیل متنی' },
-            ]}
           />
           <FormSelect
             label="اندازهٔ استودیو"
@@ -2867,6 +3034,42 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
 // ============================================
 // PUBLISH MODAL — preview social media post before publishing
 // ============================================
+
+// ----- Social bot configuration (Telegram / Bale) -----
+// Persisted in localStorage so the user enters their bot token + chat ID once.
+type SocialBotConfig = {
+  platform: 'telegram' | 'bale';
+  token: string;
+  chatId: string;
+};
+
+const BOT_CONFIG_KEY = 'bankresaneh_bot_config_v1';
+
+function loadBotConfig(): SocialBotConfig | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(BOT_CONFIG_KEY);
+    if (!raw) return null;
+    const c = JSON.parse(raw);
+    if ((c.platform === 'telegram' || c.platform === 'bale') && typeof c.token === 'string' && typeof c.chatId === 'string') {
+      return c;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function saveBotConfig(cfg: SocialBotConfig | null) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (cfg) window.localStorage.setItem(BOT_CONFIG_KEY, JSON.stringify(cfg));
+    else window.localStorage.removeItem(BOT_CONFIG_KEY);
+  } catch {
+    // ignore storage errors
+  }
+}
+
 const SOCIAL_PLATFORMS = [
   { id: 'telegram', name: 'تلگرام', color: '#0088cc', icon: '✈' },
   { id: 'bale', name: 'بله', color: '#ffaa00', icon: '💬' },
@@ -2876,10 +3079,11 @@ const SOCIAL_PLATFORMS = [
   { id: 'instagram', name: 'اینستاگرام', color: '#e1306c', icon: '📷' },
 ];
 
-function PublishModal({ shows, onClose, onConfirm }: {
+function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
   shows: TalkShow[];
   onClose: () => void;
   onConfirm: (platform: string) => void;
+  onOpenBotConfig: () => void;
 }) {
   const [selectedPlatform, setSelectedPlatform] = useState<string>('');
   const [postText, setPostText] = useState(
@@ -2887,6 +3091,49 @@ function PublishModal({ shows, onClose, onConfirm }: {
       ? `🎬 ${shows[0].name}\n\n📝 ${shows[0].descriptionFa}\n\n🏷 ${shows[0].category.replace(/^\d+\.\s*/, '')}\n\n🔗 تماشا: ${shows[0].youtube}\n\n#بانک_رسانه #تاک_شو #برنامه_تلویزیونی`
       : `🎬 ${shows.length.toLocaleString('fa-IR')} برنامهٔ منتخب بانک رسانه\n\n${shows.map(s => `• ${s.name} — ${s.descriptionFa.substring(0, 60)}...`).join('\n\n')}\n\n#بانک_رسانه #تاک_شو`
   );
+  // Direct-send state (Telegram / Bale only)
+  const [botConfig, setBotConfig] = useState<SocialBotConfig | null>(() => loadBotConfig());
+  const [sending, setSending] = useState(false);
+  const [sendResult, setSendResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  const directSendSupported = selectedPlatform === 'تلگرام' || selectedPlatform === 'بله';
+
+  // Send the post directly to the selected channel via the /api/publish-social route.
+  const handleDirectSend = async () => {
+    if (!botConfig || !botConfig.token || !botConfig.chatId) {
+      setSendResult({ ok: false, msg: 'ابتدا تنظیمات ربات را وارد کنید' });
+      return;
+    }
+    setSending(true);
+    setSendResult(null);
+    try {
+      // Pick the first available image (real program image if present)
+      const imageUrl = shows.length === 1 && shows[0].images && shows[0].images.length > 0
+        ? shows[0].images[0]
+        : undefined;
+      const res = await fetch('/api/publish-social', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platform: botConfig.platform,
+          token: botConfig.token,
+          chatId: botConfig.chatId,
+          text: postText,
+          imageUrl,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setSendResult({ ok: true, msg: `✅ پست به ${selectedPlatform} ارسال شد` });
+      } else {
+        setSendResult({ ok: false, msg: `❌ ${data.error || 'ارسال ناموفق'}` });
+      }
+    } catch {
+      setSendResult({ ok: false, msg: '❌ خطای شبکه هنگام ارسال' });
+    } finally {
+      setSending(false);
+    }
+  };
 
   const handlePublish = async () => {
     if (!selectedPlatform) return;
@@ -3121,22 +3368,271 @@ function PublishModal({ shows, onClose, onConfirm }: {
           </div>
 
           {/* Action buttons */}
-          <div className="flex gap-3">
+          <div className="space-y-3">
+            {/* Direct send (Telegram / Bale only) */}
+            {directSendSupported && (
+              <div
+                className="p-3 rounded-xl"
+                style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.18)' }}
+              >
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold" style={{ color: '#1a2e22' }}>📡 ارسال مستقیم به {selectedPlatform}</div>
+                    <div className="text-xs" style={{ color: '#7a8a80' }}>
+                      {botConfig
+                        ? `ربات ${botConfig.platform === 'telegram' ? 'تلگرام' : 'بله'} پیکربندی شده — مقصد: ${botConfig.chatId}`
+                        : 'برای ارسال مستقیم، ابتدا توکن ربات و شناسهٔ کانال را وارد کنید'}
+                    </div>
+                  </div>
+                  <button
+                    onClick={onOpenBotConfig}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium flex-shrink-0"
+                    style={{ background: 'rgba(2,144,72,0.12)', color: '#016035', border: '1px solid rgba(2,144,72,0.3)' }}
+                  >
+                    {botConfig ? '⚙ تنظیمات ربات' : '＋ پیکربندی ربات'}
+                  </button>
+                </div>
+                <button
+                  onClick={handleDirectSend}
+                  disabled={!botConfig || sending}
+                  className="btn-enter-premium w-full mt-3"
+                  style={{ opacity: botConfig && !sending ? 1 : 0.5, cursor: botConfig && !sending ? 'pointer' : 'not-allowed' }}
+                >
+                  {sending ? '⏳ در حال ارسال...' : `📡 ارسال مستقیم به ${selectedPlatform}`}
+                </button>
+                {sendResult && (
+                  <div
+                    className="mt-2 text-xs font-medium px-3 py-2 rounded-lg"
+                    style={{
+                      background: sendResult.ok ? 'rgba(2,144,72,0.12)' : 'rgba(220,38,38,0.1)',
+                      color: sendResult.ok ? '#016035' : '#dc2626',
+                    }}
+                  >
+                    {sendResult.msg}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Manual fallback (download image + copy text + open platform) */}
+            <div className="flex gap-3">
+              <button
+                onClick={handlePublish}
+                disabled={!selectedPlatform}
+                className="btn-enter-premium flex-1"
+                style={{ opacity: selectedPlatform ? 1 : 0.5, cursor: selectedPlatform ? 'pointer' : 'not-allowed' }}
+              >
+                {selectedPlatform ? `📤 انتشار دستی در ${selectedPlatform}` : 'ابتدا پلتفرم را انتخاب کنید'}
+              </button>
+              <button
+                onClick={onClose}
+                className="px-6 py-3 rounded-xl text-sm font-medium"
+                style={{ background: 'rgba(122,138,128,0.15)', color: '#4a5d52', border: '1px solid rgba(122,138,128,0.3)' }}
+              >
+                انصراف
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// BOT CONFIG MODAL — configure Telegram/Bale bot token + chat ID
+// ============================================
+function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const initial = loadBotConfig();
+  const [platform, setPlatform] = useState<'telegram' | 'bale'>(initial?.platform || 'telegram');
+  const [token, setToken] = useState(initial?.token || '');
+  const [chatId, setChatId] = useState(initial?.chatId || '');
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [showToken, setShowToken] = useState(false);
+
+  const handleTest = async () => {
+    if (!token) { setTestResult({ ok: false, msg: 'توکن را وارد کنید' }); return; }
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const res = await fetch(`/api/publish-social?platform=${platform}&token=${encodeURIComponent(token)}`);
+      const data = await res.json();
+      if (data.ok) {
+        setTestResult({ ok: true, msg: `✅ ربات «@${data.bot.username}» شناسایی شد` });
+      } else {
+        setTestResult({ ok: false, msg: `❌ ${data.error || 'توکن نامعتبر'}` });
+      }
+    } catch {
+      setTestResult({ ok: false, msg: '❌ خطای شبکه' });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const handleSave = () => {
+    if (!token || !chatId) return;
+    saveBotConfig({ platform, token, chatId });
+    onSaved();
+  };
+
+  const handleClear = () => {
+    saveBotConfig(null);
+    setToken('');
+    setChatId('');
+    setTestResult(null);
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-content" style={{ maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.1)' }}>
+          <h2 className="text-xl font-bold" style={{ color: '#1a2e22' }}>⚙ تنظیمات ربات انتشار</h2>
+          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#7a8a80' }}>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {/* Intro help */}
+          <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.15)', color: '#4a5d52' }}>
+            برای ارسال مستقیم پست‌ها به کانال یا گروه، یک ربات بسازید و آن را ادمین مقصد کنید:
+            <ul className="mt-2 space-y-1 text-xs" style={{ color: '#7a8a80' }}>
+              <li>• تلگرام: ربات <code style={{ direction: 'ltr' }}>@BotFather</code> → /newbot</li>
+              <li>• بله: ربات <code style={{ direction: 'ltr' }}>@BotFather@</code> → ساخت ربات جدید</li>
+              <li>• سپس ربات را به کانال/گروه ادمین کنید</li>
+            </ul>
+          </div>
+
+          {/* Platform picker */}
+          <div>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>پلتفرم</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setPlatform('telegram')}
+                className="p-3 rounded-xl text-center transition-all"
+                style={platform === 'telegram' ? { background: '#0088cc', color: 'white', border: '2px solid #0088cc' } : { background: '#0088cc15', color: '#0088cc', border: '1px solid #0088cc30' }}
+              >
+                <div className="text-2xl mb-1">✈</div>
+                <div className="text-sm font-bold">تلگرام</div>
+              </button>
+              <button
+                onClick={() => setPlatform('bale')}
+                className="p-3 rounded-xl text-center transition-all"
+                style={platform === 'bale' ? { background: '#ffaa00', color: 'white', border: '2px solid #ffaa00' } : { background: '#ffaa0015', color: '#ffaa00', border: '1px solid #ffaa0030' }}
+              >
+                <div className="text-2xl mb-1">💬</div>
+                <div className="text-sm font-bold">بله</div>
+              </button>
+            </div>
+          </div>
+
+          {/* Bot token */}
+          <div>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>توکن ربات (Bot Token)</label>
+            <div className="flex gap-2">
+              <input
+                type={showToken ? 'text' : 'password'}
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                placeholder="123456789:ABCdefGhIjKlMnOpQrStUvWxYz"
+                dir="ltr"
+                style={{
+                  flex: 1,
+                  padding: '10px 14px',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(2,144,72,0.15)',
+                  background: 'rgba(255,255,255,0.9)',
+                  color: '#1a2e22',
+                  fontFamily: 'monospace',
+                  outline: 'none',
+                  textAlign: 'left',
+                }}
+              />
+              <button
+                onClick={() => setShowToken(!showToken)}
+                className="px-3 rounded-xl text-sm font-medium"
+                style={{ background: 'rgba(122,138,128,0.15)', color: '#4a5d52', border: '1px solid rgba(122,138,128,0.3)' }}
+              >
+                {showToken ? '🙈 پنهان' : '👁 نمایش'}
+              </button>
+            </div>
+          </div>
+
+          {/* Chat ID */}
+          <div>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>شناسهٔ مقصد (Chat ID)</label>
+            <input
+              type="text"
+              value={chatId}
+              onChange={(e) => setChatId(e.target.value)}
+              placeholder="@channelusername یا -1001234567890"
+              dir="ltr"
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                borderRadius: '12px',
+                border: '1px solid rgba(2,144,72,0.15)',
+                background: 'rgba(255,255,255,0.9)',
+                color: '#1a2e22',
+                fontFamily: 'monospace',
+                outline: 'none',
+                textAlign: 'left',
+              }}
+            />
+            <p className="text-xs mt-1" style={{ color: '#7a8a80' }}>
+              برای کانال: نام کاربری کانال (مثل @mychannel) یا Chat ID عددی. برای چت خصوصی: Chat ID عددی شما.
+            </p>
+          </div>
+
+          {/* Test button */}
+          <button
+            onClick={handleTest}
+            disabled={testing || !token}
+            className="px-4 py-2 rounded-xl text-sm font-medium w-full"
+            style={{
+              background: testing || !token ? 'rgba(122,138,128,0.15)' : 'rgba(2,144,72,0.12)',
+              color: testing || !token ? '#7a8a80' : '#016035',
+              border: '1px solid ' + (testing || !token ? 'rgba(122,138,128,0.3)' : 'rgba(2,144,72,0.3)'),
+              cursor: testing || !token ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {testing ? '⏳ در حال بررسی...' : '🔍 تست اتصال ربات'}
+          </button>
+          {testResult && (
+            <div
+              className="text-sm font-medium px-3 py-2 rounded-lg"
+              style={{
+                background: testResult.ok ? 'rgba(2,144,72,0.12)' : 'rgba(220,38,38,0.1)',
+                color: testResult.ok ? '#016035' : '#dc2626',
+              }}
+            >
+              {testResult.msg}
+            </div>
+          )}
+
+          {/* Save / clear */}
+          <div className="flex gap-3 pt-2">
             <button
-              onClick={handlePublish}
-              disabled={!selectedPlatform}
+              onClick={handleSave}
+              disabled={!token || !chatId}
               className="btn-enter-premium flex-1"
-              style={{ opacity: selectedPlatform ? 1 : 0.5, cursor: selectedPlatform ? 'pointer' : 'not-allowed' }}
+              style={{ opacity: token && chatId ? 1 : 0.5, cursor: token && chatId ? 'pointer' : 'not-allowed' }}
             >
-              {selectedPlatform ? `✓ انتشار در ${selectedPlatform}` : 'ابتدا پلتفرم را انتخاب کنید'}
+              ✓ ذخیره تنظیمات
             </button>
-            <button
-              onClick={onClose}
-              className="px-6 py-3 rounded-xl text-sm font-medium"
-              style={{ background: 'rgba(122,138,128,0.15)', color: '#4a5d52', border: '1px solid rgba(122,138,128,0.3)' }}
-            >
-              انصراف
-            </button>
+            {initial && (
+              <button
+                onClick={handleClear}
+                className="px-4 py-2 rounded-xl text-sm font-medium"
+                style={{ background: 'rgba(220,38,38,0.12)', color: '#dc2626', border: '1px solid rgba(220,38,38,0.3)' }}
+              >
+                🗑 پاک کردن
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -3295,8 +3791,8 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {[
                     { n: 1, t: 'خلاصه اجرایی', icon: '📋', desc: 'مرور کلی آرشیو، حجم داده‌ها، یافته‌های کلیدی و نکات مهم برای تصمیم‌گیرندگان' },
-                    { n: 2, t: 'روش جمع‌آوری داده', icon: '🔬', desc: 'توضیح منابع داده (اکسل، PDF، تصاویر وب)، فرایند طبقه‌بندی ژانری و رویکرد ترکیبی' },
-                    { n: 3, t: 'نمای آماری کلی', icon: '📊', desc: '۴ کارت آماری + ۵ نمودار میله‌ای: منبع داده، اندازه استودیو، سبک دکور، تماشاگر، نورپردازی' },
+                    { n: 2, t: 'روش جمع‌آوری داده', icon: '🔬', desc: 'توضیح منابع داده، فرایند طبقه‌بندی ژانری و رویکرد ترکیبی' },
+                    { n: 3, t: 'نمای آماری کلی', icon: '📊', desc: '۴ کارت آماری + ۵ نمودار میله‌ای: اندازه استودیو، سبک دکور، تماشاگر، نورپردازی، چیدمان' },
                     { n: 4, t: 'تحلیل توزیع ژانرها', icon: '🏷', desc: 'نمودار کامل توزیع + معرفی تفصیلی هر دسته با شمارش، درصد، و برنامه‌های شاخص' },
                     { n: 5, t: 'تحلیل دکور و صحنه', icon: '🎨', desc: '۴ نمودار: عناصر پرتکرار صحنه، مصالح، طیف رنگی، نورپردازی + یافته‌های تحلیلی' },
                     { n: 6, t: 'فهرست تفصیلی برنامه‌ها', icon: '📚', desc: 'کارت کامل برای هر برنامه: تصویر، توضیحات فارسی، تگ‌ها، مشخصات دکور، خلاصه' },
@@ -3444,24 +3940,20 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
 // ============================================
 // REPORTS VIEW
 // ============================================
-function ReportsView({ talkShows, uploadedShows, showToast }: {
+function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
   talkShows: TalkShow[];
   uploadedShows: number[];
   showToast: (msg: string) => void;
+  onExport: (shows: TalkShow[], format: 'pdf' | 'excel') => void;
 }) {
   const stats = {
     total: talkShows.length,
-    pdf: talkShows.filter(s => s.source === 'تصویر PDF').length,
-    web: talkShows.filter(s => s.source === 'تصویر وب').length,
-    text: talkShows.filter(s => s.source === 'متن').length,
     uploaded: uploadedShows.length,
   };
 
   const reports = [
     { id: 1, title: 'گزارش کامل همهٔ برنامه‌ها', type: 'pdf', count: stats.total, date: '۱۴۰۴/۰۸/۲۵' },
     { id: 2, title: 'گزارش برنامه‌های آپلود شده در فضای مجازی', type: 'excel', count: stats.uploaded, date: '۱۴۰۴/۰۸/۲۵' },
-    { id: 3, title: 'گزارش برنامه‌های با تصویر PDF', type: 'pdf', count: stats.pdf, date: '۱۴۰۴/۰۷/۱۸' },
-    { id: 4, title: 'گزارش برنامه‌های با تصویر وب', type: 'excel', count: stats.web, date: '۱۴۰۴/۰۷/۱۳' },
   ];
 
   return (
@@ -3481,12 +3973,12 @@ function ReportsView({ talkShows, uploadedShows, showToast }: {
           <div style={{ color: '#4a5d52' }} className="text-sm">آپلود شده</div>
         </div>
         <div className="premium-glass p-5">
-          <div className="text-3xl font-black mb-1" style={{ color: '#dc2626' }}>{stats.pdf.toLocaleString('fa-IR')}</div>
-          <div style={{ color: '#4a5d52' }} className="text-sm">با تصویر PDF</div>
+          <div className="text-3xl font-black mb-1" style={{ color: '#016035' }}>{GENRES.length.toLocaleString('fa-IR')}</div>
+          <div style={{ color: '#4a5d52' }} className="text-sm">ژانرها</div>
         </div>
         <div className="premium-glass p-5">
-          <div className="text-3xl font-black mb-1" style={{ color: '#2563eb' }}>{stats.web.toLocaleString('fa-IR')}</div>
-          <div style={{ color: '#4a5d52' }} className="text-sm">با تصویر وب</div>
+          <div className="text-3xl font-black mb-1" style={{ color: '#2563eb' }}>{talkShows.filter(s => s.images && s.images.length > 0).length.toLocaleString('fa-IR')}</div>
+          <div style={{ color: '#4a5d52' }} className="text-sm">با تصویر</div>
         </div>
       </div>
 
@@ -3532,7 +4024,13 @@ function ReportsView({ talkShows, uploadedShows, showToast }: {
                   <button
                     className="text-sm hover:underline"
                     style={{ color: '#029048' }}
-                    onClick={() => showToast(`دانلود گزارش: ${r.title}`)}
+                    onClick={() => {
+                      let shows: TalkShow[] = [];
+                      if (r.id === 1) shows = talkShows;
+                      else if (r.id === 2) shows = talkShows.filter(s => uploadedShows.includes(s.num));
+                      if (shows.length === 0) { showToast('برنامه‌ای برای این گزارش وجود ندارد'); return; }
+                      onExport(shows, r.type === 'pdf' ? 'pdf' : 'excel');
+                    }}
                   >
                     دانلود
                   </button>

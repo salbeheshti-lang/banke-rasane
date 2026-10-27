@@ -56,11 +56,10 @@ function generatePDFHtml(shows: any[], opts: PDFOptions): string {
   });
   const sortedCategories = Object.entries(byCategory).sort((a, b) => b[1].length - a[1].length);
 
-  // Source distribution
+  // Source distribution — kept generic (no PDF/web mention)
   const bySource = {
-    pdf: shows.filter(s => s.source === 'تصویر PDF').length,
-    web: shows.filter(s => s.source === 'تصویر وب').length,
-    text: shows.filter(s => s.source === 'متن' || (!s.source)).length,
+    withImages: shows.filter(s => s.images && s.images.length > 0).length,
+    textOnly: shows.filter(s => !s.images || s.images.length === 0).length,
   };
 
   // Size distribution
@@ -230,7 +229,7 @@ function generatePDFHtml(shows: any[], opts: PDFOptions): string {
         <div class="highlight-title">نکات کلیدی</div>
         <ul class="highlight-list">
           <li>حجم آرشیو: <strong>${total.toLocaleString('fa-IR')}</strong> برنامه در <strong>${sortedCategories.length.toLocaleString('fa-IR')}</strong> دستهٔ ژانری</li>
-          <li>پراکندگی منبع داده: <strong>${bySource.pdf.toLocaleString('fa-IR')}</strong> PDF، <strong>${bySource.web.toLocaleString('fa-IR')}</strong> وب، <strong>${bySource.text.toLocaleString('fa-IR')}</strong> متنی</li>
+          <li>برنامه‌های دارای تصویر: <strong>${bySource.withImages.toLocaleString('fa-IR')}</strong> برنامه</li>
           <li>بزرگ‌ترین دسته: <strong>${escapeHtml(sortedCategories[0]?.[0] || '—')}</strong> (<strong>${((sortedCategories[0]?.[1]?.length || 0) / total * 100).toFixed(0)}%</strong> از کل)</li>
           <li>گزارش شامل توضیحات فارسی، مشخصات دکور و تحلیل آماری است</li>
         </ul>
@@ -277,7 +276,7 @@ function generatePDFHtml(shows: any[], opts: PDFOptions): string {
         <div class="method-card">
           <div class="method-icon">🖼</div>
           <h4>منبع ۳: تصاویر مرجع</h4>
-          <p>${bySource.pdf.toLocaleString('fa-IR')} برنامه با تصویر PDF و ${bySource.web.toLocaleString('fa-IR')} برنامه با تصویر وب — بقیه با تحلیل متنی.</p>
+          <p>${bySource.withImages.toLocaleString('fa-IR')} برنامه دارای تصویر مرجع و ${bySource.textOnly.toLocaleString('fa-IR')} برنامه با تحلیل متنی.</p>
         </div>
         <div class="method-card">
           <div class="method-icon">🏷</div>
@@ -327,12 +326,11 @@ function generatePDFHtml(shows: any[], opts: PDFOptions): string {
         `).join('')}
       </div>
 
-      <h3 class="subsection-title">توزیع بر اساس منبع داده</h3>
+      <h3 class="subsection-title">برنامه‌های دارای تصویر</h3>
       <div class="bar-chart">
         ${renderBarChart([
-          ['تصویر PDF', bySource.pdf],
-          ['تصویر وب', bySource.web],
-          ['تحلیل متنی', bySource.text],
+          ['با تصویر', bySource.withImages],
+          ['تحلیل متنی', bySource.textOnly],
         ], '#029048', total)}
       </div>
 
