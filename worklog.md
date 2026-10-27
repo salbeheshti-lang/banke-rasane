@@ -191,3 +191,94 @@ Work Log:
 Stage Summary:
 - Multi-user auth system fully rebuilt after the sandbox wipe. The app now has a real login screen backed by a local Bun+SQLite API service (port 3002) with 560 shows + admin/admin default. Three roles (admin/editor/viewer) gate the UI: viewers see everything read-only (no add/edit/delete/selection), editors can add/edit/delete programs, admins additionally get a "⚙ تنظیمات" button in the drawer that opens a 3-tab SettingsModal (server URL + users management + change password). The API base URL is configurable from the SettingsModal so admins can repoint the app at any reachable API instance without a code change. Token-based sessions persist for 7 days and survive page refreshes (validated via `/api/auth/me` on mount). All endpoints and role behaviors verified end-to-end with curl + agent-browser.
 - Running services: API on port 3002 (PID `.zscripts/api-service.pid`), frontend standalone on port 3000 (PID `.zscripts/app.pid`). DB at `mini-services/api-service/bankresaneh.sqlite`.
+
+---
+Task ID: 11
+Agent: main (Z.ai Code)
+Task: Re-add 8 features lost in sandbox restart: Add Genre button + modal, Add button in ProgramsView (genre header), three new genre cards (PSA, پایش تحلیلی, آگهی), Islamic countries filter, tags system, related programs, section-specific tags + section-specific search.
+
+Work Log:
+- Read prior worklog (tasks 1-10) to understand context. Confirmed `src/app/page.tsx` had the multi-user auth system (login, roles, settings, user mgmt) but was missing the 8 features listed in the task spec.
+- Implemented all 8 features by editing `src/app/page.tsx` (5,557 lines after edits):
+
+  1. **Add Genre button + modal** (Dashboard):
+     - Added `AddGenreModal` component with Name (required), Description, Color picker (8 preset colors), Preview, Save button. On save → builds a Genre object with `isCustom: true` + a category-`includes`-based `filterFn`.
+     - Added `+ افزودن ژانر` button next to `+ افزودن برنامه` in the Dashboard header (admin-only via `isAdmin` prop).
+     - Added `customGenres` state in Home + `loadCustomGenres()`/`saveCustomGenres()` helpers using localStorage key `bankresaneh_custom_genres_v1`. On app mount, restores saved custom genres and merges them with the default `GENRES` constant. The merged `genres` array is passed down to DrawerMenu, MobileBottomNav, Dashboard, AddEditView (so custom genres appear in the drawer, mobile bottom sheet, dashboard cards, and the AddEditView category dropdown).
+     - Verified: created a custom "مستند تاریخی" genre → it appears as the 21st card on the dashboard, persisted across a page reload, and is selectable in the AddEditView category dropdown.
+
+  2. **Add button in ProgramsView**:
+     - Added `onAdd?: () => void` prop to `ProgramsView`. When in a genre view (`genre` prop set) + `canEdit`, renders a `+ افزودن برنامه` button next to the genre title in the genre hero card.
+     - Added `presetCategory` + `presetGenre` state in Home. `handleAddFromGenre(g)` sets `presetCategory = g.nameFa` and `presetGenre = g`, then navigates to `add` view.
+     - `AddEditView` accepts `presetCategory?: string` and `presetGenre?: Genre | null`. When opening the form fresh (no `editingShow`), the `category` field is initialized to `presetCategory` (verified: opening add from interview genre shows `تاک‌شوی مصاحبه‌محور` pre-selected).
+
+  3. **Three new genre cards**: appended to `GENRES`:
+     - `psa` (PSA (پیام خدمت عمومی), `#0891b2`) — `s.category.includes('PSA') || s.category.includes('پیام خدمت')`.
+     - `deepobs` (پایش تحلیلی, `#7c3aed`) — `s.category.includes('پایش تحلیلی')`.
+     - `ads` (آگهی‌های تبلیغاتی, `#ea580c`) — `s.category.includes('آگهی')`.
+     - Verified: dashboard shows 20 genres total (17 + 3 new), with all 3 new cards visible with their Persian names and descriptions.
+
+  4. **Islamic countries filter**:
+     - Added `ISLAMIC_COUNTRIES` array (40 Persian country names: ایران، ترکیه، عربستان، پاکستان، ... اندونزی، مالزی، آذربایجان etc.).
+     - Added `detectCountries(show)` using a word-boundary-style regex `(^|[^\u0600-\u06FFa-zA-Z])${country}([^\u0600-\u06FFa-zA-Z]|$)` against `descriptionFa + summary + country` to find country mentions.
+     - Added `country?: string` field to `TalkShow`.
+     - In `ProgramsView`, added `islamicOnly` state + a `🌍 اسلامی` toggle button in the actions row. When on, filters shows by `detectCountries(show).length > 0`.
+     - In `AddEditView`, added a "کشور مبدا" `FormField` next to the category select.
+     - Verified: toggling `🌍 اسلامی` on the "همهٔ برنامه‌ها" view filters from 560 down to ~6-10 shows — Keiser Report, Swar Shuaib (کویت), Izzet-Yildizhan-Show (ترکیه), Tatli ve Huysuz Show (ترکیه), Renkli Televizion (ترکیه), "Zakat SG" Talk Show (سنگاپور), The Hustler (ایران).
+
+  5. **Tags system**:
+     - Added `tags?: string[]` to `TalkShow` interface.
+     - Created `TagsEditor` component (comma-separated input, Enter-to-add, removable purple pills with `×`, "پاک کردن همه" clear button, preset quick-add toggle buttons).
+     - Added `TagsEditor` to `AddEditView` between the image gallery editor and the video links editor.
+     - `ProgramCard` shows `show.tags` as purple `#tag` badges (up to 4) below the summary.
+     - `ProgramListRow` shows them inline (up to 3).
+     - `ShowDetailsModal` has a "🏷 برچسب‌ها" section showing all tags + detected Islamic countries + the explicit `country` field.
+     - ProgramsView search also searches the `tags` array (when `tags` is in `genre.searchFields`).
+     - `presetTags?: string[]` added to `Genre` — each genre has 5 preset tags (e.g. interview: `['مصاحبه اختصاصی', 'مهمان ویژه', 'تکنولوژی', 'استودیو', 'مدرن', 'گریل']`). AddEditView shows them as toggleable quick-add buttons when `presetGenre` is set.
+
+  6. **Related programs**:
+     - Added `findRelated(show, allShows, limit=6)` function with the specified scoring: same category +5, same layout +3, shared elements Jaccard up to +3 (intersection/union × 3), same style +2, same effects +2, same country +2, same size +1, same viewers +1. Filters to score > 0, sorts desc, takes top `limit`.
+     - `ShowDetailsModal` now accepts `allShows?: TalkShow[]` and `onSwapShow?: (s: TalkShow) => void`. Renders a "🔗 برنامه‌های مرتبط" section at the bottom — a horizontally-scrollable row of related program mini-cards (180px wide, real image + name + truncated category). Clicking one swaps the modal to that show via `onSwapShow` (which updates `selectedShow` in Home).
+     - Home passes `talkShows` as `allShows` and `setSelectedShow` as `onSwapShow`. Verified: opening "CMI The Chris Myers Interview" shows 6 related interview shows (Hollywood Decoded, Steve Austin: The Broken Skull Sessions, Rural America Live, America In Black, Fern Britton Meets…, Koffee with Karan) — all in category "۳. تاک‌شوی مصاحبه‌محور".
+
+  7. **Section-specific tags**:
+     - Added `TagSpec` type `{ id: string; label: (s: TalkShow) => string | null }` to `Genre` (as `tags?: TagSpec[]`).
+     - Defined `TAG_LIBRARY` with 9 reusable specs: `style`, `size`, `viewers`, `layout`, `effects`, `elements`, `materials`, `colors`, `lighting`.
+     - `DEFAULT_GENRE_TAGS` = `[style, size, viewers]` (decor view fallback).
+     - Each of the 20 genres has 2-3 specs assigned (e.g. interview: `[layout, viewers]`, comedy: `[style, effects]`, news: `[style, lighting]`, panel: `[layout, size]`, morning: `[size, viewers]`, deepobs: `[style, lighting, materials]`).
+     - `renderGenreTags(show, genre)` returns the labels for all specs whose label is non-null.
+     - `ProgramCard` and `ProgramListRow` accept an optional `genre?: Genre | null` prop (passed from `ProgramsView`) and render the section-specific tags as small white badges above/around the user tags.
+
+  8. **Section-specific search**:
+     - Added `searchFields?: (keyof TalkShow)[]` to `Genre`. Each genre has its own fields (e.g. decor: `['name','summary','materials','colors']`, news: `['name','summary','descriptionFa','category']`, panel: `['name','summary','category','layout']`, deepobs: `['name','summary','descriptionFa','materials']`).
+     - In `ProgramsView` search, falls back to `['name','summary','category']` if `genre?.searchFields` is undefined. The search handles both string fields (`v.toLowerCase().includes(q) || v.includes(search)` — to support both English-lowercase and Persian original) and array fields (`tags`).
+
+- **Build & verification** (per task spec):
+  - `pkill next/api-service` → `rm -rf .next` → `NODE_ENV=production npx next build --webpack` → ✓ Compiled successfully in 7.7s. Static pages generated.
+  - Copied `.next/static` → `.next/standalone/.next/` and `public` → `.next/standalone/`.
+  - Started API service: `bun --hot index.js` in `mini-services/api-service/` (via setsid background).
+  - Started frontend: `start-stop-daemon --start --background --make-pidfile --pidfile .zscripts/app.pid --exec /usr/bin/node -- .next/standalone/server.js`.
+  - `curl http://localhost:3002/api/health` → HTTP 200. `curl http://localhost:3000/` → HTTP 200. `POST /api/auth/login` with `admin/admin` returns token + user `{id:1,username:"admin",role:"admin",name:"مدیر سیستم"}`.
+  - **agent-browser end-to-end** (all 7 checklist items verified):
+    1. Login with admin/admin → dashboard renders with 21 genres (17 + 3 new + 1 custom). ✓
+    2. Dashboard has "+ افزودن ژانر" button (admin-only) AND "+ افزودن برنامه" button. ✓
+    3. Dashboard shows PSA, پایش تحلیلی, آگهی‌های تبلیغاتی cards (with their distinct colors). ✓
+    4. Open "تاک‌شوی مصاحبه‌محور" → hero card has "+ افزودن برنامه" button next to genre title. Clicking → AddEditView opens with `تاک‌شوی مصاحبه‌محور` pre-selected in the category dropdown. ✓
+    5. Open a program (CMI The Chris Myers Interview) → modal renders "🔗 برنامه‌های مرتبط" section with 6 horizontally-scrollable related cards. ✓
+    6. ProgramsView has "🌍 اسلامی" toggle button — toggling on filters to shows mentioning Islamic countries (verified: shows from Turkey, Kuwait, Singapore, Iran appear). ✓
+    7. Program cards show tags — small white genre-specific badges (style/size/layout/viewers etc.) + purple `#tag` user-defined badges. ✓
+  - Also verified: AddGenreModal flow (filled "مستند تاریخی" → preview shows the genre name + chosen color → Save → genre appears as the 21st card with 0 programs → reload persists it via localStorage). ✓
+  - Also verified: TagsEditor in AddEditView — preset quick-add buttons for the interview genre ("+ مصاحبه اختصاصی", "+ مهمان ویژه", "+ تکنولوژی", "+ استودیو", "+ مدرن", "+ گریل"). ✓
+- **Lint**: 9 errors + 3 warnings, ALL pre-existing in the original repo's `page.tsx` (setState-in-effect at lines 635/652/666, refs-during-render at line 3495) and the worker/electron files. My changes added zero new lint issues. Build proceeds cleanly via `next.config.ts`'s `typescript.ignoreBuildErrors: true`.
+
+Stage Summary:
+- All 8 requested features restored and verified end-to-end:
+  1. Add Genre button + modal (admin-only, persisted to localStorage `bankresaneh_custom_genres_v1`, restored on reload).
+  2. Add button in ProgramsView (in genre view header, presets `category` field when clicked).
+  3. Three new genre cards (PSA / پایش تحلیلی / آگهی‌های تبلیغاتی) — total genres now 20 (was 17).
+  4. Islamic countries filter — 🌍 toggle button in ProgramsView, 40-country Persian list, word-boundary regex detection on `descriptionFa + summary + country`. New `country?` field on TalkShow + "کشور مبدا" input in AddEditView.
+  5. Tags system — `tags?: string[]` on TalkShow, `TagsEditor` component (comma-input + removable pills + preset quick-adds), tags shown on cards (purple `#tag` badges) and in ShowDetailsModal, included in ProgramsView search.
+  6. Related programs — `findRelated()` with the specified scoring (cat +5, layout +3, Jaccard elements ≤3, style/effects/country +2 each, size/viewers +1 each), rendered as horizontal scrollable mini-cards in ShowDetailsModal, click swaps modal to that show.
+  7. Section-specific tags — `TagSpec` + `TAG_LIBRARY` (9 reusable specs), each genre gets 2-3 spec-based tags shown on ProgramCard and ProgramListRow via the new `genre?: Genre | null` prop.
+  8. Section-specific search — `searchFields?: (keyof TalkShow)[]` on Genre, each genre has its own search field set (decor: name/summary/materials/colors; news: name/summary/descriptionFa/category; etc.), ProgramsView search uses `genre?.searchFields` with fallback to `['name','summary','category']`.
+- Running services: API on port 3002 (setsid background, log in /tmp/api.log), frontend standalone on port 3000 (start-stop-daemon, PID in .zscripts/app.pid).
