@@ -4,7 +4,18 @@
 // reachable instance of the API service (default: local Bun service on :3002).
 export function getApiBase(): string {
   if (typeof window !== 'undefined') {
-    return localStorage.getItem('server_url') || 'http://localhost:3002';
+    // If user set a custom server URL, use it
+    const custom = localStorage.getItem('server_url');
+    if (custom) return custom;
+    // Auto-detect: if we're behind the preview gateway (port 81),
+    // route API requests through the gateway with XTransformPort
+    const currentPort = window.location.port;
+    const currentHost = window.location.hostname;
+    if (currentPort === '81' || currentPort === '') {
+      // Behind gateway — use relative path with XTransformPort
+      return `${window.location.origin}/?XTransformPort=3002`.replace(/\?.*/, '');
+    }
+    return 'http://localhost:3002';
   }
   return 'http://localhost:3002';
 }
@@ -92,7 +103,18 @@ async function apiRequest(path: string, options: RequestInit = {}): Promise<any>
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${getApiBase()}${path}`, {
+  // Detect if behind gateway — if so, append XTransformPort to query
+  let url = `${getApiBase()}${path}`;
+  if (typeof window !== 'undefined') {
+    const port = window.location.port;
+    if (port === '81' || port === '') {
+      // Behind gateway — use relative path with XTransformPort
+      const sep = path.includes('?') ? '&' : '?';
+      url = `${path}${sep}XTransformPort=3002`;
+    }
+  }
+
+  const response = await fetch(url, {
     ...options,
     headers,
   });
