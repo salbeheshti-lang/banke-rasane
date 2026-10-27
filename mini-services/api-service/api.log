@@ -1,0 +1,14 @@
+[seed] shows table already has 560 rows — skipping seed
+298 | seedShows();
+299 | 
+300 | // ---------------------------------------------------------------------------
+301 | // Router
+302 | // ---------------------------------------------------------------------------
+303 | const server = Bun.serve({
+                         ^
+error: Failed to start server. Is port 3002 in use?
+ syscall: "listen",
+   errno: 0,
+    code: "EADDRINUSE"
+
+      at /home/z/my-project/mini-services/api-service/index.js:303:20
