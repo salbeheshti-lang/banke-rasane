@@ -127,13 +127,28 @@ function startNextServer() {
   });
 }
 
+function getIconPath() {
+  // icon.ico is placed in resources/ (outside asar) via extraResources config
+  const candidates = [
+    path.join(process.resourcesPath || '', 'icon.ico'),
+    path.join(__dirname, 'icon.ico'),
+    path.join(__dirname, '..', 'electron', 'icon.ico'),
+    path.join(process.resourcesPath || '', 'app.asar', 'electron', 'icon.ico'),
+  ];
+  for (const p of candidates) {
+    try { if (fs.existsSync(p)) { log('Icon found: ' + p); return p; } } catch(e) {}
+  }
+  log('Icon NOT found in any candidate path');
+  return candidates[0];
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1440, height: 900, minWidth: 1024, minHeight: 700,
     title: 'بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی',
     backgroundColor: '#010a05', show: false,
     webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true },
-    icon: path.join(__dirname, 'icon.ico'),
+    icon: getIconPath(),
   });
   mainWindow.once('ready-to-show', () => { mainWindow.show(); mainWindow.maximize(); });
   mainWindow.loadURL(NEXT_URL);

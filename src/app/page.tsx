@@ -1451,7 +1451,7 @@ function ProgramsView({
             placeholder={`جستجو در ${genre ? genre.nameFa : 'همهٔ برنامه‌ها'}...`}
             style={{
               background: 'rgba(255, 255, 255, 0.9)',
-              border: '1px solid rgba(2, 144, 72, 0.15)',
+              border: '2px solid rgba(2, 144, 72, 0.55)',
               borderRadius: '12px',
               padding: '11px 36px 11px 16px',
               width: '100%',
@@ -1469,7 +1469,7 @@ function ProgramsView({
             className="flex items-center gap-1 rounded-xl p-1 flex-shrink-0"
             style={{
               background: 'rgba(255, 255, 255, 0.9)',
-              border: '1px solid rgba(2, 144, 72, 0.15)',
+              border: '2px solid rgba(2, 144, 72, 0.55)',
             }}
           >
             <button
@@ -1503,7 +1503,7 @@ function ProgramsView({
               color: '#016035',
             } : {
               background: 'rgba(255, 255, 255, 0.9)',
-              border: '1px solid rgba(2, 144, 72, 0.15)',
+              border: '2px solid rgba(2, 144, 72, 0.55)',
               color: '#4a5d52',
             }}
           >
@@ -1567,7 +1567,7 @@ function ProgramsView({
         {selectionMode && selectedIds.length > 0 && (
           <div
             className="flex flex-wrap items-center gap-3 pt-3"
-            style={{ borderTop: '1px solid rgba(2, 144, 72, 0.1)' }}
+            style={{ borderTop: '1px solid rgba(2, 144, 72, 0.4)' }}
           >
             <span style={{ color: '#016035' }} className="font-medium text-sm">
               {selectedIds.length.toLocaleString('fa-IR')} برنامه انتخاب شده
@@ -2371,7 +2371,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
 
       <div className="premium-glass p-6 space-y-4">
         {/* Auto-fetch from IMDb/Wikipedia */}
-        <div className="p-4 rounded-xl" style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.15)' }}>
+        <div className="p-4 rounded-xl" style={{ background: 'rgba(2,144,72,0.06)', border: '2px solid rgba(2,144,72,0.55)' }}>
           <h4 className="font-bold mb-2" style={{ color: '#1a2e22' }}>⚡ دریافت خودکار اطلاعات</h4>
           <p className="text-xs mb-3" style={{ color: '#7a8a80' }}>
             لینک IMDb یا ویکی‌پدیا برنامه را وارد کنید تا نام، توضیحات، تصویر و سایر اطلاعات خودکار دریافت شود.
@@ -2386,7 +2386,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
                 flex: 1,
                 padding: '10px 16px',
                 borderRadius: '12px',
-                border: '1px solid rgba(2,144,72,0.15)',
+                border: '2px solid rgba(2,144,72,0.55)',
                 background: 'rgba(255,255,255,0.85)',
                 color: '#1a2e22',
                 fontFamily: 'inherit',
@@ -2477,7 +2477,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
               width: '100%',
               padding: '12px 16px',
               borderRadius: '12px',
-              border: '1px solid rgba(2, 144, 72, 0.15)',
+              border: '2px solid rgba(2, 144, 72, 0.55)',
               background: 'rgba(255, 255, 255, 0.85)',
               color: '#1a2e22',
               fontFamily: 'inherit',
@@ -2498,7 +2498,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
               width: '100%',
               padding: '12px 16px',
               borderRadius: '12px',
-              border: '1px solid rgba(2, 144, 72, 0.15)',
+              border: '2px solid rgba(2, 144, 72, 0.55)',
               background: 'rgba(255, 255, 255, 0.85)',
               color: '#1a2e22',
               fontFamily: 'inherit',
@@ -2562,7 +2562,7 @@ function FormField({ label, value, onChange, placeholder }: {
           width: '100%',
           padding: '10px 16px',
           borderRadius: '12px',
-          border: '1px solid rgba(2, 144, 72, 0.15)',
+          border: '2px solid rgba(2, 144, 72, 0.55)',
           background: 'rgba(255, 255, 255, 0.85)',
           color: '#1a2e22',
           fontFamily: 'inherit',
@@ -2589,7 +2589,7 @@ function FormSelect({ label, value, onChange, options }: {
           width: '100%',
           padding: '10px 16px',
           borderRadius: '12px',
-          border: '1px solid rgba(2, 144, 72, 0.15)',
+          border: '2px solid rgba(2, 144, 72, 0.55)',
           background: 'rgba(255, 255, 255, 0.85)',
           color: '#1a2e22',
           fontFamily: 'inherit',
@@ -2675,7 +2675,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
   };
 
   return (
-    <div className="p-4 rounded-xl" style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.15)' }}>
+    <div className="p-4 rounded-xl" style={{ background: 'rgba(2,144,72,0.06)', border: '2px solid rgba(2,144,72,0.55)' }}>
       <div className="flex items-center justify-between mb-3">
         <h4 className="font-bold" style={{ color: '#1a2e22' }}>
           🖼 تصاویر برنامه
@@ -2701,7 +2701,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
             flex: 1,
             padding: '10px 16px',
             borderRadius: '12px',
-            border: '1px solid rgba(2,144,72,0.15)',
+            border: '2px solid rgba(2,144,72,0.55)',
             background: images.length >= MAX_IMAGES ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.85)',
             color: '#1a2e22',
             fontFamily: 'inherit',
@@ -2890,7 +2890,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
   };
 
   return (
-    <div className="p-4 rounded-xl" style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.15)' }}>
+    <div className="p-4 rounded-xl" style={{ background: 'rgba(2,144,72,0.06)', border: '2px solid rgba(2,144,72,0.55)' }}>
       <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>
         🎬 ویدیوهای برنامه
         <span className="text-xs font-normal mr-2" style={{ color: '#7a8a80' }}>
@@ -2910,7 +2910,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
             width: '100%',
             padding: '8px 12px',
             borderRadius: '10px',
-            border: '1px solid rgba(2,144,72,0.15)',
+            border: '2px solid rgba(2,144,72,0.55)',
             background: 'rgba(255,255,255,0.85)',
             color: '#1a2e22',
             fontFamily: 'inherit',
@@ -2934,7 +2934,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
             flex: 1,
             padding: '10px 16px',
             borderRadius: '12px',
-            border: '1px solid rgba(2,144,72,0.15)',
+            border: '2px solid rgba(2,144,72,0.55)',
             background: 'rgba(255,255,255,0.85)',
             color: '#1a2e22',
             fontFamily: 'inherit',
@@ -2969,7 +2969,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
               <div
                 key={idx}
                 className="flex items-center gap-3 p-2 rounded-xl"
-                style={{ background: 'rgba(255,255,255,0.85)', border: '1px solid rgba(2,144,72,0.1)' }}
+                style={{ background: 'rgba(255,255,255,0.85)', border: '2px solid rgba(2,144,72,0.5)' }}
               >
                 {/* Thumbnail or icon */}
                 <div
@@ -3261,7 +3261,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content" style={{ maxWidth: '700px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.1)' }}>
+        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.4)' }}>
           <h2 className="text-xl font-bold" style={{ color: '#1a2e22' }}>📱 انتشار در شبکه‌های اجتماعی</h2>
           <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#7a8a80' }}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3373,7 +3373,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
             {directSendSupported && (
               <div
                 className="p-3 rounded-xl"
-                style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.18)' }}
+                style={{ background: 'rgba(2,144,72,0.06)', border: '2px solid rgba(2,144,72,0.55)' }}
               >
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div className="flex-1 min-w-0">
@@ -3487,7 +3487,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content" style={{ maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.1)' }}>
+        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.4)' }}>
           <h2 className="text-xl font-bold" style={{ color: '#1a2e22' }}>⚙ تنظیمات ربات انتشار</h2>
           <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#7a8a80' }}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3498,7 +3498,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
 
         <div className="p-6 space-y-5">
           {/* Intro help */}
-          <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.15)', color: '#4a5d52' }}>
+          <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(2,144,72,0.06)', border: '2px solid rgba(2,144,72,0.55)', color: '#4a5d52' }}>
             برای ارسال مستقیم پست‌ها به کانال یا گروه، یک ربات بسازید و آن را ادمین مقصد کنید:
             <ul className="mt-2 space-y-1 text-xs" style={{ color: '#7a8a80' }}>
               <li>• تلگرام: ربات <code style={{ direction: 'ltr' }}>@BotFather</code> → /newbot</li>
@@ -3544,7 +3544,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
                   flex: 1,
                   padding: '10px 14px',
                   borderRadius: '12px',
-                  border: '1px solid rgba(2,144,72,0.15)',
+                  border: '2px solid rgba(2,144,72,0.55)',
                   background: 'rgba(255,255,255,0.9)',
                   color: '#1a2e22',
                   fontFamily: 'monospace',
@@ -3575,7 +3575,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
                 width: '100%',
                 padding: '10px 14px',
                 borderRadius: '12px',
-                border: '1px solid rgba(2,144,72,0.15)',
+                border: '2px solid rgba(2,144,72,0.55)',
                 background: 'rgba(255,255,255,0.9)',
                 color: '#1a2e22',
                 fontFamily: 'monospace',
@@ -3705,7 +3705,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content" style={{ maxWidth: '800px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.1)' }}>
+        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.4)' }}>
           <h2 className="text-xl font-bold" style={{ color: '#1a2e22' }}>
             {format === 'pdf' ? '📄 پیش‌نمایش گزارش PDF' : '📊 پیش‌نمایش گزارش Excel'}
           </h2>
@@ -3983,7 +3983,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
       </div>
 
       <div className="premium-glass overflow-hidden">
-        <div className="p-5" style={{ borderBottom: '1px solid rgba(2, 144, 72, 0.1)' }}>
+        <div className="p-5" style={{ borderBottom: '1px solid rgba(2, 144, 72, 0.4)' }}>
           <h3 className="font-bold" style={{ color: '#1a2e22' }}>گزارش‌های موجود</h3>
         </div>
         <table className="w-full">
@@ -4001,7 +4001,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
             {reports.map((r, idx) => (
               <tr
                 key={r.id}
-                style={{ borderBottom: '1px solid rgba(2, 144, 72, 0.08)' }}
+                style={{ borderBottom: '1px solid rgba(2, 144, 72, 0.35)' }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.55)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
