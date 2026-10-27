@@ -456,7 +456,17 @@ export default function Home() {
   };
 
   const handleLoginSuccess = (user: User) => {
+    setAuthLoading(true);
     setCurrentUser(user);
+    // Reload shows from API (or local JSON) after login
+    fetch('/talk-shows-data.json')
+      .then(r => r.json())
+      .then(data => {
+        setBaseShows(data);
+        setTalkShows(applyOverrides(data, loadOverrides()));
+      })
+      .catch(e => console.error('Failed to load data:', e))
+      .finally(() => setAuthLoading(false));
   };
 
   if (authLoading) {
