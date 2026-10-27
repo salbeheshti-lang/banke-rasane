@@ -1,6 +1,28 @@
-// API client for BankResaneh Cloud API
+// API client for BankResaneh API
 
-const API_BASE = 'https://banke-rasane-api.salbeheshti-lang.workers.dev';
+// The API base URL is configurable so admins can point the app at any
+// reachable instance of the API service (default: local Bun service on :3002).
+export function getApiBase(): string {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('server_url') || 'http://localhost:3002';
+  }
+  return 'http://localhost:3002';
+}
+
+export function setApiBase(url: string): void {
+  if (typeof window !== 'undefined') {
+    const cleaned = (url || '').trim().replace(/\/+$/, '');
+    if (cleaned) {
+      localStorage.setItem('server_url', cleaned);
+    } else {
+      localStorage.removeItem('server_url');
+    }
+  }
+}
+
+export function getApiBaseUrl(): string {
+  return getApiBase();
+}
 
 export interface User {
   id: number;
@@ -70,7 +92,7 @@ async function apiRequest(path: string, options: RequestInit = {}): Promise<any>
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetch(`${getApiBase()}${path}`, {
     ...options,
     headers,
   });
@@ -157,6 +179,25 @@ export const api = {
 
   async deleteUser(id: number): Promise<void> {
     await apiRequest(`/api/users/${id}`, { method: 'DELETE' });
+  },
+
+  async updateUser(id: number, patch: { role?: string; name?: string; password?: string }): Promise<void> {
+    await apiRequest(`/api/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(patch),
+    });
+  },
+
+  async changePassword(oldPassword: string, newPassword: string): Promise<void> {
+    await apiRequest('/api/auth/change-password', {
+      method: 'PUT',
+      body: JSON.stringify({ oldPassword, newPassword }),
+    });
+  },
+
+  async getHealth(): Promise<{ status: string }> {
+    const data = await apiRequest('/api/health');
+    return data;
   },
 
   // Stats
