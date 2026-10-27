@@ -1,0 +1,1007 @@
+     1→  4000→        const headers = ['شماره', 'نام برنامه', 'دسته‌بندی', 'منبع', 'اندازه', 'تماشاگر', 'سبک', 'توضیحات'];
+     2→  4001→        const rows = shows.map((s, i) => [
+     3→  4002→          i + 1,
+     4→  4003→          s.name,
+     5→  4004→          (s.category || '').replace(/^\d+\.\s*/, ''),
+     6→  4005→          s.source || '',
+     7→  4006→          s.size || '',
+     8→  4007→          s.viewers || '',
+     9→  4008→          s.style || '',
+    10→  4009→          (s.descriptionFa || s.summary || '').substring(0, 200),
+    11→  4010→        ]);
+    12→  4011→        const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    13→  4012→        const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+    14→  4013→        const url = URL.createObjectURL(blob);
+    15→  4014→        const a = document.createElement('a');
+    16→  4015→        a.href = url;
+    17→  4016→        a.download = `banke-rasane-${Date.now()}.csv`;
+    18→  4017→        a.click();
+    19→  4018→        URL.revokeObjectURL(url);
+    20→  4019→      }
+    21→  4020→      onDownload();
+    22→  4021→    } catch (e) {
+    23→  4022→      console.error('Download error:', e);
+    24→  4023→    } finally {
+    25→  4024→      setDownloading(false);
+    26→  4025→    }
+    27→  4026→  };
+    28→  4027→
+    29→  4028→  return (
+    30→  4029→    <div className="modal-backdrop" onClick={onClose}>
+    31→  4030→      <div className="modal-content" style={{ maxWidth: '800px' }} onClick={(e) => e.stopPropagation()}>
+    32→  4031→        {/* Header */}
+    33→  4032→        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.1)' }}>
+    34→  4033→          <h2 className="text-xl font-bold" style={{ color: '#1a2e22' }}>
+    35→  4034→            {format === 'pdf' ? '📄 پیش‌نمایش گزارش PDF' : '📊 پیش‌نمایش گزارش Excel'}
+    36→  4035→          </h2>
+    37→  4036→          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#7a8a80' }}>
+    38→  4037→            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    39→  4038→              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+    40→  4039→            </svg>
+    41→  4040→          </button>
+    42→  4041→        </div>
+    43→  4042→
+    44→  4043→        <div className="p-6">
+    45→  4044→          {/* Summary */}
+    46→  4045→          <div className="mb-4 p-4 rounded-xl" style={{ background: 'rgba(2,144,72,0.08)', border: '1px solid rgba(2,144,72,0.2)' }}>
+    47→  4046→            <div className="flex items-center justify-between">
+    48→  4047→              <div>
+    49→  4048→                <div className="text-sm" style={{ color: '#4a5d52' }}>تعداد برنامه‌ها</div>
+    50→  4049→                <div className="text-2xl font-bold" style={{ color: '#016035' }}>{shows.length.toLocaleString('fa-IR')}</div>
+    51→  4050→              </div>
+    52→  4051→              <div>
+    53→  4052→                <div className="text-sm" style={{ color: '#4a5d52' }}>فرمت</div>
+    54→  4053→                <div className="text-2xl font-bold" style={{ color: format === 'pdf' ? '#dc2626' : '#016035' }}>{format.toUpperCase()}</div>
+    55→  4054→              </div>
+    56→  4055→              <div>
+    57→  4056→                <div className="text-sm" style={{ color: '#4a5d52' }}>تاریخ</div>
+    58→  4057→                <div className="text-2xl font-bold" style={{ color: '#1a2e22' }}>{new Date().toLocaleDateString('fa-IR')}</div>
+    59→  4058→              </div>
+    60→  4059→            </div>
+    61→  4060→          </div>
+    62→  4061→
+    63→  4062→          {/* PDF report preview — multi-section professional template */}
+    64→  4063→          {format === 'pdf' && (
+    65→  4064→            <div className="mb-4 rounded-2xl overflow-hidden" style={{ border: '2px solid #029048', boxShadow: '0 8px 24px rgba(2, 144, 72, 0.15)' }}>
+    66→  4065→              {/* Cover preview */}
+    67→  4066→              <div
+    68→  4067→                className="p-6 text-center relative overflow-hidden"
+    69→  4068→                style={{
+    70→  4069→                  background: 'radial-gradient(ellipse 80% 60% at 70% 20%, rgba(54, 179, 126, 0.35) 0%, transparent 60%), radial-gradient(ellipse 70% 50% at 25% 80%, rgba(2, 144, 72, 0.4) 0%, transparent 60%), linear-gradient(160deg, #010a05 0%, #02150c 50%, #010a05 100%)',
+    71→  4070→                  color: 'white',
+    72→  4071→                }}
+    73→  4072→              >
+    74→  4073→                <div style={{ color: 'rgba(168, 230, 193, 0.6)', fontSize: '11px', letterSpacing: '4px', marginBottom: '12px' }}>بانک رسانه</div>
+    75→  4074→                <div style={{ color: '#4ade80', marginBottom: '10px', filter: 'drop-shadow(0 0 16px rgba(74, 222, 128, 0.5))' }}>
+    76→  4075→                  <svg viewBox="0 0 64 64" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="2" style={{ display: 'inline-block' }}>
+    77→  4076→                    <rect x="6" y="14" width="52" height="36" rx="4" />
+    78→  4077→                    <path d="M6 22h52M14 14v-4M50 14v-4M20 32l10 6-10 6z" />
+    79→  4078→                  </svg>
+    80→  4079→                </div>
+    81→  4080→                <h3 className="text-xl font-black mb-2" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.4)' }}>گزارش جامع آرشیو برنامه‌های تلویزیونی</h3>
+    82→  4081→                <p className="text-xs" style={{ color: 'rgba(168, 230, 193, 0.8)' }}>بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی</p>
+    83→  4082→                <div
+    84→  4083→                  className="flex justify-center gap-4 mt-4 mx-auto"
+    85→  4084→                  style={{
+    86→  4085→                    background: 'rgba(2, 144, 72, 0.1)',
+    87→  4086→                    border: '1px solid rgba(74, 222, 128, 0.25)',
+    88→  4087→                    borderRadius: '12px',
+    89→  4088→                    padding: '12px 16px',
+    90→  4089→                    maxWidth: '380px',
+    91→  4090→                    backdropFilter: 'blur(8px)',
+    92→  4091→                  }}
+    93→  4092→                >
+    94→  4093→                  <div>
+    95→  4094→                    <div className="text-xl font-black" style={{ color: '#4ade80' }}>{shows.length.toLocaleString('fa-IR')}</div>
+    96→  4095→                    <div className="text-xs" style={{ color: 'rgba(168, 230, 193, 0.7)' }}>برنامه</div>
+    97→  4096→                  </div>
+    98→  4097→                  <div style={{ width: '1px', background: 'rgba(74, 222, 128, 0.3)' }}></div>
+    99→  4098→                  <div>
+   100→  4099→                    <div className="text-xl font-black" style={{ color: '#4ade80' }}>{new Set(shows.map(s => s.category)).size.toLocaleString('fa-IR')}</div>
+   101→  4100→                    <div className="text-xs" style={{ color: 'rgba(168, 230, 193, 0.7)' }}>دستهٔ ژانری</div>
+   102→  4101→                  </div>
+   103→  4102→                  <div style={{ width: '1px', background: 'rgba(74, 222, 128, 0.3)' }}></div>
+   104→  4103→                  <div>
+   105→  4104→                    <div className="text-xl font-black" style={{ color: '#4ade80' }}>{new Date().toLocaleDateString('fa-IR')}</div>
+   106→  4105→                    <div className="text-xs" style={{ color: 'rgba(168, 230, 193, 0.7)' }}>تاریخ</div>
+   107→  4106→                  </div>
+   108→  4107→                </div>
+   109→  4108→              </div>
+   110→  4109→
+   111→  4110→              {/* Sections list — shows the report structure with descriptions */}
+   112→  4111→              <div className="p-4" style={{ background: '#f8faf9' }}>
+   113→  4112→                <div className="text-xs font-bold mb-3" style={{ color: '#016035', paddingRight: '8px', borderRight: '3px solid #029048' }}>
+   114→  4113→                  ساختار گزارش (۸ بخش) — هر بخش شامل توضیحات کامل
+   115→  4114→                </div>
+   116→  4115→                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+   117→  4116→                  {[
+   118→  4117→                    { n: 1, t: 'خلاصه اجرایی', icon: '📋', desc: 'مرور کلی آرشیو، حجم داده‌ها، یافته‌های کلیدی و نکات مهم برای تصمیم‌گیرندگان' },
+   119→  4118→                    { n: 2, t: 'روش جمع‌آوری داده', icon: '🔬', desc: 'توضیح منابع داده (اکسل، PDF، تصاویر وب)، فرایند طبقه‌بندی ژانری و رویکرد ترکیبی' },
+   120→  4119→                    { n: 3, t: 'نمای آماری کلی', icon: '📊', desc: '۴ کارت آماری + ۵ نمودار میله‌ای: منبع داده، اندازه استودیو، سبک دکور، تماشاگر، نورپردازی' },
+   121→  4120→                    { n: 4, t: 'تحلیل توزیع ژانرها', icon: '🏷', desc: 'نمودار کامل توزیع + معرفی تفصیلی هر دسته با شمارش، درصد، و برنامه‌های شاخص' },
+   122→  4121→                    { n: 5, t: 'تحلیل دکور و صحنه', icon: '🎨', desc: '۴ نمودار: عناصر پرتکرار صحنه، مصالح، طیف رنگی، نورپردازی + یافته‌های تحلیلی' },
+   123→  4122→                    { n: 6, t: 'فهرست تفصیلی برنامه‌ها', icon: '📚', desc: 'کارت کامل برای هر برنامه: تصویر، توضیحات فارسی، تگ‌ها، مشخصات دکور، خلاصه' },
+   124→  4123→                    { n: 7, t: 'نتیجه‌گیری و پیشنهادها', icon: '💡', desc: 'جمع‌بندی یافته‌ها + ۵ پیشنهاد اجرایی + بخش امضا و تاریخ' },
+   125→  4124→                    { n: 8, t: 'پیوست: نمایهٔ الفبایی', icon: '📑', desc: 'فهرست کامل همهٔ برنامه‌ها به ترتیب الفبایی با شماره و دستهٔ ژانری' },
+   126→  4125→                  ].map(s => (
+   127→  4126→                    <div
+   128→  4127→                      key={s.n}
+   129→  4128→                      className="p-3 rounded-lg flex gap-2.5"
+   130→  4129→                      style={{ background: 'white', border: '1px solid #e0e8e4' }}
+   131→  4130→                    >
+   132→  4131→                      <span
+   133→  4132→                        className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0"
+   134→  4133→                        style={{ background: 'linear-gradient(135deg, #029048 0%, #016035 100%)', color: 'white', boxShadow: '0 2px 6px rgba(2, 144, 72, 0.3)' }}
+   135→  4134→                      >
+   136→  4135→                        {s.n.toLocaleString('fa-IR')}
+   137→  4136→                      </span>
+   138→  4137→                      <div className="flex-1 min-w-0">
+   139→  4138→                        <div className="flex items-center gap-1.5 mb-1">
+   140→  4139→                          <span className="text-sm">{s.icon}</span>
+   141→  4140→                          <span className="text-xs font-bold" style={{ color: '#1a2e22' }}>{s.t}</span>
+   142→  4141→                        </div>
+   143→  4142→                        <p className="text-xs leading-relaxed" style={{ color: '#4a5d52', fontSize: '10.5px' }}>
+   144→  4143→                          {s.desc}
+   145→  4144→                        </p>
+   146→  4145→                      </div>
+   147→  4146→                    </div>
+   148→  4147→                  ))}
+   149→  4148→                </div>
+   150→  4149→              </div>
+   151→  4150→
+   152→  4151→              {/* Sample program card preview */}
+   153→  4152→              <div className="p-4" style={{ background: 'white', borderTop: '1px solid #e0e8e4' }}>
+   154→  4153→                <div className="text-xs font-bold mb-2" style={{ color: '#016035' }}>نمونه کارت برنامه (از بخش ۶)</div>
+   155→  4154→                <div
+   156→  4155→                  className="rounded-lg overflow-hidden"
+   157→  4156→                  style={{ border: '1px solid #e0e8e4', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}
+   158→  4157→                >
+   159→  4158→                  <div
+   160→  4159→                    className="p-2 flex items-center gap-2"
+   161→  4160→                    style={{ background: 'linear-gradient(135deg, #f0f8f4 0%, #e8f4ee 100%)', borderBottom: '1px solid #c8e0d4' }}
+   162→  4161→                  >
+   163→  4162→                    <span
+   164→  4163→                      className="w-5 h-5 rounded flex items-center justify-center text-xs font-bold flex-shrink-0"
+   165→  4164→                      style={{ background: '#029048', color: 'white' }}
+   166→  4165→                    >۱</span>
+   167→  4166→                    <span className="text-xs font-bold flex-1" style={{ color: '#1a2e22', direction: 'ltr', textAlign: 'right' }}>
+   168→  4167→                      {shows[0]?.name || 'نمونه برنامه'}
+   169→  4168→                    </span>
+   170→  4169→                    <span className="text-xs" style={{ color: '#7a8a80' }}>شناسه: ۱</span>
+   171→  4170→                  </div>
+   172→  4171→                  <div className="p-2 flex gap-2">
+   173→  4172→                    <div
+   174→  4173→                      className="w-12 h-9 rounded flex-shrink-0"
+   175→  4174→                      style={{ background: 'linear-gradient(135deg, #029048 0%, #016035 100%)' }}
+   176→  4175→                    ></div>
+   177→  4176→                    <div className="flex-1 min-w-0">
+   178→  4177→                      <div className="flex flex-wrap gap-1 mb-1">
+   179→  4178→                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(2,144,72,0.08)', color: '#016035', fontSize: '9px' }}>
+   180→  4179→                          {shows[0]?.style || 'مدرن'}
+   181→  4180→                        </span>
+   182→  4181→                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(2,144,72,0.08)', color: '#016035', fontSize: '9px' }}>
+   183→  4182→                          {shows[0]?.size || 'متوسط'}
+   184→  4183→                        </span>
+   185→  4184→                      </div>
+   186→  4185→                      <p className="text-xs" style={{ color: '#2a3a30', lineHeight: 1.5 }}>
+   187→  4186→                        {(shows[0]?.descriptionFa || '').substring(0, 100)}...
+   188→  4187→                      </p>
+   189→  4188→                    </div>
+   190→  4189→                  </div>
+   191→  4190→                </div>
+   192→  4191→              </div>
+   193→  4192→
+   194→  4193→              {shows.length > 80 && (
+   195→  4194→                <div className="p-2 text-center text-xs" style={{ background: '#fef9e7', color: '#7a8a80' }}>
+   196→  4195→                  در گزارش کامل، ۸۰ برنامهٔ نخست به‌صورت تفصیلی و همهٔ {shows.length.toLocaleString('fa-IR')} برنامه در نمایهٔ الفبایی
+   197→  4196→                </div>
+   198→  4197→              )}
+   199→  4198→            </div>
+   200→  4199→          )}
+   201→  4200→
+   202→  4201→          {/* Excel preview */}
+   203→  4202→          {format === 'excel' && (
+   204→  4203→            <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(0,0,0,0.1)' }}>
+   205→  4204→              <div className="p-3 text-center" style={{ background: 'linear-gradient(135deg, #029048 0%, #016035 100%)', color: 'white' }}>
+   206→  4205→                <div className="text-lg font-bold">بانک رسانه — خروجی Excel</div>
+   207→  4206→                <div className="text-xs opacity-80">{shows.length.toLocaleString('fa-IR')} برنامه</div>
+   208→  4207→              </div>
+   209→  4208→              <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
+   210→  4209→                <table className="w-full" style={{ fontSize: '12px' }}>
+   211→  4210→                  <thead style={{ position: 'sticky', top: 0, background: '#f5efe0', zIndex: 1 }}>
+   212→  4211→                    <tr>
+   213→  4212→                      <th className="text-right p-2 font-bold" style={{ color: '#4a5d52' }}>#</th>
+   214→  4213→                      <th className="text-right p-2 font-bold" style={{ color: '#4a5d52' }}>نام</th>
+   215→  4214→                      <th className="text-right p-2 font-bold" style={{ color: '#4a5d52' }}>دسته</th>
+   216→  4215→                      <th className="text-right p-2 font-bold" style={{ color: '#4a5d52' }}>سبک</th>
+   217→  4216→                      <th className="text-right p-2 font-bold" style={{ color: '#4a5d52' }}>اندازه</th>
+   218→  4217→                    </tr>
+   219→  4218→                  </thead>
+   220→  4219→                  <tbody>
+   221→  4220→                    {shows.slice(0, 50).map((s, i) => (
+   222→  4221→                      <tr key={s.num} style={{ borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+   223→  4222→                        <td className="p-2" style={{ color: '#7a8a80' }}>{(i + 1).toLocaleString('fa-IR')}</td>
+   224→  4223→                        <td className="p-2 font-medium" style={{ color: '#1a2e22', direction: 'ltr', textAlign: 'right' }}>{s.name}</td>
+   225→  4224→                        <td className="p-2" style={{ color: '#4a5d52' }}>{s.category.replace(/^\d+\.\s*/, '').substring(0, 20)}</td>
+   226→  4225→                        <td className="p-2" style={{ color: '#4a5d52' }}>{s.style}</td>
+   227→  4226→                        <td className="p-2" style={{ color: '#4a5d52' }}>{s.size}</td>
+   228→  4227→                      </tr>
+   229→  4228→                    ))}
+   230→  4229→                  </tbody>
+   231→  4230→                </table>
+   232→  4231→              </div>
+   233→  4232→            </div>
+   234→  4233→          )}
+   235→  4234→
+   236→  4235→          {/* Download button */}
+   237→  4236→          <div className="mt-6 flex gap-3">
+   238→  4237→            <button
+   239→  4238→              onClick={handleDownload}
+   240→  4239→              disabled={downloading}
+   241→  4240→              className="btn-enter-premium flex-1"
+   242→  4241→            >
+   243→  4242→              {downloading ? '⏳ در حال تولید...' : `⬇ دانلود فایل ${format.toUpperCase()}`}
+   244→  4243→            </button>
+   245→  4244→            <button
+   246→  4245→              onClick={onClose}
+   247→  4246→              className="px-6 py-3 rounded-xl text-sm font-medium"
+   248→  4247→              style={{ background: 'rgba(122,138,128,0.15)', color: '#4a5d52', border: '1px solid rgba(122,138,128,0.3)' }}
+   249→  4248→            >
+   250→  4249→              انصراف
+   251→  4250→            </button>
+   252→  4251→          </div>
+   253→  4252→          {format === 'pdf' && (
+   254→  4253→            <p className="mt-3 text-xs text-center" style={{ color: '#7a8a80', lineHeight: 1.7 }}>
+   255→  4254→              گزارش شامل ۸ بخش است: صفحهٔ عنوان، فهرست مطالب، خلاصهٔ اجرایی، روش تحقیق، نمای آماری، تحلیل ژانرها، تحلیل دکور، و معرفی تفصیلی برنامه‌ها.<br />
+   256→  4255→              پس از کلیک روی دانلود، پنجره چاپ باز می‌شود — مقاس «A4» و «Save as PDF» را انتخاب کنید.
+   257→  4256→            </p>
+   258→  4257→          )}
+   259→  4258→        </div>
+   260→  4259→      </div>
+   261→  4260→    </div>
+   262→  4261→  );
+   263→  4262→}
+   264→  4263→
+   265→  4264→// ============================================
+   266→  4265→// REPORTS VIEW
+   267→  4266→// ============================================
+   268→  4267→function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
+   269→  4268→  talkShows: TalkShow[];
+   270→  4269→  uploadedShows: number[];
+   271→  4270→  showToast: (msg: string) => void;
+   272→  4271→  onExport: (shows: TalkShow[], format: 'pdf' | 'excel') => void;
+   273→  4272→}) {
+   274→  4273→  const stats = {
+   275→  4274→    total: talkShows.length,
+   276→  4275→    pdf: talkShows.filter(s => s.source === 'تصویر PDF').length,
+   277→  4276→    web: talkShows.filter(s => s.source === 'تصویر وب').length,
+   278→  4277→    text: talkShows.filter(s => s.source === 'متن').length,
+   279→  4278→    uploaded: uploadedShows.length,
+   280→  4279→  };
+   281→  4280→
+   282→  4281→  const reports = [
+   283→  4282→    { id: 1, title: 'گزارش کامل همهٔ برنامه‌ها', type: 'pdf', count: stats.total, date: '۱۴۰۴/۰۸/۲۵' },
+   284→  4283→    { id: 2, title: 'گزارش برنامه‌های آپلود شده در فضای مجازی', type: 'excel', count: stats.uploaded, date: '۱۴۰۴/۰۸/۲۵' },
+   285→  4284→    { id: 3, title: 'گزارش برنامه‌های با تصویر PDF', type: 'pdf', count: stats.pdf, date: '۱۴۰۴/۰۷/۱۸' },
+   286→  4285→    { id: 4, title: 'گزارش برنامه‌های با تصویر وب', type: 'excel', count: stats.web, date: '۱۴۰۴/۰۷/۱۳' },
+   287→  4286→  ];
+   288→  4287→
+   289→  4288→  return (
+   290→  4289→    <>
+   291→  4290→      <header className="mb-8">
+   292→  4291→        <h1 className="text-2xl sm:text-3xl font-bold mb-2" style={{ color: '#1a2e22' }}>گزارش‌ها</h1>
+   293→  4292→        <p style={{ color: '#7a8a80' }}>آمار و گزارش‌های بانک رسانه</p>
+   294→  4293→      </header>
+   295→  4294→
+   296→  4295→      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+   297→  4296→        <div className="premium-glass p-5">
+   298→  4297→          <div className="text-3xl font-black mb-1" style={{ color: '#029048' }}>{stats.total.toLocaleString('fa-IR')}</div>
+   299→  4298→          <div style={{ color: '#4a5d52' }} className="text-sm">کل برنامه‌ها</div>
+   300→  4299→        </div>
+   301→  4300→        <div className="premium-glass p-5">
+   302→  4301→          <div className="text-3xl font-black mb-1" style={{ color: '#7c3aed' }}>{stats.uploaded.toLocaleString('fa-IR')}</div>
+   303→  4302→          <div style={{ color: '#4a5d52' }} className="text-sm">آپلود شده</div>
+   304→  4303→        </div>
+   305→  4304→        <div className="premium-glass p-5">
+   306→  4305→          <div className="text-3xl font-black mb-1" style={{ color: '#dc2626' }}>{stats.pdf.toLocaleString('fa-IR')}</div>
+   307→  4306→          <div style={{ color: '#4a5d52' }} className="text-sm">با تصویر PDF</div>
+   308→  4307→        </div>
+   309→  4308→        <div className="premium-glass p-5">
+   310→  4309→          <div className="text-3xl font-black mb-1" style={{ color: '#2563eb' }}>{stats.web.toLocaleString('fa-IR')}</div>
+   311→  4310→          <div style={{ color: '#4a5d52' }} className="text-sm">با تصویر وب</div>
+   312→  4311→        </div>
+   313→  4312→      </div>
+   314→  4313→
+   315→  4314→      <div className="premium-glass overflow-hidden">
+   316→  4315→        <div className="p-5" style={{ borderBottom: '1px solid rgba(2, 144, 72, 0.1)' }}>
+   317→  4316→          <h3 className="font-bold" style={{ color: '#1a2e22' }}>گزارش‌های موجود</h3>
+   318→  4317→        </div>
+   319→  4318→        <table className="w-full">
+   320→  4319→          <thead>
+   321→  4320→            <tr style={{ background: 'rgba(2, 144, 72, 0.08)', borderBottom: '1px solid rgba(2, 144, 72, 0.2)' }}>
+   322→  4321→              <th className="text-right p-4 text-xs font-bold" style={{ color: '#4a5d52' }}>#</th>
+   323→  4322→              <th className="text-right p-4 text-xs font-bold" style={{ color: '#4a5d52' }}>عنوان</th>
+   324→  4323→              <th className="text-right p-4 text-xs font-bold hidden sm:table-cell" style={{ color: '#4a5d52' }}>نوع</th>
+   325→  4324→              <th className="text-right p-4 text-xs font-bold" style={{ color: '#4a5d52' }}>تعداد</th>
+   326→  4325→              <th className="text-right p-4 text-xs font-bold hidden sm:table-cell" style={{ color: '#4a5d52' }}>تاریخ</th>
+   327→  4326→              <th className="text-right p-4 text-xs font-bold" style={{ color: '#4a5d52' }}>عملیات</th>
+   328→  4327→            </tr>
+   329→  4328→          </thead>
+   330→  4329→          <tbody>
+   331→  4330→            {reports.map((r, idx) => (
+   332→  4331→              <tr
+   333→  4332→                key={r.id}
+   334→  4333→                style={{ borderBottom: '1px solid rgba(2, 144, 72, 0.08)' }}
+   335→  4334→                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.55)'; }}
+   336→  4335→                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+   337→  4336→              >
+   338→  4337→                <td className="p-4 text-sm" style={{ color: '#7a8a80' }}>{(idx + 1).toLocaleString('fa-IR')}</td>
+   339→  4338→                <td className="p-4 text-sm font-medium" style={{ color: '#1a2e22' }}>{r.title}</td>
+   340→  4339→                <td className="p-4 hidden sm:table-cell">
+   341→  4340→                  <span
+   342→  4341→                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium"
+   343→  4342→                    style={r.type === 'pdf'
+   344→  4343→                      ? { background: 'rgba(220, 38, 38, 0.15)', color: '#dc2626' }
+   345→  4344→                      : { background: 'rgba(2, 144, 72, 0.15)', color: '#016035' }
+   346→  4345→                    }
+   347→  4346→                  >
+   348→  4347→                    {r.type === 'pdf' ? 'PDF' : 'Excel'}
+   349→  4348→                  </span>
+   350→  4349→                </td>
+   351→  4350→                <td className="p-4 text-sm" style={{ color: '#4a5d52' }}>{r.count.toLocaleString('fa-IR')}</td>
+   352→  4351→                <td className="p-4 text-sm hidden sm:table-cell" style={{ color: '#7a8a80' }}>{r.date}</td>
+   353→  4352→                <td className="p-4">
+   354→  4353→                  <button
+   355→  4354→                    className="text-sm hover:underline"
+   356→  4355→                    style={{ color: '#029048' }}
+   357→  4356→                    onClick={() => {
+   358→  4357→                      let shows: TalkShow[] = [];
+   359→  4358→                      if (r.id === 1) shows = talkShows;
+   360→  4359→                      else if (r.id === 2) shows = talkShows.filter(s => uploadedShows.includes(s.num));
+   361→  4360→                      else if (r.id === 3) shows = talkShows.filter(s => s.source === 'تصویر PDF');
+   362→  4361→                      else if (r.id === 4) shows = talkShows.filter(s => s.source === 'تصویر وب');
+   363→  4362→                      if (shows.length === 0) { showToast('برنامه‌ای برای این گزارش وجود ندارد'); return; }
+   364→  4363→                      onExport(shows, r.type === 'pdf' ? 'pdf' : 'excel');
+   365→  4364→                    }}
+   366→  4365→                  >
+   367→  4366→                    دانلود
+   368→  4367→                  </button>
+   369→  4368→                </td>
+   370→  4369→              </tr>
+   371→  4370→            ))}
+   372→  4371→          </tbody>
+   373→  4372→        </table>
+   374→  4373→      </div>
+   375→  4374→    </>
+   376→  4375→  );
+   377→  4376→}
+   378→  4377→
+   379→  4378→// ============================================
+   380→  4379→// SETTINGS MODAL (admin only) — 3 tabs:
+   381→  4380→//   1. سرور — server URL field, test connection, save (setApiBase)
+   382→  4381→//   2. کاربران — list users, add user, delete user, change role
+   383→  4382→//   3. رمز عبور — change own password (old + new + confirm)
+   384→  4383→// ============================================
+   385→  4384→function SettingsModal({
+   386→  4385→  currentUser,
+   387→  4386→  onClose,
+   388→  4387→  showToast,
+   389→  4388→  onLogout,
+   390→  4389→}: {
+   391→  4390→  currentUser: User;
+   392→  4391→  onClose: () => void;
+   393→  4392→  showToast: (msg: string) => void;
+   394→  4393→  onLogout: () => void;
+   395→  4394→}) {
+   396→  4395→  const [tab, setTab] = useState<'server' | 'users' | 'password'>('server');
+   397→  4396→
+   398→  4397→  const tabs = [
+   399→  4398→    { key: 'server' as const,   label: 'سرور',     icon: '🖥' },
+   400→  4399→    { key: 'users' as const,    label: 'کاربران',  icon: '👥' },
+   401→  4400→    { key: 'password' as const, label: 'رمز عبور', icon: '🔑' },
+   402→  4401→  ];
+   403→  4402→
+   404→  4403→  return (
+   405→  4404→    <div
+   406→  4405→      className="fixed inset-0 z-[80] flex items-center justify-center p-4"
+   407→  4406→      style={{ background: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(8px)', animation: 'fade-in 0.2s ease-out' }}
+   408→  4407→      onClick={onClose}
+   409→  4408→    >
+   410→  4409→      <div
+   411→  4410→        className="relative flex flex-col"
+   412→  4411→        style={{
+   413→  4412→          width: 'min(720px, 96vw)',
+   414→  4413→          maxHeight: '90vh',
+   415→  4414→          background: 'linear-gradient(180deg, #f8fbf8 0%, #eef5ef 100%)',
+   416→  4415→          borderRadius: '20px',
+   417→  4416→          border: '1px solid rgba(2, 144, 72, 0.25)',
+   418→  4417→          boxShadow: '0 30px 80px rgba(0, 0, 0, 0.35)',
+   419→  4418→          overflow: 'hidden',
+   420→  4419→        }}
+   421→  4420→        onClick={(e) => e.stopPropagation()}
+   422→  4421→      >
+   423→  4422→        {/* Header */}
+   424→  4423→        <div
+   425→  4424→          className="flex items-center justify-between p-4 flex-shrink-0"
+   426→  4425→          style={{
+   427→  4426→            background: 'linear-gradient(180deg, rgba(4, 40, 23, 0.98) 0%, rgba(2, 80, 45, 0.96) 100%)',
+   428→  4427→            borderBottom: '1px solid rgba(74, 222, 128, 0.4)',
+   429→  4428→          }}
+   430→  4429→        >
+   431→  4430→          <h2 className="text-lg font-bold" style={{ color: 'white' }}>⚙ تنظیمات سیستم</h2>
+   432→  4431→          <button
+   433→  4432→            onClick={onClose}
+   434→  4433→            aria-label="بستن تنظیمات"
+   435→  4434→            className="p-2 rounded-lg transition-colors"
+   436→  4435→            style={{ color: 'rgba(255, 255, 255, 0.7)' }}
+   437→  4436→            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(220, 38, 38, 0.25)'; e.currentTarget.style.color = '#fca5a5'; }}
+   438→  4437→            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'; }}
+   439→  4438→          >
+   440→  4439→            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+   441→  4440→              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+   442→  4441→            </svg>
+   443→  4442→          </button>
+   444→  4443→        </div>
+   445→  4444→
+   446→  4445→        {/* Tabs */}
+   447→  4446→        <div
+   448→  4447→          className="flex items-center gap-1 p-2 flex-shrink-0"
+   449→  4448→          style={{ background: 'rgba(2, 144, 72, 0.05)', borderBottom: '1px solid rgba(2, 144, 72, 0.12)' }}
+   450→  4449→        >
+   451→  4450→          {tabs.map((t) => {
+   452→  4451→            const active = tab === t.key;
+   453→  4452→            return (
+   454→  4453→              <button
+   455→  4454→                key={t.key}
+   456→  4455→                onClick={() => setTab(t.key)}
+   457→  4456→                className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition-all"
+   458→  4457→                style={active ? {
+   459→  4458→                  background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
+   460→  4459→                  color: 'white',
+   461→  4460→                  boxShadow: '0 4px 12px rgba(2, 144, 72, 0.3), inset 0 1px 0 rgba(74, 222, 128, 0.4)',
+   462→  4461→                } : {
+   463→  4462→                  color: '#4a5d52',
+   464→  4463→                  border: '1px solid transparent',
+   465→  4464→                }}
+   466→  4465→              >
+   467→  4466→                <span>{t.icon}</span>
+   468→  4467→                <span>{t.label}</span>
+   469→  4468→              </button>
+   470→  4469→            );
+   471→  4470→          })}
+   472→  4471→        </div>
+   473→  4472→
+   474→  4473→        {/* Body — scrollable */}
+   475→  4474→        <div className="flex-1 overflow-y-auto p-4 sm:p-6" style={{ maxHeight: 'calc(90vh - 130px)' }}>
+   476→  4475→          {tab === 'server' && <SettingsServerTab showToast={showToast} />}
+   477→  4476→          {tab === 'users' && <SettingsUsersTab currentUser={currentUser} showToast={showToast} />}
+   478→  4477→          {tab === 'password' && <SettingsPasswordTab currentUser={currentUser} showToast={showToast} onLogout={onLogout} />}
+   479→  4478→        </div>
+   480→  4479→      </div>
+   481→  4480→    </div>
+   482→  4481→  );
+   483→  4482→}
+   484→  4483→
+   485→  4484→// --- Tab 1: Server URL ---
+   486→  4485→function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) {
+   487→  4486→  const [url, setUrl] = useState('');
+   488→  4487→  const [testing, setTesting] = useState(false);
+   489→  4488→  const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
+   490→  4489→
+   491→  4490→  useEffect(() => {
+   492→  4491→    setUrl(getApiBase());
+   493→  4492→  }, []);
+   494→  4493→
+   495→  4494→  const handleTest = async () => {
+   496→  4495→    setTesting(true);
+   497→  4496→    setTestResult(null);
+   498→  4497→    try {
+   499→  4498→      const res = await fetch(`${url.replace(/\/+$/, '')}/api/health`, { method: 'GET' });
+   500→  4499→      const data = await res.json();
+   501→  4500→      if (res.ok && data?.status === 'ok') {
+   502→  4501→        setTestResult({ ok: true, msg: 'اتصال برقرار شد ✓' });
+   503→  4502→      } else {
+   504→  4503→        setTestResult({ ok: false, msg: `پاسخ نامعتبر: ${JSON.stringify(data).slice(0, 100)}` });
+   505→  4504→      }
+   506→  4505→    } catch (e: any) {
+   507→  4506→      setTestResult({ ok: false, msg: `خطا در اتصال: ${e?.message || 'نامشخص'}` });
+   508→  4507→    } finally {
+   509→  4508→      setTesting(false);
+   510→  4509→    }
+   511→  4510→  };
+   512→  4511→
+   513→  4512→  const handleSave = () => {
+   514→  4513→    setApiBase(url);
+   515→  4514→    showToast('آدرس سرور ذخیره شد. برای اعمال کامل، صفحه را بارگذاری مجدد کنید.');
+   516→  4515→    setTestResult({ ok: true, msg: 'ذخیره شد ✓ — آدرس جدید اعمال شد.' });
+   517→  4516→  };
+   518→  4517→
+   519→  4518→  return (
+   520→  4519→    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+   521→  4520→      <div>
+   522→  4521→        <h3 className="text-base font-bold mb-1" style={{ color: '#1a2e22' }}>🖥 آدرس سرور API</h3>
+   523→  4522→        <p className="text-sm mb-3" style={{ color: '#7a8a80' }}>
+   524→  4523→          آدرس سرویس API که این برنامه به آن متصل می‌شود. پیش‌فرض: <code dir="ltr" style={{ background: 'rgba(2,144,72,0.1)', padding: '2px 6px', borderRadius: '6px', color: '#016035' }}>http://localhost:3002</code>
+   525→  4524→        </p>
+   526→  4525→        <input
+   527→  4526→          type="text"
+   528→  4527→          dir="ltr"
+   529→  4528→          value={url}
+   530→  4529→          onChange={(e) => { setUrl(e.target.value); setTestResult(null); }}
+   531→  4530→          placeholder="http://localhost:3002"
+   532→  4531→          style={{
+   533→  4532→            width: '100%',
+   534→  4533→            background: 'rgba(255, 255, 255, 0.95)',
+   535→  4534→            border: '1px solid rgba(2, 144, 72, 0.25)',
+   536→  4535→            borderRadius: '12px',
+   537→  4536→            padding: '12px 16px',
+   538→  4537→            color: '#1a2e22',
+   539→  4538→            fontSize: '14px',
+   540→  4539→            fontFamily: 'inherit',
+   541→  4540→            outline: 'none',
+   542→  4541→            textAlign: 'left',
+   543→  4542→            direction: 'ltr',
+   544→  4543→          }}
+   545→  4544→        />
+   546→  4545→      </div>
+   547→  4546→
+   548→  4547→      {testResult && (
+   549→  4548→        <div
+   550→  4549→          className="p-3 rounded-xl text-sm font-medium"
+   551→  4550→          style={
+   552→  4551→            testResult.ok
+   553→  4552→              ? { background: 'rgba(2, 144, 72, 0.12)', color: '#016035', border: '1px solid rgba(2, 144, 72, 0.3)' }
+   554→  4553→              : { background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }
+   555→  4554→          }
+   556→  4555→        >
+   557→  4556→          {testResult.ok ? '✓' : '⚠'} {testResult.msg}
+   558→  4557→        </div>
+   559→  4558→      )}
+   560→  4559→
+   561→  4560→      <div className="flex items-center gap-2">
+   562→  4561→        <button
+   563→  4562→          onClick={handleTest}
+   564→  4563→          disabled={testing || !url}
+   565→  4564→          className="px-4 py-2 rounded-xl text-sm font-bold transition-all"
+   566→  4565→          style={{
+   567→  4566→            background: testing ? 'rgba(122, 138, 128, 0.5)' : 'rgba(2, 144, 72, 0.15)',
+   568→  4567→            color: testing ? '#7a8a80' : '#016035',
+   569→  4568→            border: '1px solid rgba(2, 144, 72, 0.3)',
+   570→  4569→            opacity: testing || !url ? 0.6 : 1,
+   571→  4570→            cursor: testing || !url ? 'not-allowed' : 'pointer',
+   572→  4571→          }}
+   573→  4572→        >
+   574→  4573→          {testing ? '⏳ در حال تست...' : '🔍 تست اتصال'}
+   575→  4574→        </button>
+   576→  4575→        <button
+   577→  4576→          onClick={handleSave}
+   578→  4577→          className="px-4 py-2 rounded-xl text-sm font-bold transition-all flex-1"
+   579→  4578→          style={{
+   580→  4579→            background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
+   581→  4580→            color: 'white',
+   582→  4581→            boxShadow: '0 4px 12px rgba(2, 144, 72, 0.3)',
+   583→  4582→          }}
+   584→  4583→        >
+   585→  4584→          ✓ ذخیره آدرس
+   586→  4585→        </button>
+   587→  4586→      </div>
+   588→  4587→
+   589→  4588→      <div
+   590→  4589→        className="p-3 rounded-xl text-xs"
+   591→  4590→        style={{ background: 'rgba(2, 144, 72, 0.05)', border: '1px solid rgba(2, 144, 72, 0.15)', color: '#4a5d52', lineHeight: 1.7 }}
+   592→  4591→      >
+   593→  4592→        <strong>راهنما:</strong> آدرس وارد شده باید ریشهٔ سرویس API باشد (بدون مسیرهای <code dir="ltr">/api/...</code>).
+   594→  4593→        اگر از گیتوی Caddy استفاده می‌کنید، می‌توانید آدرس نسبی وارد کنید. پس از ذخیره، توکن فعلی شما معتبر می‌ماند.
+   595→  4594→      </div>
+   596→  4595→    </div>
+   597→  4596→  );
+   598→  4597→}
+   599→  4598→
+   600→  4599→// --- Tab 2: Users management ---
+   601→  4600→function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showToast: (msg: string) => void }) {
+   602→  4601→  const [users, setUsers] = useState<User[]>([]);
+   603→  4602→  const [loading, setLoading] = useState(true);
+   604→  4603→  const [error, setError] = useState<string | null>(null);
+   605→  4604→  const [newUser, setNewUser] = useState({ username: '', password: '', role: 'viewer', name: '' });
+   606→  4605→  const [creating, setCreating] = useState(false);
+   607→  4606→
+   608→  4607→  const load = async () => {
+   609→  4608→    setLoading(true);
+   610→  4609→    setError(null);
+   611→  4610→    try {
+   612→  4611→      const list = await api.getUsers();
+   613→  4612→      setUsers(list);
+   614→  4613→    } catch (e: any) {
+   615→  4614→      setError(e?.message || 'خطا در بارگذاری کاربران');
+   616→  4615→    } finally {
+   617→  4616→      setLoading(false);
+   618→  4617→    }
+   619→  4618→  };
+   620→  4619→
+   621→  4620→  useEffect(() => { load(); }, []);
+   622→  4621→
+   623→  4622→  const handleCreate = async () => {
+   624→  4623→    if (!newUser.username.trim() || !newUser.password) {
+   625→  4624→      showToast('نام کاربری و رمز را وارد کنید');
+   626→  4625→      return;
+   627→  4626→    }
+   628→  4627→    setCreating(true);
+   629→  4628→    try {
+   630→  4629→      await api.createUser({
+   631→  4630→        username: newUser.username.trim(),
+   632→  4631→        password: newUser.password,
+   633→  4632→        role: newUser.role,
+   634→  4633→        name: newUser.name,
+   635→  4634→      });
+   636→  4635→      showToast(`کاربر «${newUser.username}» ساخته شد`);
+   637→  4636→      setNewUser({ username: '', password: '', role: 'viewer', name: '' });
+   638→  4637→      await load();
+   639→  4638→    } catch (e: any) {
+   640→  4639→      showToast(e?.message || 'خطا در ایجاد کاربر');
+   641→  4640→    } finally {
+   642→  4641→      setCreating(false);
+   643→  4642→    }
+   644→  4643→  };
+   645→  4644→
+   646→  4645→  const handleDelete = async (u: User) => {
+   647→  4646→    if (u.id === currentUser.id) {
+   648→  4647→      showToast('نمی‌توانید حساب خودتان را حذف کنید');
+   649→  4648→      return;
+   650→  4649→    }
+   651→  4650→    if (!confirm(`کاربر «${u.username}» حذف شود؟`)) return;
+   652→  4651→    try {
+   653→  4652→      await api.deleteUser(u.id);
+   654→  4653→      showToast('کاربر حذف شد');
+   655→  4654→      await load();
+   656→  4655→    } catch (e: any) {
+   657→  4656→      showToast(e?.message || 'خطا در حذف کاربر');
+   658→  4657→    }
+   659→  4658→  };
+   660→  4659→
+   661→  4660→  const handleChangeRole = async (u: User, newRole: string) => {
+   662→  4661→    if (newRole === u.role) return;
+   663→  4662→    try {
+   664→  4663→      await api.updateUser(u.id, { role: newRole });
+   665→  4664→      showToast(`نقش «${u.username}» به ${newRole} تغییر کرد`);
+   666→  4665→      await load();
+   667→  4666→    } catch (e: any) {
+   668→  4667→      showToast(e?.message || 'خطا در تغییر نقش');
+   669→  4668→    }
+   670→  4669→  };
+   671→  4670→
+   672→  4671→  const roleLabel: Record<string, string> = { admin: 'مدیر', editor: 'ویراستار', viewer: 'بیننده' };
+   673→  4672→
+   674→  4673→  return (
+   675→  4674→    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+   676→  4675→      <div>
+   677→  4676→        <h3 className="text-base font-bold mb-1" style={{ color: '#1a2e22' }}>👥 مدیریت کاربران</h3>
+   678→  4677→        <p className="text-sm" style={{ color: '#7a8a80' }}>
+   679→  4678→          افزودن، حذف یا تغییر نقش کاربران سیستم. نقش‌ها: مدیر (دسترسی کامل)، ویراستار (افزودن/ویرایش برنامه‌ها)، بیننده (فقط مشاهده).
+   680→  4679→        </p>
+   681→  4680→      </div>
+   682→  4681→
+   683→  4682→      {/* Add new user form */}
+   684→  4683→      <div
+   685→  4684→        className="p-4 rounded-xl"
+   686→  4685→        style={{ background: 'rgba(2, 144, 72, 0.05)', border: '1px solid rgba(2, 144, 72, 0.15)' }}
+   687→  4686→      >
+   688→  4687→        <h4 className="font-bold text-sm mb-3" style={{ color: '#1a2e22' }}>＋ افزودن کاربر جدید</h4>
+   689→  4688→        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+   690→  4689→          <input
+   691→  4690→            type="text"
+   692→  4691→            dir="ltr"
+   693→  4692→            placeholder="نام کاربری"
+   694→  4693→            value={newUser.username}
+   695→  4694→            onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+   696→  4695→            style={{
+   697→  4696→              background: 'white',
+   698→  4697→              border: '1px solid rgba(2, 144, 72, 0.2)',
+   699→  4698→              borderRadius: '10px',
+   700→  4699→              padding: '10px 14px',
+   701→  4700→              fontSize: '14px',
+   702→  4701→              color: '#1a2e22',
+   703→  4702→              outline: 'none',
+   704→  4703→              textAlign: 'left',
+   705→  4704→              direction: 'ltr',
+   706→  4705→            }}
+   707→  4706→          />
+   708→  4707→          <input
+   709→  4708→            type="text"
+   710→  4709→            placeholder="نام نمایشی (اختیاری)"
+   711→  4710→            value={newUser.name}
+   712→  4711→            onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+   713→  4712→            style={{
+   714→  4713→              background: 'white',
+   715→  4714→              border: '1px solid rgba(2, 144, 72, 0.2)',
+   716→  4715→              borderRadius: '10px',
+   717→  4716→              padding: '10px 14px',
+   718→  4717→              fontSize: '14px',
+   719→  4718→              color: '#1a2e22',
+   720→  4719→              outline: 'none',
+   721→  4720→            }}
+   722→  4721→          />
+   723→  4722→          <input
+   724→  4723→            type="password"
+   725→  4724→            dir="ltr"
+   726→  4725→            placeholder="رمز عبور (حداقل ۴ کاراکتر)"
+   727→  4726→            value={newUser.password}
+   728→  4727→            onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+   729→  4728→            style={{
+   730→  4729→              background: 'white',
+   731→  4730→              border: '1px solid rgba(2, 144, 72, 0.2)',
+   732→  4731→              borderRadius: '10px',
+   733→  4732→              padding: '10px 14px',
+   734→  4733→              fontSize: '14px',
+   735→  4734→              color: '#1a2e22',
+   736→  4735→              outline: 'none',
+   737→  4736→              textAlign: 'left',
+   738→  4737→              direction: 'ltr',
+   739→  4738→            }}
+   740→  4739→          />
+   741→  4740→          <select
+   742→  4741→            value={newUser.role}
+   743→  4742→            onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+   744→  4743→            style={{
+   745→  4744→              background: 'white',
+   746→  4745→              border: '1px solid rgba(2, 144, 72, 0.2)',
+   747→  4746→              borderRadius: '10px',
+   748→  4747→              padding: '10px 14px',
+   749→  4748→              fontSize: '14px',
+   750→  4749→              color: '#1a2e22',
+   751→  4750→              outline: 'none',
+   752→  4751→              fontFamily: 'inherit',
+   753→  4752→            }}
+   754→  4753→          >
+   755→  4754→            <option value="viewer">بیننده</option>
+   756→  4755→            <option value="editor">ویراستار</option>
+   757→  4756→            <option value="admin">مدیر</option>
+   758→  4757→          </select>
+   759→  4758→        </div>
+   760→  4759→        <button
+   761→  4760→          onClick={handleCreate}
+   762→  4761→          disabled={creating}
+   763→  4762→          className="px-4 py-2 rounded-xl text-sm font-bold transition-all"
+   764→  4763→          style={{
+   765→  4764→            background: creating ? 'rgba(122, 138, 128, 0.5)' : 'linear-gradient(135deg, #029048 0%, #016035 100%)',
+   766→  4765→            color: 'white',
+   767→  4766→            boxShadow: '0 4px 12px rgba(2, 144, 72, 0.3)',
+   768→  4767→            opacity: creating ? 0.6 : 1,
+   769→  4768→            cursor: creating ? 'not-allowed' : 'pointer',
+   770→  4769→          }}
+   771→  4770→        >
+   772→  4771→          {creating ? '⏳ در حال ایجاد...' : '＋ ایجاد کاربر'}
+   773→  4772→        </button>
+   774→  4773→      </div>
+   775→  4774→
+   776→  4775→      {/* Users list */}
+   777→  4776→      <div>
+   778→  4777→        <h4 className="font-bold text-sm mb-2" style={{ color: '#1a2e22' }}>
+   779→  4778→          کاربران فعلی ({users.length.toLocaleString('fa-IR')})
+   780→  4779→        </h4>
+   781→  4780→        {loading && (
+   782→  4781→          <div className="p-4 text-center text-sm" style={{ color: '#7a8a80' }}>در حال بارگذاری...</div>
+   783→  4782→        )}
+   784→  4783→        {error && (
+   785→  4784→          <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}>
+   786→  4785→            ⚠ {error}
+   787→  4786→          </div>
+   788→  4787→        )}
+   789→  4788→        {!loading && !error && (
+   790→  4789→          <div className="space-y-2">
+   791→  4790→            {users.map((u) => (
+   792→  4791→              <div
+   793→  4792→                key={u.id}
+   794→  4793→                className="p-3 rounded-xl flex items-center gap-3"
+   795→  4794→                style={{ background: 'white', border: '1px solid rgba(2, 144, 72, 0.15)' }}
+   796→  4795→              >
+   797→  4796→                <div
+   798→  4797→                  className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm"
+   799→  4798→                  style={{
+   800→  4799→                    background: u.role === 'admin' ? 'rgba(220, 38, 38, 0.15)' : u.role === 'editor' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(2, 144, 72, 0.15)',
+   801→  4800→                    color: u.role === 'admin' ? '#dc2626' : u.role === 'editor' ? '#d97706' : '#016035',
+   802→  4801→                    border: `1px solid ${u.role === 'admin' ? 'rgba(220, 38, 38, 0.35)' : u.role === 'editor' ? 'rgba(245, 158, 11, 0.35)' : 'rgba(2, 144, 72, 0.35)'}`,
+   803→  4802→                  }}
+   804→  4803→                >
+   805→  4804→                  {(u.name || u.username).charAt(0).toUpperCase()}
+   806→  4805→                </div>
+   807→  4806→                <div className="flex-1 min-w-0">
+   808→  4807→                  <div className="font-bold text-sm" style={{ color: '#1a2e22' }} title={u.username}>
+   809→  4808→                    {u.name || u.username}{' '}
+   810→  4809→                    {u.id === currentUser.id && (
+   811→  4810→                      <span className="text-xs font-normal" style={{ color: '#7a8a80' }}>(شما)</span>
+   812→  4811→                    )}
+   813→  4812→                  </div>
+   814→  4813→                  <div className="text-xs" style={{ color: '#7a8a80' }} dir="ltr">@{u.username}</div>
+   815→  4814→                </div>
+   816→  4815→                <select
+   817→  4816→                  value={u.role}
+   818→  4817→                  onChange={(e) => handleChangeRole(u, e.target.value)}
+   819→  4818→                  disabled={u.id === currentUser.id}
+   820→  4819→                  style={{
+   821→  4820→                    background: 'rgba(2, 144, 72, 0.05)',
+   822→  4821→                    border: '1px solid rgba(2, 144, 72, 0.2)',
+   823→  4822→                    borderRadius: '8px',
+   824→  4823→                    padding: '6px 10px',
+   825→  4824→                    fontSize: '13px',
+   826→  4825→                    color: '#1a2e22',
+   827→  4826→                    outline: 'none',
+   828→  4827→                    fontFamily: 'inherit',
+   829→  4828→                    cursor: u.id === currentUser.id ? 'not-allowed' : 'pointer',
+   830→  4829→                    opacity: u.id === currentUser.id ? 0.6 : 1,
+   831→  4830→                  }}
+   832→  4831→                  title={u.id === currentUser.id ? 'نمی‌توانید نقش خودتان را تغییر دهید' : 'تغییر نقش'}
+   833→  4832→                >
+   834→  4833→                  <option value="viewer">بیننده</option>
+   835→  4834→                  <option value="editor">ویراستار</option>
+   836→  4835→                  <option value="admin">مدیر</option>
+   837→  4836→                </select>
+   838→  4837→                <button
+   839→  4838→                  onClick={() => handleDelete(u)}
+   840→  4839→                  disabled={u.id === currentUser.id}
+   841→  4840→                  className="p-2 rounded-lg transition-colors flex-shrink-0"
+   842→  4841→                  style={{
+   843→  4842→                    color: u.id === currentUser.id ? 'rgba(122, 138, 128, 0.4)' : '#dc2626',
+   844→  4843→                    background: u.id === currentUser.id ? 'transparent' : 'rgba(220, 38, 38, 0.1)',
+   845→  4844→                    border: '1px solid rgba(220, 38, 38, 0.25)',
+   846→  4845→                    cursor: u.id === currentUser.id ? 'not-allowed' : 'pointer',
+   847→  4846→                    opacity: u.id === currentUser.id ? 0.4 : 1,
+   848→  4847→                  }}
+   849→  4848→                  title={u.id === currentUser.id ? 'نمی‌توانید خودتان را حذف کنید' : `حذف ${u.username}`}
+   850→  4849→                  aria-label={`حذف کاربر ${u.username}`}
+   851→  4850→                >
+   852→  4851→                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+   853→  4852→                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+   854→  4853→                  </svg>
+   855→  4854→                </button>
+   856→  4855→              </div>
+   857→  4856→            ))}
+   858→  4857→          </div>
+   859→  4858→        )}
+   860→  4859→      </div>
+   861→  4860→    </div>
+   862→  4861→  );
+   863→  4862→}
+   864→  4863→
+   865→  4864→// --- Tab 3: Change password ---
+   866→  4865→function SettingsPasswordTab({
+   867→  4866→  currentUser,
+   868→  4867→  showToast,
+   869→  4868→  onLogout,
+   870→  4869→}: {
+   871→  4870→  currentUser: User;
+   872→  4871→  showToast: (msg: string) => void;
+   873→  4872→  onLogout: () => void;
+   874→  4873→}) {
+   875→  4874→  const [oldPw, setOldPw] = useState('');
+   876→  4875→  const [newPw, setNewPw] = useState('');
+   877→  4876→  const [confirmPw, setConfirmPw] = useState('');
+   878→  4877→  const [showPw, setShowPw] = useState(false);
+   879→  4878→  const [saving, setSaving] = useState(false);
+   880→  4879→
+   881→  4880→  const handleChange = async () => {
+   882→  4881→    if (!oldPw || !newPw || !confirmPw) {
+   883→  4882→      showToast('هر سه فیلد را پر کنید');
+   884→  4883→      return;
+   885→  4884→    }
+   886→  4885→    if (newPw.length < 4) {
+   887→  4886→      showToast('رمز جدید باید حداقل ۴ کاراکتر باشد');
+   888→  4887→      return;
+   889→  4888→    }
+   890→  4889→    if (newPw !== confirmPw) {
+   891→  4890→      showToast('رمز جدید و تأیید آن یکسان نیستند');
+   892→  4891→      return;
+   893→  4892→    }
+   894→  4893→    if (newPw === oldPw) {
+   895→  4894→      showToast('رمز جدید باید با رمز فعلی متفاوت باشد');
+   896→  4895→      return;
+   897→  4896→    }
+   898→  4897→    setSaving(true);
+   899→  4898→    try {
+   900→  4899→      await api.changePassword(oldPw, newPw);
+   901→  4900→      showToast('رمز با موفقیت تغییر کرد. لطفاً دوباره وارد شوید.');
+   902→  4901→      // Force re-login since the API invalidated the session.
+   903→  4902→      setTimeout(() => { onLogout(); }, 1500);
+   904→  4903→    } catch (e: any) {
+   905→  4904→      showToast(e?.message || 'خطا در تغییر رمز');
+   906→  4905→    } finally {
+   907→  4906→      setSaving(false);
+   908→  4907→    }
+   909→  4908→  };
+   910→  4909→
+   911→  4910→  const inputStyle: React.CSSProperties = {
+   912→  4911→    width: '100%',
+   913→  4912→    background: 'rgba(255, 255, 255, 0.95)',
+   914→  4913→    border: '1px solid rgba(2, 144, 72, 0.25)',
+   915→  4914→    borderRadius: '12px',
+   916→  4915→    padding: '12px 48px 12px 16px',
+   917→  4916→    color: '#1a2e22',
+   918→  4917→    fontSize: '14px',
+   919→  4918→    fontFamily: 'inherit',
+   920→  4919→    outline: 'none',
+   921→  4920→    textAlign: 'left',
+   922→  4921→    direction: 'ltr',
+   923→  4922→  };
+   924→  4923→
+   925→  4924→  return (
+   926→  4925→    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+   927→  4926→      <div>
+   928→  4927→        <h3 className="text-base font-bold mb-1" style={{ color: '#1a2e22' }}>🔑 تغییر رمز عبور</h3>
+   929→  4928→        <p className="text-sm" style={{ color: '#7a8a80' }}>
+   930→  4929→          رمز عبور خود را تغییر دهید. پس از تغییر، تمام نشست‌های فعال شما باطل شده و باید دوباره وارد شوید.
+   931→  4930→        </p>
+   932→  4931→      </div>
+   933→  4932→
+   934→  4933→      <div
+   935→  4934→        className="p-3 rounded-xl text-sm flex items-center gap-2"
+   936→  4935→        style={{ background: 'rgba(2, 144, 72, 0.08)', border: '1px solid rgba(2, 144, 72, 0.2)', color: '#016035' }}
+   937→  4936→      >
+   938→  4937→        <span>👤 حساب فعلی:</span>
+   939→  4938→        <strong>{currentUser.name || currentUser.username}</strong>
+   940→  4939→        <span dir="ltr" style={{ color: '#7a8a80' }}>@{currentUser.username}</span>
+   941→  4940→      </div>
+   942→  4941→
+   943→  4942→      {[
+   944→  4943→        { label: 'رمز فعلی', val: oldPw, set: setOldPw },
+   945→  4944→        { label: 'رمز جدید', val: newPw, set: setNewPw },
+   946→  4945→        { label: 'تکرار رمز جدید', val: confirmPw, set: setConfirmPw },
+   947→  4946→      ].map((f, i) => (
+   948→  4947→        <div key={i}>
+   949→  4948→          <label className="block text-sm font-bold mb-2" style={{ color: '#1a2e22' }}>{f.label}</label>
+   950→  4949→          <div className="relative">
+   951→  4950→            <input
+   952→  4951→              type={showPw ? 'text' : 'password'}
+   953→  4952→              dir="ltr"
+   954→  4953→              value={f.val}
+   955→  4954→              onChange={(e) => f.set(e.target.value)}
+   956→  4955→              placeholder="••••••"
+   957→  4956→              style={inputStyle}
+   958→  4957→            />
+   959→  4958→            <button
+   960→  4959→              type="button"
+   961→  4960→              onClick={() => setShowPw(!showPw)}
+   962→  4961→              className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-lg"
+   963→  4962→              style={{ color: '#4a5d52', background: 'transparent' }}
+   964→  4963→              aria-label={showPw ? 'پنهان کردن رمز' : 'نمایش رمز'}
+   965→  4964→            >
+   966→  4965→              {showPw ? (
+   967→  4966→                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+   968→  4967→                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.243 4.243L9.88 9.88" />
+   969→  4968→                </svg>
+   970→  4969→              ) : (
+   971→  4970→                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+   972→  4971→                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+   973→  4972→                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+   974→  4973→                </svg>
+   975→  4974→              )}
+   976→  4975→            </button>
+   977→  4976→          </div>
+   978→  4977→        </div>
+   979→  4978→      ))}
+   980→  4979→
+   981→  4980→      {newPw && confirmPw && newPw !== confirmPw && (
+   982→  4981→        <div
+   983→  4982→          className="p-3 rounded-xl text-sm font-medium"
+   984→  4983→          style={{ background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}
+   985→  4984→        >
+   986→  4985→          ⚠ رمز جدید و تأیید آن یکسان نیستند
+   987→  4986→        </div>
+   988→  4987→      )}
+   989→  4988→
+   990→  4989→      <button
+   991→  4990→        onClick={handleChange}
+   992→  4991→        disabled={saving}
+   993→  4992→        className="px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
+   994→  4993→        style={{
+   995→  4994→          background: saving ? 'rgba(122, 138, 128, 0.5)' : 'linear-gradient(135deg, #029048 0%, #016035 100%)',
+   996→  4995→          color: 'white',
+   997→  4996→          boxShadow: '0 4px 12px rgba(2, 144, 72, 0.3)',
+   998→  4997→          opacity: saving ? 0.6 : 1,
+   999→  4998→          cursor: saving ? 'not-allowed' : 'pointer',
+  1000→  4999→        }}
+  1001→  5000→      >
+  1002→  5001→        {saving ? '⏳ در حال تغییر...' : '✓ تغییر رمز عبور'}
+  1003→  5002→      </button>
+  1004→  5003→    </div>
+  1005→  5004→  );
+  1006→  5005→}
+  1007→  5006→

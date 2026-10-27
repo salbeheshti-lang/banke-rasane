@@ -27,9 +27,15 @@ interface TalkShow {
   imdb: string;
   wikipedia: string;
   socialPost: string;
+  country?: string;
+  tags?: string[];
   images?: string[];
   videos?: string[];
 }
+
+// A "section-specific tag" — derives a small badge label from a TalkShow field
+// (only when the field has a meaningful value). Each Genre chooses which tags to show.
+type TagSpec = { id: string; label: (s: TalkShow) => string | null };
 
 interface Genre {
   id: string;
@@ -39,28 +45,300 @@ interface Genre {
   color: string;
   description: string;
   filterFn: (s: TalkShow) => boolean;
+  // Section-specific tags shown on cards in this genre's view
+  tags?: TagSpec[];
+  // Preset tags offered as quick-add buttons in AddEditView when this genre is preset
+  presetTags?: string[];
+  // Which TalkShow fields the ProgramsView search bar should match against
+  searchFields?: (keyof TalkShow)[];
+  // True for user-created genres (stored in localStorage)
+  isCustom?: boolean;
 }
 
-// Real genres from Excel - 17 categories + technical decor view
+// Reusable tag specifications — each Genre picks a subset for its `tags` array.
+const TAG_LIBRARY: Record<string, TagSpec> = {
+  style: { id: 'style', label: s => s.style || null },
+  size: { id: 'size', label: s => s.size || null },
+  viewers: { id: 'viewers', label: s => (s.viewers === 'با تماشاگر' ? 'با تماشاگر' : null) },
+  layout: { id: 'layout', label: s => s.layout || null },
+  effects: { id: 'effects', label: s => s.effects || null },
+  elements: { id: 'elements', label: s => s.elements || null },
+  materials: { id: 'materials', label: s => s.materials || null },
+  colors: { id: 'colors', label: s => s.colors || null },
+  lighting: { id: 'lighting', label: s => s.lighting || null },
+};
+
+// Default tag set for the "decor" view (or any genre without its own tags).
+const DEFAULT_GENRE_TAGS: TagSpec[] = [TAG_LIBRARY.style, TAG_LIBRARY.size, TAG_LIBRARY.viewers];
+
+// Real genres from Excel - 17 categories + technical decor view + 3 extras (PSA, deep observation, ads)
 const GENRES: Genre[] = [
-  { id: 'decor', key: 'decor', nameFa: 'دکور برنامه‌ها', name: 'Decor Analysis', color: '#029048', description: 'همهٔ ۵۶۰ برنامه با تحلیل دکور و صحنه', filterFn: () => true },
-  { id: 'interview', key: 'interview', nameFa: 'تاک‌شوی مصاحبه‌محور', name: 'Interview', color: '#0d9488', description: '۱۰۲ برنامه', filterFn: s => s.category.includes('مصاحبه') },
-  { id: 'comedy', key: 'comedy', nameFa: 'تاک‌شوی طنز و کمدی', name: 'Comedy', color: '#db2777', description: '۸۹ برنامه', filterFn: s => s.category.includes('طنز') },
-  { id: 'news', key: 'news', nameFa: 'تاک‌شوی سیاسی و خبری', name: 'News/Politics', color: '#dc2626', description: '۶۸ برنامه', filterFn: s => s.category.includes('خبری') || s.category.includes('سیاسی') },
-  { id: 'lifestyle', key: 'lifestyle', nameFa: 'تاک‌شوی تخصصی و سبک زندگی', name: 'Lifestyle', color: '#16a34a', description: '۵۴ برنامه', filterFn: s => s.category.includes('تخصصی') },
-  { id: 'cultural', key: 'cultural', nameFa: 'تاک‌شوی فرهنگی، هنری', name: 'Cultural', color: '#b45309', description: '۵۲ برنامه', filterFn: s => s.category.includes('فرهنگی') },
-  { id: 'celebrity', key: 'celebrity', nameFa: 'تاک‌شوی گروهی سلبریتی‌ها', name: 'Celebrity', color: '#7c3aed', description: '۴۲ برنامه', filterFn: s => s.category.includes('سلبریتی') },
-  { id: 'panel', key: 'panel', nameFa: 'تاک‌شوی پنلی و میزگرد', name: 'Panel', color: '#2563eb', description: '۲۳ برنامه', filterFn: s => s.category.includes('پنلی') },
-  { id: 'morning', key: 'morning', nameFa: 'تاک‌شوی روزانه/صبحگاهی', name: 'Morning Show', color: '#f59e0b', description: '۲۰ برنامه', filterFn: s => s.category.includes('صبحگاهی') },
-  { id: 'reality', key: 'reality', nameFa: 'ریلیتی شو / مسابقه', name: 'Reality/Competition', color: '#ea580c', description: '۱۹ برنامه', filterFn: s => s.category.includes('مسابقه') || s.category.includes('رئالیتی') },
-  { id: 'night', key: 'night', nameFa: 'تاک‌شوی شبانه', name: 'Late Night', color: '#6366f1', description: '۱۵ برنامه', filterFn: s => s.category.includes('شبانه') },
-  { id: 'entertainment', key: 'entertainment', nameFa: 'صنعت سرگرمی / پشت‌صحنه', name: 'Entertainment', color: '#c026d3', description: '۱۳ برنامه', filterFn: s => s.category.includes('سرگرمی') },
-  { id: 'location', key: 'location', nameFa: 'موقعیت‌محور / خارج از استودیو', name: 'On-Location', color: '#92400e', description: '۱۲ برنامه', filterFn: s => s.category.includes('موقعیت') },
-  { id: 'digital', key: 'digital', nameFa: 'تاک‌شوی دیجیتال / اینترنتی', name: 'Digital', color: '#0891b2', description: '۱۰ برنامه', filterFn: s => s.category.includes('دیجیتال') },
-  { id: 'relationships', key: 'relationships', nameFa: 'تاک‌شوی روابط و تعارض', name: 'Relationships', color: '#be185d', description: '۸ برنامه', filterFn: s => s.category.includes('روابط') },
-  { id: 'radio', key: 'radio', nameFa: 'تاک‌شوی رادیویی / صوتی', name: 'Radio/Audio', color: '#4a5d52', description: '۶ برنامه', filterFn: s => s.category.includes('رادیویی') },
-  { id: 'human', key: 'human', nameFa: 'تاک‌شوی انسانی و داستان‌محور', name: 'Human Stories', color: '#0369a1', description: '۵ برنامه', filterFn: s => s.category.includes('انسانی') },
+  {
+    id: 'decor', key: 'decor', nameFa: 'دکور برنامه‌ها', name: 'Decor Analysis',
+    color: '#029048', description: 'همهٔ ۵۶۰ برنامه با تحلیل دکور و صحنه', filterFn: () => true,
+    tags: DEFAULT_GENRE_TAGS,
+    presetTags: ['مدرن', 'مینیمال', 'چوب', 'تکنولوژی', 'گرم', 'لوکس', 'تاریک', 'روشن'],
+    searchFields: ['name', 'summary', 'materials', 'colors'],
+  },
+  {
+    id: 'interview', key: 'interview', nameFa: 'تاک‌شوی مصاحبه‌محور', name: 'Interview',
+    color: '#0d9488', description: '۱۰۲ برنامه', filterFn: s => s.category.includes('مصاحبه'),
+    tags: [TAG_LIBRARY.layout, TAG_LIBRARY.viewers],
+    presetTags: ['مصاحبه اختصاصی', 'مهمان ویژه', 'تکنولوژی', 'استودیو', 'مدرن', 'گریل'],
+    searchFields: ['name', 'summary', 'category', 'layout'],
+  },
+  {
+    id: 'comedy', key: 'comedy', nameFa: 'تاک‌شوی طنز و کمدی', name: 'Comedy',
+    color: '#db2777', description: '۸۹ برنامه', filterFn: s => s.category.includes('طنز'),
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
+    presetTags: ['طنز', 'استندآپ', 'شخصیت‌محور', 'استودیوی رنگارنگ', 'پویا'],
+    searchFields: ['name', 'summary', 'style', 'effects'],
+  },
+  {
+    id: 'news', key: 'news', nameFa: 'تاک‌شوی سیاسی و خبری', name: 'News/Politics',
+    color: '#dc2626', description: '۶۸ برنامه', filterFn: s => s.category.includes('خبری') || s.category.includes('سیاسی'),
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting],
+    presetTags: ['خبری', 'تحلیل سیاسی', 'مهمان سیاسی', 'رسمی', 'مدرن'],
+    searchFields: ['name', 'summary', 'descriptionFa', 'category'],
+  },
+  {
+    id: 'lifestyle', key: 'lifestyle', nameFa: 'تاک‌شوی تخصصی و سبک زندگی', name: 'Lifestyle',
+    color: '#16a34a', description: '۵۴ برنامه', filterFn: s => s.category.includes('تخصصی'),
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.materials],
+    presetTags: ['سبک زندگی', 'آشپزی', 'سلامت', 'مد', 'منزل', 'طبیعت'],
+    searchFields: ['name', 'summary', 'category', 'materials'],
+  },
+  {
+    id: 'cultural', key: 'cultural', nameFa: 'تاک‌شوی فرهنگی، هنری', name: 'Cultural',
+    color: '#b45309', description: '۵۲ برنامه', filterFn: s => s.category.includes('فرهنگی'),
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.materials],
+    presetTags: ['فرهنگی', 'هنری', 'سنتی', 'تاریخی', 'موسیقی'],
+    searchFields: ['name', 'summary', 'category', 'materials'],
+  },
+  {
+    id: 'celebrity', key: 'celebrity', nameFa: 'تاک‌شوی گروهی سلبریتی‌ها', name: 'Celebrity',
+    color: '#7c3aed', description: '۴۲ برنامه', filterFn: s => s.category.includes('سلبریتی'),
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.size],
+    presetTags: ['سلبریتی', 'گروهی', 'مهمان‌محور', 'سرگرمی', 'لوکس'],
+    searchFields: ['name', 'summary', 'style', 'size'],
+  },
+  {
+    id: 'panel', key: 'panel', nameFa: 'تاک‌شوی پنلی و میزگرد', name: 'Panel',
+    color: '#2563eb', description: '۲۳ برنامه', filterFn: s => s.category.includes('پنلی'),
+    tags: [TAG_LIBRARY.layout, TAG_LIBRARY.size],
+    presetTags: ['پنل', 'میزگرد', 'چندمهمانه', 'بحث', 'تخصصی'],
+    searchFields: ['name', 'summary', 'category', 'layout'],
+  },
+  {
+    id: 'morning', key: 'morning', nameFa: 'تاک‌شوی روزانه/صبحگاهی', name: 'Morning Show',
+    color: '#f59e0b', description: '۲۰ برنامه', filterFn: s => s.category.includes('صبحگاهی'),
+    tags: [TAG_LIBRARY.size, TAG_LIBRARY.viewers],
+    presetTags: ['صبحگاهی', 'روزانه', 'پویا', 'با تماشاگر', 'موسیقی زنده'],
+    searchFields: ['name', 'summary', 'category', 'viewers'],
+  },
+  {
+    id: 'reality', key: 'reality', nameFa: 'ریلیتی شو / مسابقه', name: 'Reality/Competition',
+    color: '#ea580c', description: '۱۹ برنامه', filterFn: s => s.category.includes('مسابقه') || s.category.includes('رئالیتی'),
+    tags: [TAG_LIBRARY.effects, TAG_LIBRARY.style],
+    presetTags: ['مسابقه', 'رئالیتی', 'داورمحور', 'پیروز', 'تعاملی'],
+    searchFields: ['name', 'summary', 'style', 'effects'],
+  },
+  {
+    id: 'night', key: 'night', nameFa: 'تاک‌شوی شبانه', name: 'Late Night',
+    color: '#6366f1', description: '۱۵ برنامه', filterFn: s => s.category.includes('شبانه'),
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting],
+    presetTags: ['شبانه', 'تاریک', 'کمدی', 'مصاحبه کوتاه', 'مدرن'],
+    searchFields: ['name', 'summary', 'style', 'lighting'],
+  },
+  {
+    id: 'entertainment', key: 'entertainment', nameFa: 'صنعت سرگرمی / پشت‌صحنه', name: 'Entertainment',
+    color: '#c026d3', description: '۱۳ برنامه', filterFn: s => s.category.includes('سرگرمی'),
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
+    presetTags: ['سرگرمی', 'پشت‌صحنه', 'گوینده', 'مدرن', 'تعاملی'],
+    searchFields: ['name', 'summary', 'style', 'effects'],
+  },
+  {
+    id: 'location', key: 'location', nameFa: 'موقعیت‌محور / خارج از استودیو', name: 'On-Location',
+    color: '#92400e', description: '۱۲ برنامه', filterFn: s => s.category.includes('موقعیت'),
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.materials],
+    presetTags: ['موقعیت‌محور', 'بیرون از استودیو', 'میدانی', 'طبیعت', 'شهری'],
+    searchFields: ['name', 'summary', 'category', 'materials'],
+  },
+  {
+    id: 'digital', key: 'digital', nameFa: 'تاک‌شوی دیجیتال / اینترنتی', name: 'Digital',
+    color: '#0891b2', description: '۱۰ برنامه', filterFn: s => s.category.includes('دیجیتال'),
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
+    presetTags: ['دیجیتال', 'اینترنتی', 'استریم', 'تعاملی', 'مدرن'],
+    searchFields: ['name', 'summary', 'style', 'effects'],
+  },
+  {
+    id: 'relationships', key: 'relationships', nameFa: 'تاک‌شوی روابط و تعارض', name: 'Relationships',
+    color: '#be185d', description: '۸ برنامه', filterFn: s => s.category.includes('روابط'),
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
+    presetTags: ['روابط', 'تعارض', 'خانوادگی', 'گفتگومحور', 'صمیمی'],
+    searchFields: ['name', 'summary', 'style', 'layout'],
+  },
+  {
+    id: 'radio', key: 'radio', nameFa: 'تاک‌شوی رادیویی / صوتی', name: 'Radio/Audio',
+    color: '#4a5d52', description: '۶ برنامه', filterFn: s => s.category.includes('رادیویی'),
+    tags: [TAG_LIBRARY.layout, TAG_LIBRARY.effects],
+    presetTags: ['رادیویی', 'صوتی', 'گفتگو', 'مدرن', 'استودیویی'],
+    searchFields: ['name', 'summary', 'layout', 'effects'],
+  },
+  {
+    id: 'human', key: 'human', nameFa: 'تاک‌شوی انسانی و داستان‌محور', name: 'Human Stories',
+    color: '#0369a1', description: '۵ برنامه', filterFn: s => s.category.includes('انسانی'),
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.materials],
+    presetTags: ['انسانی', 'داستان‌محور', 'مصاحبه عمیق', 'صمیمی', 'مستندگونه'],
+    searchFields: ['name', 'summary', 'style', 'materials'],
+  },
+  {
+    id: 'psa', key: 'psa', nameFa: 'PSA (پیام خدمت عمومی)', name: 'Public Service Announcement',
+    color: '#0891b2', description: 'پیام‌های آگاهی‌بخش و خدمت عمومی',
+    filterFn: s => s.category.includes('PSA') || s.category.includes('پیام خدمت'),
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
+    presetTags: ['خدمت عمومی', 'آگاهی‌بخش', 'آموزشی', 'اجتماعی', 'کوتاه'],
+    searchFields: ['name', 'summary', 'category', 'descriptionFa'],
+  },
+  {
+    id: 'deepobs', key: 'deepobs', nameFa: 'پایش تحلیلی', name: 'Deep Observation',
+    color: '#7c3aed', description: 'تحلیل و رصد عمیق برنامه‌ها',
+    filterFn: s => s.category.includes('پایش تحلیلی'),
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting, TAG_LIBRARY.materials],
+    presetTags: ['تحلیلی', 'رصد عمیق', 'بررسی تخصصی', 'مقایسه‌ای', 'تفصیلی'],
+    searchFields: ['name', 'summary', 'descriptionFa', 'materials'],
+  },
+  {
+    id: 'ads', key: 'ads', nameFa: 'آگهی‌های تبلیغاتی', name: 'Advertisements',
+    color: '#ea580c', description: 'تبلیغات و آگهی‌های تجاری',
+    filterFn: s => s.category.includes('آگهی'),
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.colors],
+    presetTags: ['تبلیغاتی', 'تجاری', 'برندمحور', 'جذاب', 'کوتاه'],
+    searchFields: ['name', 'summary', 'category', 'colors'],
+  },
 ];
+
+// ============================================
+// ISLAMIC COUNTRIES FILTER
+// ~40 Persian country names — used to detect a show's country from its text.
+// ============================================
+const ISLAMIC_COUNTRIES: string[] = [
+  'ایران', 'افغانستان', 'پاکستان', 'ترکیه', 'عربستان', 'عراق', 'سوریه', 'مصر',
+  'یمن', 'عمان', 'قطر', 'کویت', 'بحرین', 'امارات', 'اردن', 'لبنان',
+  'فلسطین', 'سودان', 'لیبی', 'تونس', 'الجزایر', 'مراکش', 'موریتانی', 'سومالی',
+  'مالزی', 'اندونزی', 'برونئی', 'بنگلادش', 'مالدیو', 'کومور', 'ازبکستان', 'تاجیکستان',
+  'ترکمنستان', 'قرقیزستان', 'قزاقستان', 'آذربایجان', 'مالی', 'نیجر', 'چاد', 'سنگال',
+];
+
+// Returns the list of Islamic countries mentioned in a show's text (description, summary, country).
+function detectCountries(show: TalkShow): string[] {
+  const text = `${show.descriptionFa || ''} ${show.summary || ''} ${show.country || ''}`;
+  const found: string[] = [];
+  for (const c of ISLAMIC_COUNTRIES) {
+    // Word-boundary-style match: country must not be part of a longer Persian word.
+    // We use a regex that requires non-letter / start / end on either side.
+    const escaped = c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`(^|[^\\u0600-\\u06FFa-zA-Z])${escaped}([^\\u0600-\\u06FFa-zA-Z]|$)`);
+    if (re.test(text)) found.push(c);
+  }
+  return Array.from(new Set(found));
+}
+
+// ============================================
+// RELATED PROGRAMS
+// Score: same category +5, same layout +3, shared elements (Jaccard up to +3),
+//        same style +2, same effects +2, same country +2, same size +1, same viewers +1
+// ============================================
+function findRelated(show: TalkShow, allShows: TalkShow[], limit = 6): TalkShow[] {
+  const showElements = (show.elements || '').split(/[,،\s]+/).filter(Boolean);
+  const candidates = allShows.filter(s => s.num !== show.num);
+  const scored = candidates.map(s => {
+    let score = 0;
+    if (s.category === show.category) score += 5;
+    if (s.layout === show.layout) score += 3;
+    const sElements = (s.elements || '').split(/[,،\s]+/).filter(Boolean);
+    if (showElements.length > 0 && sElements.length > 0) {
+      const intersection = showElements.filter(e => sElements.includes(e)).length;
+      const union = new Set([...showElements, ...sElements]).size || 1;
+      score += Math.round((intersection / union) * 3);
+    }
+    if (s.style === show.style) score += 2;
+    if (s.effects === show.effects) score += 2;
+    if (s.country && show.country && s.country === show.country) score += 2;
+    if (s.size === show.size) score += 1;
+    if (s.viewers === show.viewers) score += 1;
+    return { show: s, score };
+  });
+  return scored
+    .filter(x => x.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map(x => x.show);
+}
+
+// ============================================
+// CUSTOM GENRES — persisted in localStorage so user-added genres survive refresh
+// ============================================
+const CUSTOM_GENRES_KEY = 'bankresaneh_custom_genres_v1';
+
+type StoredGenre = {
+  id: string;
+  nameFa: string;
+  name?: string;
+  color: string;
+  description: string;
+};
+
+function loadCustomGenres(): Genre[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(CUSTOM_GENRES_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .filter((g: any) => g && typeof g === 'object' && typeof g.id === 'string' && typeof g.nameFa === 'string' && typeof g.color === 'string')
+      .map((g: StoredGenre) => ({
+        id: g.id,
+        key: g.id,
+        nameFa: g.nameFa,
+        name: g.name || g.nameFa,
+        color: g.color,
+        description: g.description || '',
+        // Match shows whose category contains the genre's Persian name
+        filterFn: (s: TalkShow) => s.category.includes(g.nameFa) || (g.name ? s.category.includes(g.name) : false),
+        isCustom: true,
+        tags: DEFAULT_GENRE_TAGS,
+        presetTags: [],
+        searchFields: ['name', 'summary', 'category', 'descriptionFa'] as (keyof TalkShow)[],
+      }));
+  } catch {
+    return [];
+  }
+}
+
+function saveCustomGenres(genres: Genre[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    const arr: StoredGenre[] = genres.map(g => ({
+      id: g.id, nameFa: g.nameFa, name: g.name, color: g.color, description: g.description,
+    }));
+    window.localStorage.setItem(CUSTOM_GENRES_KEY, JSON.stringify(arr));
+  } catch {
+    // ignore storage errors
+  }
+}
+
+// Render the section-specific tags (from genre.tags or DEFAULT_GENRE_TAGS) as small badges.
+function renderGenreTags(show: TalkShow, genre?: Genre | null): { id: string; label: string }[] {
+  const specs = (genre && genre.tags) ? genre.tags : DEFAULT_GENRE_TAGS;
+  const out: { id: string; label: string }[] = [];
+  for (const spec of specs) {
+    const label = spec.label(show);
+    if (label) out.push({ id: spec.id, label });
+  }
+  return out;
+}
 
 function toFa(n: number | null | undefined): string {
   if (n === null || n === undefined || n === 0) return '-';
@@ -328,6 +606,16 @@ export default function Home() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   // Settings modal (admin only)
   const [showSettings, setShowSettings] = useState(false);
+  // User-created custom genres (persisted to localStorage) — merged with GENRES.
+  const [customGenres, setCustomGenres] = useState<Genre[]>([]);
+  // When the user clicks "+ افزودن برنامه" from inside a genre view, that genre's
+  // Persian name is preset here so AddEditView's category field starts with it.
+  const [presetCategory, setPresetCategory] = useState<string | undefined>(undefined);
+  // When AddEditView opens with a preset genre, its preset tags are offered as quick-adds.
+  const [presetGenre, setPresetGenre] = useState<Genre | null>(null);
+
+  // The full list of genres = default GENRES + user customGenres.
+  const genres: Genre[] = useMemo(() => [...GENRES, ...customGenres], [customGenres]);
 
   // Role helpers — viewer is read-only (no add/edit/delete), admin can manage users + settings.
   const role = currentUser?.role || null;
@@ -345,6 +633,8 @@ export default function Home() {
     // Load persisted overrides first, then merge them with the base JSON data.
     const saved = loadOverrides();
     setOverrides(saved);
+    // Restore custom genres saved in a previous session.
+    setCustomGenres(loadCustomGenres());
     fetch('/talk-shows-data.json')
       .then(r => r.json())
       .then((data: TalkShow[]) => {
@@ -445,6 +735,27 @@ export default function Home() {
     navigate('genre', g);
   };
 
+  // User clicked "+ افزودن برنامه" from inside a genre view → preset the category
+  // so AddEditView opens with this genre's Persian name already chosen.
+  const handleAddFromGenre = (g: Genre) => {
+    setPresetCategory(g.nameFa);
+    setPresetGenre(g);
+    setEditingShow(null);
+    setViewStack(prev => [...prev, { view: currentView, genre: selectedGenre }]);
+    setCurrentView('add');
+    setSelectedGenre(null);
+    setDrawerOpen(false);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Add a brand-new custom Genre to state + localStorage.
+  const handleAddGenre = (g: Genre) => {
+    const next = [...customGenres, g];
+    setCustomGenres(next);
+    saveCustomGenres(next);
+    showToast(`ژانر «${g.nameFa}» اضافه شد`);
+  };
+
   const handleLogout = async () => {
     try { await api.logout(); } catch {}
     setCurrentUser(null);
@@ -453,6 +764,8 @@ export default function Home() {
     setCurrentView('dashboard');
     setSelectedGenre(null);
     setViewStack([]);
+    setPresetCategory(undefined);
+    setPresetGenre(null);
   };
 
   const handleLoginSuccess = (user: User) => {
@@ -508,14 +821,15 @@ export default function Home() {
         currentUser={currentUser}
         isAdmin={isAdmin}
         talkShows={talkShows}
+        genres={genres}
       />
 
       <main className={isMobile ? 'p-4 pt-20 pb-28' : 'p-8 pt-24'}>
-        {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => navigate('add')} canEdit={canEdit} />}
+        {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} />}
         {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} />}
-        {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} />}
+        {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} />}
         {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} onExport={(shows, format) => setExportPreview({ shows, format })} />}
-        {currentView === 'add' && canEdit && <AddEditView talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} />}
+        {currentView === 'add' && canEdit && <AddEditView talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setPresetCategory(undefined); setPresetGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} presetCategory={presetCategory} presetGenre={presetGenre} genres={genres} />}
         {currentView === 'add' && !canEdit && (
           <div className="premium-glass p-8 text-center">
             <h2 className="text-2xl font-bold mb-2" style={{ color: '#dc2626' }}>دسترسی غیرمجاز</h2>
@@ -532,20 +846,23 @@ export default function Home() {
           onLogout={handleLogout}
           onOpenDrawer={() => setDrawerOpen(true)}
           talkShows={talkShows}
+          genres={genres}
         />
       )}
 
-      {/* Show details modal */}
+      {/* Show details modal — pass talkShows so the modal can compute related programs */}
       {selectedShow && (
         <ShowDetailsModal
           show={selectedShow}
+          allShows={talkShows}
           onClose={() => setSelectedShow(null)}
-          onEdit={(s) => { setSelectedShow(null); setEditingShow(s); navigate('add'); }}
+          onEdit={(s) => { setSelectedShow(null); setEditingShow(s); setPresetGenre(null); setPresetCategory(undefined); navigate('add'); }}
           onDelete={handleDeleteShow}
           onPublish={(s) => setPublishShows([s])}
           onExport={(s, fmt) => setExportPreview({ shows: [s], format: fmt })}
           isUploaded={uploadedShows.includes(selectedShow.num)}
           canEdit={canEdit}
+          onSwapShow={(s) => setSelectedShow(s)}
         />
       )}
 
@@ -999,6 +1316,7 @@ function DrawerMenu({
   currentUser,
   isAdmin,
   talkShows,
+  genres = GENRES,
 }: {
   open: boolean;
   onClose: () => void;
@@ -1010,6 +1328,7 @@ function DrawerMenu({
   currentUser: User | null;
   isAdmin: boolean;
   talkShows: TalkShow[];
+  genres?: Genre[];
 }) {
   const [genresExpanded, setGenresExpanded] = useState(true);
 
@@ -1125,7 +1444,7 @@ function DrawerMenu({
               className="flex items-center justify-between w-full px-3 mb-2 text-xs font-bold uppercase tracking-wider"
               style={{ color: 'rgba(255, 255, 255, 0.5)' }}
             >
-              <span>ژانرها ({GENRES.length})</span>
+              <span>ژانرها ({genres.length})</span>
               <svg
                 className="w-4 h-4 transition-transform"
                 style={{ transform: genresExpanded ? 'rotate(0deg)' : 'rotate(-90deg)' }}
@@ -1137,7 +1456,7 @@ function DrawerMenu({
 
             {genresExpanded && (
               <div className="space-y-0.5 animate-fade-in-up">
-                {GENRES.map((g) => {
+                {genres.map((g) => {
                   const count = talkShows.filter(g.filterFn).length;
                   return (
                     <button
@@ -1297,6 +1616,7 @@ function MobileBottomNav({
   onLogout,
   onOpenDrawer,
   talkShows,
+  genres = GENRES,
 }: {
   currentView: string;
   onNavigate: (v: 'dashboard' | 'programs' | 'reports' | 'add') => void;
@@ -1304,6 +1624,7 @@ function MobileBottomNav({
   onLogout: () => void;
   onOpenDrawer: () => void;
   talkShows: TalkShow[];
+  genres?: Genre[];
 }) {
   const [showGenres, setShowGenres] = useState(false);
 
@@ -1331,7 +1652,7 @@ function MobileBottomNav({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg" style={{ color: '#1a2e22' }}>ژانرها ({GENRES.length})</h3>
+              <h3 className="font-bold text-lg" style={{ color: '#1a2e22' }}>ژانرها ({genres.length})</h3>
               <button
                 onClick={() => setShowGenres(false)}
                 className="p-2 rounded-lg"
@@ -1343,7 +1664,7 @@ function MobileBottomNav({
               </button>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              {GENRES.map((g) => {
+              {genres.map((g) => {
                 const count = talkShows.filter(g.filterFn).length;
                 return (
                   <button
@@ -1449,16 +1770,20 @@ function MobileNavBtn({ label, icon, active, onClick, highlight }: {
 // ============================================
 // DASHBOARD
 // ============================================
-function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit }: {
+function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isAdmin, genres = GENRES, onAddGenre }: {
   onGenreClick: (g: Genre) => void;
   talkShows: TalkShow[];
   uploadedCount: number;
   onAdd: () => void;
   canEdit: boolean;
+  isAdmin?: boolean;
+  genres?: Genre[];
+  onAddGenre?: (g: Genre) => void;
 }) {
+  const [showAddGenre, setShowAddGenre] = useState(false);
   const stats = [
     { label: 'کل برنامه‌ها', value: talkShows.length, color: '#029048', icon: 'film' },
-    { label: 'ژانرها', value: GENRES.length, color: '#2563eb', icon: 'tag' },
+    { label: 'ژانرها', value: genres.length, color: '#2563eb', icon: 'tag' },
     { label: 'آپلود شده در فضای مجازی', value: uploadedCount, color: '#7c3aed', icon: 'cloud' },
     { label: 'با تصویر (PDF + وب)', value: 149 + 23, color: '#db2777', icon: 'image' },
   ];
@@ -1476,7 +1801,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit }: {
           </span>
         </div>
         <p style={{ color: '#7a8a80' }}>
-          بانک اطلاعاتی {talkShows.length.toLocaleString('fa-IR')} برنامهٔ تلویزیونی در {GENRES.length} ژانر
+          بانک اطلاعاتی {talkShows.length.toLocaleString('fa-IR')} برنامهٔ تلویزیونی در {genres.length} ژانر
         </p>
       </header>
 
@@ -1517,21 +1842,36 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit }: {
         })}
       </div>
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <h2 className="text-xl font-bold" style={{ color: '#1a2e22' }}>ژانرها</h2>
-        {canEdit && (
-          <button
-            onClick={onAdd}
-            className="btn-enter-premium text-sm"
-            style={{ padding: '8px 20px', fontSize: '14px' }}
-          >
-            + افزودن برنامه
-          </button>
-        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          {isAdmin && onAddGenre && (
+            <button
+              onClick={() => setShowAddGenre(true)}
+              className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+              style={{
+                background: 'rgba(7, 89, 133, 0.12)',
+                color: '#075985',
+                border: '1px solid rgba(7, 89, 133, 0.3)',
+              }}
+            >
+              + افزودن ژانر
+            </button>
+          )}
+          {canEdit && (
+            <button
+              onClick={onAdd}
+              className="btn-enter-premium text-sm"
+              style={{ padding: '8px 20px', fontSize: '14px' }}
+            >
+              + افزودن برنامه
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {GENRES.map((g, idx) => {
+        {genres.map((g, idx) => {
           const count = talkShows.filter(g.filterFn).length;
           const dark = adjustColor(g.color, -40);
           const darker = adjustColor(g.color, -70);
@@ -1591,6 +1931,13 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit }: {
           );
         })}
       </div>
+
+      {showAddGenre && onAddGenre && (
+        <AddGenreModal
+          onClose={() => setShowAddGenre(false)}
+          onSave={(g) => { onAddGenre(g); setShowAddGenre(false); }}
+        />
+      )}
     </>
   );
 }
@@ -1623,6 +1970,7 @@ function ProgramsView({
   onPublish,
   onExport,
   canEdit,
+  onAdd,
 }: {
   genre?: Genre;
   talkShows: TalkShow[];
@@ -1634,6 +1982,7 @@ function ProgramsView({
   onPublish: (shows: TalkShow[]) => void;
   onExport: (shows: TalkShow[], format: 'pdf' | 'excel') => void;
   canEdit: boolean;
+  onAdd?: () => void;
 }) {
   const [search, setSearch] = useState('');
   const [view, setView] = useState<'grid' | 'list'>('grid');
@@ -1642,6 +1991,7 @@ function ProgramsView({
   const [filterSize, setFilterSize] = useState('all');
   const [filterViewers, setFilterViewers] = useState('all');
   const [filterStyle, setFilterStyle] = useState('all');
+  const [islamicOnly, setIslamicOnly] = useState(false);
 
   const filteredShows = useMemo(() => {
     let shows = [...talkShows];
@@ -1649,16 +1999,25 @@ function ProgramsView({
     if (filterSize !== 'all') shows = shows.filter(s => s.size === filterSize);
     if (filterViewers !== 'all') shows = shows.filter(s => s.viewers === filterViewers);
     if (filterStyle !== 'all') shows = shows.filter(s => s.style === filterStyle);
+    if (islamicOnly) shows = shows.filter(s => detectCountries(s).length > 0);
     if (search) {
       const q = search.toLowerCase();
-      shows = shows.filter(s =>
-        s.name.toLowerCase().includes(q) ||
-        (s.summary && s.summary.includes(search)) ||
-        (s.category && s.category.includes(search))
-      );
+      // Section-specific search: use genre.searchFields if defined, else default to name+summary+category.
+      const fields: (keyof TalkShow)[] = genre?.searchFields || ['name', 'summary', 'category'];
+      shows = shows.filter(s => {
+        for (const f of fields) {
+          const v = s[f];
+          if (typeof v === 'string') {
+            if (v.toLowerCase().includes(q) || v.includes(search)) return true;
+          } else if (Array.isArray(v)) {
+            if (v.some(item => String(item).toLowerCase().includes(q) || String(item).includes(search))) return true;
+          }
+        }
+        return false;
+      });
     }
     return shows;
-  }, [talkShows, genre, search, filterSize, filterViewers, filterStyle]);
+  }, [talkShows, genre, search, filterSize, filterViewers, filterStyle, islamicOnly]);
 
   const handleUploadSelected = () => {
     const selectedShows = filteredShows.filter(s => selectedIds.includes(s.num));
@@ -1719,7 +2078,18 @@ function ProgramsView({
               </svg>
             </div>
             <div className="flex-1">
-              <h2 className="text-xl sm:text-2xl font-bold mb-1" style={{ color: '#1a2e22' }}>{genre.nameFa}</h2>
+              <div className="flex items-center gap-3 flex-wrap">
+                <h2 className="text-xl sm:text-2xl font-bold mb-1" style={{ color: '#1a2e22' }}>{genre.nameFa}</h2>
+                {canEdit && onAdd && (
+                  <button
+                    onClick={onAdd}
+                    className="btn-enter-premium text-sm"
+                    style={{ padding: '6px 16px', fontSize: '13px' }}
+                  >
+                    + افزودن برنامه
+                  </button>
+                )}
+              </div>
               <p style={{ color: '#4a5d52' }} className="text-sm mt-1">{genre.description}</p>
             </div>
           </div>
@@ -1756,7 +2126,7 @@ function ProgramsView({
           />
         </div>
 
-        {/* Actions row — view toggle + multi-select */}
+        {/* Actions row — view toggle + multi-select + Islamic filter */}
         <div className="flex items-center gap-2">
           <div
             className="flex items-center gap-1 rounded-xl p-1 flex-shrink-0"
@@ -1786,6 +2156,24 @@ function ProgramsView({
               </svg>
             </button>
           </div>
+
+          {/* 🌍 Islamic-countries filter — toggles whether shows must mention an Islamic country */}
+          <button
+            onClick={() => setIslamicOnly(!islamicOnly)}
+            className="px-3 py-2 rounded-xl text-sm font-medium transition-all flex-shrink-0"
+            title="فقط برنامه‌های مرتبط با کشورهای اسلامی"
+            style={islamicOnly ? {
+              background: 'linear-gradient(135deg, #0891b2 0%, #0e7490 100%)',
+              color: 'white',
+              border: '1px solid rgba(8, 145, 178, 0.5)',
+            } : {
+              background: 'rgba(255, 255, 255, 0.9)',
+              color: '#4a5d52',
+              border: '1px solid rgba(2, 144, 72, 0.15)',
+            }}
+          >
+            🌍 اسلامی
+          </button>
 
           {canEdit && (
             <button
@@ -1922,6 +2310,7 @@ function ProgramsView({
             <ProgramCard
               key={s.num}
               show={s}
+              genre={genre}
               selectionMode={selectionMode}
               selected={selectedIds.includes(s.num)}
               isUploaded={uploadedShows.includes(s.num)}
@@ -1939,6 +2328,7 @@ function ProgramsView({
             <ProgramListRow
               key={s.num}
               show={s}
+              genre={genre}
               selectionMode={selectionMode}
               selected={selectedIds.includes(s.num)}
               isUploaded={uploadedShows.includes(s.num)}
@@ -1963,17 +2353,22 @@ function ProgramsView({
   );
 }
 
-function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onClick }: {
+function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onClick, genre }: {
   show: TalkShow;
   selectionMode: boolean;
   selected: boolean;
   isUploaded: boolean;
   onToggle: () => void;
   onClick: () => void;
+  genre?: Genre | null;
 }) {
   const thumb = getShowThumbnail(show);
   const dark = adjustColor(thumb.accent, -40);
   const darker = adjustColor(thumb.accent, -70);
+  // Section-specific tags derived from the genre (fallback to decor's style/size/viewers).
+  const genreTags = renderGenreTags(show, genre);
+  // User-defined tags on the show itself (purple badges).
+  const userTags = show.tags && show.tags.length > 0 ? show.tags : [];
   return (
     <div
       onClick={selectionMode ? onToggle : onClick}
@@ -2134,6 +2529,36 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
           {show.summary && show.summary !== '—' ? show.summary : show.category}
         </p>
 
+        {/* Section-specific genre tags (small white badges) */}
+        {genreTags.length > 0 && (
+          <div className="flex items-center gap-1 flex-wrap mb-2">
+            {genreTags.map(t => (
+              <span
+                key={t.id}
+                className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
+                style={{ backgroundColor: 'rgba(255,255,255,0.22)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}
+              >
+                {t.label}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* User-defined tags (purple badges) */}
+        {userTags.length > 0 && (
+          <div className="flex items-center gap-1 flex-wrap mb-2">
+            {userTags.slice(0, 4).map((t, i) => (
+              <span
+                key={i}
+                className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
+                style={{ backgroundColor: 'rgba(124, 58, 237, 0.65)', color: 'white', border: '1px solid rgba(168, 85, 247, 0.7)' }}
+              >
+                #{t}
+              </span>
+            ))}
+          </div>
+        )}
+
         <div className="flex items-center justify-between text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>
           <span className="truncate" title={show.category}>
             {show.category.replace(/^\d+\.\s*/, '').substring(0, 18)}
@@ -2145,17 +2570,20 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
   );
 }
 
-function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, onClick }: {
+function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, onClick, genre }: {
   show: TalkShow;
   selectionMode: boolean;
   selected: boolean;
   isUploaded: boolean;
   onToggle: () => void;
   onClick: () => void;
+  genre?: Genre | null;
 }) {
   const thumb = getShowThumbnail(show);
   const dark = adjustColor(thumb.accent, -40);
   const darker = adjustColor(thumb.accent, -70);
+  const genreTags = renderGenreTags(show, genre);
+  const userTags = show.tags && show.tags.length > 0 ? show.tags : [];
   return (
     <div
       onClick={selectionMode ? onToggle : onClick}
@@ -2239,6 +2667,28 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
         </div>
         <h3 className="font-bold text-sm mb-1 truncate text-white" style={{ direction: 'ltr', textAlign: 'right', textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}>{show.name}</h3>
         <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.8)' }}>{show.summary && show.summary !== '—' ? show.summary : show.category}</p>
+        {(genreTags.length > 0 || userTags.length > 0) && (
+          <div className="flex items-center gap-1 flex-wrap mt-1.5">
+            {genreTags.map(t => (
+              <span
+                key={t.id}
+                className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
+                style={{ backgroundColor: 'rgba(255,255,255,0.22)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}
+              >
+                {t.label}
+              </span>
+            ))}
+            {userTags.slice(0, 3).map((t, i) => (
+              <span
+                key={`u${i}`}
+                className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
+                style={{ backgroundColor: 'rgba(124, 58, 237, 0.65)', color: 'white', border: '1px solid rgba(168, 85, 247, 0.7)' }}
+              >
+                #{t}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="text-center flex-shrink-0">
@@ -2252,7 +2702,7 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
 // ============================================
 // SHOW DETAILS MODAL — with Persian description, links, publish, export
 // ============================================
-function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport, isUploaded, canEdit }: {
+function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport, isUploaded, canEdit, allShows = [], onSwapShow }: {
   show: TalkShow;
   onClose: () => void;
   onEdit: (s: TalkShow) => void;
@@ -2261,9 +2711,18 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
   onExport: (s: TalkShow, fmt: 'pdf' | 'excel') => void;
   isUploaded: boolean;
   canEdit: boolean;
+  allShows?: TalkShow[];
+  onSwapShow?: (s: TalkShow) => void;
 }) {
   const thumb = getShowThumbnail(show);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Related programs computed from the full list — capped at 6.
+  const related = useMemo(
+    () => allShows.length > 0 ? findRelated(show, allShows, 6) : [],
+    [show, allShows]
+  );
+  // Detect Islamic-country mentions for the country badges.
+  const countries = detectCountries(show);
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -2539,6 +2998,85 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
               <p style={{ color: '#4a5d52', lineHeight: 1.7 }}>{show.summary}</p>
             </div>
           )}
+
+          {/* Tags section — user-defined tags + detected Islamic countries */}
+          {((show.tags && show.tags.length > 0) || countries.length > 0 || show.country) && (
+            <div className="mt-6 p-4 rounded-xl" style={{ background: 'rgba(124, 58, 237, 0.06)', border: '1px solid rgba(124, 58, 237, 0.2)' }}>
+              <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>🏷 برچسب‌ها</h4>
+              {show.tags && show.tags.length > 0 && (
+                <div className="flex items-center gap-2 flex-wrap mb-2">
+                  {show.tags.map((t, i) => (
+                    <span
+                      key={i}
+                      className="text-xs px-2 py-1 rounded-md font-medium"
+                      style={{ background: 'rgba(124, 58, 237, 0.18)', color: '#6d28d9', border: '1px solid rgba(124, 58, 237, 0.3)' }}
+                    >
+                      #{t}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {countries.length > 0 && (
+                <div className="flex items-center gap-2 flex-wrap mb-2">
+                  <span className="text-xs font-bold" style={{ color: '#7a8a80' }}>🌍 کشورهای شناسایی‌شده:</span>
+                  {countries.map((c, i) => (
+                    <span
+                      key={i}
+                      className="text-xs px-2 py-1 rounded-md font-medium"
+                      style={{ background: 'rgba(8, 145, 178, 0.15)', color: '#0e7490', border: '1px solid rgba(8, 145, 178, 0.3)' }}
+                    >
+                      {c}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {show.country && (
+                <div className="text-xs" style={{ color: '#7a8a80' }}>
+                  کشور مبدا (وارد شده): <strong style={{ color: '#1a2e22' }}>{show.country}</strong>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 🔗 Related programs — computed from allShows via findRelated */}
+          {related.length > 0 && (
+            <div className="mt-6">
+              <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>🔗 برنامه‌های مرتبط</h4>
+              <div className="flex items-center gap-3 overflow-x-auto pb-3 no-scrollbar">
+                {related.map(r => {
+                  const rThumb = getShowThumbnail(r);
+                  const rDark = adjustColor(rThumb.accent, -40);
+                  return (
+                    <button
+                      key={r.num}
+                      onClick={() => { if (onSwapShow) onSwapShow(r); setConfirmDelete(false); }}
+                      className="flex-shrink-0 rounded-xl overflow-hidden text-right transition-all"
+                      style={{
+                        width: '180px',
+                        background: `linear-gradient(135deg, ${rThumb.accent} 0%, ${rDark} 100%)`,
+                        border: '1px solid rgba(255,255,255,0.3)',
+                        boxShadow: `0 6px 18px ${rThumb.accent}40`,
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
+                    >
+                      <div className="aspect-video relative overflow-hidden">
+                        {rThumb.image ? (
+                          <img src={rThumb.image} alt={r.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                        ) : (
+                          <div className="absolute inset-0" style={{ background: rThumb.gradient }}></div>
+                        )}
+                      </div>
+                      <div className="p-2">
+                        <div className="text-xs font-bold text-white truncate" style={{ direction: 'ltr', textAlign: 'right', textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}>{r.name}</div>
+                        <div className="text-[10px] mt-1" style={{ color: 'rgba(255,255,255,0.75)' }}>{r.category.replace(/^\d+\.\s*/, '').substring(0, 18)}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -2557,19 +3095,22 @@ function DetailField({ label, value }: { label: string; value: string }) {
 // ============================================
 // ADD/EDIT VIEW
 // ============================================
-function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, showToast }: {
+function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, showToast, presetCategory, presetGenre, genres = GENRES }: {
   talkShows: TalkShow[];
   onSave: (show: TalkShow, isEdit: boolean) => void;
   editingShow: TalkShow | null;
   setEditingShow: (s: TalkShow | null) => void;
   onDone: () => void;
   showToast: (msg: string) => void;
+  presetCategory?: string;
+  presetGenre?: Genre | null;
+  genres?: Genre[];
 }) {
   const [form, setForm] = useState<Partial<TalkShow>>(
     editingShow || {
       num: Math.max(0, ...talkShows.map(s => s.num)) + 1,
       name: '',
-      category: '',
+      category: presetCategory || '',
       source: 'متن',
       size: 'متوسط/استاندارد',
       viewers: 'بدون تماشاگر',
@@ -2585,6 +3126,8 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       youtube: '',
       imdb: '',
       wikipedia: '',
+      country: '',
+      tags: [],
     }
   );
   const [fetchUrl, setFetchUrl] = useState('');
@@ -2727,8 +3270,9 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
             label="دسته‌بندی"
             value={form.category || ''}
             onChange={v => setForm({ ...form, category: v })}
-            options={GENRES.map(g => ({ value: g.nameFa, label: g.nameFa }))}
+            options={genres.map(g => ({ value: g.nameFa, label: g.nameFa }))}
           />
+          <FormField label="کشور مبدا" value={form.country || ''} onChange={v => setForm({ ...form, country: v })} placeholder="مثلاً: ایران، ترکیه" />
           <FormSelect
             label="منبع داده"
             value={form.source || ''}
@@ -2837,6 +3381,13 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
           images={form.images || []}
           onChange={(imgs) => setForm({ ...form, images: imgs })}
           showToast={showToast}
+        />
+
+        {/* Tags editor — comma-separated input + quick-add preset buttons */}
+        <TagsEditor
+          tags={form.tags || []}
+          onChange={(t) => setForm({ ...form, tags: t })}
+          presetTags={presetGenre?.presetTags}
         />
 
         {/* Video links section — multiple URLs */}
@@ -3392,6 +3943,315 @@ function saveBotConfig(cfg: SocialBotConfig | null) {
   } catch {
     // ignore storage errors
   }
+}
+
+// ============================================
+// TAGS EDITOR — comma-separated input + removable pills + preset quick-adds
+// ============================================
+function TagsEditor({ tags, onChange, presetTags }: {
+  tags: string[];
+  onChange: (tags: string[]) => void;
+  presetTags?: string[];
+}) {
+  const [input, setInput] = useState('');
+
+  const commit = (next: string[]) => {
+    // De-duplicate + trim. Empty strings are dropped.
+    const seen = new Set<string>();
+    const clean: string[] = [];
+    for (const t of next) {
+      const s = (t || '').trim();
+      if (!s) continue;
+      const key = s.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      clean.push(s);
+    }
+    onChange(clean);
+  };
+
+  const addFromInput = () => {
+    if (!input.trim()) return;
+    // Split on commas (Persian & English) so the user can paste "tag1, tag2, tag3".
+    const parts = input.split(/[,،]/).map(p => p.trim()).filter(Boolean);
+    commit([...tags, ...parts]);
+    setInput('');
+  };
+
+  const removeTag = (idx: number) => {
+    onChange(tags.filter((_, i) => i !== idx));
+  };
+
+  const togglePreset = (t: string) => {
+    const exists = tags.some(x => x.toLowerCase() === t.toLowerCase());
+    if (exists) {
+      onChange(tags.filter(x => x.toLowerCase() !== t.toLowerCase()));
+    } else {
+      commit([...tags, t]);
+    }
+  };
+
+  return (
+    <div className="p-4 rounded-xl" style={{ background: 'rgba(124, 58, 237, 0.06)', border: '1px solid rgba(124, 58, 237, 0.2)' }}>
+      <h4 className="font-bold mb-2" style={{ color: '#1a2e22' }}>
+        🏷 برچسب‌ها
+        <span className="text-xs font-normal mr-2" style={{ color: '#7a8a80' }}>
+          ({tags.length.toLocaleString('fa-IR')} برچسب)
+        </span>
+      </h4>
+      <p className="text-xs mb-3" style={{ color: '#7a8a80' }}>
+        برچسب‌ها را با کاما (، یا ,) جدا کنید — مثلاً: مدرن، گرم، چوبی
+      </p>
+
+      {/* Comma-separated input + Add button */}
+      <div className="flex gap-2 mb-3">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addFromInput(); } }}
+          placeholder="مدرن، گرم، چوبی..."
+          style={{
+            flex: 1,
+            padding: '10px 16px',
+            borderRadius: '12px',
+            border: '1px solid rgba(124, 58, 237, 0.2)',
+            background: 'rgba(255,255,255,0.85)',
+            color: '#1a2e22',
+            fontFamily: 'inherit',
+            outline: 'none',
+          }}
+        />
+        <button
+          onClick={addFromInput}
+          disabled={!input.trim()}
+          className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+          style={{
+            background: !input.trim() ? 'rgba(0,0,0,0.05)' : 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)',
+            color: !input.trim() ? '#999' : 'white',
+            border: '1px solid rgba(124, 58, 237, 0.3)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          + افزودن
+        </button>
+      </div>
+
+      {/* Removable pill list */}
+      {tags.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap mb-3">
+          {tags.map((t, i) => (
+            <span
+              key={i}
+              className="text-xs px-2 py-1 rounded-md font-medium flex items-center gap-1"
+              style={{ background: 'rgba(124, 58, 237, 0.18)', color: '#6d28d9', border: '1px solid rgba(124, 58, 237, 0.3)' }}
+            >
+              #{t}
+              <button
+                onClick={() => removeTag(i)}
+                aria-label={`حذف ${t}`}
+                className="hover:opacity-70"
+                style={{ color: '#7c3aed', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1 }}
+                title="حذف"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+          <button
+            onClick={() => onChange([])}
+            className="text-xs px-2 py-1 rounded-md font-medium"
+            style={{ background: 'rgba(220, 38, 38, 0.1)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.25)' }}
+            title="پاک کردن همه"
+          >
+            پاک کردن همه
+          </button>
+        </div>
+      )}
+
+      {/* Preset quick-add buttons (from the genre's presetTags) */}
+      {presetTags && presetTags.length > 0 && (
+        <div>
+          <div className="text-xs font-bold mb-2" style={{ color: '#4a5d52' }}>برچسب‌های پیشنهادی این ژانر:</div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {presetTags.map(t => {
+              const selected = tags.some(x => x.toLowerCase() === t.toLowerCase());
+              return (
+                <button
+                  key={t}
+                  onClick={() => togglePreset(t)}
+                  className="text-xs px-2 py-1 rounded-md font-medium transition-all"
+                  style={selected ? {
+                    background: 'rgba(124, 58, 237, 0.4)',
+                    color: 'white',
+                    border: '1px solid rgba(124, 58, 237, 0.6)',
+                  } : {
+                    background: 'rgba(124, 58, 237, 0.08)',
+                    color: '#6d28d9',
+                    border: '1px solid rgba(124, 58, 237, 0.2)',
+                  }}
+                >
+                  {selected ? '✓ ' : '+ '}{t}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================
+// ADD GENRE MODAL — admin creates a new Genre (name + description + color)
+// ============================================
+const GENRE_COLOR_PRESETS = [
+  '#029048', '#0891b2', '#7c3aed', '#db2777', '#dc2626', '#ea580c', '#16a34a', '#0e7490',
+];
+
+function AddGenreModal({ onClose, onSave }: {
+  onClose: () => void;
+  onSave: (g: Genre) => void;
+}) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [color, setColor] = useState(GENRE_COLOR_PRESETS[0]);
+
+  const handleSave = () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const id = 'custom-' + Date.now().toString(36);
+    const g: Genre = {
+      id,
+      key: id,
+      nameFa: trimmed,
+      name: trimmed,
+      color,
+      description: description.trim() || `ژانر سفارشی: ${trimmed}`,
+      filterFn: (s: TalkShow) => s.category.includes(trimmed),
+      isCustom: true,
+      tags: DEFAULT_GENRE_TAGS,
+      presetTags: [],
+      searchFields: ['name', 'summary', 'category', 'descriptionFa'] as (keyof TalkShow)[],
+    };
+    onSave(g);
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-content" style={{ maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.1)' }}>
+          <h2 className="text-xl font-bold" style={{ color: '#1a2e22' }}>+ افزودن ژانر جدید</h2>
+          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#7a8a80' }}>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <div>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>نام ژانر *</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="مثلاً: مستند، انیمیشن، کودک..."
+              style={{
+                width: '100%',
+                padding: '10px 16px',
+                borderRadius: '12px',
+                border: '1px solid rgba(2, 144, 72, 0.15)',
+                background: 'rgba(255,255,255,0.85)',
+                color: '#1a2e22',
+                fontFamily: 'inherit',
+                outline: 'none',
+              }}
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>توضیحات</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="توضیح کوتاه دربارهٔ این ژانر..."
+              rows={2}
+              style={{
+                width: '100%',
+                padding: '10px 16px',
+                borderRadius: '12px',
+                border: '1px solid rgba(2, 144, 72, 0.15)',
+                background: 'rgba(255,255,255,0.85)',
+                color: '#1a2e22',
+                fontFamily: 'inherit',
+                outline: 'none',
+                resize: 'vertical',
+              }}
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>رنگ ژانر</label>
+            <div className="flex items-center gap-2 flex-wrap">
+              {GENRE_COLOR_PRESETS.map(c => (
+                <button
+                  key={c}
+                  onClick={() => setColor(c)}
+                  className="w-9 h-9 rounded-full transition-all"
+                  style={{
+                    background: c,
+                    border: color === c ? '3px solid #1a2e22' : '3px solid transparent',
+                    boxShadow: color === c ? `0 0 0 3px ${c}40` : 'none',
+                    cursor: 'pointer',
+                  }}
+                  aria-label={`رنگ ${c}`}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div
+            className="p-4 rounded-xl"
+            style={{
+              background: `linear-gradient(135deg, ${color}22 0%, ${color}08 100%)`,
+              border: `1px solid ${color}50`,
+            }}
+          >
+            <div className="text-xs font-bold mb-1" style={{ color: '#7a8a80' }}>پیش‌نمایش:</div>
+            <div className="flex items-center gap-2">
+              <span
+                className="w-3 h-3 rounded-full"
+                style={{ background: color, boxShadow: `0 0 10px ${color}` }}
+              ></span>
+              <strong style={{ color: '#1a2e22' }}>{name || '—'}</strong>
+            </div>
+            <p className="text-xs mt-1" style={{ color: '#4a5d52' }}>{description || 'توضیحات...'}</p>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={handleSave}
+              disabled={!name.trim()}
+              className="btn-enter-premium flex-1"
+              style={{ opacity: name.trim() ? 1 : 0.5, cursor: name.trim() ? 'pointer' : 'not-allowed' }}
+            >
+              ✓ ذخیره ژانر
+            </button>
+            <button
+              onClick={onClose}
+              className="px-6 py-3 rounded-xl text-sm font-medium"
+              style={{ background: 'rgba(122,138,128,0.15)', color: '#4a5d52', border: '1px solid rgba(122,138,128,0.3)' }}
+            >
+              انصراف
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 const SOCIAL_PLATFORMS = [
