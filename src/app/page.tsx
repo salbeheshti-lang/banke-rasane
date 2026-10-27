@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
+import { api, setApiBase, getApiBase, User } from '@/lib/api';
 
 // ============================================
 // TYPES
@@ -304,10 +305,9 @@ function applyOverrides(base: TalkShow[], o: Overrides): TalkShow[] {
 }
 
 export default function Home() {
-  const [screen, setScreen] = useState<'login' | 'app'>('login');
   const [currentView, setCurrentView] = useState<'dashboard' | 'programs' | 'genre' | 'reports' | 'add'>('dashboard');
   const [selectedGenre, setSelectedGenre] = useState<Genre | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [talkShows, setTalkShows] = useState<TalkShow[]>([]);
   // Base data (raw from JSON, never mutated) used to recompute the merged list.
@@ -324,6 +324,15 @@ export default function Home() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   // Navigation history so every view can navigate back to the previous one
   const [viewStack, setViewStack] = useState<Array<{ view: typeof currentView; genre: Genre | null }>>([]);
+  // Real authenticated user (null = logged out → show login screen)
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // Settings modal (admin only)
+  const [showSettings, setShowSettings] = useState(false);
+
+  // Role helpers — viewer is read-only (no add/edit/delete), admin can manage users + settings.
+  const role = currentUser?.role || null;
+  const canEdit = role === 'admin' || role === 'editor';
+  const isAdmin = role === 'admin';
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -343,6 +352,22 @@ export default function Home() {
         setTalkShows(applyOverrides(data, saved));
       })
       .catch(e => console.error('Failed to load data:', e));
+  }, []);
+
+  // On mount: check if a token exists in localStorage, validate via /api/auth/me.
+  // If valid → set currentUser (skip login). If invalid → clear token, show login.
+  useEffect(() => {
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('bankresaneh_token') : null;
+    if (!stored) {
+      setAuthLoading(false);
+      return;
+    }
+    api.getCurrentUser()
+      .then((user) => setCurrentUser(user))
+      .catch(() => {
+        localStorage.removeItem('bankresaneh_token');
+      })
+      .finally(() => setAuthLoading(false));
   }, []);
 
   // Recompute the merged list whenever overrides change (e.g. after an edit).
@@ -420,11 +445,36 @@ export default function Home() {
     navigate('genre', g);
   };
 
-  if (screen === 'login') {
-    return <LoginScreen onEnter={() => {
-      setLoading(true);
-      setTimeout(() => { setLoading(false); setScreen('app'); }, 600);
-    }} loading={loading} />;
+  const handleLogout = async () => {
+    try { await api.logout(); } catch {}
+    setCurrentUser(null);
+    setDrawerOpen(false);
+    // Reset navigation back to dashboard on logout.
+    setCurrentView('dashboard');
+    setSelectedGenre(null);
+    setViewStack([]);
+  };
+
+  const handleLoginSuccess = (user: User) => {
+    setCurrentUser(user);
+  };
+
+  if (authLoading) {
+    return (
+      <div className="login-screen min-h-screen relative flex flex-col items-center justify-center">
+        <div className="login-ambient-light green-1"></div>
+        <div className="login-ambient-light green-2"></div>
+        <div className="login-ambient-light green-3"></div>
+        <div className="relative z-20 flex flex-col items-center" style={{ gap: '16px' }}>
+          <div className="w-10 h-10 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(255,255,255,0.25)', borderTopColor: '#4ade80' }}></div>
+          <span style={{ color: 'rgba(168, 230, 193, 0.85)', fontSize: '14px' }}>در حال بارگذاری...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return <LoginScreen onLogin={handleLoginSuccess} />;
   }
 
   return (
@@ -443,16 +493,25 @@ export default function Home() {
         currentView={currentView}
         onNavigate={handleNavigate}
         onGenreSelect={handleGenreSelect}
-        onLogout={() => setScreen('login')}
+        onLogout={handleLogout}
+        onOpenSettings={() => { setShowSettings(true); setDrawerOpen(false); }}
+        currentUser={currentUser}
+        isAdmin={isAdmin}
         talkShows={talkShows}
       />
 
       <main className={isMobile ? 'p-4 pt-20 pb-28' : 'p-8 pt-24'}>
-        {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => navigate('add')} />}
-        {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} />}
-        {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} />}
+        {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => navigate('add')} canEdit={canEdit} />}
+        {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} />}
+        {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} />}
         {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} onExport={(shows, format) => setExportPreview({ shows, format })} />}
-        {currentView === 'add' && <AddEditView talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} />}
+        {currentView === 'add' && canEdit && <AddEditView talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} />}
+        {currentView === 'add' && !canEdit && (
+          <div className="premium-glass p-8 text-center">
+            <h2 className="text-2xl font-bold mb-2" style={{ color: '#dc2626' }}>دسترسی غیرمجاز</h2>
+            <p style={{ color: '#4a5d52' }}>شما اجازهٔ افزودن یا ویرایش برنامه‌ها را ندارید. برای دسترسی کامل با حساب مدیر یا ویراستار وارد شوید.</p>
+          </div>
+        )}
       </main>
 
       {isMobile && (
@@ -460,7 +519,7 @@ export default function Home() {
           currentView={currentView}
           onNavigate={handleNavigate}
           onGenreSelect={handleGenreSelect}
-          onLogout={() => setScreen('login')}
+          onLogout={handleLogout}
           onOpenDrawer={() => setDrawerOpen(true)}
           talkShows={talkShows}
         />
@@ -476,6 +535,7 @@ export default function Home() {
           onPublish={(s) => setPublishShows([s])}
           onExport={(s, fmt) => setExportPreview({ shows: [s], format: fmt })}
           isUploaded={uploadedShows.includes(selectedShow.num)}
+          canEdit={canEdit}
         />
       )}
 
@@ -497,6 +557,16 @@ export default function Home() {
         <BotConfigModal
           onClose={() => setShowBotConfig(false)}
           onSaved={() => { setShowBotConfig(false); showToast('تنظیمات ربات ذخیره شد'); }}
+        />
+      )}
+
+      {/* Settings modal (admin only) — server URL, users, change password */}
+      {showSettings && isAdmin && (
+        <SettingsModal
+          currentUser={currentUser}
+          onClose={() => setShowSettings(false)}
+          showToast={showToast}
+          onLogout={handleLogout}
         />
       )}
 
@@ -540,11 +610,36 @@ export default function Home() {
 }
 
 // ============================================
-// LOGIN SCREEN
+// LOGIN SCREEN — real auth (username + password)
 // ============================================
-function LoginScreen({ onEnter, loading }: { onEnter: () => void; loading: boolean }) {
+function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
   const [isReady, setIsReady] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => { setIsReady(true); }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loading) return;
+    setError(null);
+    if (!username.trim() || !password) {
+      setError('نام کاربری و رمز عبور را وارد کنید');
+      return;
+    }
+    setLoading(true);
+    try {
+      const data = await api.login(username.trim(), password);
+      onLogin(data.user);
+    } catch (err: any) {
+      setError(err?.message || 'ورود ناموفق بود');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="login-screen min-h-screen relative flex flex-col items-center justify-center">
@@ -554,12 +649,12 @@ function LoginScreen({ onEnter, loading }: { onEnter: () => void; loading: boole
 
       <div
         className={`relative z-20 flex flex-col items-center px-8 transition-all duration-1000 ${isReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
-        style={{ maxWidth: '900px' }}
+        style={{ maxWidth: '440px', width: '100%' }}
       >
         {/* Logo — gradient light beam sweeps ONLY across the logo pixels.
             The beam is masked to the logo's own shape via mask-image,
             so the "برق" appears only on the icon + "بانک رسانه" text. */}
-        <div className="mb-14 flex justify-center">
+        <div className="mb-10 flex justify-center">
           <div
             className="logo-shimmer"
             style={{ ['--logo-mask' as string]: 'url(/banke-rasane-logo.png)' }}
@@ -567,45 +662,149 @@ function LoginScreen({ onEnter, loading }: { onEnter: () => void; loading: boole
             <Image
               src="/banke-rasane-logo.png"
               alt="بانک رسانه"
-              width={440}
-              height={240}
+              width={360}
+              height={196}
               priority
             />
           </div>
         </div>
 
-        {/* Enter button - simple, no ring */}
-        <button
-          onClick={onEnter}
-          disabled={loading}
-          className="btn-enter-white group"
-        >
-          <span className="relative z-10 flex items-center gap-3 justify-center" style={{ color: '#ffffff' }}>
-            {loading ? (
-              <>
-                <div className="w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(255,255,255,0.35)', borderTopColor: '#ffffff' }}></div>
-                <span>در حال ورود...</span>
-              </>
-            ) : (
-              <>
-                <span>ورود به برنامه</span>
-                <svg
-                  className="w-5 h-5 rtl-flip group-hover:-translate-x-1.5 transition-transform"
-                  fill="none"
-                  stroke="#ffffff"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2.5}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-              </>
-            )}
-          </span>
-        </button>
+        {/* Login form */}
+        <form onSubmit={handleSubmit} className="w-full" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {/* Username */}
+          <div>
+            <label htmlFor="login-username" className="block text-sm font-bold mb-2" style={{ color: 'rgba(168, 230, 193, 0.9)' }}>
+              نام کاربری
+            </label>
+            <input
+              id="login-username"
+              type="text"
+              autoComplete="username"
+              dir="ltr"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="admin"
+              disabled={loading}
+              style={{
+                width: '100%',
+                background: 'rgba(255, 255, 255, 0.95)',
+                border: '1px solid rgba(74, 222, 128, 0.4)',
+                borderRadius: '12px',
+                padding: '12px 16px',
+                color: '#1a2e22',
+                fontSize: '15px',
+                fontFamily: 'inherit',
+                outline: 'none',
+                textAlign: 'left',
+                direction: 'ltr',
+              }}
+            />
+          </div>
 
-        <div className="mt-20 text-center">
+          {/* Password with show/hide */}
+          <div>
+            <label htmlFor="login-password" className="block text-sm font-bold mb-2" style={{ color: 'rgba(168, 230, 193, 0.9)' }}>
+              رمز عبور
+            </label>
+            <div className="relative">
+              <input
+                id="login-password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                dir="ltr"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••"
+                disabled={loading}
+                style={{
+                  width: '100%',
+                  background: 'rgba(255, 255, 255, 0.95)',
+                  border: '1px solid rgba(74, 222, 128, 0.4)',
+                  borderRadius: '12px',
+                  padding: '12px 48px 12px 16px',
+                  color: '#1a2e22',
+                  fontSize: '15px',
+                  fontFamily: 'inherit',
+                  outline: 'none',
+                  textAlign: 'left',
+                  direction: 'ltr',
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'پنهان کردن رمز' : 'نمایش رمز'}
+                disabled={loading}
+                className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-colors"
+                style={{ color: '#4a5d52', background: 'transparent' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(2, 144, 72, 0.1)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                {showPassword ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.243 4.243L9.88 9.88" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Error message */}
+          {error && (
+            <div
+              className="p-3 rounded-xl text-sm font-medium animate-fade-in"
+              style={{
+                background: 'rgba(220, 38, 38, 0.18)',
+                border: '1px solid rgba(220, 38, 38, 0.5)',
+                color: '#fca5a5',
+              }}
+            >
+              ⚠ {error}
+            </div>
+          )}
+
+          {/* Submit — green liquid-glass button (same .btn-enter-white class) */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn-enter-white group"
+            style={{ marginTop: '8px' }}
+          >
+            <span className="relative z-10 flex items-center gap-3 justify-center" style={{ color: '#ffffff' }}>
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(255,255,255,0.35)', borderTopColor: '#ffffff' }}></div>
+                  <span>در حال ورود...</span>
+                </>
+              ) : (
+                <>
+                  <span>ورود به برنامه</span>
+                  <svg
+                    className="w-5 h-5 rtl-flip group-hover:-translate-x-1.5 transition-transform"
+                    fill="none"
+                    stroke="#ffffff"
+                    viewBox="0 0 24 24"
+                    strokeWidth={2.5}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </>
+              )}
+            </span>
+          </button>
+        </form>
+
+        <div className="mt-10 text-center">
           <p style={{ color: 'rgba(168, 230, 193, 0.6)' }} className="text-xs tracking-wider">
             نسخه ۲.۰.۰ • بانک اطلاعاتی برنامه‌های تلویزیونی
+          </p>
+          <p style={{ color: 'rgba(168, 230, 193, 0.45)' }} className="text-xs mt-2">
+            نام کاربری پیش‌فرض: <span dir="ltr">admin</span> / رمز: <span dir="ltr">admin</span>
           </p>
         </div>
       </div>
@@ -786,6 +985,9 @@ function DrawerMenu({
   onNavigate,
   onGenreSelect,
   onLogout,
+  onOpenSettings,
+  currentUser,
+  isAdmin,
   talkShows,
 }: {
   open: boolean;
@@ -794,6 +996,9 @@ function DrawerMenu({
   onNavigate: (v: 'dashboard' | 'programs' | 'reports' | 'add') => void;
   onGenreSelect: (g: Genre) => void;
   onLogout: () => void;
+  onOpenSettings: () => void;
+  currentUser: User | null;
+  isAdmin: boolean;
   talkShows: TalkShow[];
 }) {
   const [genresExpanded, setGenresExpanded] = useState(true);
@@ -807,6 +1012,12 @@ function DrawerMenu({
 
   // Don't render anything if not open — keeps DOM clean
   if (!open) return null;
+
+  const roleLabel: Record<string, string> = {
+    admin: 'مدیر سیستم',
+    editor: 'ویراستار',
+    viewer: 'بیننده',
+  };
 
   return (
     <div
@@ -955,11 +1166,78 @@ function DrawerMenu({
           </div>
         </nav>
 
-        {/* Logout footer */}
+        {/* User info + settings + logout footer */}
         <div
           className="p-3 flex-shrink-0"
           style={{ borderTop: '1px solid rgba(74, 222, 128, 0.3)' }}
         >
+          {currentUser && (
+            <div
+              className="mb-2 p-3 rounded-xl"
+              style={{
+                background: 'rgba(255, 255, 255, 0.06)',
+                border: '1px solid rgba(74, 222, 128, 0.2)',
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(2, 144, 72, 0.7) 0%, rgba(2, 144, 72, 0.4) 100%)',
+                    color: '#4ade80',
+                    border: '1px solid rgba(74, 222, 128, 0.5)',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                  }}
+                >
+                  {(currentUser.name || currentUser.username).charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-sm" style={{ color: '#4ade80' }} title={currentUser.username}>
+                    {currentUser.name || currentUser.username}
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span
+                      className="text-xs px-1.5 py-0.5 rounded-md font-bold"
+                      style={{
+                        background: currentUser.role === 'admin' ? 'rgba(220, 38, 38, 0.25)' : currentUser.role === 'editor' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(2, 144, 72, 0.25)',
+                        color: currentUser.role === 'admin' ? '#fca5a5' : currentUser.role === 'editor' ? '#fcd34d' : '#4ade80',
+                      }}
+                    >
+                      {roleLabel[currentUser.role] || currentUser.role}
+                    </span>
+                    <span className="text-xs" style={{ color: 'rgba(168, 230, 193, 0.6)' }} dir="ltr">
+                      @{currentUser.username}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Settings button — admin only */}
+          {isAdmin && (
+            <button
+              onClick={onOpenSettings}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all w-full mb-1"
+              style={{ color: 'rgba(255, 255, 255, 0.85)' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(2, 144, 72, 0.25)';
+                e.currentTarget.style.color = '#4ade80';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.85)';
+              }}
+            >
+              <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <span className="font-medium text-sm">⚙ تنظیمات</span>
+            </button>
+          )}
+
           <button
             onClick={onLogout}
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all w-full"
@@ -1161,11 +1439,12 @@ function MobileNavBtn({ label, icon, active, onClick, highlight }: {
 // ============================================
 // DASHBOARD
 // ============================================
-function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd }: {
+function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit }: {
   onGenreClick: (g: Genre) => void;
   talkShows: TalkShow[];
   uploadedCount: number;
   onAdd: () => void;
+  canEdit: boolean;
 }) {
   const stats = [
     { label: 'کل برنامه‌ها', value: talkShows.length, color: '#029048', icon: 'film' },
@@ -1230,13 +1509,15 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd }: {
 
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold" style={{ color: '#1a2e22' }}>ژانرها</h2>
-        <button
-          onClick={onAdd}
-          className="btn-enter-premium text-sm"
-          style={{ padding: '8px 20px', fontSize: '14px' }}
-        >
-          + افزودن برنامه
-        </button>
+        {canEdit && (
+          <button
+            onClick={onAdd}
+            className="btn-enter-premium text-sm"
+            style={{ padding: '8px 20px', fontSize: '14px' }}
+          >
+            + افزودن برنامه
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1331,6 +1612,7 @@ function ProgramsView({
   showToast,
   onPublish,
   onExport,
+  canEdit,
 }: {
   genre?: Genre;
   talkShows: TalkShow[];
@@ -1341,6 +1623,7 @@ function ProgramsView({
   showToast: (msg: string) => void;
   onPublish: (shows: TalkShow[]) => void;
   onExport: (shows: TalkShow[], format: 'pdf' | 'excel') => void;
+  canEdit: boolean;
 }) {
   const [search, setSearch] = useState('');
   const [view, setView] = useState<'grid' | 'list'>('grid');
@@ -1494,21 +1777,36 @@ function ProgramsView({
             </button>
           </div>
 
-          <button
-            onClick={() => setSelectionMode(!selectionMode)}
-            className="px-4 py-2 rounded-xl text-sm font-medium transition-all flex-1"
-            style={selectionMode ? {
-              background: 'rgba(2, 144, 72, 0.15)',
-              border: '1px solid rgba(2, 144, 72, 0.3)',
-              color: '#016035',
-            } : {
-              background: 'rgba(255, 255, 255, 0.9)',
-              border: '1px solid rgba(2, 144, 72, 0.15)',
-              color: '#4a5d52',
-            }}
-          >
-            {selectionMode ? `✓ انتخاب (${selectedIds.length.toLocaleString('fa-IR')})` : 'انتخاب چندتایی'}
-          </button>
+          {canEdit && (
+            <button
+              onClick={() => setSelectionMode(!selectionMode)}
+              className="px-4 py-2 rounded-xl text-sm font-medium transition-all flex-1"
+              style={selectionMode ? {
+                background: 'rgba(2, 144, 72, 0.15)',
+                border: '1px solid rgba(2, 144, 72, 0.3)',
+                color: '#016035',
+              } : {
+                background: 'rgba(255, 255, 255, 0.9)',
+                border: '1px solid rgba(2, 144, 72, 0.15)',
+                color: '#4a5d52',
+              }}
+            >
+              {selectionMode ? `✓ انتخاب (${selectedIds.length.toLocaleString('fa-IR')})` : 'انتخاب چندتایی'}
+            </button>
+          )}
+          {!canEdit && (
+            <div
+              className="px-4 py-2 rounded-xl text-sm font-medium flex-1 text-center"
+              style={{
+                background: 'rgba(122, 138, 128, 0.08)',
+                color: '#7a8a80',
+                border: '1px solid rgba(122, 138, 128, 0.2)',
+              }}
+              title="برای افزودن یا ویرایش برنامه‌ها با حساب مدیر یا ویراستار وارد شوید"
+            >
+              🔒 فقط مشاهده — برای افزودن یا ویرایش با حساب مدیر وارد شوید
+            </div>
+          )}
         </div>
 
         {/* Filters — two horizontally scrollable rows (no chaotic wrapping on mobile) */}
@@ -1944,7 +2242,7 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
 // ============================================
 // SHOW DETAILS MODAL — with Persian description, links, publish, export
 // ============================================
-function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport, isUploaded }: {
+function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport, isUploaded, canEdit }: {
   show: TalkShow;
   onClose: () => void;
   onEdit: (s: TalkShow) => void;
@@ -1952,6 +2250,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
   onPublish: (s: TalkShow) => void;
   onExport: (s: TalkShow, fmt: 'pdf' | 'excel') => void;
   isUploaded: boolean;
+  canEdit: boolean;
 }) {
   const thumb = getShowThumbnail(show);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -2141,13 +2440,15 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
             >
               📱 انتشار در شبکه‌های اجتماعی
             </button>
-            <button
-              onClick={() => onEdit(show)}
-              className="px-4 py-2 rounded-xl text-sm font-medium"
-              style={{ background: 'rgba(2, 144, 72, 0.15)', color: '#016035', border: '1px solid rgba(2, 144, 72, 0.3)' }}
-            >
-              ✏ ویرایش
-            </button>
+            {canEdit && (
+              <button
+                onClick={() => onEdit(show)}
+                className="px-4 py-2 rounded-xl text-sm font-medium"
+                style={{ background: 'rgba(2, 144, 72, 0.15)', color: '#016035', border: '1px solid rgba(2, 144, 72, 0.3)' }}
+              >
+                ✏ ویرایش
+              </button>
+            )}
             <button
               onClick={() => onExport(show, 'pdf')}
               className="px-4 py-2 rounded-xl text-sm font-medium"
@@ -2162,13 +2463,15 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
             >
               📊 گزارش Excel
             </button>
-            <button
-              onClick={() => setConfirmDelete(true)}
-              className="px-4 py-2 rounded-xl text-sm font-medium"
-              style={{ background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}
-            >
-              🗑 حذف برنامه
-            </button>
+            {canEdit && (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="px-4 py-2 rounded-xl text-sm font-medium"
+                style={{ background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}
+              >
+                🗑 حذف برنامه
+              </button>
+            )}
           </div>
 
           {/* Delete confirmation */}
@@ -4059,5 +4362,634 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
         </table>
       </div>
     </>
+  );
+}
+
+// ============================================
+// SETTINGS MODAL (admin only) — 3 tabs:
+//   1. سرور — server URL field, test connection, save (setApiBase)
+//   2. کاربران — list users, add user, delete user, change role
+//   3. رمز عبور — change own password (old + new + confirm)
+// ============================================
+function SettingsModal({
+  currentUser,
+  onClose,
+  showToast,
+  onLogout,
+}: {
+  currentUser: User;
+  onClose: () => void;
+  showToast: (msg: string) => void;
+  onLogout: () => void;
+}) {
+  const [tab, setTab] = useState<'server' | 'users' | 'password'>('server');
+
+  const tabs = [
+    { key: 'server' as const,   label: 'سرور',     icon: '🖥' },
+    { key: 'users' as const,    label: 'کاربران',  icon: '👥' },
+    { key: 'password' as const, label: 'رمز عبور', icon: '🔑' },
+  ];
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center p-4"
+      style={{ background: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(8px)', animation: 'fade-in 0.2s ease-out' }}
+      onClick={onClose}
+    >
+      <div
+        className="relative flex flex-col"
+        style={{
+          width: 'min(720px, 96vw)',
+          maxHeight: '90vh',
+          background: 'linear-gradient(180deg, #f8fbf8 0%, #eef5ef 100%)',
+          borderRadius: '20px',
+          border: '1px solid rgba(2, 144, 72, 0.25)',
+          boxShadow: '0 30px 80px rgba(0, 0, 0, 0.35)',
+          overflow: 'hidden',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div
+          className="flex items-center justify-between p-4 flex-shrink-0"
+          style={{
+            background: 'linear-gradient(180deg, rgba(4, 40, 23, 0.98) 0%, rgba(2, 80, 45, 0.96) 100%)',
+            borderBottom: '1px solid rgba(74, 222, 128, 0.4)',
+          }}
+        >
+          <h2 className="text-lg font-bold" style={{ color: 'white' }}>⚙ تنظیمات سیستم</h2>
+          <button
+            onClick={onClose}
+            aria-label="بستن تنظیمات"
+            className="p-2 rounded-lg transition-colors"
+            style={{ color: 'rgba(255, 255, 255, 0.7)' }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(220, 38, 38, 0.25)'; e.currentTarget.style.color = '#fca5a5'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'; }}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div
+          className="flex items-center gap-1 p-2 flex-shrink-0"
+          style={{ background: 'rgba(2, 144, 72, 0.05)', borderBottom: '1px solid rgba(2, 144, 72, 0.12)' }}
+        >
+          {tabs.map((t) => {
+            const active = tab === t.key;
+            return (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition-all"
+                style={active ? {
+                  background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
+                  color: 'white',
+                  boxShadow: '0 4px 12px rgba(2, 144, 72, 0.3), inset 0 1px 0 rgba(74, 222, 128, 0.4)',
+                } : {
+                  color: '#4a5d52',
+                  border: '1px solid transparent',
+                }}
+              >
+                <span>{t.icon}</span>
+                <span>{t.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Body — scrollable */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6" style={{ maxHeight: 'calc(90vh - 130px)' }}>
+          {tab === 'server' && <SettingsServerTab showToast={showToast} />}
+          {tab === 'users' && <SettingsUsersTab currentUser={currentUser} showToast={showToast} />}
+          {tab === 'password' && <SettingsPasswordTab currentUser={currentUser} showToast={showToast} onLogout={onLogout} />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Tab 1: Server URL ---
+function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) {
+  const [url, setUrl] = useState('');
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  useEffect(() => {
+    setUrl(getApiBase());
+  }, []);
+
+  const handleTest = async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const res = await fetch(`${url.replace(/\/+$/, '')}/api/health`, { method: 'GET' });
+      const data = await res.json();
+      if (res.ok && data?.status === 'ok') {
+        setTestResult({ ok: true, msg: 'اتصال برقرار شد ✓' });
+      } else {
+        setTestResult({ ok: false, msg: `پاسخ نامعتبر: ${JSON.stringify(data).slice(0, 100)}` });
+      }
+    } catch (e: any) {
+      setTestResult({ ok: false, msg: `خطا در اتصال: ${e?.message || 'نامشخص'}` });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const handleSave = () => {
+    setApiBase(url);
+    showToast('آدرس سرور ذخیره شد. برای اعمال کامل، صفحه را بارگذاری مجدد کنید.');
+    setTestResult({ ok: true, msg: 'ذخیره شد ✓ — آدرس جدید اعمال شد.' });
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div>
+        <h3 className="text-base font-bold mb-1" style={{ color: '#1a2e22' }}>🖥 آدرس سرور API</h3>
+        <p className="text-sm mb-3" style={{ color: '#7a8a80' }}>
+          آدرس سرویس API که این برنامه به آن متصل می‌شود. پیش‌فرض: <code dir="ltr" style={{ background: 'rgba(2,144,72,0.1)', padding: '2px 6px', borderRadius: '6px', color: '#016035' }}>http://localhost:3002</code>
+        </p>
+        <input
+          type="text"
+          dir="ltr"
+          value={url}
+          onChange={(e) => { setUrl(e.target.value); setTestResult(null); }}
+          placeholder="http://localhost:3002"
+          style={{
+            width: '100%',
+            background: 'rgba(255, 255, 255, 0.95)',
+            border: '1px solid rgba(2, 144, 72, 0.25)',
+            borderRadius: '12px',
+            padding: '12px 16px',
+            color: '#1a2e22',
+            fontSize: '14px',
+            fontFamily: 'inherit',
+            outline: 'none',
+            textAlign: 'left',
+            direction: 'ltr',
+          }}
+        />
+      </div>
+
+      {testResult && (
+        <div
+          className="p-3 rounded-xl text-sm font-medium"
+          style={
+            testResult.ok
+              ? { background: 'rgba(2, 144, 72, 0.12)', color: '#016035', border: '1px solid rgba(2, 144, 72, 0.3)' }
+              : { background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }
+          }
+        >
+          {testResult.ok ? '✓' : '⚠'} {testResult.msg}
+        </div>
+      )}
+
+      <div className="flex items-center gap-2">
+        <button
+          onClick={handleTest}
+          disabled={testing || !url}
+          className="px-4 py-2 rounded-xl text-sm font-bold transition-all"
+          style={{
+            background: testing ? 'rgba(122, 138, 128, 0.5)' : 'rgba(2, 144, 72, 0.15)',
+            color: testing ? '#7a8a80' : '#016035',
+            border: '1px solid rgba(2, 144, 72, 0.3)',
+            opacity: testing || !url ? 0.6 : 1,
+            cursor: testing || !url ? 'not-allowed' : 'pointer',
+          }}
+        >
+          {testing ? '⏳ در حال تست...' : '🔍 تست اتصال'}
+        </button>
+        <button
+          onClick={handleSave}
+          className="px-4 py-2 rounded-xl text-sm font-bold transition-all flex-1"
+          style={{
+            background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
+            color: 'white',
+            boxShadow: '0 4px 12px rgba(2, 144, 72, 0.3)',
+          }}
+        >
+          ✓ ذخیره آدرس
+        </button>
+      </div>
+
+      <div
+        className="p-3 rounded-xl text-xs"
+        style={{ background: 'rgba(2, 144, 72, 0.05)', border: '1px solid rgba(2, 144, 72, 0.15)', color: '#4a5d52', lineHeight: 1.7 }}
+      >
+        <strong>راهنما:</strong> آدرس وارد شده باید ریشهٔ سرویس API باشد (بدون مسیرهای <code dir="ltr">/api/...</code>).
+        اگر از گیتوی Caddy استفاده می‌کنید، می‌توانید آدرس نسبی وارد کنید. پس از ذخیره، توکن فعلی شما معتبر می‌ماند.
+      </div>
+    </div>
+  );
+}
+
+// --- Tab 2: Users management ---
+function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showToast: (msg: string) => void }) {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [newUser, setNewUser] = useState({ username: '', password: '', role: 'viewer', name: '' });
+  const [creating, setCreating] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const list = await api.getUsers();
+      setUsers(list);
+    } catch (e: any) {
+      setError(e?.message || 'خطا در بارگذاری کاربران');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleCreate = async () => {
+    if (!newUser.username.trim() || !newUser.password) {
+      showToast('نام کاربری و رمز را وارد کنید');
+      return;
+    }
+    setCreating(true);
+    try {
+      await api.createUser({
+        username: newUser.username.trim(),
+        password: newUser.password,
+        role: newUser.role,
+        name: newUser.name,
+      });
+      showToast(`کاربر «${newUser.username}» ساخته شد`);
+      setNewUser({ username: '', password: '', role: 'viewer', name: '' });
+      await load();
+    } catch (e: any) {
+      showToast(e?.message || 'خطا در ایجاد کاربر');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleDelete = async (u: User) => {
+    if (u.id === currentUser.id) {
+      showToast('نمی‌توانید حساب خودتان را حذف کنید');
+      return;
+    }
+    if (!confirm(`کاربر «${u.username}» حذف شود؟`)) return;
+    try {
+      await api.deleteUser(u.id);
+      showToast('کاربر حذف شد');
+      await load();
+    } catch (e: any) {
+      showToast(e?.message || 'خطا در حذف کاربر');
+    }
+  };
+
+  const handleChangeRole = async (u: User, newRole: string) => {
+    if (newRole === u.role) return;
+    try {
+      await api.updateUser(u.id, { role: newRole });
+      showToast(`نقش «${u.username}» به ${newRole} تغییر کرد`);
+      await load();
+    } catch (e: any) {
+      showToast(e?.message || 'خطا در تغییر نقش');
+    }
+  };
+
+  const roleLabel: Record<string, string> = { admin: 'مدیر', editor: 'ویراستار', viewer: 'بیننده' };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div>
+        <h3 className="text-base font-bold mb-1" style={{ color: '#1a2e22' }}>👥 مدیریت کاربران</h3>
+        <p className="text-sm" style={{ color: '#7a8a80' }}>
+          افزودن، حذف یا تغییر نقش کاربران سیستم. نقش‌ها: مدیر (دسترسی کامل)، ویراستار (افزودن/ویرایش برنامه‌ها)، بیننده (فقط مشاهده).
+        </p>
+      </div>
+
+      {/* Add new user form */}
+      <div
+        className="p-4 rounded-xl"
+        style={{ background: 'rgba(2, 144, 72, 0.05)', border: '1px solid rgba(2, 144, 72, 0.15)' }}
+      >
+        <h4 className="font-bold text-sm mb-3" style={{ color: '#1a2e22' }}>＋ افزودن کاربر جدید</h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+          <input
+            type="text"
+            dir="ltr"
+            placeholder="نام کاربری"
+            value={newUser.username}
+            onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+            style={{
+              background: 'white',
+              border: '1px solid rgba(2, 144, 72, 0.2)',
+              borderRadius: '10px',
+              padding: '10px 14px',
+              fontSize: '14px',
+              color: '#1a2e22',
+              outline: 'none',
+              textAlign: 'left',
+              direction: 'ltr',
+            }}
+          />
+          <input
+            type="text"
+            placeholder="نام نمایشی (اختیاری)"
+            value={newUser.name}
+            onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+            style={{
+              background: 'white',
+              border: '1px solid rgba(2, 144, 72, 0.2)',
+              borderRadius: '10px',
+              padding: '10px 14px',
+              fontSize: '14px',
+              color: '#1a2e22',
+              outline: 'none',
+            }}
+          />
+          <input
+            type="password"
+            dir="ltr"
+            placeholder="رمز عبور (حداقل ۴ کاراکتر)"
+            value={newUser.password}
+            onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+            style={{
+              background: 'white',
+              border: '1px solid rgba(2, 144, 72, 0.2)',
+              borderRadius: '10px',
+              padding: '10px 14px',
+              fontSize: '14px',
+              color: '#1a2e22',
+              outline: 'none',
+              textAlign: 'left',
+              direction: 'ltr',
+            }}
+          />
+          <select
+            value={newUser.role}
+            onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+            style={{
+              background: 'white',
+              border: '1px solid rgba(2, 144, 72, 0.2)',
+              borderRadius: '10px',
+              padding: '10px 14px',
+              fontSize: '14px',
+              color: '#1a2e22',
+              outline: 'none',
+              fontFamily: 'inherit',
+            }}
+          >
+            <option value="viewer">بیننده</option>
+            <option value="editor">ویراستار</option>
+            <option value="admin">مدیر</option>
+          </select>
+        </div>
+        <button
+          onClick={handleCreate}
+          disabled={creating}
+          className="px-4 py-2 rounded-xl text-sm font-bold transition-all"
+          style={{
+            background: creating ? 'rgba(122, 138, 128, 0.5)' : 'linear-gradient(135deg, #029048 0%, #016035 100%)',
+            color: 'white',
+            boxShadow: '0 4px 12px rgba(2, 144, 72, 0.3)',
+            opacity: creating ? 0.6 : 1,
+            cursor: creating ? 'not-allowed' : 'pointer',
+          }}
+        >
+          {creating ? '⏳ در حال ایجاد...' : '＋ ایجاد کاربر'}
+        </button>
+      </div>
+
+      {/* Users list */}
+      <div>
+        <h4 className="font-bold text-sm mb-2" style={{ color: '#1a2e22' }}>
+          کاربران فعلی ({users.length.toLocaleString('fa-IR')})
+        </h4>
+        {loading && (
+          <div className="p-4 text-center text-sm" style={{ color: '#7a8a80' }}>در حال بارگذاری...</div>
+        )}
+        {error && (
+          <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}>
+            ⚠ {error}
+          </div>
+        )}
+        {!loading && !error && (
+          <div className="space-y-2">
+            {users.map((u) => (
+              <div
+                key={u.id}
+                className="p-3 rounded-xl flex items-center gap-3"
+                style={{ background: 'white', border: '1px solid rgba(2, 144, 72, 0.15)' }}
+              >
+                <div
+                  className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm"
+                  style={{
+                    background: u.role === 'admin' ? 'rgba(220, 38, 38, 0.15)' : u.role === 'editor' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(2, 144, 72, 0.15)',
+                    color: u.role === 'admin' ? '#dc2626' : u.role === 'editor' ? '#d97706' : '#016035',
+                    border: `1px solid ${u.role === 'admin' ? 'rgba(220, 38, 38, 0.35)' : u.role === 'editor' ? 'rgba(245, 158, 11, 0.35)' : 'rgba(2, 144, 72, 0.35)'}`,
+                  }}
+                >
+                  {(u.name || u.username).charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-sm" style={{ color: '#1a2e22' }} title={u.username}>
+                    {u.name || u.username}{' '}
+                    {u.id === currentUser.id && (
+                      <span className="text-xs font-normal" style={{ color: '#7a8a80' }}>(شما)</span>
+                    )}
+                  </div>
+                  <div className="text-xs" style={{ color: '#7a8a80' }} dir="ltr">@{u.username}</div>
+                </div>
+                <select
+                  value={u.role}
+                  onChange={(e) => handleChangeRole(u, e.target.value)}
+                  disabled={u.id === currentUser.id}
+                  style={{
+                    background: 'rgba(2, 144, 72, 0.05)',
+                    border: '1px solid rgba(2, 144, 72, 0.2)',
+                    borderRadius: '8px',
+                    padding: '6px 10px',
+                    fontSize: '13px',
+                    color: '#1a2e22',
+                    outline: 'none',
+                    fontFamily: 'inherit',
+                    cursor: u.id === currentUser.id ? 'not-allowed' : 'pointer',
+                    opacity: u.id === currentUser.id ? 0.6 : 1,
+                  }}
+                  title={u.id === currentUser.id ? 'نمی‌توانید نقش خودتان را تغییر دهید' : 'تغییر نقش'}
+                >
+                  <option value="viewer">بیننده</option>
+                  <option value="editor">ویراستار</option>
+                  <option value="admin">مدیر</option>
+                </select>
+                <button
+                  onClick={() => handleDelete(u)}
+                  disabled={u.id === currentUser.id}
+                  className="p-2 rounded-lg transition-colors flex-shrink-0"
+                  style={{
+                    color: u.id === currentUser.id ? 'rgba(122, 138, 128, 0.4)' : '#dc2626',
+                    background: u.id === currentUser.id ? 'transparent' : 'rgba(220, 38, 38, 0.1)',
+                    border: '1px solid rgba(220, 38, 38, 0.25)',
+                    cursor: u.id === currentUser.id ? 'not-allowed' : 'pointer',
+                    opacity: u.id === currentUser.id ? 0.4 : 1,
+                  }}
+                  title={u.id === currentUser.id ? 'نمی‌توانید خودتان را حذف کنید' : `حذف ${u.username}`}
+                  aria-label={`حذف کاربر ${u.username}`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// --- Tab 3: Change password ---
+function SettingsPasswordTab({
+  currentUser,
+  showToast,
+  onLogout,
+}: {
+  currentUser: User;
+  showToast: (msg: string) => void;
+  onLogout: () => void;
+}) {
+  const [oldPw, setOldPw] = useState('');
+  const [newPw, setNewPw] = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
+  const [showPw, setShowPw] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const handleChange = async () => {
+    if (!oldPw || !newPw || !confirmPw) {
+      showToast('هر سه فیلد را پر کنید');
+      return;
+    }
+    if (newPw.length < 4) {
+      showToast('رمز جدید باید حداقل ۴ کاراکتر باشد');
+      return;
+    }
+    if (newPw !== confirmPw) {
+      showToast('رمز جدید و تأیید آن یکسان نیستند');
+      return;
+    }
+    if (newPw === oldPw) {
+      showToast('رمز جدید باید با رمز فعلی متفاوت باشد');
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.changePassword(oldPw, newPw);
+      showToast('رمز با موفقیت تغییر کرد. لطفاً دوباره وارد شوید.');
+      // Force re-login since the API invalidated the session.
+      setTimeout(() => { onLogout(); }, 1500);
+    } catch (e: any) {
+      showToast(e?.message || 'خطا در تغییر رمز');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    background: 'rgba(255, 255, 255, 0.95)',
+    border: '1px solid rgba(2, 144, 72, 0.25)',
+    borderRadius: '12px',
+    padding: '12px 48px 12px 16px',
+    color: '#1a2e22',
+    fontSize: '14px',
+    fontFamily: 'inherit',
+    outline: 'none',
+    textAlign: 'left',
+    direction: 'ltr',
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div>
+        <h3 className="text-base font-bold mb-1" style={{ color: '#1a2e22' }}>🔑 تغییر رمز عبور</h3>
+        <p className="text-sm" style={{ color: '#7a8a80' }}>
+          رمز عبور خود را تغییر دهید. پس از تغییر، تمام نشست‌های فعال شما باطل شده و باید دوباره وارد شوید.
+        </p>
+      </div>
+
+      <div
+        className="p-3 rounded-xl text-sm flex items-center gap-2"
+        style={{ background: 'rgba(2, 144, 72, 0.08)', border: '1px solid rgba(2, 144, 72, 0.2)', color: '#016035' }}
+      >
+        <span>👤 حساب فعلی:</span>
+        <strong>{currentUser.name || currentUser.username}</strong>
+        <span dir="ltr" style={{ color: '#7a8a80' }}>@{currentUser.username}</span>
+      </div>
+
+      {[
+        { label: 'رمز فعلی', val: oldPw, set: setOldPw },
+        { label: 'رمز جدید', val: newPw, set: setNewPw },
+        { label: 'تکرار رمز جدید', val: confirmPw, set: setConfirmPw },
+      ].map((f, i) => (
+        <div key={i}>
+          <label className="block text-sm font-bold mb-2" style={{ color: '#1a2e22' }}>{f.label}</label>
+          <div className="relative">
+            <input
+              type={showPw ? 'text' : 'password'}
+              dir="ltr"
+              value={f.val}
+              onChange={(e) => f.set(e.target.value)}
+              placeholder="••••••"
+              style={inputStyle}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPw(!showPw)}
+              className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-lg"
+              style={{ color: '#4a5d52', background: 'transparent' }}
+              aria-label={showPw ? 'پنهان کردن رمز' : 'نمایش رمز'}
+            >
+              {showPw ? (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.243 4.243L9.88 9.88" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              )}
+            </button>
+          </div>
+        </div>
+      ))}
+
+      {newPw && confirmPw && newPw !== confirmPw && (
+        <div
+          className="p-3 rounded-xl text-sm font-medium"
+          style={{ background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}
+        >
+          ⚠ رمز جدید و تأیید آن یکسان نیستند
+        </div>
+      )}
+
+      <button
+        onClick={handleChange}
+        disabled={saving}
+        className="px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
+        style={{
+          background: saving ? 'rgba(122, 138, 128, 0.5)' : 'linear-gradient(135deg, #029048 0%, #016035 100%)',
+          color: 'white',
+          boxShadow: '0 4px 12px rgba(2, 144, 72, 0.3)',
+          opacity: saving ? 0.6 : 1,
+          cursor: saving ? 'not-allowed' : 'pointer',
+        }}
+      >
+        {saving ? '⏳ در حال تغییر...' : '✓ تغییر رمز عبور'}
+      </button>
+    </div>
   );
 }

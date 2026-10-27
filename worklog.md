@@ -137,3 +137,57 @@ Work Log:
 Stage Summary:
 - Direct publish to Telegram and Bale is implemented and verified. The user creates a bot via @BotFather (Telegram) or @BotFather@ (Bale), makes it admin of the target channel/group/chat, enters the token + Chat ID once in the new "⚙ تنظیمات ربات انتشار" modal (with a connection-test button), and from then on can send any program's post directly to that destination with one click on "📡 ارسال مستقیم به <پلتفرم>". The old manual flow (download image + copy text + open share URL) is preserved as "📤 انتشار دستی" for all 6 platforms. Other platforms (اینستاگرام، ایفا، سروش، گپ) keep the manual flow because they have no public direct-publish API.
 - Dev server still running (PID 3958) at the preview gateway (port 81).
+
+---
+Task ID: 10
+Agent: main (Z.ai Code)
+Task: Sandbox wipe recovery — rebuild the multi-user auth system. Replace the dummy one-button login with a real username/password form, create a local Bun+SQLite API service on port 3002 (admin/admin default, 560-show seed, sessions, role-based endpoints), make the frontend API client configurable, gate add/edit/delete UI by role (viewer = read-only), and add an admin-only Settings modal with tabs for server URL / users / change-password.
+
+Work Log:
+- Read prior worklog. Confirmed: `src/app/page.tsx` had the dummy LoginScreen (one-button "ورود به برنامه"), `src/lib/api.ts` pointed to a hardcoded Cloudflare URL, `mini-services/api-service/` was empty, and a stale dev server was on port 3000.
+- **Part 1 — API service** (`mini-services/api-service/{package.json,index.js}`):
+  - Bun + `bun:sqlite` HTTP server on port 3002. Three tables: `users`, `sessions`, `shows`. Default admin `admin/admin` (SHA-256), seeded on first run.
+  - Seeds 560 shows from `public/talk-shows-data.json` on first run (idempotent). Session tokens = 32-byte random hex, 7-day TTL. CORS `*` on every response + OPTIONS preflight.
+  - All 14 endpoints implemented + curl-tested: `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `GET /api/shows`, `GET /api/shows/:num`, `POST /api/shows` (admin/editor), `PUT /api/shows/:num` (admin/editor), `DELETE /api/shows/:num` (admin), `GET /api/users` (admin), `POST /api/users` (admin), `DELETE /api/users/:id` (admin, refuses self-delete), `PUT /api/users/:id` (admin), `PUT /api/auth/change-password` (invalidates sessions), `GET /api/health`.
+  - **Bug found & fixed**: bun:sqlite named parameters (`@name`/`$name`/`:name`) silently bind to `null` when the JS object key lacks the matching prefix. All 560 shows were seeding with empty `name`/`category`. Rewrote show insert/update statements to use positional `?` placeholders with an ordered `SHOW_COLUMNS` + `showToValues(s)` array. After the fix, `GET /api/shows/1` correctly returns `name:"Ayuready?"`.
+  - Persistent via `start-stop-daemon` (PID in `.zscripts/api-service.pid`, log in `.zscripts/api-service.log`).
+- **Part 2 — Configurable API client** (`src/lib/api.ts`):
+  - Removed the hardcoded `API_BASE = 'https://banke-rasane-api.salbeheshti-lang.workers.dev'`.
+  - Added `getApiBase()` — returns `localStorage['server_url'] || 'http://localhost:3002'` on the client; SSR-safe default on the server.
+  - Added `setApiBase(url)` — trims trailing slashes, writes to localStorage.
+  - Updated `apiRequest()` to use `${getApiBase()}${path}`.
+  - Kept all existing methods; added `updateUser(id, patch)`, `changePassword(old, new)`, `getHealth()`.
+- **Part 3 — Real login screen** (`src/app/page.tsx`):
+  - Rewrote `LoginScreen` from a one-button dummy into a real auth form: username field (LTR), password field (LTR) with show/hide eye toggle (eye vs eye-off icons), red error card for API errors, spinner + "در حال ورود..." loading state, kept the existing `.btn-enter-white` green liquid-glass button. Help line shows default credentials `admin / admin`.
+  - Replaced `screen: 'login' | 'app'` state with `currentUser: User | null` + `authLoading`. On mount: reads `localStorage['bankresaneh_token']`, calls `api.getCurrentUser()`. If valid → skip login (set currentUser). If invalid/expired → clear token, show login. While checking → render a spinner overlay on the login background.
+  - `handleLogout()` calls `api.logout()` (clears server session) + resets currentUser/viewStack.
+- **Part 4 — Role-based UI** (`canEdit = admin||editor`, `isAdmin = admin`):
+  - Dashboard: `+ افزودن برنامه` button hidden for viewers.
+  - ProgramsView: `انتخاب چندتایی` button hidden for viewers; replaced with a `🔒 فقط مشاهده — برای افزودن یا ویرایش با حساب مدیر وارد شوید` info badge so the toolbar layout stays consistent.
+  - ShowDetailsModal: `✏ ویرایش` and `🗑 حذف برنامه` buttons hidden for viewers. Publish/PDF/Excel stay visible to all roles.
+  - AddEditView: rendered only when `canEdit`; viewers see an "دسترسی غیرمجاز" glass card with a Persian explanation.
+  - DrawerMenu: takes new `currentUser` + `isAdmin` props. Footer shows a user info card (avatar = first letter, display name, color-coded role badge: admin=red, editor=amber, viewer=green, `@username`). Settings button `⚙ تنظیمات` (gear icon) renders only when `isAdmin === true`.
+- **Part 5 — SettingsModal** (admin only):
+  - 3-tab modal opened from the drawer's `⚙ تنظیمات` button:
+    1. **سرور**: server URL field (LTR), "🔍 تست اتصال" button (fetches `${url}/api/health`), "✓ ذخیره آدرس" button (calls `setApiBase` + toast).
+    2. **کاربران**: "＋ افزودن کاربر جدید" form (username/name/password/role), "کاربران فعلی" list with avatar + name + `@username` + role dropdown (disabled for self) + delete button (disabled for self with title). All mutations re-fetch the list.
+    3. **رمز عبور**: three password fields (current/new/confirm) with a shared show/hide toggle, live mismatch warning, validation (all required, new ≥4, new === confirm, new ≠ old). On success, the API invalidates all sessions for that user, so the UI calls `onLogout()` after 1.5s to force re-login.
+- **Build & verification**:
+  - API service started via `bun install && bun --hot index.js` (in `mini-services/api-service/`). `curl http://localhost:3002/api/health → {"status":"ok"}`; login `admin/admin` returns a token + `{id:1,username:"admin",role:"admin",name:"مدیر سیستم"}`.
+  - Frontend: `pkill -9 -f next` → `rm -rf .next` → `NODE_ENV=production npx next build --webpack` (success, standalone output). Copied `.next/static` + `public` into `.next/standalone/`. Started via `start-stop-daemon` running `node .next/standalone/server.js`. `curl http://localhost:3000/ → HTTP 200`.
+  - agent-browser end-to-end:
+    1. **Login form renders** with "نام کاربری", "رمز عبور" fields + show/hide eye + "ورود به برنامه" button + help line (not the old dummy one-button).
+    2. Fill `admin/admin` → click → **dashboard renders** (560 programs, 17 genres, "+ افزودن برنامه" visible to admin).
+    3. Open drawer → **user info card** shows "مدیر سیستم" + red "مدیر سیستم" badge + "@admin". **"⚙ تنظیمات" button visible**.
+    4. Click settings → **SettingsModal opens with 3 tabs**: "🖥 سرور", "👥 کاربران", "🔑 رمز عبور". Click "👥 کاربران" → "افزودن کاربر جدید" form + "کاربران فعلی (۱)" list with admin user (role dropdown disabled for self).
+  - **Role-based verification** with a test viewer user (`viewer1`/`view123`):
+    - Dashboard: NO "+ افزودن برنامه" button.
+    - ProgramsView: NO "انتخاب چندتایی" button (replaced with "🔒 فقط مشاهده" badge).
+    - ShowDetailsModal: action buttons limited to Publish + PDF + Excel; "✏ ویرایش" and "🗑 حذف برنامه" are HIDDEN.
+    - Drawer: NO "⚙ تنظیمات" button; user info card shows green "بیننده" badge.
+  - All curl endpoint tests passed: health, login (success + bad password), shows (560), get show 1 (correct name), create user (id=2), update show (PUT), change password (invalidates session, new pass works), delete user.
+- **Lint**: 9 errors + 3 warnings, ALL pre-existing in the original repo's `page.tsx` (setState-in-effect at line ~376, refs-during-render at line ~2933) and `worker/*.js` (anonymous default exports). My changes added zero new lint issues. Build proceeds cleanly because `next.config.ts` has `typescript.ignoreBuildErrors: true` (inherited).
+
+Stage Summary:
+- Multi-user auth system fully rebuilt after the sandbox wipe. The app now has a real login screen backed by a local Bun+SQLite API service (port 3002) with 560 shows + admin/admin default. Three roles (admin/editor/viewer) gate the UI: viewers see everything read-only (no add/edit/delete/selection), editors can add/edit/delete programs, admins additionally get a "⚙ تنظیمات" button in the drawer that opens a 3-tab SettingsModal (server URL + users management + change password). The API base URL is configurable from the SettingsModal so admins can repoint the app at any reachable API instance without a code change. Token-based sessions persist for 7 days and survive page refreshes (validated via `/api/auth/me` on mount). All endpoints and role behaviors verified end-to-end with curl + agent-browser.
+- Running services: API on port 3002 (PID `.zscripts/api-service.pid`), frontend standalone on port 3000 (PID `.zscripts/app.pid`). DB at `mini-services/api-service/bankresaneh.sqlite`.

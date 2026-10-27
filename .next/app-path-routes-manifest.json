@@ -1,0 +1,10 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/_global-error/page": "/_global-error",
+  "/api/route": "/api",
+  "/api/export-pdf/route": "/api/export-pdf",
+  "/api/fetch-show-info/route": "/api/fetch-show-info",
+  "/api/health/route": "/api/health",
+  "/api/publish-social/route": "/api/publish-social",
+  "/page": "/"
+}
