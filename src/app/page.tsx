@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, createContext, useContext } from 'react';
 import Image from 'next/image';
 import { api, setApiBase, getApiBase, User } from '@/lib/api';
 
@@ -207,6 +207,30 @@ const GENRES: Genre[] = [
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting, TAG_LIBRARY.materials],
     presetTags: ['تحلیلی', 'رصد عمیق', 'بررسی تخصصی', 'مقایسه‌ای', 'تفصیلی'],
     searchFields: ['name', 'summary', 'descriptionFa', 'materials'],
+  },
+  {
+    id: 'funeral', key: 'funeral', nameFa: 'سوگواری و خاکسپاری', name: 'Funeral Coverage',
+    color: '#374151', description: 'پوشش خبری مراسم خاکسپاری و سوگواری شخصیت‌ها',
+    filterFn: s => s.category.includes('خاکسپاری') || s.category.includes('سوگواری'),
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting],
+    presetTags: ['رسمی', 'مذهبی', 'دولتی', 'مردمی', 'سنتی'],
+    searchFields: ['name', 'summary', 'descriptionFa'],
+  },
+  {
+    id: 'war', key: 'war', nameFa: 'برنامه‌های جنگ و بحران', name: 'War & Conflict',
+    color: '#991b1b', description: 'برنامه‌های تلویزیونی با موضوع جنگ و منازعات',
+    filterFn: s => s.category.includes('جنگ') || s.category.includes('بحران') || s.category.includes('منازعه'),
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
+    presetTags: ['مستند جنگ', 'تحلیل نظامی', 'خبری', 'بیانیه', 'مصاحبه'],
+    searchFields: ['name', 'summary', 'descriptionFa'],
+  },
+  {
+    id: 'debate', key: 'debate', nameFa: 'مناظرات انتخاباتی', name: 'Electoral Debates',
+    color: '#1e40af', description: 'مناظرات و بحث‌های انتخاباتی',
+    filterFn: s => s.category.includes('مناظره') || s.category.includes('انتخابات'),
+    tags: [TAG_LIBRARY.layout, TAG_LIBRARY.viewers],
+    presetTags: ['ریاست جمهوری', 'پارلمانی', 'محلی', 'حزبی', 'تلویزیونی'],
+    searchFields: ['name', 'summary', 'descriptionFa', 'layout'],
   },
   {
     id: 'ads', key: 'ads', nameFa: 'آگهی‌های تبلیغاتی', name: 'Advertisements',
@@ -582,6 +606,337 @@ function applyOverrides(base: TalkShow[], o: Overrides): TalkShow[] {
   return [...o.added, ...out];
 }
 
+// ============================================
+// i18n — Persian (default) / English UI strings.
+// Program data (names, descriptions) stays in Persian; only chrome strings translate.
+// ============================================
+type Lang = 'fa' | 'en';
+
+type StringKey =
+  | 'app_title'
+  | 'app_subtitle'
+  | 'archive_title'
+  | 'genres_section'
+  | 'all_programs'
+  | 'add_program'
+  | 'search'
+  | 'search_in'
+  | 'reports'
+  | 'settings'
+  | 'logout'
+  | 'dashboard'
+  | 'bookmarks'
+  | 'related_programs'
+  | 'compare'
+  | 'compare_mode'
+  | 'compare_count'
+  | 'multi_select'
+  | 'multi_select_count'
+  | 'grid_view'
+  | 'list_view'
+  | 'islamic'
+  | 'has_image'
+  | 'has_video'
+  | 'programs_count'
+  | 'no_programs'
+  | 'no_programs_desc'
+  | 'loading'
+  | 'login'
+  | 'login_btn'
+  | 'username'
+  | 'password'
+  | 'show_password'
+  | 'hide_password'
+  | 'logging_in'
+  | 'back'
+  | 'menu'
+  | 'close'
+  | 'connected'
+  | 'banke_rasane'
+  | 'total_programs'
+  | 'uploaded'
+  | 'with_image'
+  | 'version'
+  | 'add_genre'
+  | 'add_to_compare'
+  | 'remove_from_compare'
+  | 'add_to_bookmarks'
+  | 'remove_from_bookmarks'
+  | 'show_num'
+  | 'about_program'
+  | 'compare_two_programs'
+  | 'clear_list'
+  | 'close_btn'
+  | 'difference'
+  | 'help_diff'
+  | 'program_first'
+  | 'program_second'
+  | 'field'
+  | 'decor_programs'
+  | 'preserved_genre'
+  | 'genre_count_suffix'
+  | 'no_access'
+  | 'no_access_desc'
+  | 'role_admin'
+  | 'role_editor'
+  | 'role_viewer'
+  | 'settings_title'
+  | 'page_x_of_y'
+  | 'showing_x_y_of_z'
+  | 'prev'
+  | 'next'
+  | 'cancel'
+  | 'download'
+  | 'total'
+  | 'genre'
+  | 'type'
+  | 'date'
+  | 'action'
+  | 'title'
+  | 'available_reports'
+  | 'pdf'
+  | 'excel'
+  | 'all'
+  | 'size_label'
+  | 'style_label'
+  | 'large_lux'
+  | 'medium_std'
+  | 'small_econ'
+  | 'modern'
+  | 'composite'
+  | 'minimal'
+  | 'classic'
+  | 'switch_to_light'
+  | 'switch_to_dark'
+  | 'switch_to_en'
+  | 'switch_to_fa';
+
+const STRINGS: Record<Lang, Record<StringKey, string>> = {
+  fa: {
+    app_title: 'آرشیو تخصصی برنامه‌های تلویزیونی',
+    app_subtitle: 'بانک اطلاعاتی برنامه‌های تلویزیونی',
+    archive_title: 'آرشیو تخصصی برنامه‌های تلویزیونی',
+    genres_section: 'ژانرها',
+    all_programs: 'همهٔ برنامه‌ها',
+    add_program: 'افزودن برنامه',
+    search: 'جستجو',
+    search_in: 'جستجو در',
+    reports: 'گزارش‌ها',
+    settings: 'تنظیمات',
+    logout: 'خروج',
+    dashboard: 'آرشیو',
+    bookmarks: 'برنامه‌های نشان‌شده',
+    related_programs: 'برنامه‌های مرتبط',
+    compare: 'مقایسه',
+    compare_mode: 'حالت مقایسه',
+    compare_count: 'مقایسه',
+    multi_select: 'انتخاب چندتایی',
+    multi_select_count: 'انتخاب',
+    grid_view: 'نمایش شبکه‌ای',
+    list_view: 'نمایش لیستی',
+    islamic: 'اسلامی',
+    has_image: 'با تصویر',
+    has_video: 'با ویدیو',
+    programs_count: 'برنامه',
+    no_programs: 'برنامه‌ای یافت نشد',
+    no_programs_desc: 'با فیلترهای فعلی برنامه‌ای موجود نیست. فیلترها را تغییر دهید یا واژهٔ دیگری جستجو کنید.',
+    loading: 'در حال بارگذاری...',
+    login: 'ورود به برنامه',
+    login_btn: 'ورود به برنامه',
+    username: 'نام کاربری',
+    password: 'رمز عبور',
+    show_password: 'نمایش رمز',
+    hide_password: 'پنهان کردن رمز',
+    logging_in: 'در حال ورود...',
+    back: 'بازگشت',
+    menu: 'منو',
+    close: 'بستن',
+    connected: 'متصل',
+    banke_rasane: 'بانک رسانه',
+    total_programs: 'کل برنامه‌ها',
+    uploaded: 'آپلود شده',
+    with_image: 'با تصویر',
+    version: 'نسخه ۲.۰.۰',
+    add_genre: 'افزودن ژانر',
+    add_to_compare: 'افزودن به مقایسه',
+    remove_from_compare: 'حذف از مقایسه',
+    add_to_bookmarks: 'افزودن به نشان‌شده‌ها',
+    remove_from_bookmarks: 'حذف از نشان‌شده‌ها',
+    show_num: 'شماره',
+    about_program: 'دربارهٔ برنامه',
+    compare_two_programs: 'مقایسهٔ دو برنامه',
+    clear_list: 'پاک کردن',
+    close_btn: 'بستن',
+    difference: 'تفاوت',
+    help_diff: 'ردیف‌هایی که با نشانگر «تفاوت» خروجی‌دار شده‌اند، در دو برنامه متفاوت هستند. مقادیر مشابه بدون تغییر باقی می‌مانند.',
+    program_first: 'برنامهٔ اول',
+    program_second: 'برنامهٔ دوم',
+    field: 'فیلد',
+    decor_programs: 'دکور برنامه‌ها',
+    preserved_genre: 'ژانر',
+    genre_count_suffix: 'برنامه',
+    no_access: 'دسترسی غیرمجاز',
+    no_access_desc: 'شما اجازهٔ افزودن یا ویرایش برنامه‌ها را ندارید. برای دسترسی کامل با حساب مدیر یا ویراستار وارد شوید.',
+    role_admin: 'مدیر سیستم',
+    role_editor: 'ویراستار',
+    role_viewer: 'بیننده',
+    settings_title: 'تنظیمات سیستم',
+    page_x_of_y: 'صفحهٔ',
+    showing_x_y_of_z: 'نمایش',
+    prev: 'قبلی',
+    next: 'بعدی',
+    cancel: 'لغو',
+    download: 'دانلود',
+    total: 'کل',
+    genre: 'ژانرها',
+    type: 'نوع',
+    date: 'تاریخ',
+    action: 'عملیات',
+    title: 'عنوان',
+    available_reports: 'گزارش‌های موجود',
+    pdf: 'PDF',
+    excel: 'Excel',
+    all: 'همه',
+    size_label: 'اندازه:',
+    style_label: 'سبک:',
+    large_lux: 'بزرگ/لوکس',
+    medium_std: 'متوسط',
+    small_econ: 'کوچک',
+    modern: 'مدرن',
+    composite: 'ترکیبی',
+    minimal: 'مینیمال',
+    classic: 'کلاسیک',
+    switch_to_light: 'تغییر به حالت روشن',
+    switch_to_dark: 'تغییر به حالت تیره',
+    switch_to_en: 'Switch to English',
+    switch_to_fa: 'تغییر به فارسی',
+  },
+  en: {
+    app_title: 'Specialized TV Program Archive',
+    app_subtitle: 'TV Program Database',
+    archive_title: 'Specialized TV Program Archive',
+    genres_section: 'Genres',
+    all_programs: 'All Programs',
+    add_program: 'Add Program',
+    search: 'Search',
+    search_in: 'Search in',
+    reports: 'Reports',
+    settings: 'Settings',
+    logout: 'Logout',
+    dashboard: 'Archive',
+    bookmarks: 'Bookmarks',
+    related_programs: 'Related Programs',
+    compare: 'Compare',
+    compare_mode: 'Compare Mode',
+    compare_count: 'Compare',
+    multi_select: 'Multi-Select',
+    multi_select_count: 'Select',
+    grid_view: 'Grid view',
+    list_view: 'List view',
+    islamic: 'Islamic',
+    has_image: 'With image',
+    has_video: 'With video',
+    programs_count: 'programs',
+    no_programs: 'No programs found',
+    no_programs_desc: 'No programs match the current filters. Try changing the filters or searching for something else.',
+    loading: 'Loading...',
+    login: 'Sign in',
+    login_btn: 'Sign in',
+    username: 'Username',
+    password: 'Password',
+    show_password: 'Show password',
+    hide_password: 'Hide password',
+    logging_in: 'Signing in...',
+    back: 'Back',
+    menu: 'Menu',
+    close: 'Close',
+    connected: 'Connected',
+    banke_rasane: 'Banke Rasaneh',
+    total_programs: 'Total programs',
+    uploaded: 'Uploaded',
+    with_image: 'With image',
+    version: 'Version 2.0.0',
+    add_genre: 'Add Genre',
+    add_to_compare: 'Add to compare',
+    remove_from_compare: 'Remove from compare',
+    add_to_bookmarks: 'Add to bookmarks',
+    remove_from_bookmarks: 'Remove from bookmarks',
+    show_num: 'No.',
+    about_program: 'About this program',
+    compare_two_programs: 'Compare two programs',
+    clear_list: 'Clear',
+    close_btn: 'Close',
+    difference: 'Diff',
+    help_diff: 'Rows tagged with "Diff" differ between the two programs. Identical values appear unchanged.',
+    program_first: 'First program',
+    program_second: 'Second program',
+    field: 'Field',
+    decor_programs: 'Decor programs',
+    preserved_genre: 'Genre',
+    genre_count_suffix: 'programs',
+    no_access: 'Access denied',
+    no_access_desc: 'You do not have permission to add or edit programs. Sign in with an admin or editor account for full access.',
+    role_admin: 'System Admin',
+    role_editor: 'Editor',
+    role_viewer: 'Viewer',
+    settings_title: 'System Settings',
+    page_x_of_y: 'Page',
+    showing_x_y_of_z: 'Showing',
+    prev: 'Prev',
+    next: 'Next',
+    cancel: 'Cancel',
+    download: 'Download',
+    total: 'Total',
+    genre: 'Genres',
+    type: 'Type',
+    date: 'Date',
+    action: 'Action',
+    title: 'Title',
+    available_reports: 'Available reports',
+    pdf: 'PDF',
+    excel: 'Excel',
+    all: 'All',
+    size_label: 'Size:',
+    style_label: 'Style:',
+    large_lux: 'Large/Lux',
+    medium_std: 'Medium',
+    small_econ: 'Small',
+    modern: 'Modern',
+    composite: 'Composite',
+    minimal: 'Minimal',
+    classic: 'Classic',
+    switch_to_light: 'Switch to light mode',
+    switch_to_dark: 'Switch to dark mode',
+    switch_to_en: 'Switch to English',
+    switch_to_fa: 'Switch to Persian',
+  },
+};
+
+// Language context — wraps the entire app and exposes { lang, setLang, t }.
+type LangContextValue = {
+  lang: Lang;
+  setLang: (l: Lang) => void;
+  t: (key: StringKey) => string;
+};
+const LangContext = createContext<LangContextValue>({
+  lang: 'fa',
+  setLang: () => {},
+  t: (k) => STRINGS.fa[k],
+});
+
+function LangProvider({ lang, setLang, children }: { lang: Lang; setLang: (l: Lang) => void; children: React.ReactNode }) {
+  const value = useMemo<LangContextValue>(() => ({
+    lang,
+    setLang,
+    t: (k: StringKey) => STRINGS[lang][k] || STRINGS.fa[k] || k,
+  }), [lang, setLang]);
+  return <LangContext.Provider value={value}>{children}</LangContext.Provider>;
+}
+
+function useLang() {
+  return useContext(LangContext);
+}
+
 export default function Home() {
   const [currentView, setCurrentView] = useState<'dashboard' | 'programs' | 'genre' | 'reports' | 'add' | 'bookmarks'>('dashboard');
   const [selectedGenre, setSelectedGenre] = useState<Genre | null>(null);
@@ -813,12 +1168,20 @@ export default function Home() {
   };
 
   // ⚖ Toggle a show in the compare queue (max 2 items).
+  // When the SECOND item is added (queue goes from 1 → 2), automatically open the compare modal —
+  // this makes the workflow discoverable. When the user removes items, the modal stays open until
+  // they explicitly close it.
   const handleToggleCompare = (num: number) => {
     setCompareList(prev => {
       if (prev.includes(num)) return prev.filter(n => n !== num);
       if (prev.length >= 2) {
         // Replace oldest entry to keep only the latest two.
         return [prev[1], num];
+      }
+      // Auto-open modal as soon as 2 items are queued.
+      if (prev.length === 1) {
+        // Defer the modal-open to the next tick so compareList updates first.
+        setTimeout(() => setShowCompareModal(true), 0);
       }
       return [...prev, num];
     });
@@ -879,24 +1242,31 @@ export default function Home() {
 
   if (authLoading) {
     return (
-      <div className="login-screen min-h-screen relative flex flex-col items-center justify-center">
-        <div className="login-ambient-light green-1"></div>
-        <div className="login-ambient-light green-2"></div>
-        <div className="login-ambient-light green-3"></div>
-        <div className="relative z-20 flex flex-col items-center" style={{ gap: '16px' }}>
-          <div className="w-10 h-10 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(255,255,255,0.25)', borderTopColor: '#4ade80' }}></div>
-          <span style={{ color: 'rgba(168, 230, 193, 0.85)', fontSize: '14px' }}>در حال بارگذاری...</span>
+      <LangProvider lang={lang} setLang={setLang}>
+        <div className="login-screen min-h-screen relative flex flex-col items-center justify-center">
+          <div className="login-ambient-light green-1"></div>
+          <div className="login-ambient-light green-2"></div>
+          <div className="login-ambient-light green-3"></div>
+          <div className="relative z-20 flex flex-col items-center" style={{ gap: '16px' }}>
+            <div className="w-10 h-10 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(255,255,255,0.25)', borderTopColor: '#4ade80' }}></div>
+            <span style={{ color: 'rgba(168, 230, 193, 0.85)', fontSize: '14px' }}>{STRINGS[lang].loading}</span>
+          </div>
         </div>
-      </div>
+      </LangProvider>
     );
   }
 
   if (!currentUser) {
-    return <LoginScreen onLogin={handleLoginSuccess} />;
+    return (
+      <LangProvider lang={lang} setLang={setLang}>
+        <LoginScreen onLogin={handleLoginSuccess} />
+      </LangProvider>
+    );
   }
 
   return (
-    <div className="app-content min-h-screen">
+    <LangProvider lang={lang} setLang={setLang}>
+      <div className="app-content min-h-screen">
       <TopAppBar
         onMenuClick={() => setDrawerOpen(true)}
         isMobile={isMobile}
@@ -905,7 +1275,6 @@ export default function Home() {
         canGoBack={canGoBack}
         theme={theme}
         onToggleTheme={handleToggleTheme}
-        lang={lang}
         onToggleLang={handleToggleLang}
       />
 
@@ -1068,6 +1437,7 @@ export default function Home() {
         </div>
       )}
     </div>
+    </LangProvider>
   );
 }
 
@@ -1075,6 +1445,7 @@ export default function Home() {
 // LOGIN SCREEN — real auth (username + password)
 // ============================================
 function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
+  const { t, lang } = useLang();
   const [isReady, setIsReady] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -1089,7 +1460,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
     if (loading) return;
     setError(null);
     if (!username.trim() || !password) {
-      setError('نام کاربری و رمز عبور را وارد کنید');
+      setError(lang === 'en' ? 'Please enter username and password' : 'نام کاربری و رمز عبور را وارد کنید');
       return;
     }
     setLoading(true);
@@ -1097,7 +1468,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
       const data = await api.login(username.trim(), password);
       onLogin(data.user);
     } catch (err: any) {
-      setError(err?.message || 'ورود ناموفق بود');
+      setError(err?.message || (lang === 'en' ? 'Login failed' : 'ورود ناموفق بود'));
     } finally {
       setLoading(false);
     }
@@ -1109,34 +1480,40 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
       <div className="login-ambient-light green-2"></div>
       <div className="login-ambient-light green-3"></div>
 
+      {/* Subtle vignette layer — adds drama around the centered card */}
+      <div
+        aria-hidden
+        className="absolute inset-0 z-0 pointer-events-none"
+        style={{ background: 'radial-gradient(ellipse 60% 50% at 50% 50%, transparent 30%, rgba(0,0,0,0.45) 100%)' }}
+      />
+
       <div
         className={`relative z-20 flex flex-col items-center px-8 transition-all duration-1000 ${isReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
-        style={{ maxWidth: '440px', width: '100%' }}
+        style={{ maxWidth: '480px', width: '100%' }}
       >
-        {/* Logo — gradient light beam sweeps ONLY across the logo pixels.
-            The beam is masked to the logo's own shape via mask-image,
-            so the "برق" appears only on the icon + "بانک رسانه" text. */}
-        <div className="mb-10 flex justify-center">
+        {/* Logo — larger + dramatic shimmer sweep */}
+        <div className="mb-12 flex justify-center">
           <div
             className="logo-shimmer"
             style={{ ['--logo-mask' as string]: 'url(/banke-rasane-logo.png)' }}
           >
             <Image
               src="/banke-rasane-logo.png"
-              alt="بانک رسانه"
-              width={360}
-              height={196}
+              alt={t('banke_rasane')}
+              width={440}
+              height={240}
               priority
+              style={{ width: '100%', height: 'auto', maxWidth: '440px' }}
             />
           </div>
         </div>
 
         {/* Login form */}
-        <form onSubmit={handleSubmit} className="w-full" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <form onSubmit={handleSubmit} className="w-full" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* Username */}
           <div>
             <label htmlFor="login-username" className="block text-sm font-bold mb-2" style={{ color: 'rgba(168, 230, 193, 0.9)' }}>
-              نام کاربری
+              {t('username')}
             </label>
             <input
               id="login-username"
@@ -1147,26 +1524,30 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
               onChange={(e) => setUsername(e.target.value)}
               placeholder="admin"
               disabled={loading}
+              className="input-base"
               style={{
                 width: '100%',
                 background: 'rgba(255, 255, 255, 0.95)',
                 border: '1px solid rgba(74, 222, 128, 0.4)',
-                borderRadius: '12px',
-                padding: '12px 16px',
+                borderRadius: '14px',
+                padding: '14px 18px',
                 color: '#1a2e22',
                 fontSize: '15px',
                 fontFamily: 'inherit',
                 outline: 'none',
                 textAlign: 'left',
                 direction: 'ltr',
+                transition: 'border-color 0.25s ease, box-shadow 0.25s ease',
               }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = '#4ade80'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(74,222,128,0.18)'; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(74, 222, 128, 0.4)'; e.currentTarget.style.boxShadow = 'none'; }}
             />
           </div>
 
           {/* Password with show/hide */}
           <div>
             <label htmlFor="login-password" className="block text-sm font-bold mb-2" style={{ color: 'rgba(168, 230, 193, 0.9)' }}>
-              رمز عبور
+              {t('password')}
             </label>
             <div className="relative">
               <input
@@ -1182,20 +1563,24 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                   width: '100%',
                   background: 'rgba(255, 255, 255, 0.95)',
                   border: '1px solid rgba(74, 222, 128, 0.4)',
-                  borderRadius: '12px',
-                  padding: '12px 48px 12px 16px',
+                  borderRadius: '14px',
+                  padding: '14px 52px 14px 18px',
                   color: '#1a2e22',
                   fontSize: '15px',
                   fontFamily: 'inherit',
                   outline: 'none',
                   textAlign: 'left',
                   direction: 'ltr',
+                  transition: 'border-color 0.25s ease, box-shadow 0.25s ease',
                 }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = '#4ade80'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(74,222,128,0.18)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(74, 222, 128, 0.4)'; e.currentTarget.style.boxShadow = 'none'; }}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? 'پنهان کردن رمز' : 'نمایش رمز'}
+                aria-label={showPassword ? t('hide_password') : t('show_password')}
+                title={showPassword ? t('hide_password') : t('show_password')}
                 disabled={loading}
                 className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-colors"
                 style={{ color: '#4a5d52', background: 'transparent' }}
@@ -1241,11 +1626,11 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
               {loading ? (
                 <>
                   <div className="w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(255,255,255,0.35)', borderTopColor: '#ffffff' }}></div>
-                  <span>در حال ورود...</span>
+                  <span>{t('logging_in')}</span>
                 </>
               ) : (
                 <>
-                  <span>ورود به برنامه</span>
+                  <span>{t('login_btn')}</span>
                   <svg
                     className="w-5 h-5 rtl-flip group-hover:-translate-x-1.5 transition-transform"
                     fill="none"
@@ -1263,10 +1648,12 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
 
         <div className="mt-10 text-center">
           <p style={{ color: 'rgba(168, 230, 193, 0.6)' }} className="text-xs tracking-wider">
-            نسخه ۲.۰.۰ • بانک اطلاعاتی برنامه‌های تلویزیونی
+            {t('version')} • {t('app_subtitle')}
           </p>
           <p style={{ color: 'rgba(168, 230, 193, 0.45)' }} className="text-xs mt-2">
-            نام کاربری پیش‌فرض: <span dir="ltr">admin</span> / رمز: <span dir="ltr">admin</span>
+            {lang === 'en' ? 'Default user: ' : 'نام کاربری پیش‌فرض: '}
+            <span dir="ltr">admin</span> {lang === 'en' ? '/ pass: ' : '/ رمز: '}
+            <span dir="ltr">admin</span>
           </p>
         </div>
       </div>
@@ -1276,9 +1663,10 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
 
 // ============================================
 // TOP APP BAR — fixed at top, hamburger (3-line) on the right,
-// logo + title in the center, visible on BOTH desktop and mobile
+// logo + title in the center, visible on BOTH desktop and mobile.
+// Theme-aware via the `.top-app-bar` className (CSS variables in globals.css).
 // ============================================
-function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, theme, onToggleTheme, lang, onToggleLang }: {
+function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, theme, onToggleTheme, onToggleLang }: {
   onMenuClick: () => void;
   isMobile: boolean;
   currentView: string;
@@ -1286,42 +1674,44 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, them
   canGoBack: boolean;
   theme?: 'dark' | 'light';
   onToggleTheme?: () => void;
-  lang?: 'fa' | 'en';
   onToggleLang?: () => void;
 }) {
+  const { t, lang } = useLang();
   const viewTitles: Record<string, string> = {
-    dashboard: 'آرشیو تخصصی برنامه‌های تلویزیونی',
-    programs: 'همهٔ برنامه‌ها',
-    genre: 'برنامه‌های ژانر',
-    reports: 'گزارش‌ها',
-    add: 'افزودن / ویرایش برنامه',
-    bookmarks: 'برنامه‌های نشان‌شده',
+    dashboard: t('archive_title'),
+    programs: t('all_programs'),
+    genre: t('preserved_genre'),
+    reports: t('reports'),
+    add: t('add_program'),
+    bookmarks: t('bookmarks'),
   };
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-40"
+      className="fixed top-0 left-0 right-0 z-40 top-app-bar"
       style={{
         background: 'linear-gradient(180deg, rgba(4, 40, 23, 0.98) 0%, rgba(2, 80, 45, 0.96) 100%)',
         backdropFilter: 'blur(24px) saturate(180%)',
         WebkitBackdropFilter: 'blur(24px) saturate(180%)',
         borderBottom: '1px solid rgba(74, 222, 128, 0.4)',
         boxShadow: '0 8px 32px rgba(2, 144, 72, 0.25), inset 0 1px 0 rgba(74, 222, 128, 0.2)',
+        transition: 'background 0.35s ease, color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease',
       }}
     >
       <div
         className="flex items-center justify-between"
         style={{
-          padding: isMobile ? '12px 16px' : '14px 28px',
-          minHeight: '64px',
+          padding: isMobile ? '12px 16px' : '16px 32px',
+          minHeight: isMobile ? '64px' : '72px',
           gap: '12px',
         }}
       >
         {/* Hamburger button — 3 lines — opens the drawer from the right */}
         <button
           onClick={onMenuClick}
-          aria-label="باز کردن منو"
-          className="flex flex-col justify-center items-center p-2.5 rounded-xl transition-all"
+          aria-label={t('menu')}
+          title={t('menu')}
+          className="btn-base flex flex-col justify-center items-center p-2.5 rounded-xl"
           style={{
             background: 'linear-gradient(135deg, rgba(2, 144, 72, 0.4) 0%, rgba(2, 144, 72, 0.15) 100%)',
             border: '1px solid rgba(74, 222, 128, 0.4)',
@@ -1351,9 +1741,9 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, them
         >
           <Image
             src="/banke-rasane-logo.png"
-            alt="بانک رسانه"
-            width={isMobile ? 90 : 130}
-            height={isMobile ? 24 : 34}
+            alt={t('banke_rasane')}
+            width={isMobile ? 96 : 140}
+            height={isMobile ? 26 : 36}
             priority
             style={{
               filter: 'drop-shadow(0 2px 10px rgba(2, 144, 72, 0.5))',
@@ -1362,14 +1752,14 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, them
           />
           {!isMobile && (
             <div
-              className="flex flex-col"
-              style={{ borderRight: '1px solid rgba(74, 222, 128, 0.3)', paddingRight: '12px' }}
+              className="flex flex-col bar-title"
+              style={{ borderRight: '1px solid rgba(74, 222, 128, 0.3)', paddingRight: '14px' }}
             >
-              <span style={{ color: 'white', fontWeight: 700, fontSize: '15px', lineHeight: 1.2 }}>
-                {viewTitles[currentView] || 'بانک رسانه'}
+              <span className="bar-title" style={{ color: 'white', fontWeight: 700, fontSize: '15px', lineHeight: 1.2 }}>
+                {viewTitles[currentView] || t('banke_rasane')}
               </span>
-              <span style={{ color: 'rgba(168, 230, 193, 0.6)', fontSize: '11px', marginTop: '2px' }}>
-                نسخه ۲.۰.۰
+              <span className="bar-title-sub" style={{ color: 'rgba(168, 230, 193, 0.6)', fontSize: '11px', marginTop: '2px' }}>
+                {t('version')}
               </span>
             </div>
           )}
@@ -1381,9 +1771,9 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, them
           {onToggleTheme && (
             <button
               onClick={onToggleTheme}
-              aria-label={theme === 'dark' ? 'تغییر به حالت روشن' : 'تغییر به حالت تیره'}
-              title={theme === 'dark' ? 'تغییر به حالت روشن' : 'تغییر به حالت تیره'}
-              className="flex items-center justify-center rounded-xl transition-all"
+              aria-label={theme === 'dark' ? t('switch_to_light') : t('switch_to_dark')}
+              title={theme === 'dark' ? t('switch_to_light') : t('switch_to_dark')}
+              className="btn-base bar-toggle flex items-center justify-center rounded-xl"
               style={{
                 background: theme === 'dark'
                   ? 'rgba(255, 255, 255, 0.15)'
@@ -1393,7 +1783,6 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, them
                 width: '44px',
                 height: '44px',
                 fontSize: '18px',
-                cursor: 'pointer',
                 boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15)',
               }}
             >
@@ -1404,9 +1793,9 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, them
           {onToggleLang && (
             <button
               onClick={onToggleLang}
-              aria-label={lang === 'fa' ? 'Switch to English' : 'تغییر به فارسی'}
-              title={lang === 'fa' ? 'Switch to English' : 'تغییر به فارسی'}
-              className="flex items-center justify-center rounded-xl transition-all font-bold"
+              aria-label={lang === 'fa' ? t('switch_to_en') : t('switch_to_fa')}
+              title={lang === 'fa' ? t('switch_to_en') : t('switch_to_fa')}
+              className="btn-base bar-toggle flex items-center justify-center rounded-xl font-bold"
               style={{
                 background: 'rgba(255, 255, 255, 0.15)',
                 border: '1px solid rgba(74, 222, 128, 0.45)',
@@ -1414,8 +1803,6 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, them
                 width: '44px',
                 height: '44px',
                 fontSize: '13px',
-                cursor: 'pointer',
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15)',
                 direction: 'ltr',
               }}
             >
@@ -1425,9 +1812,9 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, them
           {canGoBack ? (
             <button
               onClick={onBack}
-              aria-label="بازگشت به صفحهٔ قبل"
-              title="بازگشت به صفحهٔ قبل"
-              className="flex items-center gap-2 rounded-xl transition-all"
+              aria-label={t('back')}
+              title={t('back')}
+              className="btn-base flex items-center gap-2 rounded-xl"
               style={{
                 background: 'rgba(255, 255, 255, 0.96)',
                 border: '1px solid rgba(74, 222, 128, 0.55)',
@@ -1445,22 +1832,22 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, them
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
-              {!isMobile && <span>بازگشت</span>}
+              {!isMobile && <span>{t('back')}</span>}
             </button>
           ) : isMobile ? (
             <span
-              className="px-2.5 py-1 rounded-full text-xs font-bold"
+              className="px-2.5 py-1 rounded-full text-xs font-bold bar-title"
               style={{
                 background: 'rgba(2, 144, 72, 0.35)',
                 color: '#4ade80',
                 border: '1px solid rgba(74, 222, 128, 0.35)',
               }}
             >
-              بانک رسانه
+              {t('banke_rasane')}
             </span>
           ) : (
             <div
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bar-title"
               style={{
                 background: 'rgba(2, 144, 72, 0.18)',
                 border: '1px solid rgba(2, 144, 72, 0.35)',
@@ -1474,7 +1861,7 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, them
                   animation: 'pulse 2s ease-in-out infinite',
                 }}
               ></span>
-              <span style={{ color: 'rgba(168, 230, 193, 0.85)', fontSize: '12px' }}>متصل</span>
+              <span className="bar-title-sub" style={{ color: 'rgba(168, 230, 193, 0.85)', fontSize: '12px' }}>{t('connected')}</span>
             </div>
           )}
         </div>
@@ -1520,61 +1907,63 @@ function DrawerMenu({
   onOpenBookmarks?: () => void;
 }) {
   const [genresExpanded, setGenresExpanded] = useState(true);
+  const { t, lang } = useLang();
 
   const navItems = [
-    { key: 'dashboard', label: 'آرشیو', icon: 'home', desc: 'صفحهٔ اصلی و ژانرها' },
-    { key: 'programs', label: 'همهٔ برنامه‌ها', icon: 'grid', desc: 'لیست کامل ۵۶۰ برنامه' },
-    { key: 'bookmarks', label: 'برنامه‌های نشان‌شده', icon: 'bookmark', desc: 'برنامه‌هایی که نشان کرده‌اید' },
-    { key: 'add', label: 'افزودن برنامه', icon: 'plus', desc: 'افزودن یا ویرایش برنامه' },
-    { key: 'reports', label: 'گزارش‌ها', icon: 'reports', desc: 'آمار و خروجی' },
+    { key: 'dashboard', label: t('dashboard'), icon: 'home', desc: lang === 'en' ? 'Home and genres' : 'صفحهٔ اصلی و ژانرها' },
+    { key: 'programs', label: t('all_programs'), icon: 'grid', desc: lang === 'en' ? 'Full list of programs' : 'لیست کامل برنامه‌ها' },
+    { key: 'bookmarks', label: t('bookmarks'), icon: 'bookmark', desc: lang === 'en' ? 'Programs you bookmarked' : 'برنامه‌هایی که نشان کرده‌اید' },
+    { key: 'add', label: t('add_program'), icon: 'plus', desc: lang === 'en' ? 'Add or edit a program' : 'افزودن یا ویرایش برنامه' },
+    { key: 'reports', label: t('reports'), icon: 'reports', desc: lang === 'en' ? 'Stats and exports' : 'آمار و خروجی' },
   ] as const;
 
   // Don't render anything if not open — keeps DOM clean
   if (!open) return null;
 
   const roleLabel: Record<string, string> = {
-    admin: 'مدیر سیستم',
-    editor: 'ویراستار',
-    viewer: 'بیننده',
+    admin: t('role_admin'),
+    editor: t('role_editor'),
+    viewer: t('role_viewer'),
   };
 
   return (
     <div
       className="fixed inset-0 z-50"
-      style={{ background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(4px)', animation: 'fade-in 0.2s ease-out' }}
+      style={{ background: 'var(--overlay-strong)', backdropFilter: 'blur(4px)', animation: 'fade-in 0.2s ease-out' }}
       onClick={onClose}
     >
       <aside
-        className="fixed top-0 right-0 bottom-0 animate-drawer-slide-in flex flex-col"
+        className="drawer-aside fixed top-0 right-0 bottom-0 animate-drawer-slide-in flex flex-col"
         style={{
           width: 'min(340px, 88vw)',
           background: 'linear-gradient(180deg, #042817 0%, #035932 40%, #024a28 70%, #042817 100%)',
           borderLeft: '1px solid rgba(74, 222, 128, 0.45)',
           boxShadow: '-16px 0 56px rgba(2, 144, 72, 0.4), inset 1px 0 0 rgba(74, 222, 128, 0.15)',
+          transition: 'background 0.35s ease, color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease',
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drawer header — logo + close */}
         <div
-          className="p-4 flex items-center justify-between flex-shrink-0"
+          className="p-4 flex items-center justify-between flex-shrink-0 drawer-divider"
           style={{ borderBottom: '1px solid rgba(74, 222, 128, 0.3)' }}
         >
           <Image
             src="/banke-rasane-logo.png"
-            alt="بانک رسانه"
-            width={130}
-            height={34}
+            alt={t('banke_rasane')}
+            width={140}
+            height={36}
             priority
             style={{ filter: 'drop-shadow(0 2px 10px rgba(2, 144, 72, 0.5))' }}
           />
           <button
             onClick={onClose}
-            className="p-2 rounded-lg transition-colors"
+            className="btn-base p-2 rounded-lg drawer-fg-muted"
             style={{ color: 'rgba(255, 255, 255, 0.6)' }}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(220, 38, 38, 0.2)'; e.currentTarget.style.color = '#fca5a5'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)'; }}
-            title="بستن منو"
-            aria-label="بستن منو"
+            title={t('close')}
+            aria-label={t('close')}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1594,7 +1983,7 @@ function DrawerMenu({
                 <button
                   key={item.key}
                   onClick={() => onNavigate(item.key as any)}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all w-full text-right"
+                  className="btn-base drawer-fg flex items-center gap-3 px-3 py-2.5 rounded-xl w-full text-right"
                   style={isActive ? {
                     background: 'linear-gradient(135deg, rgba(2, 144, 72, 0.55) 0%, rgba(2, 144, 72, 0.25) 100%)',
                     border: '1px solid rgba(2, 144, 72, 0.65)',
@@ -1620,7 +2009,7 @@ function DrawerMenu({
                   <NavIcon name={item.icon} />
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm">{item.label}</div>
-                    <div className="text-xs" style={{ color: 'rgba(168, 230, 193, 0.75)', marginTop: '2px' }}>{item.desc}</div>
+                    <div className="text-xs drawer-fg-muted" style={{ color: 'rgba(168, 230, 193, 0.75)', marginTop: '2px' }}>{item.desc}</div>
                   </div>
                 </button>
               );
@@ -1631,10 +2020,10 @@ function DrawerMenu({
           <div className="mt-6">
             <button
               onClick={() => setGenresExpanded(!genresExpanded)}
-              className="flex items-center justify-between w-full px-3 mb-2 text-xs font-bold uppercase tracking-wider"
+              className="btn-base drawer-fg-muted flex items-center justify-between w-full px-3 mb-2 text-xs font-bold uppercase tracking-wider"
               style={{ color: 'rgba(255, 255, 255, 0.5)' }}
             >
-              <span>ژانرها ({genres.length})</span>
+              <span>{t('genres_section')} ({genres.length})</span>
               <svg
                 className="w-4 h-4 transition-transform"
                 style={{ transform: genresExpanded ? 'rotate(0deg)' : 'rotate(-90deg)' }}
@@ -1652,7 +2041,7 @@ function DrawerMenu({
                     <button
                       key={g.id}
                       onClick={() => onGenreSelect(g)}
-                      className="flex items-center gap-3 px-3 py-2 rounded-lg transition-all group w-full"
+                      className="btn-base drawer-fg flex items-center gap-3 px-3 py-2 rounded-lg group w-full"
                       style={{ color: 'rgba(255, 255, 255, 0.95)' }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.background = `${g.color}30`;
@@ -1687,7 +2076,7 @@ function DrawerMenu({
 
         {/* User info + settings + logout footer */}
         <div
-          className="p-3 flex-shrink-0"
+          className="p-3 flex-shrink-0 drawer-divider"
           style={{ borderTop: '1px solid rgba(74, 222, 128, 0.3)' }}
         >
           {currentUser && (
@@ -1712,7 +2101,7 @@ function DrawerMenu({
                   {(currentUser.name || currentUser.username).charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm" style={{ color: '#4ade80' }} title={currentUser.username}>
+                  <div className="font-bold text-sm drawer-fg-active" style={{ color: '#4ade80' }} title={currentUser.username}>
                     {currentUser.name || currentUser.username}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
@@ -1725,7 +2114,7 @@ function DrawerMenu({
                     >
                       {roleLabel[currentUser.role] || currentUser.role}
                     </span>
-                    <span className="text-xs" style={{ color: 'rgba(168, 230, 193, 0.6)' }} dir="ltr">
+                    <span className="text-xs drawer-fg-muted" style={{ color: 'rgba(168, 230, 193, 0.6)' }} dir="ltr">
                       @{currentUser.username}
                     </span>
                   </div>
@@ -1738,7 +2127,7 @@ function DrawerMenu({
           {isAdmin && (
             <button
               onClick={onOpenSettings}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all w-full mb-1"
+              className="btn-base drawer-fg flex items-center gap-3 px-3 py-2.5 rounded-lg w-full mb-1"
               style={{ color: 'rgba(255, 255, 255, 0.85)' }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'rgba(2, 144, 72, 0.25)';
@@ -1753,13 +2142,13 @@ function DrawerMenu({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-              <span className="font-medium text-sm">⚙ تنظیمات</span>
+              <span className="font-medium text-sm">⚙ {t('settings')}</span>
             </button>
           )}
 
           <button
             onClick={onLogout}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all w-full"
+            className="btn-base drawer-fg flex items-center gap-3 px-3 py-2.5 rounded-lg w-full"
             style={{ color: 'rgba(255, 255, 255, 0.85)' }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = 'rgba(220, 38, 38, 0.2)';
@@ -1771,7 +2160,7 @@ function DrawerMenu({
             }}
           >
             <NavIcon name="exit" />
-            <span className="font-medium text-sm">خروج از حساب</span>
+            <span className="font-medium text-sm">{t('logout')}</span>
           </button>
         </div>
       </aside>
@@ -1972,27 +2361,30 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
   onAddGenre?: (g: Genre) => void;
 }) {
   const [showAddGenre, setShowAddGenre] = useState(false);
+  const { t, lang } = useLang();
   const stats = [
-    { label: 'کل برنامه‌ها', value: talkShows.length, color: '#029048', icon: 'film' },
-    { label: 'ژانرها', value: genres.length, color: '#2563eb', icon: 'tag' },
-    { label: 'آپلود شده در فضای مجازی', value: uploadedCount, color: '#7c3aed', icon: 'cloud' },
-    { label: 'با تصویر', value: talkShows.filter(s => s.images && s.images.length > 0).length, color: '#db2777', icon: 'image' },
+    { label: t('total_programs'), value: talkShows.length, color: '#029048', icon: 'film' },
+    { label: t('genre'), value: genres.length, color: '#2563eb', icon: 'tag' },
+    { label: t('uploaded'), value: uploadedCount, color: '#7c3aed', icon: 'cloud' },
+    { label: t('with_image'), value: talkShows.filter(s => s.images && s.images.length > 0).length, color: '#db2777', icon: 'image' },
   ];
 
   return (
     <>
-      <header className="mb-8 animate-fade-in">
+      <header className="mb-8 animate-view-enter">
         <div className="flex items-center gap-3 mb-2 flex-wrap">
-          <h1 className="text-3xl font-bold" style={{ color: '#1a2e22' }}>آرشیو تخصصی برنامه‌های تلویزیونی</h1>
+          <h1 className="text-3xl font-bold text-fg-strong" style={{ color: 'var(--fg-strong)' }}>{t('archive_title')}</h1>
           <span
             className="text-sm px-3 py-1 rounded-full"
-            style={{ background: 'rgba(2, 144, 72, 0.1)', color: '#016035' }}
+            style={{ background: 'var(--accent-bg-soft)', color: 'var(--accent-text)' }}
           >
-            بانک رسانه
+            {t('banke_rasane')}
           </span>
         </div>
-        <p style={{ color: '#7a8a80' }}>
-          بانک اطلاعاتی {talkShows.length.toLocaleString('fa-IR')} برنامهٔ تلویزیونی در {genres.length} ژانر
+        <p className="text-fg-muted" style={{ color: 'var(--fg-muted)' }}>
+          {lang === 'en'
+            ? `${t('app_subtitle')} — ${talkShows.length.toLocaleString('fa-IR')} programs in ${genres.length} genres`
+            : `بانک اطلاعاتی ${talkShows.length.toLocaleString('fa-IR')} برنامهٔ تلویزیونی در ${genres.length} ژانر`}
         </p>
       </header>
 
@@ -2034,19 +2426,19 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
       </div>
 
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <h2 className="text-xl font-bold" style={{ color: '#1a2e22' }}>ژانرها</h2>
+        <h2 className="text-xl font-bold text-fg-strong" style={{ color: 'var(--fg-strong)' }}>{t('genres_section')}</h2>
         <div className="flex items-center gap-2 flex-wrap">
           {isAdmin && onAddGenre && (
             <button
               onClick={() => setShowAddGenre(true)}
-              className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+              className="btn-base px-4 py-2 rounded-xl text-sm font-medium"
               style={{
                 background: 'rgba(7, 89, 133, 0.12)',
                 color: '#075985',
                 border: '1px solid rgba(7, 89, 133, 0.3)',
               }}
             >
-              + افزودن ژانر
+              + {t('add_genre')}
             </button>
           )}
           {canEdit && (
@@ -2055,7 +2447,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
               className="btn-enter-premium text-sm"
               style={{ padding: '8px 20px', fontSize: '14px' }}
             >
-              + افزودن برنامه
+              + {t('add_program')}
             </button>
           )}
         </div>
@@ -2107,13 +2499,13 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                   <div className="text-4xl font-black text-white">
                     {count.toLocaleString('fa-IR')}
                   </div>
-                  <div className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>برنامه</div>
+                  <div className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>{t('programs_count')}</div>
                 </div>
               </div>
               <h3 className="font-bold text-lg mb-1 text-white">{g.nameFa}</h3>
               <p className="text-sm mt-3" style={{ color: 'rgba(255,255,255,0.8)' }}>{g.description}</p>
               <div className="mt-4 flex items-center text-sm font-bold text-white">
-                مشاهده و جستجو
+                {lang === 'en' ? 'View & search' : 'مشاهده و جستجو'}
                 <svg className="w-4 h-4 mr-1 rtl-flip" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
@@ -2198,7 +2590,10 @@ function ProgramsView({
   const [hasImageOnly, setHasImageOnly] = useState(false);
   const [hasVideoOnly, setHasVideoOnly] = useState(false);
   const [page, setPage] = useState(1);
+  const [compareMode, setCompareMode] = useState(false);
+  const [loading, setLoading] = useState(talkShows.length === 0);
   const PAGE_SIZE = 24;
+  const { t, lang } = useLang();
 
   // Decor-specific size & style filters ONLY apply in the "decor" view (no genre) or
   // when explicitly inside the decor genre. Other genres hide these filter rows so
@@ -2240,6 +2635,20 @@ function ProgramsView({
   // Reset to first page whenever filters change (so user doesn't see an empty page).
   useEffect(() => { setPage(1); }, [search, filterSize, filterStyle, filterViewers, islamicOnly, hasImageOnly, hasVideoOnly, genre]);
 
+  // Loading state — show skeletons for ~600ms after data first arrives (or instantly if we have data).
+  useEffect(() => {
+    if (talkShows.length > 0) {
+      // Simulate brief loading shimmer on first arrival so users see the skeleton pattern.
+      const timer = setTimeout(() => setLoading(false), 350);
+      return () => clearTimeout(timer);
+    } else {
+      setLoading(true);
+    }
+  }, [talkShows.length]);
+
+  // ⚖ Compare auto-open behaviour lives in Home.handleToggleCompare — when the second item is
+  // queued, the modal opens automatically. No additional effect needed here.
+
   const totalPages = Math.max(1, Math.ceil(filteredShows.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const pageStart = (currentPage - 1) * PAGE_SIZE;
@@ -2270,19 +2679,19 @@ function ProgramsView({
 
   return (
     <>
-      <header className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-1" style={{ color: '#1a2e22' }}>
-          {overrideTitle || (genre ? genre.nameFa : 'همهٔ برنامه‌ها')}
+      <header className="mb-6 animate-view-enter">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-1 text-fg-strong" style={{ color: 'var(--fg-strong)' }}>
+          {overrideTitle || (genre ? genre.nameFa : t('all_programs'))}
         </h1>
-        <p style={{ color: '#7a8a80' }}>
-          {filteredShows.length.toLocaleString('fa-IR')} برنامه
+        <p className="text-fg-muted" style={{ color: 'var(--fg-muted)' }}>
+          {filteredShows.length.toLocaleString('fa-IR')} {t('programs_count')}
           {genre && ` • ${genre.description}`}
         </p>
       </header>
 
       {genre && (
         <div
-          className="premium-card mb-6 p-6"
+          className="premium-card mb-6 p-6 animate-view-enter"
           style={{
             background: `linear-gradient(135deg, ${gc}22 0%, ${gc}08 100%)`,
             border: `1px solid ${gc}50`,
@@ -2305,30 +2714,30 @@ function ProgramsView({
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-3 flex-wrap">
-                <h2 className="text-xl sm:text-2xl font-bold mb-1" style={{ color: '#1a2e22' }}>{genre.nameFa}</h2>
+                <h2 className="text-xl sm:text-2xl font-bold mb-1 text-fg-strong" style={{ color: 'var(--fg-strong)' }}>{genre.nameFa}</h2>
                 {canEdit && onAdd && (
                   <button
                     onClick={onAdd}
                     className="btn-enter-premium text-sm"
                     style={{ padding: '6px 16px', fontSize: '13px' }}
                   >
-                    + افزودن برنامه
+                    + {t('add_program')}
                   </button>
                 )}
               </div>
-              <p style={{ color: '#4a5d52' }} className="text-sm mt-1">{genre.description}</p>
+              <p className="text-fg-muted text-sm mt-1" style={{ color: 'var(--fg-muted)' }}>{genre.description}</p>
             </div>
           </div>
         </div>
       )}
 
       {/* Search & toolbar — mobile-friendly: full-width search, actions row, horizontally scrollable filter chips */}
-      <div className="premium-glass p-3 sm:p-4 mb-6 space-y-3">
+      <div className="premium-glass p-3 sm:p-4 mb-6 space-y-3 animate-view-enter">
         {/* Search — full width on every screen size */}
         <div className="relative">
           <svg
             className="w-5 h-5 absolute right-3 top-1/2 -translate-y-1/2"
-            style={{ color: '#7a8a80' }}
+            style={{ color: 'var(--fg-muted)' }}
             fill="none" stroke="currentColor" viewBox="0 0 24 24"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -2337,35 +2746,40 @@ function ProgramsView({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={`جستجو در ${genre ? genre.nameFa : 'همهٔ برنامه‌ها'}...`}
+            placeholder={`${t('search_in')} ${genre ? genre.nameFa : t('all_programs')}...`}
+            className="input-base"
             style={{
-              background: 'rgba(255, 255, 255, 0.9)',
-              border: '1px solid rgba(2, 144, 72, 0.15)',
+              background: 'var(--input-bg)',
+              border: '1px solid var(--input-border)',
               borderRadius: '12px',
               padding: '11px 36px 11px 16px',
               width: '100%',
               fontFamily: 'inherit',
-              color: '#1a2e22',
+              color: 'var(--input-fg)',
               outline: 'none',
               fontSize: '15px',
+              transition: 'border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease',
             }}
+            onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.boxShadow = '0 0 0 3px var(--accent-bg-soft)'; }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--input-border)'; e.currentTarget.style.boxShadow = 'none'; }}
           />
         </div>
 
         {/* Actions row — view toggle + multi-select + Islamic filter */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <div
             className="flex items-center gap-1 rounded-xl p-1 flex-shrink-0"
             style={{
-              background: 'rgba(255, 255, 255, 0.9)',
-              border: '1px solid rgba(2, 144, 72, 0.15)',
+              background: 'var(--input-bg)',
+              border: '1px solid var(--input-border)',
             }}
           >
             <button
               onClick={() => setView('grid')}
-              className="p-2 rounded-lg transition-colors"
-              style={view === 'grid' ? { background: '#029048', color: 'white' } : { color: '#4a5d52' }}
-              aria-label="نمایش شبکه‌ای"
+              className="btn-base p-2 rounded-lg"
+              style={view === 'grid' ? { background: 'var(--accent)', color: 'white' } : { color: 'var(--fg-muted)' }}
+              aria-label={t('grid_view')}
+              title={t('grid_view')}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
@@ -2373,9 +2787,10 @@ function ProgramsView({
             </button>
             <button
               onClick={() => setView('list')}
-              className="p-2 rounded-lg transition-colors"
-              style={view === 'list' ? { background: '#029048', color: 'white' } : { color: '#4a5d52' }}
-              aria-label="نمایش لیستی"
+              className="btn-base p-2 rounded-lg"
+              style={view === 'list' ? { background: 'var(--accent)', color: 'white' } : { color: 'var(--fg-muted)' }}
+              aria-label={t('list_view')}
+              title={t('list_view')}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -2386,102 +2801,127 @@ function ProgramsView({
           {/* 🌍 Islamic-countries filter — toggles whether shows must mention an Islamic country */}
           <button
             onClick={() => setIslamicOnly(!islamicOnly)}
-            className="px-3 py-2 rounded-xl text-sm font-medium transition-all flex-shrink-0"
-            title="فقط برنامه‌های مرتبط با کشورهای اسلامی"
+            className="btn-base px-3 py-2 rounded-xl text-sm font-medium flex-shrink-0"
+            title={lang === 'en' ? 'Only programs related to Islamic countries' : 'فقط برنامه‌های مرتبط با کشورهای اسلامی'}
             style={islamicOnly ? {
               background: 'linear-gradient(135deg, #0891b2 0%, #0e7490 100%)',
               color: 'white',
               border: '1px solid rgba(8, 145, 178, 0.5)',
             } : {
-              background: 'rgba(255, 255, 255, 0.9)',
-              color: '#4a5d52',
-              border: '1px solid rgba(2, 144, 72, 0.15)',
+              background: 'var(--input-bg)',
+              color: 'var(--fg-muted)',
+              border: '1px solid var(--input-border)',
             }}
           >
-            🌍 اسلامی
+            🌍 {t('islamic')}
           </button>
 
           {/* 🖼 Has-image filter — only shows with at least one image attached */}
           <button
             onClick={() => setHasImageOnly(!hasImageOnly)}
-            className="px-3 py-2 rounded-xl text-sm font-medium transition-all flex-shrink-0"
-            title="فقط برنامه‌های دارای تصویر"
+            className="btn-base px-3 py-2 rounded-xl text-sm font-medium flex-shrink-0"
+            title={lang === 'en' ? 'Only programs with images' : 'فقط برنامه‌های دارای تصویر'}
             style={hasImageOnly ? {
               background: 'linear-gradient(135deg, #db2777 0%, #9d174d 100%)',
               color: 'white',
               border: '1px solid rgba(219, 39, 119, 0.5)',
             } : {
-              background: 'rgba(255, 255, 255, 0.9)',
-              color: '#4a5d52',
-              border: '1px solid rgba(2, 144, 72, 0.15)',
+              background: 'var(--input-bg)',
+              color: 'var(--fg-muted)',
+              border: '1px solid var(--input-border)',
             }}
           >
-            🖼 با تصویر
+            🖼 {t('has_image')}
           </button>
 
           {/* 🎬 Has-video filter — only shows with at least one video link */}
           <button
             onClick={() => setHasVideoOnly(!hasVideoOnly)}
-            className="px-3 py-2 rounded-xl text-sm font-medium transition-all flex-shrink-0"
-            title="فقط برنامه‌های دارای ویدیو"
+            className="btn-base px-3 py-2 rounded-xl text-sm font-medium flex-shrink-0"
+            title={lang === 'en' ? 'Only programs with videos' : 'فقط برنامه‌های دارای ویدیو'}
             style={hasVideoOnly ? {
               background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
               color: 'white',
               border: '1px solid rgba(220, 38, 38, 0.5)',
             } : {
-              background: 'rgba(255, 255, 255, 0.9)',
-              color: '#4a5d52',
-              border: '1px solid rgba(2, 144, 72, 0.15)',
+              background: 'var(--input-bg)',
+              color: 'var(--fg-muted)',
+              border: '1px solid var(--input-border)',
             }}
           >
-            🎬 با ویدیو
+            🎬 {t('has_video')}
           </button>
 
-          {/* ⚖ Compare button — appears when 2 programs are queued for comparison */}
-          {onCompare && Array.isArray(compareList) && compareList.length === 2 && (
+          {/* ⚖ Compare MODE toggle — always visible. Flips `compareMode`, which
+              reveals the ⚖ button on every program card. When 2 are selected, the
+              ⚖ مقایسه (N) action button below opens the modal. */}
+          {onToggleCompare && onCompare && (
             <button
-              onClick={onCompare}
-              className="px-4 py-2 rounded-xl text-sm font-bold transition-all flex-shrink-0 animate-fade-in"
-              style={{
+              onClick={() => setCompareMode(!compareMode)}
+              className="btn-base px-4 py-2 rounded-xl text-sm font-medium flex-shrink-0"
+              title={t('compare_mode')}
+              style={compareMode ? {
                 background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
                 color: 'white',
                 border: '1px solid rgba(245, 158, 11, 0.5)',
                 boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4)',
+              } : {
+                background: 'var(--input-bg)',
+                color: 'var(--fg-muted)',
+                border: '1px solid var(--input-border)',
               }}
-              title="مقایسهٔ دو برنامهٔ انتخاب‌شده"
             >
-              ⚖ مقایسه ({compareList.length.toLocaleString('fa-IR')})
+              ⚖ {compareMode && Array.isArray(compareList) && compareList.length > 0
+                ? `${t('compare')} (${compareList.length.toLocaleString('fa-IR')})`
+                : t('compare')}
+            </button>
+          )}
+
+          {/* ⚖ Open-compare button — only when exactly 2 programs are queued AND compare mode is on. */}
+          {compareMode && onCompare && Array.isArray(compareList) && compareList.length === 2 && (
+            <button
+              onClick={onCompare}
+              className="btn-base px-4 py-2 rounded-xl text-sm font-bold flex-shrink-0 animate-fade-in"
+              style={{
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                color: 'white',
+                border: '1px solid rgba(245, 158, 11, 0.5)',
+                boxShadow: '0 4px 14px rgba(245, 158, 11, 0.5)',
+              }}
+              title={t('compare_two_programs')}
+            >
+              ⚖ {t('compare')} ({compareList.length.toLocaleString('fa-IR')})
             </button>
           )}
 
           {canEdit && (
             <button
               onClick={() => setSelectionMode(!selectionMode)}
-              className="px-4 py-2 rounded-xl text-sm font-medium transition-all flex-1"
+              className="btn-base px-4 py-2 rounded-xl text-sm font-medium flex-1"
               style={selectionMode ? {
-                background: 'rgba(2, 144, 72, 0.15)',
-                border: '1px solid rgba(2, 144, 72, 0.3)',
-                color: '#016035',
+                background: 'var(--accent-bg-soft)',
+                border: '1px solid var(--accent-border)',
+                color: 'var(--accent-text)',
               } : {
-                background: 'rgba(255, 255, 255, 0.9)',
-                border: '1px solid rgba(2, 144, 72, 0.15)',
-                color: '#4a5d52',
+                background: 'var(--input-bg)',
+                border: '1px solid var(--input-border)',
+                color: 'var(--fg-muted)',
               }}
             >
-              {selectionMode ? `✓ انتخاب (${selectedIds.length.toLocaleString('fa-IR')})` : 'انتخاب چندتایی'}
+              {selectionMode ? `✓ ${t('multi_select_count')} (${selectedIds.length.toLocaleString('fa-IR')})` : t('multi_select')}
             </button>
           )}
           {!canEdit && (
             <div
-              className="px-4 py-2 rounded-xl text-sm font-medium flex-1 text-center"
+              className="px-4 py-2 rounded-xl text-sm font-medium flex-1 text-center text-fg-muted"
               style={{
                 background: 'rgba(122, 138, 128, 0.08)',
-                color: '#7a8a80',
-                border: '1px solid rgba(122, 138, 128, 0.2)',
+                color: 'var(--fg-muted)',
+                border: '1px solid var(--input-border)',
               }}
-              title="برای افزودن یا ویرایش برنامه‌ها با حساب مدیر یا ویراستار وارد شوید"
+              title={t('no_access_desc')}
             >
-              🔒 فقط مشاهده — برای افزودن یا ویرایش با حساب مدیر وارد شوید
+              🔒 {lang === 'en' ? 'View only — sign in as admin/editor to edit' : 'فقط مشاهده — برای افزودن یا ویرایش با حساب مدیر وارد شوید'}
             </div>
           )}
         </div>
@@ -2491,23 +2931,23 @@ function ProgramsView({
         {decorFiltersVisible && (
           <div className="space-y-2">
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-              <span className="text-sm flex-shrink-0" style={{ color: '#7a8a80' }}>اندازه:</span>
+              <span className="text-sm flex-shrink-0 text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('size_label')}</span>
               {[
-                { key: 'all', label: 'همه' },
-                { key: 'بزرگ/لوکس', label: 'بزرگ/لوکس' },
-                { key: 'متوسط/استاندارد', label: 'متوسط' },
-                { key: 'کوچک/اقتصادی', label: 'کوچک' },
+                { key: 'all', label: t('all') },
+                { key: 'بزرگ/لوکس', label: t('large_lux') },
+                { key: 'متوسط/استاندارد', label: t('medium_std') },
+                { key: 'کوچک/اقتصادی', label: t('small_econ') },
               ].map(f => (
                 <button
                   key={f.key}
                   onClick={() => setFilterSize(f.key)}
-                  className="px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
+                  className="btn-base px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
                   style={filterSize === f.key ? {
                     background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
                     color: 'white',
                   } : {
-                    background: 'rgba(255, 255, 255, 0.9)',
-                    color: '#4a5d52',
+                    background: 'var(--input-bg)',
+                    color: 'var(--fg-muted)',
                   }}
                 >
                   {f.label}
@@ -2515,24 +2955,24 @@ function ProgramsView({
               ))}
             </div>
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-              <span className="text-sm flex-shrink-0" style={{ color: '#7a8a80' }}>سبک:</span>
+              <span className="text-sm flex-shrink-0 text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('style_label')}</span>
               {[
-                { key: 'all', label: 'همه' },
-                { key: 'مدرن', label: 'مدرن' },
-                { key: 'ترکیبی', label: 'ترکیبی' },
-                { key: 'مینیمال', label: 'مینیمال' },
-                { key: 'کلاسیک/سنتی', label: 'کلاسیک' },
+                { key: 'all', label: t('all') },
+                { key: 'مدرن', label: t('modern') },
+                { key: 'ترکیبی', label: t('composite') },
+                { key: 'مینیمال', label: t('minimal') },
+                { key: 'کلاسیک/سنتی', label: t('classic') },
               ].map(f => (
                 <button
                   key={f.key}
                   onClick={() => setFilterStyle(f.key)}
-                  className="px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
+                  className="btn-base px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
                   style={filterStyle === f.key ? {
                     background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
                     color: 'white',
                   } : {
-                    background: 'rgba(255, 255, 255, 0.9)',
-                    color: '#4a5d52',
+                    background: 'var(--input-bg)',
+                    color: 'var(--fg-muted)',
                   }}
                 >
                   {f.label}
@@ -2545,49 +2985,88 @@ function ProgramsView({
         {selectionMode && selectedIds.length > 0 && (
           <div
             className="flex flex-wrap items-center gap-3 pt-3"
-            style={{ borderTop: '1px solid rgba(2, 144, 72, 0.1)' }}
+            style={{ borderTop: '1px solid var(--input-border)' }}
           >
-            <span style={{ color: '#016035' }} className="font-medium text-sm">
-              {selectedIds.length.toLocaleString('fa-IR')} برنامه انتخاب شده
+            <span className="font-medium text-sm text-fg-strong" style={{ color: 'var(--accent-text)' }}>
+              {selectedIds.length.toLocaleString('fa-IR')} {lang === 'en' ? 'selected' : 'برنامه انتخاب شده'}
             </span>
             <button
               onClick={handleUploadSelected}
-              className="px-3 py-1.5 rounded-lg text-sm font-medium"
+              className="btn-base px-3 py-1.5 rounded-lg text-sm font-medium"
               style={{ background: 'rgba(124, 58, 237, 0.15)', color: '#7c3aed', border: '1px solid rgba(124, 58, 237, 0.3)' }}
             >
-              📱 انتشار در شبکه‌های اجتماعی
+              📱 {lang === 'en' ? 'Publish to social media' : 'انتشار در شبکه‌های اجتماعی'}
             </button>
             <button
               onClick={handlePDF}
-              className="px-3 py-1.5 rounded-lg text-sm font-medium"
+              className="btn-base px-3 py-1.5 rounded-lg text-sm font-medium"
               style={{ background: 'rgba(220, 38, 38, 0.15)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}
             >
-              📄 گزارش PDF
+              📄 {lang === 'en' ? 'PDF report' : 'گزارش PDF'}
             </button>
             <button
               onClick={handleExcel}
-              className="px-3 py-1.5 rounded-lg text-sm font-medium"
+              className="btn-base px-3 py-1.5 rounded-lg text-sm font-medium"
               style={{ background: 'rgba(2, 144, 72, 0.15)', color: '#016035', border: '1px solid rgba(2, 144, 72, 0.3)' }}
             >
-              📊 گزارش Excel
+              📊 {lang === 'en' ? 'Excel report' : 'گزارش Excel'}
             </button>
             <button
               onClick={() => { setSelectedIds([]); setSelectionMode(false); }}
-              className="px-3 py-1.5 rounded-lg text-sm font-medium"
-              style={{ background: 'rgba(122, 138, 128, 0.15)', color: '#4a5d52', border: '1px solid rgba(122, 138, 128, 0.3)' }}
+              className="btn-base px-3 py-1.5 rounded-lg text-sm font-medium"
+              style={{ background: 'rgba(122, 138, 128, 0.15)', color: 'var(--fg-muted)', border: '1px solid var(--input-border)' }}
             >
-              لغو
+              {t('cancel')}
             </button>
           </div>
         )}
       </div>
 
-      {filteredShows.length === 0 ? (
-        <div className="text-center py-20" style={{ color: '#7a8a80' }}>
-          <p>برنامه‌ای یافت نشد</p>
+      {/* Loading skeletons — shown while data is arriving */}
+      {loading && (
+        <div className={view === 'grid'
+          ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-fade-in"
+          : "space-y-2 animate-fade-in"}>
+          {Array.from({ length: view === 'grid' ? 8 : 5 }).map((_, i) => (
+            <div key={i} className="skeleton-card" style={{ height: view === 'grid' ? 320 : 100 }}>
+              <div className="p-4 flex flex-col gap-3" style={{ height: '100%' }}>
+                {view === 'grid' ? (
+                  <>
+                    <div className="skeleton-line" style={{ height: '140px', borderRadius: '12px' }} />
+                    <div className="skeleton-line" style={{ width: '60%' }} />
+                    <div className="skeleton-line" style={{ width: '90%' }} />
+                    <div className="skeleton-line" style={{ width: '40%' }} />
+                  </>
+                ) : (
+                  <div className="flex items-center gap-3 h-full">
+                    <div className="skeleton-line" style={{ width: '56px', height: '56px', borderRadius: '12px' }} />
+                    <div className="flex-1 flex flex-col gap-2">
+                      <div className="skeleton-line" style={{ width: '50%' }} />
+                      <div className="skeleton-line" style={{ width: '80%' }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
-      ) : view === 'grid' ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      )}
+
+      {!loading && filteredShows.length === 0 ? (
+        <div className="empty-state animate-fade-in">
+          <div className="empty-state-icon">
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="7" />
+              <path d="M21 21l-4-4" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-fg-strong" style={{ color: 'var(--fg-strong)' }}>{t('no_programs')}</h3>
+            <p className="text-sm mt-1 text-fg-muted" style={{ color: 'var(--fg-muted)', maxWidth: '420px' }}>{t('no_programs_desc')}</p>
+          </div>
+        </div>
+      ) : !loading && view === 'grid' ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-view-enter">
           {pageShows.map(s => (
             <ProgramCard
               key={s.num}
@@ -2597,7 +3076,7 @@ function ProgramsView({
               selected={selectedIds.includes(s.num)}
               isUploaded={uploadedShows.includes(s.num)}
               isBookmarked={bookmarks?.includes(s.num)}
-              compareActive={Array.isArray(compareList)}
+              compareActive={compareMode}
               compareSelected={compareList?.includes(s.num) || false}
               onToggle={() => {
                 if (selectedIds.includes(s.num)) setSelectedIds(selectedIds.filter(x => x !== s.num));
@@ -2609,8 +3088,8 @@ function ProgramsView({
             />
           ))}
         </div>
-      ) : (
-        <div className="space-y-2">
+      ) : !loading && (
+        <div className="space-y-2 animate-view-enter">
           {pageShows.map(s => (
             <ProgramListRow
               key={s.num}
@@ -2620,7 +3099,7 @@ function ProgramsView({
               selected={selectedIds.includes(s.num)}
               isUploaded={uploadedShows.includes(s.num)}
               isBookmarked={bookmarks?.includes(s.num)}
-              compareActive={Array.isArray(compareList)}
+              compareActive={compareMode}
               compareSelected={compareList?.includes(s.num) || false}
               onToggle={() => {
                 if (selectedIds.includes(s.num)) setSelectedIds(selectedIds.filter(x => x !== s.num));
@@ -2637,27 +3116,26 @@ function ProgramsView({
       {/* Real pagination — 24 programs per page with numbered page buttons */}
       {totalPages > 1 && (
         <div
-          className="flex items-center justify-center gap-2 mt-8 flex-wrap"
+          className="flex items-center justify-center gap-2 mt-8 flex-wrap animate-view-enter"
           style={{ direction: 'ltr' }}
         >
           <button
             onClick={() => setPage(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
-            className="px-3 py-2 rounded-lg text-sm font-medium transition-all"
+            className="btn-base px-3 py-2 rounded-lg text-sm font-medium"
             style={{
-              background: currentPage === 1 ? 'rgba(0,0,0,0.04)' : 'rgba(2, 144, 72, 0.1)',
-              color: currentPage === 1 ? '#bbb' : '#016035',
-              border: '1px solid rgba(2, 144, 72, 0.25)',
+              background: currentPage === 1 ? 'rgba(0,0,0,0.04)' : 'var(--accent-bg-soft)',
+              color: currentPage === 1 ? '#bbb' : 'var(--accent-text)',
+              border: '1px solid var(--accent-border)',
               cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
               opacity: currentPage === 1 ? 0.6 : 1,
             }}
-            aria-label="صفحهٔ قبل"
+            aria-label={t('prev')}
           >
-            › قبلی
+            › {t('prev')}
           </button>
           {Array.from({ length: totalPages }, (_, i) => i + 1)
             .filter(p => {
-              // Show first/last page, current page ±2 window, and pages near current.
               if (p === 1 || p === totalPages) return true;
               if (Math.abs(p - currentPage) <= 2) return true;
               return false;
@@ -2667,19 +3145,19 @@ function ProgramsView({
               const showEllipsisBefore = prev && p - prev > 1;
               return (
                 <span key={p} className="flex items-center gap-1">
-                  {showEllipsisBefore && <span style={{ color: '#7a8a80', padding: '0 4px' }}>…</span>}
+                  {showEllipsisBefore && <span style={{ color: 'var(--fg-muted)', padding: '0 4px' }}>…</span>}
                   <button
                     onClick={() => setPage(p)}
-                    className="min-w-[40px] px-3 py-2 rounded-lg text-sm font-bold transition-all"
+                    className="btn-base min-w-[40px] px-3 py-2 rounded-lg text-sm font-bold"
                     style={p === currentPage ? {
                       background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
                       color: 'white',
                       border: '1px solid #029048',
                       boxShadow: '0 4px 12px rgba(2, 144, 72, 0.3)',
                     } : {
-                      background: 'white',
-                      color: '#4a5d52',
-                      border: '1px solid rgba(2, 144, 72, 0.15)',
+                      background: 'var(--glass-bg-solid)',
+                      color: 'var(--fg-muted)',
+                      border: '1px solid var(--input-border)',
                     }}
                   >
                     {p.toLocaleString('fa-IR')}
@@ -2690,26 +3168,26 @@ function ProgramsView({
           <button
             onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage === totalPages}
-            className="px-3 py-2 rounded-lg text-sm font-medium transition-all"
+            className="btn-base px-3 py-2 rounded-lg text-sm font-medium"
             style={{
-              background: currentPage === totalPages ? 'rgba(0,0,0,0.04)' : 'rgba(2, 144, 72, 0.1)',
-              color: currentPage === totalPages ? '#bbb' : '#016035',
-              border: '1px solid rgba(2, 144, 72, 0.25)',
+              background: currentPage === totalPages ? 'rgba(0,0,0,0.04)' : 'var(--accent-bg-soft)',
+              color: currentPage === totalPages ? '#bbb' : 'var(--accent-text)',
+              border: '1px solid var(--accent-border)',
               cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
               opacity: currentPage === totalPages ? 0.6 : 1,
             }}
-            aria-label="صفحهٔ بعد"
+            aria-label={t('next')}
           >
-            بعدی ‹
+            {t('next')} ‹
           </button>
         </div>
       )}
 
       {filteredShows.length > 0 && (
-        <div className="text-center mt-4" style={{ color: '#7a8a80' }}>
+        <div className="text-center mt-4 text-fg-muted" style={{ color: 'var(--fg-muted)' }}>
           <p className="text-sm">
-            صفحهٔ {currentPage.toLocaleString('fa-IR')} از {totalPages.toLocaleString('fa-IR')} •
-            نمایش {(pageStart + 1).toLocaleString('fa-IR')}–{Math.min(pageStart + PAGE_SIZE, filteredShows.length).toLocaleString('fa-IR')} از {filteredShows.length.toLocaleString('fa-IR')} برنامه
+            {t('page_x_of_y')} {currentPage.toLocaleString('fa-IR')} / {totalPages.toLocaleString('fa-IR')} •
+            {t('showing_x_y_of_z')} {(pageStart + 1).toLocaleString('fa-IR')}–{Math.min(pageStart + PAGE_SIZE, filteredShows.length).toLocaleString('fa-IR')} / {filteredShows.length.toLocaleString('fa-IR')} {t('programs_count')}
           </p>
         </div>
       )}
@@ -2734,6 +3212,7 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
   const thumb = getShowThumbnail(show);
   const dark = adjustColor(thumb.accent, -40);
   const darker = adjustColor(thumb.accent, -70);
+  const { t } = useLang();
   // Section-specific tags derived from the genre (fallback to decor's style/size/viewers).
   const genreTags = renderGenreTags(show, genre);
   // User-defined tags on the show itself (purple badges).
@@ -2753,15 +3232,15 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
       }}
       onMouseEnter={(e) => {
         if (!selected) {
-          e.currentTarget.style.transform = 'translateY(-4px) scale(1.01)';
-          e.currentTarget.style.filter = 'brightness(1.12)';
-          e.currentTarget.style.boxShadow = `0 18px 56px ${thumb.accent}65, 0 6px 20px ${thumb.accent}40, inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -1px 0 rgba(0,0,0,0.2)`;
+          e.currentTarget.style.transform = 'translateY(-6px) scale(1.02)';
+          e.currentTarget.style.filter = 'brightness(1.1) saturate(1.05)';
+          e.currentTarget.style.boxShadow = `0 20px 60px ${thumb.accent}70, 0 8px 24px ${thumb.accent}45, inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -1px 0 rgba(0,0,0,0.2)`;
         }
       }}
       onMouseLeave={(e) => {
         if (!selected) {
           e.currentTarget.style.transform = 'translateY(0) scale(1)';
-          e.currentTarget.style.filter = 'brightness(1)';
+          e.currentTarget.style.filter = 'brightness(1) saturate(1)';
           e.currentTarget.style.boxShadow = `0 12px 40px ${thumb.accent}45, 0 4px 12px ${thumb.accent}30, inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.2)`;
         }
       }}
@@ -2771,7 +3250,7 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
         className="aspect-video relative overflow-hidden"
         style={{
           background: thumb.gradient,
-          borderRadius: '22px 22px 0 0',
+          borderRadius: '16px 16px 0 0',
         }}
       >
         {thumb.image ? (
@@ -2815,13 +3294,16 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
           </>
         )}
 
+        {/* Image gradient overlay — adds cinematic depth on top of the thumbnail */}
+        <div className="image-overlay" />
+
         {/* ★ Bookmark button — top-right of thumbnail */}
         {onToggleBookmark && (
           <button
             onClick={(e) => { e.stopPropagation(); onToggleBookmark(); }}
-            aria-label={isBookmarked ? 'حذف از نشان‌شده‌ها' : 'افزودن به نشان‌شده‌ها'}
-            title={isBookmarked ? 'حذف از نشان‌شده‌ها' : 'افزودن به نشان‌شده‌ها'}
-            className="absolute p-1.5 rounded-full"
+            aria-label={isBookmarked ? t('remove_from_bookmarks') : t('add_to_bookmarks')}
+            title={isBookmarked ? t('remove_from_bookmarks') : t('add_to_bookmarks')}
+            className="btn-base absolute p-1.5 rounded-full"
             style={{
               top: '8px',
               right: '8px',
@@ -2831,7 +3313,6 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
               backdropFilter: 'blur(6px)',
               WebkitBackdropFilter: 'blur(6px)',
               zIndex: 15,
-              cursor: 'pointer',
               fontSize: '14px',
               lineHeight: 1,
               minWidth: '32px',
@@ -2850,9 +3331,9 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
         {onToggleCompare && compareActive && (
           <button
             onClick={(e) => { e.stopPropagation(); onToggleCompare(); }}
-            aria-label={compareSelected ? 'حذف از مقایسه' : 'افزودن به مقایسه'}
-            title={compareSelected ? 'حذف از مقایسه' : 'افزودن به مقایسه'}
-            className="absolute p-1.5 rounded-full"
+            aria-label={compareSelected ? t('remove_from_compare') : t('add_to_compare')}
+            title={compareSelected ? t('remove_from_compare') : t('add_to_compare')}
+            className="btn-base absolute p-1.5 rounded-full"
             style={{
               bottom: '8px',
               left: '8px',
@@ -2862,7 +3343,6 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
               backdropFilter: 'blur(6px)',
               WebkitBackdropFilter: 'blur(6px)',
               zIndex: 15,
-              cursor: 'pointer',
               fontSize: '13px',
               lineHeight: 1,
               minWidth: '32px',
@@ -2870,6 +3350,7 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              boxShadow: compareSelected ? '0 2px 8px rgba(245,158,11,0.6)' : 'none',
             }}
           >
             ⚖
@@ -3025,6 +3506,7 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
   const darker = adjustColor(thumb.accent, -70);
   const genreTags = renderGenreTags(show, genre);
   const userTags = show.tags && show.tags.length > 0 ? show.tags : [];
+  const { t } = useLang();
   return (
     <div
       onClick={selectionMode ? onToggle : onClick}
@@ -3139,9 +3621,9 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
         {onToggleBookmark && (
           <button
             onClick={(e) => { e.stopPropagation(); onToggleBookmark(); }}
-            aria-label={isBookmarked ? 'حذف از نشان‌شده‌ها' : 'افزودن به نشان‌شده‌ها'}
-            title={isBookmarked ? 'حذف از نشان‌شده‌ها' : 'افزودن به نشان‌شده‌ها'}
-            className="block mb-2 mx-auto"
+            aria-label={isBookmarked ? t('remove_from_bookmarks') : t('add_to_bookmarks')}
+            title={isBookmarked ? t('remove_from_bookmarks') : t('add_to_bookmarks')}
+            className="btn-base block mb-2 mx-auto"
             style={{
               background: isBookmarked ? 'rgba(245, 158, 11, 0.95)' : 'rgba(255,255,255,0.2)',
               color: isBookmarked ? 'white' : '#fde68a',
@@ -3149,12 +3631,12 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
               borderRadius: '999px',
               width: '32px',
               height: '32px',
-              cursor: 'pointer',
               fontSize: '14px',
               lineHeight: 1,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              boxShadow: isBookmarked ? '0 2px 8px rgba(245,158,11,0.6)' : 'none',
             }}
           >
             {isBookmarked ? '★' : '☆'}
@@ -3164,9 +3646,9 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
         {onToggleCompare && compareActive && (
           <button
             onClick={(e) => { e.stopPropagation(); onToggleCompare(); }}
-            aria-label={compareSelected ? 'حذف از مقایسه' : 'افزودن به مقایسه'}
-            title={compareSelected ? 'حذف از مقایسه' : 'افزودن به مقایسه'}
-            className="block mb-2 mx-auto"
+            aria-label={compareSelected ? t('remove_from_compare') : t('add_to_compare')}
+            title={compareSelected ? t('remove_from_compare') : t('add_to_compare')}
+            className="btn-base block mb-2 mx-auto"
             style={{
               background: compareSelected ? 'rgba(245, 158, 11, 0.95)' : 'rgba(255,255,255,0.2)',
               color: compareSelected ? 'white' : '#fde68a',
@@ -3174,18 +3656,18 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
               borderRadius: '999px',
               width: '32px',
               height: '32px',
-              cursor: 'pointer',
               fontSize: '14px',
               lineHeight: 1,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              boxShadow: compareSelected ? '0 2px 8px rgba(245,158,11,0.6)' : 'none',
             }}
           >
             ⚖
           </button>
         )}
-        <div className="text-xs" style={{ color: 'rgba(255,255,255,0.6)' }}>شماره</div>
+        <div className="text-xs" style={{ color: 'rgba(255,255,255,0.6)' }}>{t('show_num')}</div>
         <div className="font-bold text-sm text-white">#{show.num.toLocaleString('fa-IR')}</div>
       </div>
     </div>
@@ -3212,6 +3694,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
 }) {
   const thumb = getShowThumbnail(show);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const { t } = useLang();
   // Related programs computed from the full list — capped at 6.
   const related = useMemo(
     () => allShows.length > 0 ? findRelated(show, allShows, 6) : [],
@@ -3573,7 +4056,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
           {/* 🔗 Related programs — computed from allShows via findRelated */}
           {related.length > 0 && (
             <div className="mt-6">
-              <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>🔗 برنامه‌های مرتبط</h4>
+              <h4 className="font-bold mb-3 text-fg-strong" style={{ color: 'var(--fg-strong)' }}>🔗 {t('related_programs')}</h4>
               <div className="flex items-center gap-3 overflow-x-auto pb-3 no-scrollbar">
                 {related.map(r => {
                   const rThumb = getShowThumbnail(r);
@@ -5810,68 +6293,70 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
   showToast: (msg: string) => void;
   onExport: (shows: TalkShow[], format: 'pdf' | 'excel') => void;
 }) {
+  const { t, lang } = useLang();
   const stats = {
     total: talkShows.length,
-    text: talkShows.filter(s => s.source === 'متن').length,
     uploaded: uploadedShows.length,
+    withImage: talkShows.filter(s => s.images && s.images.length > 0).length,
   };
 
   const reports = [
-    { id: 1, title: 'گزارش کامل همهٔ برنامه‌ها', type: 'pdf', count: stats.total, date: '۱۴۰۴/۰۸/۲۵' },
-    { id: 2, title: 'گزارش برنامه‌های آپلود شده در فضای مجازی', type: 'excel', count: stats.uploaded, date: '۱۴۰۴/۰۸/۲۵' },
+    { id: 1, title: lang === 'en' ? 'Full report of all programs' : 'گزارش کامل همهٔ برنامه‌ها', type: 'pdf', count: stats.total, date: '۱۴۰۴/۰۸/۲۵' },
+    { id: 2, title: lang === 'en' ? 'Report of programs uploaded to social media' : 'گزارش برنامه‌های آپلود شده در فضای مجازی', type: 'excel', count: stats.uploaded, date: '۱۴۰۴/۰۸/۲۵' },
   ];
 
   return (
     <>
-      <header className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-2" style={{ color: '#1a2e22' }}>گزارش‌ها</h1>
-        <p style={{ color: '#7a8a80' }}>آمار و گزارش‌های بانک رسانه</p>
+      <header className="mb-8 animate-view-enter">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-fg-strong" style={{ color: 'var(--fg-strong)' }}>{t('reports')}</h1>
+        <p className="text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{lang === 'en' ? 'Banke Rasaneh stats & reports' : 'آمار و گزارش‌های بانک رسانه'}</p>
       </header>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 animate-view-enter">
         <div className="premium-glass p-5">
           <div className="text-3xl font-black mb-1" style={{ color: '#029048' }}>{stats.total.toLocaleString('fa-IR')}</div>
-          <div style={{ color: '#4a5d52' }} className="text-sm">کل برنامه‌ها</div>
+          <div className="text-sm text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('total_programs')}</div>
         </div>
         <div className="premium-glass p-5">
           <div className="text-3xl font-black mb-1" style={{ color: '#7c3aed' }}>{stats.uploaded.toLocaleString('fa-IR')}</div>
-          <div style={{ color: '#4a5d52' }} className="text-sm">آپلود شده</div>
+          <div className="text-sm text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('uploaded')}</div>
         </div>
         <div className="premium-glass p-5">
           <div className="text-3xl font-black mb-1" style={{ color: '#016035' }}>{GENRES.length.toLocaleString('fa-IR')}</div>
-          <div style={{ color: '#4a5d52' }} className="text-sm">ژانرها</div>
+          <div className="text-sm text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('genre')}</div>
         </div>
         <div className="premium-glass p-5">
-          <div className="text-3xl font-black mb-1" style={{ color: '#2563eb' }}>{talkShows.filter(s => s.images && s.images.length > 0).length.toLocaleString('fa-IR')}</div>
-          <div style={{ color: '#4a5d52' }} className="text-sm">با تصویر</div>
+          <div className="text-3xl font-black mb-1" style={{ color: '#2563eb' }}>{stats.withImage.toLocaleString('fa-IR')}</div>
+          <div className="text-sm text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('with_image')}</div>
         </div>
       </div>
 
-      <div className="premium-glass overflow-hidden">
-        <div className="p-5" style={{ borderBottom: '1px solid rgba(2, 144, 72, 0.1)' }}>
-          <h3 className="font-bold" style={{ color: '#1a2e22' }}>گزارش‌های موجود</h3>
+      <div className="premium-glass overflow-hidden animate-view-enter">
+        <div className="p-5" style={{ borderBottom: '1px solid var(--input-border)' }}>
+          <h3 className="font-bold text-fg-strong" style={{ color: 'var(--fg-strong)' }}>{t('available_reports')}</h3>
         </div>
         <table className="w-full">
-          <thead>
-            <tr style={{ background: 'rgba(2, 144, 72, 0.08)', borderBottom: '1px solid rgba(2, 144, 72, 0.2)' }}>
-              <th className="text-right p-4 text-xs font-bold" style={{ color: '#4a5d52' }}>#</th>
-              <th className="text-right p-4 text-xs font-bold" style={{ color: '#4a5d52' }}>عنوان</th>
-              <th className="text-right p-4 text-xs font-bold hidden sm:table-cell" style={{ color: '#4a5d52' }}>نوع</th>
-              <th className="text-right p-4 text-xs font-bold" style={{ color: '#4a5d52' }}>تعداد</th>
-              <th className="text-right p-4 text-xs font-bold hidden sm:table-cell" style={{ color: '#4a5d52' }}>تاریخ</th>
-              <th className="text-right p-4 text-xs font-bold" style={{ color: '#4a5d52' }}>عملیات</th>
+          <thead className="table-head">
+            <tr style={{ background: 'var(--table-head-bg)', borderBottom: '1px solid var(--table-border)' }}>
+              <th className="text-right p-4 text-xs font-bold text-fg-muted" style={{ color: 'var(--fg-muted)' }}>#</th>
+              <th className="text-right p-4 text-xs font-bold text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('title')}</th>
+              <th className="text-right p-4 text-xs font-bold hidden sm:table-cell text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('type')}</th>
+              <th className="text-right p-4 text-xs font-bold text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('total')}</th>
+              <th className="text-right p-4 text-xs font-bold hidden sm:table-cell text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('date')}</th>
+              <th className="text-right p-4 text-xs font-bold text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('action')}</th>
             </tr>
           </thead>
           <tbody>
             {reports.map((r, idx) => (
               <tr
                 key={r.id}
-                style={{ borderBottom: '1px solid rgba(2, 144, 72, 0.08)' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.55)'; }}
+                className="table-row"
+                style={{ borderBottom: '1px solid var(--table-border)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--table-row-bg-odd)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
-                <td className="p-4 text-sm" style={{ color: '#7a8a80' }}>{(idx + 1).toLocaleString('fa-IR')}</td>
-                <td className="p-4 text-sm font-medium" style={{ color: '#1a2e22' }}>{r.title}</td>
+                <td className="p-4 text-sm text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{(idx + 1).toLocaleString('fa-IR')}</td>
+                <td className="p-4 text-sm font-medium text-fg-strong" style={{ color: 'var(--fg-strong)' }}>{r.title}</td>
                 <td className="p-4 hidden sm:table-cell">
                   <span
                     className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium"
@@ -5880,24 +6365,24 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                       : { background: 'rgba(2, 144, 72, 0.15)', color: '#016035' }
                     }
                   >
-                    {r.type === 'pdf' ? 'PDF' : 'Excel'}
+                    {r.type === 'pdf' ? t('pdf') : t('excel')}
                   </span>
                 </td>
-                <td className="p-4 text-sm" style={{ color: '#4a5d52' }}>{r.count.toLocaleString('fa-IR')}</td>
-                <td className="p-4 text-sm hidden sm:table-cell" style={{ color: '#7a8a80' }}>{r.date}</td>
+                <td className="p-4 text-sm text-fg-soft" style={{ color: 'var(--fg-soft)' }}>{r.count.toLocaleString('fa-IR')}</td>
+                <td className="p-4 text-sm hidden sm:table-cell text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{r.date}</td>
                 <td className="p-4">
                   <button
-                    className="text-sm hover:underline"
-                    style={{ color: '#029048' }}
+                    className="btn-base text-sm hover:underline"
+                    style={{ color: 'var(--accent-text)' }}
                     onClick={() => {
                       let shows: TalkShow[] = [];
                       if (r.id === 1) shows = talkShows;
                       else if (r.id === 2) shows = talkShows.filter(s => uploadedShows.includes(s.num));
-                      if (shows.length === 0) { showToast('برنامه‌ای برای این گزارش وجود ندارد'); return; }
+                      if (shows.length === 0) { showToast(lang === 'en' ? 'No programs for this report' : 'برنامه‌ای برای این گزارش وجود ندارد'); return; }
                       onExport(shows, r.type === 'pdf' ? 'pdf' : 'excel');
                     }}
                   >
-                    دانلود
+                    {t('download')}
                   </button>
                 </td>
               </tr>
@@ -6548,6 +7033,7 @@ function CompareModal({ shows, onClose, onClear }: {
   onClose: () => void;
   onClear: () => void;
 }) {
+  const { t, lang } = useLang();
   if (shows.length !== 2) return null;
   const [a, b] = shows;
   // Compare a single field — returns true if the two values differ.
@@ -6557,42 +7043,42 @@ function CompareModal({ shows, onClose, onClear }: {
     return String(x ?? '') !== String(y ?? '');
   };
   const fields: { key: keyof TalkShow; label: string }[] = [
-    { key: 'num', label: 'شماره' },
-    { key: 'name', label: 'نام برنامه' },
-    { key: 'category', label: 'دسته‌بندی' },
-    { key: 'country', label: 'کشور' },
-    { key: 'size', label: 'اندازهٔ استودیو' },
-    { key: 'style', label: 'سبک دکور' },
-    { key: 'viewers', label: 'تماشاگر' },
-    { key: 'layout', label: 'چیدمان' },
-    { key: 'effects', label: 'جلوه‌ها' },
-    { key: 'lighting', label: 'نورپردازی' },
-    { key: 'elements', label: 'عناصر دکور' },
-    { key: 'materials', label: 'مواد' },
-    { key: 'colors', label: 'رنگ‌آمیزی' },
-    { key: 'summary', label: 'خلاصه' },
-    { key: 'descriptionFa', label: 'توضیحات فارسی' },
-    { key: 'youtube', label: 'یوتیوب' },
+    { key: 'num', label: lang === 'en' ? 'Number' : 'شماره' },
+    { key: 'name', label: lang === 'en' ? 'Name' : 'نام برنامه' },
+    { key: 'category', label: lang === 'en' ? 'Category' : 'دسته‌بندی' },
+    { key: 'country', label: lang === 'en' ? 'Country' : 'کشور' },
+    { key: 'size', label: lang === 'en' ? 'Studio size' : 'اندازهٔ استودیو' },
+    { key: 'style', label: lang === 'en' ? 'Decor style' : 'سبک دکور' },
+    { key: 'viewers', label: lang === 'en' ? 'Audience' : 'تماشاگر' },
+    { key: 'layout', label: lang === 'en' ? 'Layout' : 'چیدمان' },
+    { key: 'effects', label: lang === 'en' ? 'Effects' : 'جلوه‌ها' },
+    { key: 'lighting', label: lang === 'en' ? 'Lighting' : 'نورپردازی' },
+    { key: 'elements', label: lang === 'en' ? 'Decor elements' : 'عناصر دکور' },
+    { key: 'materials', label: lang === 'en' ? 'Materials' : 'مواد' },
+    { key: 'colors', label: lang === 'en' ? 'Colors' : 'رنگ‌آمیزی' },
+    { key: 'summary', label: lang === 'en' ? 'Summary' : 'خلاصه' },
+    { key: 'descriptionFa', label: lang === 'en' ? 'Persian description' : 'توضیحات فارسی' },
+    { key: 'youtube', label: 'YouTube' },
     { key: 'imdb', label: 'IMDb' },
-    { key: 'wikipedia', label: 'ویکی‌پدیا' },
+    { key: 'wikipedia', label: lang === 'en' ? 'Wikipedia' : 'ویکی‌پدیا' },
   ];
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content" style={{ maxWidth: '1100px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.1)' }}>
-          <h2 className="text-xl font-bold" style={{ color: '#1a2e22' }}>⚖ مقایسهٔ دو برنامه</h2>
+        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid var(--input-border)' }}>
+          <h2 className="text-xl font-bold text-fg-strong" style={{ color: 'var(--fg-strong)' }}>⚖ {t('compare_two_programs')}</h2>
           <div className="flex items-center gap-2">
             <button
               onClick={onClear}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium"
+              className="btn-base px-3 py-1.5 rounded-lg text-xs font-medium"
               style={{ background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}
-              title="پاک کردن فهرست مقایسه"
+              title={lang === 'en' ? 'Clear compare list' : 'پاک کردن فهرست مقایسه'}
             >
-              🗑 پاک کردن
+              🗑 {t('clear_list')}
             </button>
-            <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#7a8a80' }} aria-label="بستن">
+            <button onClick={onClose} className="btn-base p-2 rounded-lg text-fg-muted" style={{ color: 'var(--fg-muted)' }} aria-label={t('close')}>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -6628,9 +7114,9 @@ function CompareModal({ shows, onClose, onClear }: {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs" style={{ color: '#7a8a80' }}>برنامهٔ {idx === 0 ? 'اول' : 'دوم'}</div>
-                      <div className="font-bold text-sm truncate" style={{ color: '#1a2e22', direction: 'ltr', textAlign: 'right' }}>{s.name}</div>
-                      <div className="text-xs" style={{ color: '#4a5d52' }}>#{s.num.toLocaleString('fa-IR')} • {s.style}</div>
+                      <div className="text-xs text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{idx === 0 ? t('program_first') : t('program_second')}</div>
+                      <div className="font-bold text-sm truncate text-fg-strong" style={{ color: 'var(--fg-strong)', direction: 'ltr', textAlign: 'right' }}>{s.name}</div>
+                      <div className="text-xs text-fg-soft" style={{ color: 'var(--fg-soft)' }}>#{s.num.toLocaleString('fa-IR')} • {s.style}</div>
                     </div>
                   </div>
                 </div>
@@ -6639,13 +7125,13 @@ function CompareModal({ shows, onClose, onClear }: {
           </div>
 
           {/* Comparison table */}
-          <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #e0e8e4' }}>
+          <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--input-border)' }}>
             <table className="w-full" style={{ fontSize: '13px' }}>
-              <thead style={{ background: '#f5efe0' }}>
+              <thead style={{ background: 'var(--table-head-bg)' }}>
                 <tr>
-                  <th className="text-right p-2.5 font-bold" style={{ color: '#4a5d52', width: '20%' }}>فیلد</th>
-                  <th className="text-right p-2.5 font-bold" style={{ color: '#1a2e22' }}>برنامهٔ اول</th>
-                  <th className="text-right p-2.5 font-bold" style={{ color: '#1a2e22' }}>برنامهٔ دوم</th>
+                  <th className="text-right p-2.5 font-bold text-fg-muted" style={{ color: 'var(--fg-muted)', width: '20%' }}>{t('field')}</th>
+                  <th className="text-right p-2.5 font-bold text-fg-strong" style={{ color: 'var(--fg-strong)' }}>{t('program_first')}</th>
+                  <th className="text-right p-2.5 font-bold text-fg-strong" style={{ color: 'var(--fg-strong)' }}>{t('program_second')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -6656,27 +7142,28 @@ function CompareModal({ shows, onClose, onClear }: {
                   return (
                     <tr
                       key={f.key}
+                      className="table-row"
                       style={{
-                        background: idx % 2 === 0 ? 'white' : '#fafbfa',
-                        borderBottom: '1px solid rgba(0,0,0,0.04)',
+                        background: idx % 2 === 0 ? 'transparent' : 'var(--table-row-bg-odd)',
+                        borderBottom: '1px solid var(--table-border)',
                       }}
                     >
-                      <td className="p-2.5 font-bold" style={{ color: '#7a8a80', fontSize: '11.5px' }}>
+                      <td className="p-2.5 font-bold text-fg-muted" style={{ color: 'var(--fg-muted)', fontSize: '11.5px' }}>
                         {f.label}
                         {isDiff && (
                           <span
                             className="mr-1 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold"
                             style={{ background: 'rgba(245, 158, 11, 0.18)', color: '#b45309' }}
-                            title="مقدار در دو برنامه متفاوت است"
+                            title={lang === 'en' ? 'Values differ between the two programs' : 'مقدار در دو برنامه متفاوت است'}
                           >
-                            تفاوت
+                            {t('difference')}
                           </span>
                         )}
                       </td>
                       <td
                         className="p-2.5"
                         style={{
-                          color: '#1a2e22',
+                          color: 'var(--fg-strong)',
                           background: isDiff ? 'rgba(245, 158, 11, 0.07)' : 'transparent',
                           direction: ['name', 'youtube', 'imdb', 'wikipedia'].includes(f.key as string) ? 'ltr' : 'rtl',
                           textAlign: ['name', 'youtube', 'imdb', 'wikipedia'].includes(f.key as string) ? 'left' : 'right',
@@ -6689,7 +7176,7 @@ function CompareModal({ shows, onClose, onClear }: {
                       <td
                         className="p-2.5"
                         style={{
-                          color: '#1a2e22',
+                          color: 'var(--fg-strong)',
                           background: isDiff ? 'rgba(245, 158, 11, 0.07)' : 'transparent',
                           direction: ['name', 'youtube', 'imdb', 'wikipedia'].includes(f.key as string) ? 'ltr' : 'rtl',
                           textAlign: ['name', 'youtube', 'imdb', 'wikipedia'].includes(f.key as string) ? 'left' : 'right',
@@ -6708,19 +7195,19 @@ function CompareModal({ shows, onClose, onClear }: {
 
           {/* Diff summary */}
           <div
-            className="mt-4 p-3 rounded-xl text-xs"
-            style={{ background: 'rgba(245, 158, 11, 0.06)', border: '1px solid rgba(245, 158, 11, 0.2)', color: '#4a5d52' }}
+            className="mt-4 p-3 rounded-xl text-xs text-fg-soft"
+            style={{ background: 'rgba(245, 158, 11, 0.06)', border: '1px solid rgba(245, 158, 11, 0.2)', color: 'var(--fg-soft)' }}
           >
-            <strong style={{ color: '#b45309' }}>راهنما:</strong> ردیف‌هایی که با نشانگر «تفاوت» خروجی‌دار شده‌اند، در دو برنامه متفاوت هستند. مقادیر مشابه بدون تغییر باقی می‌مانند.
+            <strong style={{ color: '#b45309' }}>{lang === 'en' ? 'Help:' : 'راهنما:'}</strong> {t('help_diff')}
           </div>
 
           <div className="mt-5 flex justify-end gap-3">
             <button
               onClick={onClose}
-              className="px-6 py-3 rounded-xl text-sm font-medium"
-              style={{ background: 'rgba(122,138,128,0.15)', color: '#4a5d52', border: '1px solid rgba(122,138,128,0.3)' }}
+              className="btn-base px-6 py-3 rounded-xl text-sm font-medium"
+              style={{ background: 'rgba(122,138,128,0.15)', color: 'var(--fg-soft)', border: '1px solid var(--input-border)' }}
             >
-              بستن
+              {t('close_btn')}
             </button>
           </div>
         </div>

@@ -45,21 +45,175 @@
   font-weight: 900; font-style: normal; font-display: swap;
 }
 
+/* ============================================
+   THEME TOKENS — switched via html.dark-theme / html.light-theme.
+   Both themes share the same green accent palette; only the
+   neutrals (backgrounds, text, borders, glass) switch.
+   ============================================ */
+:root,
+html.dark-theme {
+  /* Surface stack — dark green cinematic */
+  --bg-deep:   #010a05;
+  --bg-mid:    #02150c;
+  --bg-soft:   #042817;
+  --bg-page-1: #02180e;
+  --bg-page-2: #010a05;
+
+  /* Foreground */
+  --fg-strong: #f4fff8;
+  --fg-soft:   rgba(244, 255, 248, 0.85);
+  --fg-muted:  rgba(168, 230, 193, 0.6);
+  --fg-dim:    rgba(168, 230, 193, 0.45);
+
+  /* Accent + brand */
+  --accent:           #4ade80;
+  --accent-bright:    #4ade80;
+  --accent-press:     #36b37e;
+  --accent-bg-soft:   rgba(74, 222, 128, 0.18);
+  --accent-border:    rgba(74, 222, 128, 0.45);
+  --accent-text:      #4ade80;
+  --accent-glow:       rgba(74, 222, 128, 0.45);
+
+  /* Top app bar */
+  --bar-bg-1: rgba(4, 40, 23, 0.98);
+  --bar-bg-2: rgba(2, 80, 45, 0.96);
+  --bar-border: rgba(74, 222, 128, 0.4);
+  --bar-shadow: 0 8px 32px rgba(2, 144, 72, 0.25), inset 0 1px 0 rgba(74, 222, 128, 0.2);
+  --bar-fg: #ffffff;
+  --bar-fg-muted: rgba(168, 230, 193, 0.6);
+
+  /* Drawer */
+  --drawer-bg-1: #042817;
+  --drawer-bg-2: #035932;
+  --drawer-bg-3: #024a28;
+  --drawer-fg: rgba(255, 255, 255, 0.95);
+  --drawer-fg-active: #4ade80;
+  --drawer-fg-muted: rgba(168, 230, 193, 0.75);
+  --drawer-border: rgba(74, 222, 128, 0.45);
+  --drawer-shadow: -16px 0 56px rgba(2, 144, 72, 0.4), inset 1px 0 0 rgba(74, 222, 128, 0.15);
+
+  /* Premium glass (cards, toolbar, modals) — dark variant */
+  --glass-bg: rgba(6, 32, 18, 0.82);
+  --glass-bg-solid: #0c2a1a;
+  --glass-border: rgba(74, 222, 128, 0.22);
+  --glass-shadow: 0 16px 56px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(74, 222, 128, 0.18);
+  --glass-hover-shadow: 0 20px 64px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(74, 222, 128, 0.25);
+  --glass-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, transparent 100%);
+
+  /* Modal */
+  --modal-bg: rgba(6, 32, 18, 0.97);
+  --modal-border: rgba(74, 222, 128, 0.4);
+  --modal-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
+
+  /* Inputs */
+  --input-bg: rgba(255, 255, 255, 0.07);
+  --input-bg-focus: rgba(74, 222, 128, 0.1);
+  --input-border: rgba(74, 222, 128, 0.3);
+  --input-fg: #f4fff8;
+  --input-placeholder: rgba(168, 230, 193, 0.55);
+
+  /* Tables */
+  --table-head-bg: rgba(74, 222, 128, 0.1);
+  --table-row-bg-odd: rgba(74, 222, 128, 0.04);
+  --table-row-bg-even: transparent;
+  --table-border: rgba(74, 222, 128, 0.14);
+
+  /* Misc */
+  --skeleton-base: rgba(74, 222, 128, 0.07);
+  --skeleton-shine: rgba(74, 222, 128, 0.18);
+  --overlay-strong: rgba(0, 0, 0, 0.7);
+  --overlay-soft: rgba(0, 0, 0, 0.4);
+}
+
+html.light-theme {
+  /* Surface stack — bright cream / off-white */
+  --bg-deep:   #f8faf9;
+  --bg-mid:    #f1f6f3;
+  --bg-soft:   #e6efe9;
+  --bg-page-1: #ffffff;
+  --bg-page-2: #f1f6f3;
+
+  /* Foreground */
+  --fg-strong: #0d2418;
+  --fg-soft:   #1a2e22;
+  --fg-muted:  #4a5d52;
+  --fg-dim:    #7a8a80;
+
+  /* Accent */
+  --accent:           #029048;
+  --accent-bright:    #0bd05f;
+  --accent-press:     #016035;
+  --accent-bg-soft:   rgba(2, 144, 72, 0.12);
+  --accent-border:    rgba(2, 144, 72, 0.35);
+  --accent-text:      #016035;
+  --accent-glow:      rgba(2, 144, 72, 0.28);
+
+  /* Top app bar — light variant keeps a subtle green tint */
+  --bar-bg-1: rgba(255, 255, 255, 0.94);
+  --bar-bg-2: rgba(244, 252, 247, 0.92);
+  --bar-border: rgba(2, 144, 72, 0.18);
+  --bar-shadow: 0 6px 24px rgba(2, 144, 72, 0.1), inset 0 1px 0 rgba(255, 255, 255, 1);
+  --bar-fg: #0d2418;
+  --bar-fg-muted: #4a5d52;
+
+  /* Drawer — light variant: white card with green border */
+  --drawer-bg-1: #ffffff;
+  --drawer-bg-2: #f5fbf7;
+  --drawer-bg-3: #eef7f1;
+  --drawer-fg: #1a2e22;
+  --drawer-fg-active: #029048;
+  --drawer-fg-muted: #4a5d52;
+  --drawer-border: rgba(2, 144, 72, 0.2);
+  --drawer-shadow: -16px 0 56px rgba(2, 144, 72, 0.18), inset 1px 0 0 rgba(2, 144, 72, 0.08);
+
+  /* Premium glass — light variant: pure white with green tint */
+  --glass-bg: rgba(255, 255, 255, 0.96);
+  --glass-bg-solid: #ffffff;
+  --glass-border: rgba(2, 144, 72, 0.12);
+  --glass-shadow: 0 8px 32px rgba(2, 144, 72, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 1);
+  --glass-hover-shadow: 0 12px 40px rgba(2, 144, 72, 0.14), 0 3px 10px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 1);
+  --glass-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.85) 0%, transparent 100%);
+
+  /* Modal */
+  --modal-bg: rgba(255, 255, 255, 0.98);
+  --modal-border: rgba(2, 144, 72, 0.22);
+  --modal-shadow: 0 24px 80px rgba(0, 0, 0, 0.18);
+
+  /* Inputs */
+  --input-bg: rgba(255, 255, 255, 0.92);
+  --input-bg-focus: rgba(2, 144, 72, 0.05);
+  --input-border: rgba(2, 144, 72, 0.22);
+  --input-fg: #1a2e22;
+  --input-placeholder: #7a8a80;
+
+  /* Tables */
+  --table-head-bg: rgba(2, 144, 72, 0.08);
+  --table-row-bg-odd: rgba(2, 144, 72, 0.03);
+  --table-row-bg-even: transparent;
+  --table-border: rgba(2, 144, 72, 0.12);
+
+  /* Misc */
+  --skeleton-base: rgba(2, 144, 72, 0.07);
+  --skeleton-shine: rgba(2, 144, 72, 0.14);
+  --overlay-strong: rgba(20, 40, 30, 0.55);
+  --overlay-soft: rgba(20, 40, 30, 0.3);
+}
+
 :root {
+  /* Brand palette — same in both themes */
   --brand-green: #029048;
   --brand-green-dark: #016035;
   --brand-green-light: #36b37e;
   --brand-green-bright: #4ade80;
 
+  /* Legacy aliases kept for backward compatibility */
   --cinema-bg-deep: #010a05;
   --cinema-bg-mid: #02150c;
   --cinema-bg-soft: #042817;
-
   --cream-bg: #FAF6ED;
   --cream-text: #1a2e22;
   --cream-text-soft: #4a5d52;
   --cream-text-muted: #7a8a80;
-
   --background: #FAF6ED;
   --foreground: #1a2e22;
 }
@@ -74,10 +228,13 @@ html, body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  transition: background-color 0.35s ease, color 0.35s ease;
 }
 
 /* ============================================
    LOGIN SCREEN — deep cinematic dark green
+   (always dark — even in light theme mode, the
+   login keeps its dramatic cinematic look)
    ============================================ */
 .login-screen {
   background:
@@ -101,12 +258,14 @@ html, body {
 }
 
 /* ============================================
-   APP CONTENT — professional cool background
+   APP CONTENT — page background switches with theme.
+   Dark = deep green gradient. Light = soft white.
    ============================================ */
 .app-content {
-  background: linear-gradient(180deg, #EEF2F0 0%, #E8EDEB 100%);
-  color: var(--cream-text);
+  background: linear-gradient(180deg, var(--bg-page-1) 0%, var(--bg-page-2) 100%);
+  color: var(--fg-soft);
   min-height: 100vh;
+  transition: background 0.35s ease, color 0.35s ease;
 }
 
 /* ============================================
@@ -115,17 +274,15 @@ html, body {
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(2, 144, 72, 0.2);
+  background: var(--accent-bg-soft);
   border-radius: 8px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(2, 144, 72, 0.4);
+  background: var(--accent-border);
 }
 
 /* ============================================
    LOGO MOTION — gradient light sweep ONLY on logo pixels
-   Uses mask-image so the light beam only appears on the
-   actual logo + "بانک رسانه" text, nowhere else.
    ============================================ */
 .logo-shimmer {
   position: relative;
@@ -133,7 +290,6 @@ html, body {
   isolation: isolate;
 }
 
-/* The moving light beam, masked to the logo shape only */
 .logo-shimmer::after {
   content: '';
   position: absolute;
@@ -149,7 +305,6 @@ html, body {
   animation: logo-shimmer-sweep 3.5s ease-in-out infinite;
   pointer-events: none;
   z-index: 2;
-  /* Mask to the logo's own pixels using the logo image as alpha mask */
   -webkit-mask-image: var(--logo-mask);
   mask-image: var(--logo-mask);
   -webkit-mask-size: 100% 100%;
@@ -164,7 +319,6 @@ html, body {
   50% { background-position: -100% 0; }
 }
 
-/* Soft static glow so the logo always feels alive */
 .logo-shimmer img {
   filter: drop-shadow(0 0 14px rgba(2, 144, 72, 0.35));
 }
@@ -204,13 +358,10 @@ html, body {
 }
 
 .btn-enter-premium:active {
-  transform: translateY(0) scale(1);
+  transform: translateY(0) scale(0.98);
 }
 
-/* Liquid-glass matte green — used for the login button.
-   Translucent green body with a frosted specular highlight on top,
-   a soft outer glow to separate it from the dark green hero,
-   and white text for strong contrast. */
+/* Liquid-glass matte green — used for the login button. */
 .btn-enter-white {
   position: relative;
   padding: 16px 52px;
@@ -220,29 +371,20 @@ html, body {
   color: #ffffff;
   cursor: pointer;
   overflow: hidden;
-  /* Frosted glass: translucent green base + backdrop blur (visual approximation) */
   background:
-    /* top specular highlight — the "glass" sheen */
     linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.08) 42%, rgba(255, 255, 255, 0) 58%),
-    /* soft inner glow */
     radial-gradient(120% 80% at 50% 0%, rgba(74, 222, 128, 0.35) 0%, rgba(74, 222, 128, 0) 60%),
-    /* main matte green body */
     linear-gradient(135deg, #0e9d5a 0%, #029048 48%, #016b35 100%);
   border: 1px solid rgba(134, 239, 172, 0.55);
   box-shadow:
-    /* outer glow — separates the button from the dark hero */
     0 14px 44px rgba(2, 144, 72, 0.55),
     0 6px 18px rgba(16, 185, 129, 0.35),
-    /* matte top inner highlight (frosted, not glossy) */
     inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    /* matte bottom inner shadow (grounds the button) */
     inset 0 -2px 6px rgba(1, 60, 30, 0.5),
-    /* subtle frosted grain via inner ring */
     inset 0 0 0 1px rgba(255, 255, 255, 0.06);
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   letter-spacing: 0.5px;
   text-shadow: 0 1px 2px rgba(1, 60, 30, 0.5);
-  /* slight frosted feel */
   backdrop-filter: blur(2px) saturate(115%);
   -webkit-backdrop-filter: blur(2px) saturate(115%);
 }
@@ -260,7 +402,7 @@ html, body {
     inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 .btn-enter-white:active {
-  transform: translateY(0) scale(1);
+  transform: translateY(0) scale(0.98);
   box-shadow:
     0 8px 24px rgba(2, 144, 72, 0.45),
     0 3px 10px rgba(16, 185, 129, 0.3),
@@ -282,18 +424,17 @@ html, body {
   padding: 22px;
   cursor: pointer;
   overflow: hidden;
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              filter 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   color: white;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
-/* Top shine highlight */
 .premium-card::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  top: 0; left: 0; right: 0;
   height: 50%;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, transparent 100%);
   pointer-events: none;
@@ -302,8 +443,8 @@ html, body {
 }
 
 .premium-card:hover {
-  transform: translateY(-4px) scale(1.01);
-  filter: brightness(1.1);
+  transform: translateY(-6px) scale(1.02);
+  filter: brightness(1.08) saturate(1.05);
 }
 
 .premium-card > * {
@@ -313,26 +454,29 @@ html, body {
 
 /* ============================================
    PREMIUM SHOW CARD — solid gradient for program cards
+   Rounded to 16px (was 22px) per modernized design.
    ============================================ */
 .premium-show-card {
   position: relative;
-  border-radius: 22px;
+  border-radius: 16px;
   cursor: pointer;
   overflow: hidden;
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              filter 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.3s ease;
 }
 
 .premium-show-card::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 50%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%);
+  top: 0; left: 0; right: 0;
+  height: 35%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, transparent 100%);
   pointer-events: none;
-  border-radius: 22px 22px 0 0;
+  border-radius: 16px 16px 0 0;
   z-index: 1;
+  transition: opacity 0.35s ease;
 }
 
 .premium-show-card > * {
@@ -340,22 +484,34 @@ html, body {
   z-index: 2;
 }
 
+/* Image gradient overlay — gives thumbnails a richer, more cinematic look.
+   The overlay sits ON TOP of the image (between image and labels). */
+.image-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.05) 50%, rgba(0, 0, 0, 0.35) 100%);
+  z-index: 2;
+}
+
 /* ============================================
-   PREMIUM GLASS — for toolbar, reports, etc.
+   PREMIUM GLASS — toolbar, reports, settings cards
+   Theme-aware via CSS variables.
    ============================================ */
 .premium-glass {
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--glass-bg);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 1);
-  box-shadow:
-    0 16px 56px rgba(2, 144, 72, 0.12),
-    0 4px 12px rgba(0, 0, 0, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 1);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
   border-radius: 22px;
   position: relative;
   overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: box-shadow 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.35s ease;
+  color: var(--fg-soft);
 }
 
 .premium-glass::before {
@@ -363,16 +519,13 @@ html, body {
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 50%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, transparent 100%);
+  background: var(--glass-shine);
   pointer-events: none;
   border-radius: 22px 22px 0 0;
 }
 
 .premium-glass:hover {
-  box-shadow:
-    0 20px 64px rgba(2, 144, 72, 0.2),
-    0 6px 20px rgba(0, 0, 0, 0.07),
-    inset 0 1px 0 rgba(255, 255, 255, 1);
+  box-shadow: var(--glass-hover-shadow);
   transform: translateY(-2px);
 }
 
@@ -388,29 +541,29 @@ html, body {
 }
 
 .login-ambient-light.green-1 {
-  width: 700px;
-  height: 700px;
-  background: radial-gradient(circle, rgba(2, 144, 72, 0.65) 0%, transparent 70%);
-  top: 10%;
-  right: 5%;
+  width: 760px;
+  height: 760px;
+  background: radial-gradient(circle, rgba(2, 144, 72, 0.7) 0%, transparent 70%);
+  top: 6%;
+  right: -2%;
   animation: drift1 12s ease-in-out infinite alternate;
 }
 
 .login-ambient-light.green-2 {
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, rgba(54, 179, 126, 0.5) 0%, transparent 70%);
-  bottom: 5%;
-  left: 0%;
+  width: 680px;
+  height: 680px;
+  background: radial-gradient(circle, rgba(54, 179, 126, 0.55) 0%, transparent 70%);
+  bottom: -2%;
+  left: -3%;
   animation: drift2 15s ease-in-out infinite alternate;
 }
 
 .login-ambient-light.green-3 {
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(74, 222, 128, 0.3) 0%, transparent 70%);
-  top: 40%;
-  left: 35%;
+  width: 560px;
+  height: 560px;
+  background: radial-gradient(circle, rgba(74, 222, 128, 0.4) 0%, transparent 70%);
+  top: 35%;
+  left: 32%;
   animation: drift3 18s ease-in-out infinite alternate;
 }
 
@@ -453,6 +606,15 @@ html, body {
   animation: fade-in-up 0.4s ease-out forwards;
 }
 
+/* Page-view transition — quick fade-in when switching views */
+@keyframes view-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-view-enter {
+  animation: view-enter 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
 .spinner {
   width: 40px;
   height: 40px;
@@ -462,6 +624,47 @@ html, body {
   animation: spin 1s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Skeleton shimmer — used for loading placeholders */
+.skeleton-card {
+  background: var(--skeleton-base);
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  height: 280px;
+}
+.skeleton-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--skeleton-shine) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s linear infinite;
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skeleton-line {
+  background: var(--skeleton-base);
+  border-radius: 6px;
+  height: 10px;
+  position: relative;
+  overflow: hidden;
+}
+.skeleton-line::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, var(--skeleton-shine) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s linear infinite;
+}
 
 .line-clamp-2 {
   display: -webkit-box;
@@ -492,20 +695,21 @@ html, body {
 
 /* ============================================
    DRAWER MENU — slide-in from right (RTL friendly)
+   Theme-aware: in light theme, drawer is white with green border.
    ============================================ */
 @keyframes drawer-slide-in {
   from { transform: translateX(100%); opacity: 0.5; }
   to { transform: translateX(0); opacity: 1; }
 }
 .animate-drawer-slide-in {
-  animation: drawer-slide-in 0.32s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: drawer-slide-in 0.38s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 /* Modal */
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--overlay-strong);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   z-index: 50;
@@ -517,39 +721,419 @@ html, body {
 }
 
 .modal-content {
-  background: rgba(255, 255, 255, 0.97);
+  background: var(--modal-bg);
   backdrop-filter: blur(28px) saturate(180%);
   -webkit-backdrop-filter: blur(28px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 1);
+  border: 1px solid var(--modal-border);
   border-radius: 24px;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--modal-shadow);
   max-width: 900px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
   animation: slide-up 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--fg-soft);
 }
 
 /* ============================================
-   LIGHT THEME — overrides .app-content + text colors when <html> has .light-theme.
-   The "dark" theme is the default green cinematic look. Light theme switches the
-   app background to white while keeping green accents for brand identity.
+   THEME-FLAVORED OVERRIDES
+   For dark theme (default), most surfaces are deep green.
+   For light theme, surfaces become white/cream with green accents.
+   These selectors override inline styles by targeting className hooks.
    ============================================ */
+
+/* === Top App Bar === */
+.top-app-bar {
+  /* No-op: visual driven by inline style — but we provide a fallback for both themes */
+  color: var(--bar-fg) !important;
+  transition: background 0.35s ease, color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+}
+html.light-theme .top-app-bar {
+  background: linear-gradient(180deg, var(--bar-bg-1) 0%, var(--bar-bg-2) 100%) !important;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-bottom-color: var(--bar-border) !important;
+  box-shadow: var(--bar-shadow) !important;
+}
+html.dark-theme .top-app-bar,
+html:not(.light-theme) .top-app-bar {
+  background: linear-gradient(180deg, var(--bar-bg-1) 0%, var(--bar-bg-2) 100%);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: 1px solid var(--bar-border);
+  box-shadow: var(--bar-shadow);
+}
+/* Title text in top bar — visible in both themes */
+html.light-theme .top-app-bar .bar-title,
+html.light-theme .top-app-bar .bar-title-sub {
+  color: var(--bar-fg) !important;
+}
+/* Theme/lang toggle button backgrounds adapt to theme */
+html.light-theme .top-app-bar .bar-toggle {
+  background: rgba(2, 144, 72, 0.1) !important;
+  border-color: rgba(2, 144, 72, 0.3) !important;
+  color: var(--bar-fg) !important;
+}
+html.dark-theme .top-app-bar .bar-toggle,
+html:not(.light-theme) .top-app-bar .bar-toggle {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(74, 222, 128, 0.45);
+  color: white;
+}
+
+/* === Drawer === */
+.drawer-aside {
+  background: linear-gradient(180deg, var(--drawer-bg-1) 0%, var(--drawer-bg-2) 40%, var(--drawer-bg-3) 70%, var(--drawer-bg-1) 100%) !important;
+  border-left-color: var(--drawer-border) !important;
+  box-shadow: var(--drawer-shadow) !important;
+  color: var(--drawer-fg) !important;
+  transition: background 0.35s ease, color 0.35s ease, border-color 0.35s ease;
+}
+.drawer-aside .drawer-fg { color: var(--drawer-fg) !important; }
+.drawer-aside .drawer-fg-muted { color: var(--drawer-fg-muted) !important; }
+.drawer-aside .drawer-fg-active { color: var(--drawer-fg-active) !important; }
+.drawer-aside .drawer-divider { border-color: var(--drawer-border) !important; }
+
+/* === Inputs (login + forms) === */
+.input-base {
+  background: var(--input-bg) !important;
+  border: 1px solid var(--input-border) !important;
+  color: var(--input-fg) !important;
+  transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+.input-base::placeholder { color: var(--input-placeholder); }
+.input-base:focus { background: var(--input-bg-focus) !important; border-color: var(--accent) !important; }
+
+/* === Tables === */
+.table-head {
+  background: var(--table-head-bg) !important;
+  border-bottom: 1px solid var(--table-border) !important;
+}
+.table-head th { color: var(--fg-muted) !important; }
+.table-row { border-bottom: 1px solid var(--table-border) !important; }
+
+/* === Stat card text in light mode === */
+html.light-theme .stat-title { color: #1a2e22 !important; }
+
+/* === Generic muted text in light mode (replaces the cream-text hardcodes) === */
+html.light-theme .text-fg-strong { color: #0d2418 !important; }
+html.light-theme .text-fg-soft { color: #1a2e22 !important; }
+html.light-theme .text-fg-muted { color: #4a5d52 !important; }
+html.light-theme .text-fg-dim { color: #7a8a80 !important; }
+html.light-theme .text-accent { color: #029048 !important; }
+html.light-theme .text-accent-dark { color: #016035 !important; }
+html.dark-theme .text-fg-strong,
+html:not(.light-theme) .text-fg-strong { color: #f4fff8 !important; }
+html.dark-theme .text-fg-soft,
+html:not(.light-theme) .text-fg-soft { color: rgba(244, 255, 248, 0.88) !important; }
+html.dark-theme .text-fg-muted,
+html:not(.light-theme) .text-fg-muted { color: rgba(168, 230, 193, 0.7) !important; }
+html.dark-theme .text-fg-dim,
+html:not(.light-theme) .text-fg-dim { color: rgba(168, 230, 193, 0.45) !important; }
+html.dark-theme .text-accent,
+html:not(.light-theme) .text-accent { color: #4ade80 !important; }
+html.dark-theme .text-accent-dark,
+html:not(.light-theme) .text-accent-dark { color: #4ade80 !important; }
+
+/* === Buttons — consistent sizing & subtle press animation === */
+.btn-base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.25s ease, background 0.25s ease, color 0.25s ease, border-color 0.25s ease, opacity 0.2s ease;
+  user-select: none;
+}
+.btn-base:active:not(:disabled) { transform: translateY(0) scale(0.97); }
+.btn-base:disabled { cursor: not-allowed; opacity: 0.6; }
+.btn-base:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* === Empty state === */
+.empty-state {
+  text-align: center;
+  padding: 60px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.empty-state-icon {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-bg-soft);
+  border: 1px dashed var(--accent-border);
+  color: var(--accent-text);
+  font-size: 44px;
+  filter: drop-shadow(0 4px 16px var(--accent-glow));
+}
+
+/* Legacy: keep .light-theme .app-content and .premium-glass overrides for
+   backward-compat with any inline class usage. */
 html.light-theme .app-content {
-  background: linear-gradient(180deg, #ffffff 0%, #f5f8f6 100%);
+  background: linear-gradient(180deg, #ffffff 0%, #f1f6f3 100%);
 }
 html.light-theme body {
   background: #ffffff;
 }
-/* Make premium-glass look brighter in light mode */
 html.light-theme .premium-glass {
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(2, 144, 72, 0.12);
-  box-shadow:
-    0 8px 32px rgba(2, 144, 72, 0.08),
-    0 2px 8px rgba(0, 0, 0, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 1);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
 }
 html.light-theme .premium-glass::before {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, transparent 100%);
+  background: var(--glass-shine);
+}
+
+/* ============================================
+   LIGHT THEME OVERRIDES — override ALL hardcoded colors
+   ============================================ */
+html.light-theme .app-content,
+html.light-theme main {
+  background: linear-gradient(180deg, #ffffff 0%, #f1f6f3 100%) !important;
+  color: #1a2e22 !important;
+}
+
+/* All text colors */
+html.light-theme * { color: inherit; }
+html.light-theme h1, html.light-theme h2, html.light-theme h3, html.light-theme h4 {
+  color: #0d2418 !important;
+}
+html.light-theme p, html.light-theme span, html.light-theme div, html.light-theme td {
+  color: #1a2e22;
+}
+html.light-theme .text-sm { color: #4a5d52; }
+
+/* Premium glass cards → white in light mode */
+html.light-theme .premium-glass {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1.5px solid rgba(2, 144, 72, 0.25) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+}
+
+html.light-theme .premium-glass::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, transparent 100%) !important;
+}
+
+/* Modal backgrounds */
+html.light-theme .modal-content {
+  background: rgba(255, 255, 255, 0.98) !important;
+  border: 1px solid rgba(2, 144, 72, 0.2) !important;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.15) !important;
+}
+
+html.light-theme .modal-backdrop {
+  background: rgba(0, 0, 0, 0.35) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+/* Inputs */
+html.light-theme input,
+html.light-theme textarea,
+html.light-theme select {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1a2e22 !important;
+  border-color: rgba(2, 144, 72, 0.35) !important;
+}
+html.light-theme input::placeholder,
+html.light-theme textarea::placeholder {
+  color: #7a8a80 !important;
+}
+
+/* Buttons — green stays green in both themes */
+html.light-theme .btn-enter-premium,
+html.light-theme .btn-enter-white {
+  /* keep green gradient */
+}
+
+/* Top app bar — white in light mode */
+html.light-theme .top-app-bar,
+html.light-theme header[class*="fixed"] {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(241, 246, 243, 0.95) 100%) !important;
+  border-bottom: 1px solid rgba(2, 144, 72, 0.2) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06) !important;
+}
+
+html.light-theme header[class*="fixed"] span,
+html.light-theme header[class*="fixed"] div {
+  color: #0d2418 !important;
+}
+
+/* Drawer — lighter in light mode */
+html.light-theme aside[class*="fixed"][class*="right-0"] {
+  background: rgba(248, 250, 249, 0.85) !important;
+  backdrop-filter: blur(40px) saturate(180%) !important;
+  border-left: 1px solid rgba(2, 144, 72, 0.2) !important;
+}
+
+html.light-theme aside[class*="fixed"][class*="right-0"] * {
+  color: #1a2e22 !important;
+}
+
+/* Genre cards — keep colorful but adjust text */
+html.light-theme .premium-card {
+  /* keep the green gradient background */
+}
+
+html.light-theme .premium-card h3,
+html.light-theme .premium-card p,
+html.light-theme .premium-card div,
+html.light-theme .premium-card span {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* Stat cards */
+html.light-theme .premium-glass p,
+html.light-theme .premium-glass div {
+  color: #1a2e22 !important;
+}
+
+/* Login screen stays dark (it's always cinematic) */
+html.light-theme .login-screen {
+  background: radial-gradient(ellipse 90% 70% at 70% 25%, rgba(2, 144, 72, 0.45) 0%, transparent 55%),
+              radial-gradient(ellipse 70% 60% at 25% 85%, rgba(54, 179, 126, 0.3) 0%, transparent 55%),
+              linear-gradient(135deg, #010a05 0%, #02150c 50%, #010a05 100%) !important;
+  color: white !important;
+}
+
+html.light-theme .login-screen * {
+  color: white !important;
+}
+
+/* Program cards with green gradient — text stays white */
+html.light-theme .premium-show-card * {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* Badge/pill colors — keep as is (they're colorful) */
+
+/* Scrollbar */
+html.light-theme ::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
+html.light-theme ::-webkit-scrollbar-thumb {
+  background: rgba(2, 144, 72, 0.3);
+}
+
+
+/* ============================================
+   LIGHT THEME — clean, simple overrides
+   ============================================ */
+html.light-theme {
+  --bg-deep: #f8faf9;
+  --bg-mid: #f1f6f3;
+  --bg-soft: #e6efe9;
+  --bg-page-1: #ffffff;
+  --bg-page-2: #f1f6f3;
+  --fg-strong: #0d2418;
+  --fg-soft: #1a2e22;
+  --fg-muted: #4a5d52;
+  --fg-dim: #7a8a80;
+  --glass-bg: rgba(255, 255, 255, 0.95);
+  --glass-border: rgba(2, 144, 72, 0.2);
+  --modal-bg: rgba(255, 255, 255, 0.98);
+  --modal-border: rgba(2, 144, 72, 0.15);
+  --bar-bg-1: rgba(255, 255, 255, 0.98);
+  --bar-bg-2: rgba(241, 246, 243, 0.95);
+  --bar-border: rgba(2, 144, 72, 0.15);
+  --bar-fg: #0d2418;
+  --drawer-bg-1: rgba(248, 250, 249, 0.9);
+  --drawer-bg-2: rgba(241, 246, 243, 0.85);
+  --drawer-fg: #1a2e22;
+  --input-bg: rgba(255, 255, 255, 0.95);
+  --input-border: rgba(2, 144, 72, 0.3);
+  --input-fg: #1a2e22;
+}
+
+html.light-theme .app-content,
+html.light-theme main {
+  background: linear-gradient(180deg, #ffffff 0%, #f1f6f3 100%) !important;
+  color: #1a2e22 !important;
+}
+
+html.light-theme h1, html.light-theme h2, html.light-theme h3, html.light-theme h4 {
+  color: #0d2418 !important;
+}
+
+html.light-theme p, html.light-theme span, html.light-theme label, html.light-theme td, html.light-theme th {
+  color: #1a2e22;
+}
+
+html.light-theme .premium-glass {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1.5px solid rgba(2, 144, 72, 0.2) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08) !important;
+}
+
+html.light-theme .premium-glass::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, transparent 100%) !important;
+}
+
+html.light-theme .modal-content {
+  background: rgba(255, 255, 255, 0.98) !important;
+  border: 1px solid rgba(2, 144, 72, 0.15) !important;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.12) !important;
+}
+
+html.light-theme .modal-backdrop {
+  background: rgba(0, 0, 0, 0.3) !important;
+}
+
+html.light-theme input,
+html.light-theme textarea,
+html.light-theme select {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1a2e22 !important;
+  border-color: rgba(2, 144, 72, 0.35) !important;
+}
+
+html.light-theme input::placeholder,
+html.light-theme textarea::placeholder {
+  color: #7a8a80 !important;
+}
+
+html.light-theme header[class*="fixed"] {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(241, 246, 243, 0.95) 100%) !important;
+  border-bottom: 1px solid rgba(2, 144, 72, 0.15) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05) !important;
+}
+
+html.light-theme header[class*="fixed"] span,
+html.light-theme header[class*="fixed"] div {
+  color: #0d2418 !important;
+}
+
+html.light-theme aside[class*="fixed"][class*="right-0"],
+html.light-theme aside[class*="animate-drawer"] {
+  background: rgba(248, 250, 249, 0.92) !important;
+  backdrop-filter: blur(40px) saturate(180%) !important;
+  border-left: 1px solid rgba(2, 144, 72, 0.2) !important;
+}
+
+html.light-theme aside[class*="fixed"][class*="right-0"] button,
+html.light-theme aside[class*="animate-drawer"] button {
+  color: #1a2e22 !important;
+}
+
+/* Keep genre cards and show cards colorful in both themes */
+html.light-theme .premium-card *,
+html.light-theme .premium-show-card * {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* Login screen always dark */
+html.light-theme .login-screen {
+  background: radial-gradient(ellipse 90% 70% at 70% 25%, rgba(2, 144, 72, 0.45) 0%, transparent 55%),
+              linear-gradient(135deg, #010a05 0%, #02150c 50%, #010a05 100%) !important;
+  color: white !important;
+}
+
+html.light-theme .login-screen * {
+  color: white !important;
 }
