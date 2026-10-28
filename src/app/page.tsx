@@ -977,9 +977,7 @@ export default function Home() {
   const [compareList, setCompareList] = useState<number[]>([]);
   const [showCompareModal, setShowCompareModal] = useState(false);
 
-  // 🌗 Theme — 'dark' (current green theme) or 'light' (white bg, green accents).
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-  const THEME_KEY = 'bankresaneh_theme_v1';
+  // Theme disabled — always dark green
 
   // 🌐 Language — 'fa' (Persian, default) or 'en' (English UI strings).
   const [lang, setLang] = useState<'fa' | 'en'>('fa');
@@ -1011,7 +1009,7 @@ export default function Home() {
       const savedBookmarks = JSON.parse(window.localStorage.getItem(BOOKMARKS_KEY) || '[]');
       if (Array.isArray(savedBookmarks)) setBookmarks(savedBookmarks);
     } catch {}
-    // Restore theme.
+    // Theme disabled.
     const savedTheme = window.localStorage.getItem(THEME_KEY);
     if (savedTheme === 'light' || savedTheme === 'dark') setTheme(savedTheme);
     // Restore language.
@@ -1196,14 +1194,6 @@ export default function Home() {
     setShowCompareModal(true);
   };
 
-  // 🌗 Toggle theme (dark ↔ light), persist to localStorage.
-  const handleToggleTheme = () => {
-    setTheme(prev => {
-      const next = prev === 'dark' ? 'light' : 'dark';
-      try { window.localStorage.setItem(THEME_KEY, next); } catch {}
-      return next;
-    });
-  };
 
   // 🌐 Toggle language (fa ↔ en), persist to localStorage.
   const handleToggleLang = () => {
@@ -1273,8 +1263,8 @@ export default function Home() {
         currentView={currentView}
         onBack={goBack}
         canGoBack={canGoBack}
-        theme={theme}
-        onToggleTheme={handleToggleTheme}
+        
+        
         onToggleLang={handleToggleLang}
       />
 
@@ -1666,14 +1656,13 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
 // logo + title in the center, visible on BOTH desktop and mobile.
 // Theme-aware via the `.top-app-bar` className (CSS variables in globals.css).
 // ============================================
-function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, theme, onToggleTheme, onToggleLang }: {
+function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, onToggleLang }: {
   onMenuClick: () => void;
   isMobile: boolean;
   currentView: string;
   onBack: () => void;
   canGoBack: boolean;
-  theme?: 'dark' | 'light';
-  onToggleTheme?: () => void;
+
   onToggleLang?: () => void;
 }) {
   const { t, lang } = useLang();
@@ -1767,28 +1756,7 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, them
 
         {/* Left cluster: theme + language toggles + back button (when there is history) */}
         <div className="flex items-center gap-2" style={{ minWidth: '44px', justifyContent: 'flex-end' }}>
-          {/* 🌗 Theme toggle (dark ↔ light) */}
-          {onToggleTheme && (
-            <button
-              onClick={onToggleTheme}
-              aria-label={theme === 'dark' ? t('switch_to_light') : t('switch_to_dark')}
-              title={theme === 'dark' ? t('switch_to_light') : t('switch_to_dark')}
-              className="btn-base bar-toggle flex items-center justify-center rounded-xl"
-              style={{
-                background: theme === 'dark'
-                  ? 'rgba(255, 255, 255, 0.15)'
-                  : 'rgba(2, 144, 72, 0.18)',
-                border: '1px solid rgba(74, 222, 128, 0.45)',
-                color: theme === 'dark' ? '#fde68a' : '#016035',
-                width: '44px',
-                height: '44px',
-                fontSize: '18px',
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15)',
-              }}
-            >
-              {theme === 'dark' ? '☀️' : '🌙'}
-            </button>
-          )}
+
           {/* 🌐 Language toggle (fa ↔ en) */}
           {onToggleLang && (
             <button
