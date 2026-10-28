@@ -1162,7 +1162,10 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack }: {
     <header
       className="fixed top-0 left-0 right-0 z-40"
       style={{
-        background: 'rgba(245, 243, 237, 0.85)',
+        background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(245, 243, 237, 0.85) 100%)',
+        backdropFilter: 'blur(20px) saturate(160%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(160%)',
+        boxShadow: '0 2px 20px rgba(13, 124, 74, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
         backdropFilter: 'blur(20px) saturate(160%)',
         WebkitBackdropFilter: 'blur(20px) saturate(160%)',
         borderBottom: '1px solid rgba(13, 124, 74, 0.1)',
@@ -1358,7 +1361,9 @@ function DrawerMenu({
         className="fixed top-0 right-0 bottom-0 animate-drawer-slide-in flex flex-col"
         style={{
           width: 'min(340px, 88vw)',
-          background: 'rgba(240, 238, 230, 0.85)',
+          background: 'rgba(248, 246, 240, 0.65)',
+          backdropFilter: 'blur(40px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(40px) saturate(180%)',
           backdropFilter: 'blur(30px) saturate(140%)',
           WebkitBackdropFilter: 'blur(30px) saturate(140%)',
           borderLeft: '1px solid rgba(13, 124, 74, 0.15)',
@@ -1641,7 +1646,10 @@ function MobileBottomNav({
           <div
             className="fixed bottom-0 left-0 right-0 p-4 animate-slide-up-nav"
             style={{
-              background: 'rgba(245, 243, 237, 0.85)',
+              background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(245, 243, 237, 0.85) 100%)',
+        backdropFilter: 'blur(20px) saturate(160%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(160%)',
+        boxShadow: '0 2px 20px rgba(13, 124, 74, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
               backdropFilter: 'blur(26px) saturate(160%)',
               WebkitBackdropFilter: 'blur(26px) saturate(160%)',
               borderTop: '1px solid rgba(13, 124, 74, 0.15)',
@@ -1710,7 +1718,10 @@ function MobileBottomNav({
         <div
           className="flex items-center justify-around no-scrollbar"
           style={{
-            background: 'rgba(245, 243, 237, 0.85)',
+            background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(245, 243, 237, 0.85) 100%)',
+        backdropFilter: 'blur(20px) saturate(160%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(160%)',
+        boxShadow: '0 2px 20px rgba(13, 124, 74, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
             backdropFilter: 'blur(24px) saturate(160%)',
             WebkitBackdropFilter: 'blur(24px) saturate(160%)',
             border: '1px solid rgba(13, 124, 74, 0.15)',
@@ -5233,7 +5244,10 @@ function SettingsModal({
         <div
           className="flex items-center justify-between p-4 flex-shrink-0"
           style={{
-            background: 'rgba(245, 243, 237, 0.85)',
+            background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(245, 243, 237, 0.85) 100%)',
+        backdropFilter: 'blur(20px) saturate(160%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(160%)',
+        boxShadow: '0 2px 20px rgba(13, 124, 74, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
             borderBottom: '1px solid rgba(13, 124, 74, 0.12)',
           }}
         >
