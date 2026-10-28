@@ -209,6 +209,30 @@ const GENRES: Genre[] = [
     searchFields: ['name', 'summary', 'descriptionFa', 'materials'],
   },
   {
+    id: 'funeral', key: 'funeral', nameFa: 'سوگواری و خاکسپاری', name: 'Funeral Coverage',
+    color: '#64748b', description: 'پوشش خبری مراسم خاکسپاری و سوگواری شخصیت‌ها',
+    filterFn: s => s.category.includes('خاکسپاری') || s.category.includes('سوگواری'),
+    tags: [],
+    presetTags: ['رسمی', 'مذهبی', 'دولتی', 'مردمی', 'سنتی'],
+    searchFields: ['name', 'summary', 'descriptionFa'],
+  },
+  {
+    id: 'war', key: 'war', nameFa: 'برنامه‌های جنگ و بحران', name: 'War & Conflict',
+    color: '#991b1b', description: 'برنامه‌های تلویزیونی با موضوع جنگ و منازعات',
+    filterFn: s => s.category.includes('جنگ') || s.category.includes('بحران'),
+    tags: [],
+    presetTags: ['مستند جنگ', 'تحلیل نظامی', 'خبری', 'بیانیه'],
+    searchFields: ['name', 'summary', 'descriptionFa'],
+  },
+  {
+    id: 'debate', key: 'debate', nameFa: 'مناظرات انتخاباتی', name: 'Electoral Debates',
+    color: '#1e40af', description: 'مناظرات و بحث‌های انتخاباتی',
+    filterFn: s => s.category.includes('مناظره') || s.category.includes('انتخابات'),
+    tags: [],
+    presetTags: ['ریاست جمهوری', 'پارلمانی', 'محلی', 'حزبی'],
+    searchFields: ['name', 'summary', 'descriptionFa'],
+  },
+  {
     id: 'ads', key: 'ads', nameFa: 'آگهی‌های تبلیغاتی', name: 'Advertisements',
     color: '#ea580c', description: 'تبلیغات و آگهی‌های تجاری',
     filterFn: s => s.category.includes('آگهی'),
@@ -1360,9 +1384,9 @@ function DrawerMenu({
         className="fixed top-0 right-0 bottom-0 animate-drawer-slide-in flex flex-col"
         style={{
           width: 'min(340px, 88vw)',
-          background: 'rgba(248, 246, 240, 0.65)',
-          backdropFilter: 'blur(40px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+          background: 'rgba(10, 25, 18, 0.85)',
+          backdropFilter: 'blur(30px) saturate(160%)',
+          WebkitBackdropFilter: 'blur(30px) saturate(160%)',
           backdropFilter: 'blur(30px) saturate(140%)',
           WebkitBackdropFilter: 'blur(30px) saturate(140%)',
           borderLeft: '1px solid rgba(13, 124, 74, 0.15)',
@@ -1908,7 +1932,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                   <div className="text-4xl font-black" style={{ color: '#ffffff' }}>
                     {count.toLocaleString('fa-IR')}
                   </div>
-                  <div className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>برنامه</div>
+                  <div className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>برنامه</div>
                 </div>
               </div>
               <h3 className="font-bold text-lg mb-1" style={{ color: '#ffffff' }}>{g.nameFa}</h3>
