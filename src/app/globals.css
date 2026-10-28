@@ -53,11 +53,11 @@
 :root,
 html.dark-theme {
   /* Surface stack — dark green but not too dark */
-  --bg-deep:   #0a1f12;
-  --bg-mid:    #0d2818;
-  --bg-soft:   #103d24;
-  --bg-page-1: #0d2818;
-  --bg-page-2: #0a1f12;
+  --bg-deep:   #06120a;
+  --bg-mid:    #0a1f14;
+  --bg-soft:   #0e2a1b;
+  --bg-page-1: #081810;
+  --bg-page-2: #06120a;
 
   /* Foreground */
   --fg-strong: #f4fff8;
@@ -262,7 +262,8 @@ html, body {
    Dark = deep green gradient. Light = soft white.
    ============================================ */
 .app-content {
-  background: linear-gradient(180deg, var(--bg-page-1) 0%, var(--bg-page-2) 100%);
+  background: radial-gradient(ellipse at top, #0e2a1b 0%, #06120a 60%),
+              linear-gradient(180deg, #081810 0%, #06120a 100%);
   color: var(--fg-soft);
   min-height: 100vh;
   transition: background 0.35s ease, color 0.35s ease;
