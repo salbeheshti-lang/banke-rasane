@@ -4010,38 +4010,46 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
   onToggleCompare?: () => void;
 }) {
   const thumb = getShowThumbnail(show);
-  const dark = adjustColor(thumb.accent, -40);
-  const darker = adjustColor(thumb.accent, -70);
   const { t } = useLang();
   // Section-specific tags derived from the genre (fallback to decor's style/size/viewers).
   const genreTags = renderGenreTags(show, genre);
   // User-defined tags on the show itself (purple badges).
   const userTags = show.tags && show.tags.length > 0 ? show.tags : [];
+  // Teal pill style for all metadata badges — small, rounded, minimal.
+  const tealPill: React.CSSProperties = {
+    backgroundColor: 'rgba(0, 188, 212, 0.15)',
+    color: '#26c6da',
+    border: '1px solid rgba(0, 188, 212, 0.3)',
+  };
   return (
     <div
       onClick={selectionMode ? onToggle : onClick}
       className={`premium-show-card${selected ? ' is-selected' : ''}`}
       style={{
-        background: 'var(--card-bg)',
-        border: compareSelected ? '2px solid #FACC15' : selected ? '2px solid #26c6da' : '1px solid var(--card-border)',
-        boxShadow: compareSelected
-          ? '0 0 0 2px rgba(250, 204, 21, 0.5), 0 8px 32px rgba(250, 204, 21, 0.18), 0 4px 16px rgba(0,0,0,0.5)'
+        background: 'rgba(13, 31, 44, 0.8)',
+        border: compareSelected
+          ? '2px solid #FACC15'
           : selected
-          ? '0 0 0 2px rgba(0, 188, 212, 0.5), 0 8px 32px rgba(0, 188, 212, 0.25), 0 4px 16px rgba(0,0,0,0.5)'
-          : '0 4px 16px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04)',
+          ? '2px solid #00bcd4'
+          : '1px solid rgba(0, 188, 212, 0.2)',
+        boxShadow: compareSelected
+          ? '0 0 0 2px rgba(250, 204, 21, 0.5), 0 8px 32px rgba(250, 204, 21, 0.18), 0 0 20px rgba(250, 204, 21, 0.12)'
+          : selected
+          ? '0 0 0 2px rgba(0, 188, 212, 0.5), 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 188, 212, 0.2)'
+          : '0 8px 32px rgba(0, 0, 0, 0.4)',
       }}
       onMouseEnter={(e) => {
         if (!selected && !compareSelected) {
-          e.currentTarget.style.transform = 'translateY(-3px)';
-          e.currentTarget.style.borderColor = '#FACC15';
-          e.currentTarget.style.boxShadow = '0 8px 32px rgba(250, 204, 21, 0.18), 0 4px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05)';
+          e.currentTarget.style.transform = 'translateY(-3px) scale(1.02)';
+          e.currentTarget.style.borderColor = 'rgba(0, 188, 212, 0.5)';
+          e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 188, 212, 0.15)';
         }
       }}
       onMouseLeave={(e) => {
         if (!selected && !compareSelected) {
-          e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.borderColor = 'var(--card-border)';
-          e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04)';
+          e.currentTarget.style.transform = 'translateY(0) scale(1)';
+          e.currentTarget.style.borderColor = 'rgba(0, 188, 212, 0.2)';
+          e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.4)';
         }
       }}
     >
@@ -4050,7 +4058,7 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
         className="aspect-video relative overflow-hidden"
         style={{
           background: thumb.gradient,
-          borderRadius: '14px 14px 0 0',
+          borderRadius: '16px 16px 0 0',
         }}
       >
         {thumb.image ? (
@@ -4085,7 +4093,7 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
                 </div>
                 <div
                   className="text-xs font-medium px-2 py-0.5 rounded-full inline-block"
-                  style={{ background: 'rgba(255,255,255,0.25)', color: 'white', backdropFilter: 'blur(8px)' }}
+                  style={tealPill}
                 >
                   {show.style}
                 </div>
@@ -4094,7 +4102,8 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
           </>
         )}
 
-        {/* Image gradient overlay — adds cinematic depth on top of the thumbnail */}
+        {/* Image gradient overlay — strong dark fade at bottom for text readability
+            (linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.8) 100%)) */}
         <div className="image-overlay" />
 
         {/* ★ Bookmark button — top-right of thumbnail */}
@@ -4107,9 +4116,9 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
             style={{
               top: '8px',
               right: '8px',
-              background: isBookmarked ? 'rgba(245, 158, 11, 0.95)' : 'rgba(0, 0, 0, 0.55)',
-              color: isBookmarked ? 'white' : '#fde68a',
-              border: '1px solid rgba(255,255,255,0.3)',
+              background: isBookmarked ? 'rgba(245, 158, 11, 0.95)' : 'rgba(13, 31, 44, 0.7)',
+              color: isBookmarked ? 'white' : '#26c6da',
+              border: '1px solid rgba(0, 188, 212, 0.3)',
               backdropFilter: 'blur(6px)',
               WebkitBackdropFilter: 'blur(6px)',
               zIndex: 15,
@@ -4137,9 +4146,9 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
             style={{
               bottom: '8px',
               left: '8px',
-              background: compareSelected ? 'rgba(245, 158, 11, 0.95)' : 'rgba(0, 0, 0, 0.55)',
-              color: compareSelected ? 'white' : '#fde68a',
-              border: '1px solid rgba(255,255,255,0.3)',
+              background: compareSelected ? 'rgba(245, 158, 11, 0.95)' : 'rgba(13, 31, 44, 0.7)',
+              color: compareSelected ? 'white' : '#26c6da',
+              border: '1px solid rgba(0, 188, 212, 0.3)',
               backdropFilter: 'blur(6px)',
               WebkitBackdropFilter: 'blur(6px)',
               zIndex: 15,
@@ -4162,7 +4171,8 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
           <span
             className="absolute text-xs px-2 py-0.5 rounded-md backdrop-blur font-bold flex items-center gap-1"
             style={{
-              background: 'rgba(0, 0, 0, 0.75)', color: 'white',
+              background: 'rgba(13, 31, 44, 0.85)', color: '#26c6da',
+              border: '1px solid rgba(0, 188, 212, 0.3)',
               top: onToggleBookmark ? '44px' : '8px',
               right: '8px',
             }}
@@ -4186,11 +4196,11 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
           </span>
         )}
 
-        {/* Uploaded badge */}
+        {/* Uploaded badge — minimal dark glass instead of purple gradient */}
         {isUploaded && (
           <span
             className="absolute top-2 left-2 text-xs px-2 py-0.5 rounded-md backdrop-blur font-medium"
-            style={{ background: 'rgba(124, 58, 237, 0.9)', color: 'white' }}
+            style={{ background: 'rgba(0, 188, 212, 0.85)', color: '#0a1929' }}
           >
             ☁ آپلود شده
           </span>
@@ -4200,11 +4210,11 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
           <div
             className="absolute top-2 left-2 w-6 h-6 rounded-md border-2 flex items-center justify-center"
             style={selected ? {
-              background: thumb.accent,
-              borderColor: thumb.accent,
+              background: '#00bcd4',
+              borderColor: '#00bcd4',
             } : {
-              background: 'rgba(255,255,255,0.85)',
-              borderColor: `${thumb.accent}90`,
+              background: 'rgba(13, 31, 44, 0.85)',
+              borderColor: 'rgba(0, 188, 212, 0.5)',
             }}
           >
             {selected && (
@@ -4217,7 +4227,7 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
 
         <div
           className="absolute bottom-2 right-2 text-xs px-2 py-0.5 rounded-md backdrop-blur font-medium"
-          style={{ background: 'rgba(0, 0, 0, 0.75)', color: 'white' }}
+          style={{ background: 'rgba(13, 31, 44, 0.85)', color: '#26c6da', border: '1px solid rgba(0, 188, 212, 0.3)' }}
         >
           {show.size}
         </div>
@@ -4227,33 +4237,33 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
         <div className="flex items-center gap-2 mb-2 flex-wrap">
           <span
             className="text-xs px-2 py-0.5 rounded-full font-medium"
-            style={{ backgroundColor: 'rgba(255,255,255,0.25)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}
+            style={tealPill}
           >
             {show.style}
           </span>
           {show.viewers === 'با تماشاگر' && (
-            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}>
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={tealPill}>
               👥 تماشاگر
             </span>
           )}
         </div>
 
-        <h3 className="font-bold text-sm leading-snug mb-2 line-clamp-2 text-white" style={{ direction: 'ltr', textAlign: 'right', textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}>
+        <h3 className="font-bold text-sm leading-snug mb-2 line-clamp-2 text-white" style={{ direction: 'ltr', textAlign: 'right' }}>
           {show.name}
         </h3>
 
-        <p className="text-xs line-clamp-2 mb-3" style={{ color: 'rgba(255,255,255,0.8)' }}>
+        <p className="text-xs line-clamp-2 mb-3" style={{ color: '#8b9bb4' }}>
           {show.summary && show.summary !== '—' ? show.summary : show.category}
         </p>
 
-        {/* Section-specific genre tags (small white badges) */}
+        {/* Section-specific genre tags (small teal pills) */}
         {genreTags.length > 0 && (
           <div className="flex items-center gap-1 flex-wrap mb-2">
             {genreTags.map(t => (
               <span
                 key={t.id}
                 className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
-                style={{ backgroundColor: 'rgba(255,255,255,0.22)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}
+                style={tealPill}
               >
                 {t.label}
               </span>
@@ -4261,14 +4271,14 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
           </div>
         )}
 
-        {/* User-defined tags (purple badges) */}
+        {/* User-defined tags (subtle purple-tinted pills for distinction) */}
         {userTags.length > 0 && (
           <div className="flex items-center gap-1 flex-wrap mb-2">
             {userTags.slice(0, 4).map((t, i) => (
               <span
                 key={i}
                 className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
-                style={{ backgroundColor: 'rgba(124, 58, 237, 0.65)', color: 'white', border: '1px solid rgba(168, 85, 247, 0.7)' }}
+                style={{ backgroundColor: 'rgba(124, 58, 237, 0.25)', color: '#c4b5fd', border: '1px solid rgba(124, 58, 237, 0.4)' }}
               >
                 #{t}
               </span>
@@ -4276,11 +4286,11 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
           </div>
         )}
 
-        <div className="flex items-center justify-between text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>
+        <div className="flex items-center justify-between text-xs" style={{ color: '#8b9bb4' }}>
           <span className="truncate" title={show.category}>
             {show.category.replace(/^\d+\.\s*/, '').substring(0, 18)}
           </span>
-          <span className="font-bold text-white">#{show.num.toLocaleString('fa-IR')}</span>
+          <span className="font-bold" style={{ color: '#26c6da' }}>#{show.num.toLocaleString('fa-IR')}</span>
         </div>
       </div>
     </div>
@@ -4302,38 +4312,48 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
   onToggleCompare?: () => void;
 }) {
   const thumb = getShowThumbnail(show);
-  const dark = adjustColor(thumb.accent, -40);
-  const darker = adjustColor(thumb.accent, -70);
   const genreTags = renderGenreTags(show, genre);
   const userTags = show.tags && show.tags.length > 0 ? show.tags : [];
   const { t } = useLang();
+  // Teal pill style — consistent with ProgramCard for a unified dark media-asset look.
+  const tealPill: React.CSSProperties = {
+    backgroundColor: 'rgba(0, 188, 212, 0.15)',
+    color: '#26c6da',
+    border: '1px solid rgba(0, 188, 212, 0.3)',
+  };
   return (
     <div
       onClick={selectionMode ? onToggle : onClick}
       className="premium-show-card"
       style={{
-        background: `linear-gradient(135deg, ${thumb.accent} 0%, ${dark} 60%, ${darker} 100%)`,
-        border: selected ? `3px solid white` : compareSelected ? `3px solid #f59e0b` : `1px solid ${adjustColor(thumb.accent, 30)}`,
-        boxShadow: selected
-          ? `0 0 0 3px ${thumb.accent}, 0 12px 40px ${thumb.accent}50`
-          : compareSelected
-          ? `0 0 0 3px #f59e0b, 0 12px 40px ${thumb.accent}50`
-          : `0 10px 32px ${thumb.accent}40, 0 3px 10px ${thumb.accent}25, inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.2)`,
+        background: 'rgba(13, 31, 44, 0.8)',
+        border: compareSelected
+          ? '2px solid #FACC15'
+          : selected
+          ? '2px solid #00bcd4'
+          : '1px solid rgba(0, 188, 212, 0.2)',
+        boxShadow: compareSelected
+          ? '0 0 0 2px rgba(250, 204, 21, 0.5), 0 8px 32px rgba(250, 204, 21, 0.18), 0 0 20px rgba(250, 204, 21, 0.12)'
+          : selected
+          ? '0 0 0 2px rgba(0, 188, 212, 0.5), 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 188, 212, 0.2)'
+          : '0 8px 32px rgba(0, 0, 0, 0.4)',
         padding: '16px',
         display: 'flex',
         alignItems: 'center',
         gap: '16px',
       }}
       onMouseEnter={(e) => {
-        if (!selected) {
+        if (!selected && !compareSelected) {
           e.currentTarget.style.transform = 'translateY(-2px)';
-          e.currentTarget.style.filter = 'brightness(1.1)';
+          e.currentTarget.style.borderColor = 'rgba(0, 188, 212, 0.5)';
+          e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 188, 212, 0.15)';
         }
       }}
       onMouseLeave={(e) => {
-        if (!selected) {
+        if (!selected && !compareSelected) {
           e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.filter = 'brightness(1)';
+          e.currentTarget.style.borderColor = 'rgba(0, 188, 212, 0.2)';
+          e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.4)';
         }
       }}
     >
@@ -4341,11 +4361,11 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
         <div
           className="w-6 h-6 rounded-md border-2 flex items-center justify-center flex-shrink-0"
           style={selected ? {
-            background: thumb.accent,
-            borderColor: thumb.accent,
+            background: '#00bcd4',
+            borderColor: '#00bcd4',
           } : {
-            borderColor: `${thumb.accent}90`,
-            background: 'rgba(255,255,255,0.7)',
+            background: 'rgba(13, 31, 44, 0.85)',
+            borderColor: 'rgba(0, 188, 212, 0.5)',
           }}
         >
           {selected && (
@@ -4358,47 +4378,55 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
 
       <div
         className="w-14 h-14 rounded-xl flex-shrink-0 relative overflow-hidden"
-        style={{ background: thumb.gradient }}
+        style={{ background: thumb.gradient, border: '1px solid rgba(0, 188, 212, 0.25)' }}
       >
-        <div className="absolute inset-0" style={{ background: thumb.pattern }}></div>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-lg font-black" style={{ color: 'white', textShadow: '0 1px 4px rgba(0,0,0,0.4)' }}>
-            {show.name.charAt(0).toUpperCase()}
-          </span>
-        </div>
+        {thumb.image ? (
+          <img
+            src={thumb.image}
+            alt={show.name}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
+          />
+        ) : (
+          <>
+            <div className="absolute inset-0" style={{ background: thumb.pattern }}></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-lg font-black" style={{ color: 'white', textShadow: '0 1px 4px rgba(0,0,0,0.4)' }}>
+                {show.name.charAt(0).toUpperCase()}
+              </span>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1 flex-wrap">
-          <span
-            className="text-xs px-2 py-0.5 rounded-full font-medium"
-            style={{ backgroundColor: 'rgba(255,255,255,0.25)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}
-          >
+          <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={tealPill}>
             {show.style}
           </span>
-          <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.25)' }}>
+          <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={tealPill}>
             {show.size}
           </span>
           {show.viewers === 'با تماشاگر' && (
-            <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white' }}>
-              👥
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={tealPill}>
+              👥 تماشاگر
             </span>
           )}
           {isUploaded && (
-            <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white' }}>
-              ☁
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={tealPill}>
+              ☁ آپلود
             </span>
           )}
         </div>
-        <h3 className="font-bold text-sm mb-1 truncate text-white" style={{ direction: 'ltr', textAlign: 'right', textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}>{show.name}</h3>
-        <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.8)' }}>{show.summary && show.summary !== '—' ? show.summary : show.category}</p>
+        <h3 className="font-bold text-sm mb-1 truncate text-white" style={{ direction: 'ltr', textAlign: 'right' }}>{show.name}</h3>
+        <p className="text-xs truncate" style={{ color: '#8b9bb4' }}>{show.summary && show.summary !== '—' ? show.summary : show.category}</p>
         {(genreTags.length > 0 || userTags.length > 0) && (
           <div className="flex items-center gap-1 flex-wrap mt-1.5">
             {genreTags.map(t => (
               <span
                 key={t.id}
                 className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
-                style={{ backgroundColor: 'rgba(255,255,255,0.22)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}
+                style={tealPill}
               >
                 {t.label}
               </span>
@@ -4407,7 +4435,7 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
               <span
                 key={`u${i}`}
                 className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
-                style={{ backgroundColor: 'rgba(124, 58, 237, 0.65)', color: 'white', border: '1px solid rgba(168, 85, 247, 0.7)' }}
+                style={{ backgroundColor: 'rgba(124, 58, 237, 0.25)', color: '#c4b5fd', border: '1px solid rgba(124, 58, 237, 0.4)' }}
               >
                 #{t}
               </span>
@@ -4425,9 +4453,9 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
             title={isBookmarked ? t('remove_from_bookmarks') : t('add_to_bookmarks')}
             className="btn-base block mb-2 mx-auto"
             style={{
-              background: isBookmarked ? 'rgba(245, 158, 11, 0.95)' : 'rgba(255,255,255,0.2)',
-              color: isBookmarked ? 'white' : '#fde68a',
-              border: '1px solid rgba(255,255,255,0.3)',
+              background: isBookmarked ? 'rgba(245, 158, 11, 0.95)' : 'rgba(13, 31, 44, 0.7)',
+              color: isBookmarked ? 'white' : '#26c6da',
+              border: '1px solid rgba(0, 188, 212, 0.3)',
               borderRadius: '999px',
               width: '32px',
               height: '32px',
@@ -4450,13 +4478,13 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
             title={compareSelected ? t('remove_from_compare') : t('add_to_compare')}
             className="btn-base block mb-2 mx-auto"
             style={{
-              background: compareSelected ? 'rgba(245, 158, 11, 0.95)' : 'rgba(255,255,255,0.2)',
-              color: compareSelected ? 'white' : '#fde68a',
-              border: '1px solid rgba(255,255,255,0.3)',
+              background: compareSelected ? 'rgba(245, 158, 11, 0.95)' : 'rgba(13, 31, 44, 0.7)',
+              color: compareSelected ? 'white' : '#26c6da',
+              border: '1px solid rgba(0, 188, 212, 0.3)',
               borderRadius: '999px',
               width: '32px',
               height: '32px',
-              fontSize: '14px',
+              fontSize: '13px',
               lineHeight: 1,
               display: 'flex',
               alignItems: 'center',
@@ -4467,8 +4495,8 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
             ⚖
           </button>
         )}
-        <div className="text-xs" style={{ color: 'rgba(255,255,255,0.6)' }}>{t('show_num')}</div>
-        <div className="font-bold text-sm text-white">#{show.num.toLocaleString('fa-IR')}</div>
+        <div className="text-xs" style={{ color: '#8b9bb4' }}>{t('show_num')}</div>
+        <div className="font-bold text-sm" style={{ color: '#26c6da' }}>#{show.num.toLocaleString('fa-IR')}</div>
       </div>
     </div>
   );

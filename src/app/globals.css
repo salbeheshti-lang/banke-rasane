@@ -500,25 +500,26 @@ html.light-theme .app-content {
 }
 
 /* ============================================
-   PREMIUM SHOW CARD — dark glass with image at top, info below.
-   Dark glass background rgba(30, 41, 59, 0.8),
-   subtle border rgba(148, 163, 184, 0.1),
-   on hover: cyan border glow (#26c6da),
-   on selected: cyan border + checkmark (#00bcd4).
+   PREMIUM SHOW CARD — dark media-asset-manager look.
+   Dark glass rgba(13, 31, 44, 0.8) with blur(10px),
+   thin teal border rgba(0, 188, 212, 0.2),
+   deep drop shadow 0 8px 32px rgba(0,0,0,0.4),
+   on hover: brighter teal border + 20px teal glow + translateY(-3px) scale(1.02),
+   on selected: solid teal border + checkmark.
    ============================================ */
 .premium-show-card {
   position: relative;
   border-radius: 16px;
   cursor: pointer;
   overflow: hidden;
-  background: var(--card-bg) !important;
-  border: 1px solid var(--card-border) !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
-  backdrop-filter: blur(12px) saturate(140%);
-  -webkit-backdrop-filter: blur(12px) saturate(140%);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              border-color 0.3s ease;
+  background: rgba(13, 31, 44, 0.8) !important;
+  border: 1px solid rgba(0, 188, 212, 0.2) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.28s ease;
 }
 
 .premium-show-card::before {
@@ -534,9 +535,9 @@ html.light-theme .app-content {
 }
 
 .premium-show-card:hover {
-  border-color: var(--card-border-hover) !important;
-  transform: translateY(-3px) scale(1.01);
-  box-shadow: 0 8px 32px rgba(0, 188, 212, 0.25), 0 4px 16px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(0, 188, 212, 0.5) !important;
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 188, 212, 0.15) !important;
 }
 
 .premium-show-card > * {
@@ -544,19 +545,19 @@ html.light-theme .app-content {
   z-index: 2;
 }
 
-/* Selected state — teal border + teal checkmark */
+/* Selected state — teal border + teal glow ring */
 .premium-show-card.is-selected {
-  border-color: var(--card-border-selected) !important;
-  box-shadow: 0 0 0 2px rgba(0, 188, 212, 0.5), 0 8px 32px rgba(0, 188, 212, 0.25), 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+  border-color: #00bcd4 !important;
+  box-shadow: 0 0 0 2px rgba(0, 188, 212, 0.5), 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 188, 212, 0.2) !important;
 }
 
-/* Image gradient overlay — gives thumbnails a richer, more cinematic look */
+/* Image gradient overlay — strong dark fade at bottom for text readability.
+   Per spec: linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.8) 100%). */
 .image-overlay {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.05) 50%, rgba(0, 0, 0, 0.45) 100%);
+  background: linear-gradient(180deg, transparent 50%, rgba(0, 0, 0, 0.8) 100%);
   z-index: 2;
 }
 
@@ -1074,18 +1075,20 @@ html:not(.light-theme) .premium-glass::before {
 }
 
 /* === Program cards: dark glass with image area ===
-   `.premium-show-card` has inline `background: linear-gradient(135deg, ${thumb.accent}...)`.
-   The `!important` rule below wins, giving the dark glass look. */
+   `.premium-show-card` previously had inline `background: linear-gradient(135deg, ${thumb.accent}...)`.
+   Now ProgramCard / ProgramListRow set the dark glass inline. The `!important` rules below
+   guarantee the dark media-asset-manager look regardless of inline styles. */
 html.dark-theme .premium-show-card,
 html:not(.light-theme) .premium-show-card {
-  background: var(--card-bg) !important;
-  border: 1px solid var(--card-border) !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+  background: rgba(13, 31, 44, 0.8) !important;
+  border: 1px solid rgba(0, 188, 212, 0.2) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
 }
 html.dark-theme .premium-show-card:hover,
 html:not(.light-theme) .premium-show-card:hover {
-  border-color: var(--card-border-hover) !important;
-  box-shadow: 0 8px 32px rgba(0, 188, 212, 0.18), 0 4px 16px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(0, 188, 212, 0.5) !important;
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 188, 212, 0.15) !important;
 }
 
 /* The image area inside the card — keep its gradient/image as-is (the thumbnail itself),
@@ -1108,30 +1111,37 @@ html:not(.light-theme) .premium-show-card .text-white {
   color: var(--fg-strong) !important;
 }
 
-/* Tags inside program cards — switch from white-on-color to subtle dark-mode badges */
+/* Tags inside program cards — small teal-tinted pills (dark mode).
+   ProgramCard / ProgramListRow now set teal inline styles directly:
+   `rgba(0, 188, 212, 0.15)` bg + `rgba(0, 188, 212, 0.3)` border + `#26c6da` text.
+   The legacy white-bg selectors below are kept as back-compat hooks for any
+   stale inline styles and normalize them to the same teal pill look. */
 html.dark-theme .premium-show-card span[style*="rgba(255,255,255,0.25)"],
-html:not(.light-theme) .premium-show-card span[style*="rgba(255,255,255,0.25)"] {
-  background: rgba(255, 255, 255, 0.06) !important;
-  color: var(--fg-soft) !important;
-  border-color: var(--card-border) !important;
-}
+html:not(.light-theme) .premium-show-card span[style*="rgba(255,255,255,0.25)"],
 html.dark-theme .premium-show-card span[style*="rgba(255,255,255,0.2)"],
-html:not(.light-theme) .premium-show-card span[style*="rgba(255,255,255,0.2)"] {
-  background: rgba(255, 255, 255, 0.05) !important;
-  color: var(--fg-soft) !important;
-  border-color: var(--card-border) !important;
-}
+html:not(.light-theme) .premium-show-card span[style*="rgba(255,255,255,0.2)"],
 html.dark-theme .premium-show-card span[style*="rgba(255,255,255,0.22)"],
 html:not(.light-theme) .premium-show-card span[style*="rgba(255,255,255,0.22)"] {
-  background: rgba(255, 255, 255, 0.06) !important;
-  color: var(--fg-soft) !important;
-  border-color: var(--card-border) !important;
+  background: rgba(0, 188, 212, 0.15) !important;
+  color: #26c6da !important;
+  border-color: rgba(0, 188, 212, 0.3) !important;
 }
 
-/* The category / number text at card bottom */
+/* The category / number text at card bottom — gray-blue #8b9bb4 per spec */
 html.dark-theme .premium-show-card div[style*="rgba(255,255,255,0.7)"],
-html:not(.light-theme) .premium-show-card div[style*="rgba(255,255,255,0.7)"] {
-  color: var(--fg-muted) !important;
+html:not(.light-theme) .premium-show-card div[style*="rgba(255,255,255,0.7)"],
+html.dark-theme .premium-show-card div[style*="#8b9bb4"],
+html:not(.light-theme) .premium-show-card div[style*="#8b9bb4"] {
+  color: #8b9bb4 !important;
+}
+
+/* Light-theme tweaks for teal pill tags — slightly darker teal text for contrast on white */
+html.light-theme .premium-show-card span[style*="rgba(0, 188, 212, 0.15)"] {
+  color: #0097a7 !important;
+  border-color: rgba(0, 188, 212, 0.35) !important;
+}
+html.light-theme .premium-show-card div[style*="#8b9bb4"] {
+  color: #64748b !important;
 }
 
 /* ShowImageGallery main image container */
@@ -1390,8 +1400,17 @@ html.light-theme .drawer-aside {
 }
 html.light-theme .premium-show-card {
   background: rgba(255, 255, 255, 0.95) !important;
-  border: 1px solid rgba(148, 163, 184, 0.2) !important;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06) !important;
+  border: 1px solid rgba(0, 188, 212, 0.25) !important;
+  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.08) !important;
+}
+html.light-theme .premium-show-card:hover {
+  border-color: rgba(0, 188, 212, 0.5) !important;
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.12), 0 0 20px rgba(0, 188, 212, 0.12) !important;
+}
+html.light-theme .premium-show-card.is-selected {
+  border-color: #00bcd4 !important;
+  box-shadow: 0 0 0 2px rgba(0, 188, 212, 0.4), 0 8px 32px rgba(15, 23, 42, 0.12), 0 0 20px rgba(0, 188, 212, 0.15) !important;
 }
 html.light-theme .login-screen {
   background: radial-gradient(ellipse 90% 70% at 70% 25%, rgba(0, 188, 212, 0.45) 0%, transparent 55%),
