@@ -63,22 +63,6 @@ db.exec(`
     images       TEXT NOT NULL DEFAULT '[]',  -- JSON array of URLs
     videos       TEXT NOT NULL DEFAULT '[]'   -- JSON array of URLs
   );
-
-  -- Audit log: every create/update/delete on a show is logged with who/what/when.
-  CREATE TABLE IF NOT EXISTS changes (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    show_num    INTEGER,         -- num of the affected show (NULL if not applicable)
-    user_id     INTEGER,         -- who performed the action
-    username    TEXT NOT NULL DEFAULT '', -- denormalized for fast display
-    action      TEXT NOT NULL,   -- 'create' | 'update' | 'delete'
-    field       TEXT NOT NULL DEFAULT '', -- which field changed (empty for create/delete)
-    old_value   TEXT NOT NULL DEFAULT '',
-    new_value   TEXT NOT NULL DEFAULT '',
-    created_at  INTEGER NOT NULL DEFAULT (strftime('%s','now'))
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_changes_created ON changes(created_at DESC);
-  CREATE INDEX IF NOT EXISTS idx_changes_show_num ON changes(show_num);
 `);
 
 // ---------------------------------------------------------------------------
@@ -238,60 +222,6 @@ function requireRole(req, roles) {
     return { user, ok: false, status: 403, error: 'Forbidden' };
   }
   return { user, ok: true };
-}
-
-// ---------------------------------------------------------------------------
-// Audit log helper — writes a single row to the `changes` table.
-// `field`/`oldValue`/`newValue` are optional (used for update diffs).
-// `oldValue`/`newValue` are truncated to 500 chars to keep the table small.
-// ---------------------------------------------------------------------------
-function logChange({ showNum, user, action, field = '', oldValue = '', newValue = '' }) {
-  try {
-    const truncate = (v) => String(v ?? '').slice(0, 500);
-    db.prepare(
-      'INSERT INTO changes (show_num, user_id, username, action, field, old_value, new_value) VALUES (?, ?, ?, ?, ?, ?, ?)'
-    ).run(
-      showNum != null ? Number(showNum) : null,
-      user?.id ?? null,
-      user?.username ?? '',
-      action,
-      field,
-      truncate(oldValue),
-      truncate(newValue)
-    );
-  } catch (e) {
-    // Logging must never break the actual operation.
-    console.warn('[audit] failed to log change:', e.message);
-  }
-}
-
-// Compare two shows field-by-field and log every difference.
-function logShowDiff(user, existingRow, newShow) {
-  const old = rowToShow(existingRow);
-  if (!old) return;
-  for (const col of SHOW_COLUMNS) {
-    if (col === 'num') continue;
-    let ov = old[col];
-    let nv = newShow[col];
-    // Normalize images/videos arrays for comparison.
-    if (col === 'images' || col === 'videos') {
-      ov = JSON.stringify(Array.isArray(ov) ? ov : []);
-      nv = JSON.stringify(Array.isArray(nv) ? nv : []);
-    } else {
-      ov = ov ?? '';
-      nv = nv ?? '';
-    }
-    if (String(ov) !== String(nv)) {
-      logChange({
-        showNum: old.num,
-        user,
-        action: 'update',
-        field: col,
-        oldValue: ov,
-        newValue: nv,
-      });
-    }
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -466,8 +396,6 @@ const server = Bun.serve({
       } catch (e) {
         return json({ error: 'خطا در ایجاد برنامه: ' + e.message }, 500);
       }
-      // Audit: log creation.
-      logChange({ showNum: body.num, user, action: 'create', newValue: body.name || '' });
       return json({ num: body.num });
     }
 
@@ -501,37 +429,16 @@ const server = Bun.serve({
         } catch (e) {
           return json({ error: 'خطا در بروزرسانی: ' + e.message }, 500);
         }
-        // Audit: log per-field diffs.
-        logShowDiff(user, existing, merged);
         return json({ success: true });
       }
 
       if (method === 'DELETE') {
         const { user, ok, status, error } = requireRole(req, ['admin']);
         if (!ok) return json({ error }, status);
-        const existing = db.prepare('SELECT * FROM shows WHERE num = ?').get(num);
         const r = db.prepare('DELETE FROM shows WHERE num = ?').run(num);
         if (r.changes === 0) return json({ error: 'برنامه یافت نشد' }, 404);
-        // Audit: log deletion (capture the deleted show's name for context).
-        logChange({
-          showNum: num,
-          user,
-          action: 'delete',
-          oldValue: existing?.name || '',
-        });
         return json({ success: true });
       }
-    }
-
-    // ----- Changes (audit log): list recent changes (admin only) -----
-    if (pathname === '/api/changes' && method === 'GET') {
-      const { user, ok, status, error } = requireRole(req, ['admin']);
-      if (!ok) return json({ error }, status);
-      const limit = Math.min(parseInt(url.searchParams.get('limit') || '200', 10), 1000);
-      const rows = db.prepare(
-        'SELECT id, show_num, user_id, username, action, field, old_value, new_value, created_at FROM changes ORDER BY created_at DESC LIMIT ?'
-      ).all(limit);
-      return json({ changes: rows });
     }
 
     // ----- Users: list / create / delete / update -----

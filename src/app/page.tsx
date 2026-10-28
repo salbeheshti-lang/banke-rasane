@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef, createContext, useContext } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import { api, setApiBase, getApiBase, User } from '@/lib/api';
 
@@ -166,7 +166,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'digital', key: 'digital', nameFa: 'تاک‌شوی دیجیتال / اینترنتی', name: 'Digital',
-    color: '#0097a7', description: '۱۰ برنامه', filterFn: s => s.category.includes('دیجیتال'),
+    color: '#0891b2', description: '۱۰ برنامه', filterFn: s => s.category.includes('دیجیتال'),
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
     presetTags: ['دیجیتال', 'اینترنتی', 'استریم', 'تعاملی', 'مدرن'],
     searchFields: ['name', 'summary', 'style', 'effects'],
@@ -180,7 +180,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'radio', key: 'radio', nameFa: 'تاک‌شوی رادیویی / صوتی', name: 'Radio/Audio',
-    color: '#9CA3AF', description: '۶ برنامه', filterFn: s => s.category.includes('رادیویی'),
+    color: '#8b9bb4', description: '۶ برنامه', filterFn: s => s.category.includes('رادیویی'),
     tags: [TAG_LIBRARY.layout, TAG_LIBRARY.effects],
     presetTags: ['رادیویی', 'صوتی', 'گفتگو', 'مدرن', 'استودیویی'],
     searchFields: ['name', 'summary', 'layout', 'effects'],
@@ -194,7 +194,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'psa', key: 'psa', nameFa: 'PSA (پیام خدمت عمومی)', name: 'Public Service Announcement',
-    color: '#0097a7', description: 'پیام‌های آگاهی‌بخش و خدمت عمومی',
+    color: '#0891b2', description: 'پیام‌های آگاهی‌بخش و خدمت عمومی',
     filterFn: s => s.category.includes('PSA') || s.category.includes('پیام خدمت'),
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
     presetTags: ['خدمت عمومی', 'آگاهی‌بخش', 'آموزشی', 'اجتماعی', 'کوتاه'],
@@ -207,46 +207,6 @@ const GENRES: Genre[] = [
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting, TAG_LIBRARY.materials],
     presetTags: ['تحلیلی', 'رصد عمیق', 'بررسی تخصصی', 'مقایسه‌ای', 'تفصیلی'],
     searchFields: ['name', 'summary', 'descriptionFa', 'materials'],
-  },
-  {
-    id: 'funeral', key: 'funeral', nameFa: 'سوگواری و خاکسپاری', name: 'Funeral Coverage',
-    color: '#374151', description: 'پوشش خبری مراسم خاکسپاری و سوگواری شخصیت‌ها',
-    filterFn: s => s.category.includes('خاکسپاری') || s.category.includes('سوگواری'),
-    tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting],
-    presetTags: ['رسمی', 'مذهبی', 'دولتی', 'مردمی', 'سنتی'],
-    searchFields: ['name', 'summary', 'descriptionFa'],
-  },
-  {
-    id: 'war', key: 'war', nameFa: 'برنامه‌های جنگ و بحران', name: 'War & Conflict',
-    color: '#991b1b', description: 'برنامه‌های تلویزیونی با موضوع جنگ و منازعات',
-    filterFn: s => s.category.includes('جنگ') || s.category.includes('بحران') || s.category.includes('منازعه'),
-    tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
-    presetTags: ['مستند جنگ', 'تحلیل نظامی', 'خبری', 'بیانیه', 'مصاحبه'],
-    searchFields: ['name', 'summary', 'descriptionFa'],
-  },
-  {
-    id: 'debate', key: 'debate', nameFa: 'مناظرات انتخاباتی', name: 'Electoral Debates',
-    color: '#1e40af', description: 'مناظرات و بحث‌های انتخاباتی',
-    filterFn: s => s.category.includes('مناظره') || s.category.includes('انتخابات'),
-    tags: [TAG_LIBRARY.layout, TAG_LIBRARY.viewers],
-    presetTags: ['ریاست جمهوری', 'پارلمانی', 'محلی', 'حزبی', 'تلویزیونی'],
-    searchFields: ['name', 'summary', 'descriptionFa', 'layout'],
-  },
-  {
-    id: 'rural', key: 'rural', nameFa: 'برنامه‌های روستایی', name: 'Rural Programs',
-    color: '#65a30d', description: 'برنامه‌های تلویزیونی حوزه روستا و کشاورزی',
-    filterFn: s => s.category.includes('روستا') || s.category.includes('کشاورزی') || s.category.includes('دامداری') || s.category.includes('روستایی'),
-    tags: [TAG_LIBRARY.style, TAG_LIBRARY.elements],
-    presetTags: ['کشاورزی', 'دامداری', 'گردشگری', 'زنان روستا', 'صنایع دستی', 'مهاجرت', 'آب‌آوری', 'محیط زیست'],
-    searchFields: ['name', 'summary', 'descriptionFa', 'category'],
-  },
-  {
-    id: 'prison', key: 'prison', nameFa: 'برنامه‌های حوزه زندان', name: 'Prison Programs',
-    color: '#475569', description: 'برنامه‌های تلویزیونی با موضوع زندان و زندانیان',
-    filterFn: s => s.category.includes('زندان') || s.category.includes('زندانی') || s.category.includes('بازپروری'),
-    tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting],
-    presetTags: ['مستند', 'درام', 'واقعیت‌نما', 'بازپروری', 'حقوقی', 'اجتماعی'],
-    searchFields: ['name', 'summary', 'descriptionFa', 'category'],
   },
   {
     id: 'ads', key: 'ads', nameFa: 'آگهی‌های تبلیغاتی', name: 'Advertisements',
@@ -420,10 +380,10 @@ function generateThumbnailColors(show: TalkShow): { gradient: string; pattern: s
   else if (colorStr.includes('yellow') || colorStr.includes('زرد')) primary = '#f59e0b';
   else if (colorStr.includes('green') || colorStr.includes('سبز')) primary = '#00bcd4';
   else if (colorStr.includes('gold') || colorStr.includes('طلایی')) primary = '#b45309';
-  else if (colorStr.includes('white') || colorStr.includes('سفید')) primary = '#102a43';
+  else if (colorStr.includes('white') || colorStr.includes('سفید')) primary = '#8b9bb4';
 
   if (colorStr.includes('wood') || colorStr.includes('چوب')) secondary = '#92400e';
-  else if (colorStr.includes('dark') || colorStr.includes('تاریک')) secondary = '#0a1929';
+  else if (colorStr.includes('dark') || colorStr.includes('تاریک')) secondary = '#e2e8f0';
   else if (colorStr.includes('black') || colorStr.includes('مشکی')) secondary = '#0a0a0a';
   else secondary = primary + '88';
 
@@ -457,7 +417,7 @@ function getVideoPlatformInfo(url: string): { name: string; icon: string; color:
   if (url.includes('dailymotion.com')) return { name: 'Dailymotion', icon: '📺', color: '#0066dc' };
   if (url.includes('t.me') || url.includes('telegram')) return { name: 'تلگرام', icon: '✈', color: '#0088cc' };
   if (url.includes('instagram.com')) return { name: 'اینستاگرام', icon: '📷', color: '#e1306c' };
-  return { name: 'ویدیو', icon: '🎬', color: '#6B7280' };
+  return { name: 'ویدیو', icon: '🎬', color: '#64748b' };
 }
 
 // ============================================
@@ -469,9 +429,9 @@ function ShowImageGallery({ images, showName }: { images: string[]; showName: st
 
   return (
     <div className="mb-6">
-      <h4 className="font-bold mb-3" style={{ color: '#FFFFFF' }}>
+      <h4 className="font-bold mb-3" style={{ color: '#e2e8f0' }}>
         🖼 تصاویر برنامه
-        <span className="text-xs font-normal mr-2" style={{ color: '#6B7280' }}>
+        <span className="text-xs font-normal mr-2" style={{ color: '#64748b' }}>
           ({images.length.toLocaleString('fa-IR')} تصویر)
         </span>
       </h4>
@@ -622,1139 +582,8 @@ function applyOverrides(base: TalkShow[], o: Overrides): TalkShow[] {
   return [...o.added, ...out];
 }
 
-// ============================================
-// i18n — Persian (default) / English UI strings.
-// Program data (names, descriptions) stays in Persian; only chrome strings translate.
-// ============================================
-type Lang = 'fa' | 'en';
-
-type StringKey =
-  | 'app_title'
-  | 'app_subtitle'
-  | 'archive_title'
-  | 'genres_section'
-  | 'all_programs'
-  | 'add_program'
-  | 'search'
-  | 'search_in'
-  | 'reports'
-  | 'settings'
-  | 'logout'
-  | 'dashboard'
-  | 'bookmarks'
-  | 'related_programs'
-  | 'compare'
-  | 'compare_mode'
-  | 'compare_count'
-  | 'multi_select'
-  | 'multi_select_count'
-  | 'grid_view'
-  | 'list_view'
-  | 'islamic'
-  | 'has_image'
-  | 'has_video'
-  | 'programs_count'
-  | 'no_programs'
-  | 'no_programs_desc'
-  | 'loading'
-  | 'login'
-  | 'login_btn'
-  | 'username'
-  | 'password'
-  | 'show_password'
-  | 'hide_password'
-  | 'logging_in'
-  | 'back'
-  | 'menu'
-  | 'close'
-  | 'connected'
-  | 'banke_rasane'
-  | 'total_programs'
-  | 'uploaded'
-  | 'with_image'
-  | 'version'
-  | 'add_genre'
-  | 'add_to_compare'
-  | 'remove_from_compare'
-  | 'add_to_bookmarks'
-  | 'remove_from_bookmarks'
-  | 'show_num'
-  | 'about_program'
-  | 'compare_two_programs'
-  | 'clear_list'
-  | 'close_btn'
-  | 'difference'
-  | 'help_diff'
-  | 'program_first'
-  | 'program_second'
-  | 'field'
-  | 'decor_programs'
-  | 'preserved_genre'
-  | 'genre_count_suffix'
-  | 'no_access'
-  | 'no_access_desc'
-  | 'role_admin'
-  | 'role_editor'
-  | 'role_viewer'
-  | 'settings_title'
-  | 'page_x_of_y'
-  | 'showing_x_y_of_z'
-  | 'prev'
-  | 'next'
-  | 'cancel'
-  | 'download'
-  | 'total'
-  | 'genre'
-  | 'type'
-  | 'date'
-  | 'action'
-  | 'title'
-  | 'available_reports'
-  | 'pdf'
-  | 'excel'
-  | 'all'
-  | 'size_label'
-  | 'style_label'
-  | 'large_lux'
-  | 'medium_std'
-  | 'small_econ'
-  | 'modern'
-  | 'composite'
-  | 'minimal'
-  | 'classic'
-  | 'switch_to_light'
-  | 'switch_to_dark'
-  | 'switch_to_en'
-  | 'switch_to_fa'
-  // ----- Added keys (full i18n) -----
-  | 'enter_username_password'
-  | 'login_failed'
-  | 'default_user_hint'
-  | 'nav_dashboard_desc'
-  | 'nav_programs_desc'
-  | 'nav_bookmarks_desc'
-  | 'nav_add_desc'
-  | 'nav_reports_desc'
-  | 'dashboard_subtitle'
-  | 'view_search'
-  | 'islamic_only_desc'
-  | 'has_image_only_desc'
-  | 'has_video_only_desc'
-  | 'view_only_desc'
-  | 'selected'
-  | 'publish_social'
-  | 'pdf_report'
-  | 'excel_report'
-  | 'decor_classic_traditional'
-  | 'decor_lux_decorative'
-  | 'decor_unknown'
-  | 'decor_neutral'
-  | 'decor_warm'
-  | 'decor_cold'
-  | 'decor_dramatic'
-  | 'with_audience'
-  | 'without_audience'
-  | 'program_no_label'
-  | 'videos_of_program'
-  | 'videos_count_suffix'
-  | 'direct_access'
-  | 'watch_on_youtube'
-  | 'imdb_page'
-  | 'wikipedia_page'
-  | 'bookmarked'
-  | 'bookmark_verb'
-  | 'edit'
-  | 'delete_program'
-  | 'confirm_delete_question'
-  | 'yes_delete'
-  | 'decor_scene_specs'
-  | 'category_label'
-  | 'decor_style'
-  | 'studio_size'
-  | 'audience'
-  | 'effects'
-  | 'layout'
-  | 'lighting'
-  | 'decor_elements'
-  | 'materials'
-  | 'colors'
-  | 'decor_summary'
-  | 'tags_label'
-  | 'detected_countries'
-  | 'origin_country_entered'
-  | 'program_name_required'
-  | 'origin_country_label'
-  | 'name_placeholder'
-  | 'country_placeholder'
-  | 'about_program_fa'
-  | 'persian_description_placeholder'
-  | 'decor_summary_placeholder'
-  | 'program_images'
-  | 'image_count_of'
-  | 'first_image_cover'
-  | 'compression_notice'
-  | 'paste_image_url'
-  | 'add_link'
-  | 'upload_file'
-  | 'no_images_yet'
-  | 'cover_badge'
-  | 'add_btn'
-  | 'program_videos'
-  | 'video_constraints'
-  | 'select_video_file'
-  | 'youtube_search_link'
-  | 'paste_video_url'
-  | 'add_video'
-  | 'open_btn'
-  | 'move_left'
-  | 'move_right'
-  | 'edit_program'
-  | 'add_new_program'
-  | 'edit_program_no'
-  | 'fill_form_below'
-  | 'auto_fetch_info'
-  | 'auto_fetch_desc'
-  | 'auto_fetch_placeholder'
-  | 'fetching'
-  | 'fetch_btn'
-  | 'elements_placeholder'
-  | 'materials_placeholder'
-  | 'colors_placeholder'
-  | 'update_btn'
-  | 'add_program_btn'
-  | 'add_genre_new'
-  | 'genre_name_required'
-  | 'genre_name_placeholder'
-  | 'description_label'
-  | 'description_placeholder'
-  | 'genre_color_label'
-  | 'preview_label'
-  | 'save_genre'
-  | 'publish_social_title'
-  | 'select_platform'
-  | 'post_preview'
-  | 'direct_send_to'
-  | 'bot_configured'
-  | 'bot_config_required'
-  | 'bot_settings'
-  | 'configure_bot'
-  | 'sending'
-  | 'manual_publish_to'
-  | 'select_platform_first'
-  | 'bot_config_title'
-  | 'bot_config_help_intro'
-  | 'bot_config_help_tg'
-  | 'bot_config_help_bale'
-  | 'bot_config_help_admin'
-  | 'platform_label'
-  | 'telegram_label'
-  | 'bale_label'
-  | 'bot_token_label'
-  | 'chat_id_label'
-  | 'chat_id_help'
-  | 'test_connection'
-  | 'testing'
-  | 'save_settings'
-  | 'clear_btn'
-  | 'hide_btn'
-  | 'show_btn'
-  | 'pdf_preview_title'
-  | 'excel_preview_title'
-  | 'program_count_label'
-  | 'format_label'
-  | 'report_title_full'
-  | 'banke_rasane_archive'
-  | 'programs_unit'
-  | 'genre_category_unit'
-  | 'report_structure'
-  | 'section_exec_summary'
-  | 'section_exec_summary_desc'
-  | 'section_methodology'
-  | 'section_methodology_desc'
-  | 'section_stats_overview'
-  | 'section_stats_overview_desc'
-  | 'section_genre_analysis'
-  | 'section_genre_analysis_desc'
-  | 'section_decor_analysis'
-  | 'section_decor_analysis_desc'
-  | 'section_program_list'
-  | 'section_program_list_desc'
-  | 'section_conclusion'
-  | 'section_conclusion_desc'
-  | 'section_appendix'
-  | 'section_appendix_desc'
-  | 'sample_program_card'
-  | 'sample_program'
-  | 'identifier_label'
-  | 'excel_banke_rasane'
-  | 'name_col'
-  | 'category_col'
-  | 'generating'
-  | 'download_file'
-  | 'pdf_help_text'
-  | 'print_dialog_help'
-  | 'banke_rasane_stats_reports'
-  | 'no_programs_for_report'
-  | 'system_settings_title'
-  | 'close_settings'
-  | 'tab_server'
-  | 'tab_users'
-  | 'tab_password'
-  | 'tab_audit'
-  | 'api_server_url'
-  | 'api_server_desc'
-  | 'save_address'
-  | 'server_help'
-  | 'users_management'
-  | 'users_management_desc'
-  | 'add_new_user'
-  | 'username_placeholder'
-  | 'display_name_optional'
-  | 'password_placeholder_min'
-  | 'create_user'
-  | 'creating'
-  | 'current_users'
-  | 'change_password_title'
-  | 'change_password_desc'
-  | 'current_account'
-  | 'current_password'
-  | 'new_password'
-  | 'confirm_new_password'
-  | 'password_mismatch'
-  | 'change_password_btn'
-  | 'audit_log_title'
-  | 'audit_log_desc'
-  | 'refresh'
-  | 'action_create'
-  | 'action_update'
-  | 'action_delete'
-  | 'program_hash'
-  | 'program_created_log'
-  | 'program_deleted_log'
-  | 'field_log'
-  | 'no_changes_recorded'
-  | 'loading_users'
-  | 'loading_history'
-  | 'error_loading_users'
-  | 'error_loading_history'
-  | 'cannot_delete_self'
-  | 'cannot_change_role_self'
-  | 'help_label'
-  | 'clear_compare_list'
-  | 'values_differ'
-  | 'name_program'
-  | 'connection_ok'
-  | 'connection_invalid_response'
-  | 'connection_error'
-  | 'server_url_saved'
-  | 'user_created_toast'
-  | 'user_deleted_toast'
-  | 'user_role_changed_toast'
-  | 'role_changed_self_toast'
-  | 'fill_three_fields'
-  | 'password_min_length'
-  | 'passwords_dont_match'
-  | 'password_must_differ'
-  | 'password_changed_toast'
-  | 'error_changing_password'
-  | 'fetch_imdb_wiki_prompt'
-  | 'fetch_error_toast'
-  | 'fetch_success_toast'
-  | 'name_required_toast'
-  | 'max_images_toast'
-  | 'image_duplicate_toast'
-  | 'images_added_partial_toast'
-  | 'image_compress_error_toast'
-  | 'fetch_failed_toast'
-  | 'delete_user_confirm'
-  | 'tags_hint'
-  | 'tags_placeholder'
-  | 'preset_tags_hint'
-  | 'clear_all'
-  | 'banke_rasane_brand'
-  | 'bot_token_required'
-  | 'bot_test_ok'
-  | 'bot_test_invalid'
-  | 'bot_test_network_error'
-  | 'bot_config_required_toast'
-  | 'post_sent_to'
-  | 'post_send_failed'
-  | 'post_send_network_error'
-  | 'edit_field'
-  | 'archive_intro_subtitle'
-  | 'archive_comprehensive_report'
-  | 'report_sample_card_intro'
-  | 'full_report_detailed_first'
-  | 'social_card_brand'
-  | 'social_card_programs_count'
-  | 'social_card_more_count'
-  | 'genre_preview_default'
-  | 'genre_default_desc';
-
-const STRINGS: Record<Lang, Record<StringKey, string>> = {
-  fa: {
-    app_title: 'آرشیو تخصصی برنامه‌های تلویزیونی',
-    app_subtitle: 'بانک اطلاعاتی برنامه‌های تلویزیونی',
-    archive_title: 'آرشیو تخصصی برنامه‌های تلویزیونی',
-    genres_section: 'ژانرها',
-    all_programs: 'همهٔ برنامه‌ها',
-    add_program: 'افزودن برنامه',
-    search: 'جستجو',
-    search_in: 'جستجو در',
-    reports: 'گزارش‌ها',
-    settings: 'تنظیمات',
-    logout: 'خروج',
-    dashboard: 'آرشیو',
-    bookmarks: 'برنامه‌های نشان‌شده',
-    related_programs: 'برنامه‌های مرتبط',
-    compare: 'مقایسه',
-    compare_mode: 'حالت مقایسه',
-    compare_count: 'مقایسه',
-    multi_select: 'انتخاب چندتایی',
-    multi_select_count: 'انتخاب',
-    grid_view: 'نمایش شبکه‌ای',
-    list_view: 'نمایش لیستی',
-    islamic: 'اسلامی',
-    has_image: 'با تصویر',
-    has_video: 'با ویدیو',
-    programs_count: 'برنامه',
-    no_programs: 'برنامه‌ای یافت نشد',
-    no_programs_desc: 'با فیلترهای فعلی برنامه‌ای موجود نیست. فیلترها را تغییر دهید یا واژهٔ دیگری جستجو کنید.',
-    loading: 'در حال بارگذاری...',
-    login: 'ورود به برنامه',
-    login_btn: 'ورود به برنامه',
-    username: 'نام کاربری',
-    password: 'رمز عبور',
-    show_password: 'نمایش رمز',
-    hide_password: 'پنهان کردن رمز',
-    logging_in: 'در حال ورود...',
-    back: 'بازگشت',
-    menu: 'منو',
-    close: 'بستن',
-    connected: 'متصل',
-    banke_rasane: 'بانک رسانه',
-    total_programs: 'کل برنامه‌ها',
-    uploaded: 'آپلود شده',
-    with_image: 'با تصویر',
-    version: 'نسخه ۲.۰.۰',
-    add_genre: 'افزودن ژانر',
-    add_to_compare: 'افزودن به مقایسه',
-    remove_from_compare: 'حذف از مقایسه',
-    add_to_bookmarks: 'افزودن به نشان‌شده‌ها',
-    remove_from_bookmarks: 'حذف از نشان‌شده‌ها',
-    show_num: 'شماره',
-    about_program: 'دربارهٔ برنامه',
-    compare_two_programs: 'مقایسهٔ دو برنامه',
-    clear_list: 'پاک کردن',
-    close_btn: 'بستن',
-    difference: 'تفاوت',
-    help_diff: 'ردیف‌هایی که با نشانگر «تفاوت» خروجی‌دار شده‌اند، در دو برنامه متفاوت هستند. مقادیر مشابه بدون تغییر باقی می‌مانند.',
-    program_first: 'برنامهٔ اول',
-    program_second: 'برنامهٔ دوم',
-    field: 'فیلد',
-    decor_programs: 'دکور برنامه‌ها',
-    preserved_genre: 'ژانر',
-    genre_count_suffix: 'برنامه',
-    no_access: 'دسترسی غیرمجاز',
-    no_access_desc: 'شما اجازهٔ افزودن یا ویرایش برنامه‌ها را ندارید. برای دسترسی کامل با حساب مدیر یا ویراستار وارد شوید.',
-    role_admin: 'مدیر سیستم',
-    role_editor: 'ویراستار',
-    role_viewer: 'بیننده',
-    settings_title: 'تنظیمات سیستم',
-    page_x_of_y: 'صفحهٔ',
-    showing_x_y_of_z: 'نمایش',
-    prev: 'قبلی',
-    next: 'بعدی',
-    cancel: 'لغو',
-    download: 'دانلود',
-    total: 'کل',
-    genre: 'ژانرها',
-    type: 'نوع',
-    date: 'تاریخ',
-    action: 'عملیات',
-    title: 'عنوان',
-    available_reports: 'گزارش‌های موجود',
-    pdf: 'PDF',
-    excel: 'Excel',
-    all: 'همه',
-    size_label: 'اندازه:',
-    style_label: 'سبک:',
-    large_lux: 'بزرگ/لوکس',
-    medium_std: 'متوسط',
-    small_econ: 'کوچک',
-    modern: 'مدرن',
-    composite: 'ترکیبی',
-    minimal: 'مینیمال',
-    classic: 'کلاسیک',
-    switch_to_light: 'تغییر به حالت روشن',
-    switch_to_dark: 'تغییر به حالت تیره',
-    switch_to_en: 'Switch to English',
-    switch_to_fa: 'تغییر به فارسی',
-    // ----- Added fa translations -----
-    enter_username_password: 'نام کاربری و رمز عبور را وارد کنید',
-    login_failed: 'ورود ناموفق بود',
-    default_user_hint: 'نام کاربری پیش‌فرض: ',
-    nav_dashboard_desc: 'صفحهٔ اصلی و ژانرها',
-    nav_programs_desc: 'لیست کامل برنامه‌ها',
-    nav_bookmarks_desc: 'برنامه‌هایی که نشان کرده‌اید',
-    nav_add_desc: 'افزودن یا ویرایش برنامه',
-    nav_reports_desc: 'آمار و خروجی',
-    dashboard_subtitle: 'بانک اطلاعاتی {n} برنامهٔ تلویزیونی در {g} ژانر',
-    view_search: 'مشاهده و جستجو',
-    islamic_only_desc: 'فقط برنامه‌های مرتبط با کشورهای اسلامی',
-    has_image_only_desc: 'فقط برنامه‌های دارای تصویر',
-    has_video_only_desc: 'فقط برنامه‌های دارای ویدیو',
-    view_only_desc: 'فقط مشاهده — برای افزودن یا ویرایش با حساب مدیر وارد شوید',
-    selected: 'برنامه انتخاب شده',
-    publish_social: 'انتشار در شبکه‌های اجتماعی',
-    pdf_report: 'گزارش PDF',
-    excel_report: 'گزارش Excel',
-    decor_classic_traditional: 'کلاسیک/سنتی',
-    decor_lux_decorative: 'فاخر/تزئینی',
-    decor_unknown: 'نامشخص',
-    decor_neutral: 'خنثی',
-    decor_warm: 'گرم',
-    decor_cold: 'سرد',
-    decor_dramatic: 'دراماتیک',
-    with_audience: 'با تماشاگر',
-    without_audience: 'بدون تماشاگر',
-    program_no_label: 'برنامهٔ شمارهٔ',
-    videos_of_program: 'ویدیوهای برنامه',
-    videos_count_suffix: 'ویدیو',
-    direct_access: 'دسترسی مستقیم',
-    watch_on_youtube: 'تماشا در یوتیوب',
-    imdb_page: 'صفحهٔ IMDb',
-    wikipedia_page: 'ویکی‌پدیا',
-    bookmarked: 'نشان‌شده',
-    bookmark_verb: 'نشان کردن',
-    edit: 'ویرایش',
-    delete_program: 'حذف برنامه',
-    confirm_delete_question: 'این برنامه حذف شود؟ (قابل بازگشت نیست)',
-    yes_delete: 'بله، حذف کن',
-    decor_scene_specs: 'مشخصات دکور و صحنه',
-    category_label: 'دسته‌بندی',
-    decor_style: 'سبک دکور',
-    studio_size: 'اندازهٔ استودیو',
-    audience: 'تماشاگر',
-    effects: 'جلوه‌ها',
-    layout: 'چیدمان',
-    lighting: 'نورپردازی',
-    decor_elements: 'عناصر دکور',
-    materials: 'مواد',
-    colors: 'رنگ‌آمیزی',
-    decor_summary: 'خلاصهٔ دکور',
-    tags_label: 'برچسب‌ها',
-    detected_countries: 'کشورهای شناسایی‌شده:',
-    origin_country_entered: 'کشور مبدا (وارد شده):',
-    program_name_required: 'نام برنامه *',
-    origin_country_label: 'کشور مبدا',
-    name_placeholder: 'مثلاً: BBC Breakfast',
-    country_placeholder: 'مثلاً: ایران، ترکیه',
-    about_program_fa: 'دربارهٔ برنامه (فارسی)',
-    persian_description_placeholder: 'توضیحات فارسی دربارهٔ برنامه — چه برنامه‌ای است، چه محتوایی دارد...',
-    decor_summary_placeholder: 'توضیحات کامل دکور و صحنهٔ برنامه...',
-    program_images: 'تصاویر برنامه',
-    image_count_of: 'از',
-    first_image_cover: 'تصویر اول = کاور',
-    compression_notice: '📐 تصاویر آپلودی به‌صورت خودکار به حداکثر عرض ۱۲۸۰ پیکسل تغییر اندازه و با کیفیت JPEG ۸۰٪ فشرده می‌شوند.',
-    paste_image_url: 'لینک تصویر را اینجا بچسبانید...',
-    add_link: 'افزودن لینک',
-    upload_file: 'آپلود فایل',
-    no_images_yet: 'هنوز تصویری اضافه نشده. می‌تونید لینک بچسبانید یا فایل آپلود کنید.',
-    cover_badge: 'کاور',
-    add_btn: 'افزودن',
-    program_videos: 'ویدیوهای برنامه',
-    video_constraints: '🎞 ویدیوهای مستقیم: حداکثر ۳۰ ثانیه و ۵ مگابایت. ویدیوهای بلندتر را روی یوتیوب/آپارات بارگذاری کرده و لینک اضافه کنید.',
-    select_video_file: '🎞 انتخاب فایل ویدیو',
-    youtube_search_link: 'لینک جستجوی یوتیوب (خودکار)',
-    paste_video_url: 'لینک ویدیو (یوتیوب، آپارات، Vimeo، تلگرام و...) را بچسبانید',
-    add_video: 'افزودن ویدیو',
-    open_btn: 'باز کردن',
-    move_left: 'به چپ',
-    move_right: 'به راست',
-    edit_program: 'ویرایش برنامه',
-    add_new_program: 'افزودن برنامهٔ جدید',
-    edit_program_no: 'ویرایش برنامهٔ شمارهٔ {n}',
-    fill_form_below: 'فرم زیر را پر کنید',
-    auto_fetch_info: '⚡ دریافت خودکار اطلاعات',
-    auto_fetch_desc: 'لینک IMDb یا ویکی‌پدیا برنامه را وارد کنید تا نام، توضیحات، تصویر و سایر اطلاعات خودکار دریافت شود.',
-    auto_fetch_placeholder: 'https://www.imdb.com/title/... یا https://fa.wikipedia.org/...',
-    fetching: '⏳ در حال دریافت...',
-    fetch_btn: '⚡ دریافت',
-    elements_placeholder: 'مثلاً: plants, screens/monitors',
-    materials_placeholder: 'مثلاً: wood, glass, metal',
-    colors_placeholder: 'مثلاً: red, blue, white',
-    update_btn: '✓ بروزرسانی',
-    add_program_btn: '+ افزودن برنامه',
-    add_genre_new: '+ افزودن ژانر جدید',
-    genre_name_required: 'نام ژانر *',
-    genre_name_placeholder: 'مثلاً: مستند، انیمیشن، کودک...',
-    description_label: 'توضیحات',
-    description_placeholder: 'توضیح کوتاه دربارهٔ این ژانر...',
-    genre_color_label: 'رنگ ژانر',
-    preview_label: 'پیش‌نمایش:',
-    save_genre: '✓ ذخیره ژانر',
-    publish_social_title: '📱 انتشار در شبکه‌های اجتماعی',
-    select_platform: 'انتخاب پلتفرم',
-    post_preview: 'پیش‌نمایش پست',
-    direct_send_to: '📡 ارسال مستقیم به {platform}',
-    bot_configured: 'ربات {platform} پیکربندی شده — مقصد: {chatId}',
-    bot_config_required: 'برای ارسال مستقیم، ابتدا توکن ربات و شناسهٔ کانال را وارد کنید',
-    bot_settings: '⚙ تنظیمات ربات',
-    configure_bot: '＋ پیکربندی ربات',
-    sending: '⏳ در حال ارسال...',
-    manual_publish_to: '📤 انتشار دستی در {platform}',
-    select_platform_first: 'ابتدا پلتفرم را انتخاب کنید',
-    bot_config_title: '⚙ تنظیمات ربات انتشار',
-    bot_config_help_intro: 'برای ارسال مستقیم پست‌ها به کانال یا گروه، یک ربات بسازید و آن را ادمین مقصد کنید:',
-    bot_config_help_tg: '• تلگرام: ربات @BotFather → /newbot',
-    bot_config_help_bale: '• بله: ربات @BotFather@ → ساخت ربات جدید',
-    bot_config_help_admin: '• سپس ربات را به کانال/گروه ادمین کنید',
-    platform_label: 'پلتفرم',
-    telegram_label: 'تلگرام',
-    bale_label: 'بله',
-    bot_token_label: 'توکن ربات (Bot Token)',
-    chat_id_label: 'شناسهٔ مقصد (Chat ID)',
-    chat_id_help: 'برای کانال: نام کاربری کانال (مثل @mychannel) یا Chat ID عددی. برای چت خصوصی: Chat ID عددی شما.',
-    test_connection: '🔍 تست اتصال',
-    testing: '⏳ در حال بررسی...',
-    save_settings: '✓ ذخیره تنظیمات',
-    clear_btn: '🗑 پاک کردن',
-    hide_btn: '🙈 پنهان',
-    show_btn: '👁 نمایش',
-    pdf_preview_title: '📄 پیش‌نمایش گزارش PDF',
-    excel_preview_title: '📊 پیش‌نمایش گزارش Excel',
-    program_count_label: 'تعداد برنامه‌ها',
-    format_label: 'فرمت',
-    report_title_full: 'گزارش جامع آرشیو برنامه‌های تلویزیونی',
-    banke_rasane_archive: 'بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی',
-    programs_unit: 'برنامه',
-    genre_category_unit: 'دستهٔ ژانری',
-    report_structure: 'ساختار گزارش (۸ بخش) — هر بخش شامل توضیحات کامل',
-    section_exec_summary: 'خلاصه اجرایی',
-    section_exec_summary_desc: 'مرور کلی آرشیو، حجم داده‌ها، یافته‌های کلیدی و نکات مهم برای تصمیم‌گیرندگان',
-    section_methodology: 'روش جمع‌آوری داده',
-    section_methodology_desc: 'توضیح منابع داده، فرایند طبقه‌بندی ژانری و رویکرد ترکیبی',
-    section_stats_overview: 'نمای آماری کلی',
-    section_stats_overview_desc: '۴ کارت آماری + ۵ نمودار میله‌ای: اندازه استودیو، سبک دکور، تماشاگر، نورپردازی، چیدمان',
-    section_genre_analysis: 'تحلیل توزیع ژانرها',
-    section_genre_analysis_desc: 'نمودار کامل توزیع + معرفی تفصیلی هر دسته با شمارش، درصد، و برنامه‌های شاخص',
-    section_decor_analysis: 'تحلیل دکور و صحنه',
-    section_decor_analysis_desc: '۴ نمودار: عناصر پرتکرار صحنه، مصالح، طیف رنگی، نورپردازی + یافته‌های تحلیلی',
-    section_program_list: 'فهرست تفصیلی برنامه‌ها',
-    section_program_list_desc: 'کارت کامل برای هر برنامه: تصویر، توضیحات فارسی، تگ‌ها، مشخصات دکور، خلاصه',
-    section_conclusion: 'نتیجه‌گیری و پیشنهادها',
-    section_conclusion_desc: 'جمع‌بندی یافته‌ها + ۵ پیشنهاد اجرایی + بخش امضا و تاریخ',
-    section_appendix: 'پیوست: نمایهٔ الفبایی',
-    section_appendix_desc: 'فهرست کامل همهٔ برنامه‌ها به ترتیب الفبایی با شماره و دستهٔ ژانری',
-    sample_program_card: 'نمونه کارت برنامه (از بخش ۶)',
-    sample_program: 'نمونه برنامه',
-    identifier_label: 'شناسه:',
-    excel_banke_rasane: 'بانک رسانه — خروجی Excel',
-    name_col: 'نام',
-    category_col: 'دسته',
-    generating: '⏳ در حال تولید...',
-    download_file: '⬇ دانلود فایل {format}',
-    pdf_help_text: 'گزارش شامل ۸ بخش است: صفحهٔ عنوان، فهرست مطالب، خلاصهٔ اجرایی، روش تحقیق، نمای آماری، تحلیل ژانرها، تحلیل دکور، و معرفی تفصیلی برنامه‌ها.',
-    print_dialog_help: 'پس از کلیک روی دانلود، پنجره چاپ باز می‌شود — مقاس «A4» و «Save as PDF» را انتخاب کنید.',
-    banke_rasane_stats_reports: 'آمار و گزارش‌های بانک رسانه',
-    no_programs_for_report: 'برنامه‌ای برای این گزارش وجود ندارد',
-    system_settings_title: '⚙ تنظیمات سیستم',
-    close_settings: 'بستن تنظیمات',
-    tab_server: 'سرور',
-    tab_users: 'کاربران',
-    tab_password: 'رمز عبور',
-    tab_audit: 'تاریخچه',
-    api_server_url: '🖥 آدرس سرور API',
-    api_server_desc: 'آدرس سرویس API که این برنامه به آن متصل می‌شود. پیش‌فرض:',
-    save_address: '✓ ذخیره آدرس',
-    server_help: 'راهنما: آدرس وارد شده باید ریشهٔ سرویس API باشد (بدون مسیرهای /api/...). اگر از گیتوی Caddy استفاده می‌کنید، می‌توانید آدرس نسبی وارد کنید. پس از ذخیره، توکن فعلی شما معتبر می‌ماند.',
-    users_management: '👥 مدیریت کاربران',
-    users_management_desc: 'افزودن، حذف یا تغییر نقش کاربران سیستم. نقش‌ها: مدیر (دسترسی کامل)، ویراستار (افزودن/ویرایش برنامه‌ها)، بیننده (فقط مشاهده).',
-    add_new_user: '＋ افزودن کاربر جدید',
-    username_placeholder: 'نام کاربری',
-    display_name_optional: 'نام نمایشی (اختیاری)',
-    password_placeholder_min: 'رمز عبور (حداقل ۴ کاراکتر)',
-    create_user: '＋ ایجاد کاربر',
-    creating: '⏳ در حال ایجاد...',
-    current_users: 'کاربران فعلی',
-    change_password_title: '🔑 تغییر رمز عبور',
-    change_password_desc: 'رمز عبور خود را تغییر دهید. پس از تغییر، تمام نشست‌های فعال شما باطل شده و باید دوباره وارد شوید.',
-    current_account: '👤 حساب فعلی:',
-    current_password: 'رمز فعلی',
-    new_password: 'رمز جدید',
-    confirm_new_password: 'تکرار رمز جدید',
-    password_mismatch: '⚠ رمز جدید و تأیید آن یکسان نیستند',
-    change_password_btn: '✓ تغییر رمز عبور',
-    audit_log_title: '📜 تاریخچه تغییرات',
-    audit_log_desc: 'گزارش اخیر افزودن، ویرایش و حذف برنامه‌ها به همراه کاربر انجام‌دهنده و زمان دقیق.',
-    refresh: '↻ بازخوانی',
-    action_create: 'افزودن',
-    action_update: 'ویرایش',
-    action_delete: 'حذف',
-    program_hash: 'برنامهٔ #',
-    program_created_log: 'برنامهٔ «{name}» ایجاد شد.',
-    program_deleted_log: 'برنامهٔ «{name}» حذف شد.',
-    field_log: 'فیلد',
-    no_changes_recorded: 'هیچ تغییری ثبت نشده است.',
-    loading_users: 'در حال بارگذاری...',
-    loading_history: 'در حال بارگذاری...',
-    error_loading_users: 'خطا در بارگذاری کاربران',
-    error_loading_history: 'خطا در بارگذاری تاریخچه',
-    cannot_delete_self: 'نمی‌توانید حساب خودتان را حذف کنید',
-    cannot_change_role_self: 'نمی‌توانید نقش خودتان را تغییر دهید',
-    help_label: 'راهنما:',
-    clear_compare_list: 'پاک کردن فهرست مقایسه',
-    values_differ: 'مقدار در دو برنامه متفاوت است',
-    name_program: 'نام برنامه',
-    connection_ok: 'اتصال برقرار شد ✓',
-    connection_invalid_response: 'پاسخ نامعتبر: {body}',
-    connection_error: 'خطا در اتصال: {msg}',
-    server_url_saved: 'آدرس سرور ذخیره شد. برای اعمال کامل، صفحه را بارگذاری مجدد کنید.',
-    user_created_toast: 'کاربر «{name}» ساخته شد',
-    user_deleted_toast: 'کاربر حذف شد',
-    user_role_changed_toast: 'نقش «{name}» به {role} تغییر کرد',
-    role_changed_self_toast: 'نمی‌توانید نقش خودتان را تغییر دهید',
-    fill_three_fields: 'هر سه فیلد را پر کنید',
-    password_min_length: 'رمز جدید باید حداقل ۴ کاراکتر باشد',
-    passwords_dont_match: 'رمز جدید و تأیید آن یکسان نیستند',
-    password_must_differ: 'رمز جدید باید با رمز فعلی متفاوت باشد',
-    password_changed_toast: 'رمز با موفقیت تغییر کرد. لطفاً دوباره وارد شوید.',
-    error_changing_password: 'خطا در تغییر رمز',
-    fetch_imdb_wiki_prompt: 'لینک IMDb یا ویکی‌پدیا را وارد کنید',
-    fetch_error_toast: 'خطا در دریافت اطلاعات',
-    fetch_success_toast: 'اطلاعات با موفقیت دریافت شد',
-    name_required_toast: 'نام برنامه الزامی است',
-    max_images_toast: 'حداکثر {n} تصویر مجاز است',
-    image_duplicate_toast: 'این تصویر قبلاً اضافه شده',
-    images_added_partial_toast: 'فقط {added} تصویر اضافه شد (حداکثر {max})',
-    image_compress_error_toast: 'خطا در فشرده‌سازی: {name}',
-    fetch_failed_toast: 'خطا: {msg}',
-    delete_user_confirm: 'کاربر «{name}» حذف شود؟',
-    tags_hint: 'برچسب‌ها را با کاما (، یا ,) جدا کنید — مثلاً: مدرن، گرم، چوبی',
-    tags_placeholder: 'مدرن، گرم، چوبی...',
-    preset_tags_hint: 'برچسب‌های پیشنهادی این ژانر:',
-    clear_all: 'پاک کردن همه',
-    banke_rasane_brand: 'بانک رسانه',
-    bot_token_required: 'توکن را وارد کنید',
-    bot_test_ok: '✅ ربات «@{name}» شناسایی شد',
-    bot_test_invalid: '❌ توکن نامعتبر',
-    bot_test_network_error: '❌ خطای شبکه',
-    bot_config_required_toast: 'ابتدا تنظیمات ربات را وارد کنید',
-    post_sent_to: '✅ پست به {platform} ارسال شد',
-    post_send_failed: '❌ {msg}',
-    post_send_network_error: '❌ خطای شبکه هنگام ارسال',
-    edit_field: 'ویرایش',
-    archive_intro_subtitle: '{n} برنامهٔ تلویزیونی در {g} ژانر',
-    archive_comprehensive_report: 'گزارش جامع آرشیو برنامه‌های تلویزیونی',
-    report_sample_card_intro: 'نمونه کارت برنامه (از بخش ۶)',
-    full_report_detailed_first: 'در گزارش کامل، ۸۰ برنامهٔ نخست به‌صورت تفصیلی و همهٔ {n} برنامه در نمایهٔ الفبایی',
-    social_card_brand: 'بانک رسانه',
-    social_card_programs_count: '{n} برنامهٔ منتخب',
-    social_card_more_count: 'و {n} برنامهٔ دیگر...',
-    genre_preview_default: '—',
-    genre_default_desc: 'توضیحات...',
-  },
-  en: {
-    app_title: 'Specialized TV Program Archive',
-    app_subtitle: 'TV Program Database',
-    archive_title: 'Specialized TV Program Archive',
-    genres_section: 'Genres',
-    all_programs: 'All Programs',
-    add_program: 'Add Program',
-    search: 'Search',
-    search_in: 'Search in',
-    reports: 'Reports',
-    settings: 'Settings',
-    logout: 'Logout',
-    dashboard: 'Archive',
-    bookmarks: 'Bookmarks',
-    related_programs: 'Related Programs',
-    compare: 'Compare',
-    compare_mode: 'Compare Mode',
-    compare_count: 'Compare',
-    multi_select: 'Multi-Select',
-    multi_select_count: 'Select',
-    grid_view: 'Grid view',
-    list_view: 'List view',
-    islamic: 'Islamic',
-    has_image: 'With image',
-    has_video: 'With video',
-    programs_count: 'programs',
-    no_programs: 'No programs found',
-    no_programs_desc: 'No programs match the current filters. Try changing the filters or searching for something else.',
-    loading: 'Loading...',
-    login: 'Sign in',
-    login_btn: 'Sign in',
-    username: 'Username',
-    password: 'Password',
-    show_password: 'Show password',
-    hide_password: 'Hide password',
-    logging_in: 'Signing in...',
-    back: 'Back',
-    menu: 'Menu',
-    close: 'Close',
-    connected: 'Connected',
-    banke_rasane: 'Banke Rasaneh',
-    total_programs: 'Total programs',
-    uploaded: 'Uploaded',
-    with_image: 'With image',
-    version: 'Version 2.0.0',
-    add_genre: 'Add Genre',
-    add_to_compare: 'Add to compare',
-    remove_from_compare: 'Remove from compare',
-    add_to_bookmarks: 'Add to bookmarks',
-    remove_from_bookmarks: 'Remove from bookmarks',
-    show_num: 'No.',
-    about_program: 'About this program',
-    compare_two_programs: 'Compare two programs',
-    clear_list: 'Clear',
-    close_btn: 'Close',
-    difference: 'Diff',
-    help_diff: 'Rows tagged with "Diff" differ between the two programs. Identical values appear unchanged.',
-    program_first: 'First program',
-    program_second: 'Second program',
-    field: 'Field',
-    decor_programs: 'Decor programs',
-    preserved_genre: 'Genre',
-    genre_count_suffix: 'programs',
-    no_access: 'Access denied',
-    no_access_desc: 'You do not have permission to add or edit programs. Sign in with an admin or editor account for full access.',
-    role_admin: 'System Admin',
-    role_editor: 'Editor',
-    role_viewer: 'Viewer',
-    settings_title: 'System Settings',
-    page_x_of_y: 'Page',
-    showing_x_y_of_z: 'Showing',
-    prev: 'Prev',
-    next: 'Next',
-    cancel: 'Cancel',
-    download: 'Download',
-    total: 'Total',
-    genre: 'Genres',
-    type: 'Type',
-    date: 'Date',
-    action: 'Action',
-    title: 'Title',
-    available_reports: 'Available reports',
-    pdf: 'PDF',
-    excel: 'Excel',
-    all: 'All',
-    size_label: 'Size:',
-    style_label: 'Style:',
-    large_lux: 'Large/Lux',
-    medium_std: 'Medium',
-    small_econ: 'Small',
-    modern: 'Modern',
-    composite: 'Composite',
-    minimal: 'Minimal',
-    classic: 'Classic',
-    switch_to_light: 'Switch to light mode',
-    switch_to_dark: 'Switch to dark mode',
-    switch_to_en: 'Switch to English',
-    switch_to_fa: 'Switch to Persian',
-    // ----- Added en translations -----
-    enter_username_password: 'Please enter username and password',
-    login_failed: 'Login failed',
-    default_user_hint: 'Default user: ',
-    nav_dashboard_desc: 'Home and genres',
-    nav_programs_desc: 'Full list of programs',
-    nav_bookmarks_desc: 'Programs you bookmarked',
-    nav_add_desc: 'Add or edit a program',
-    nav_reports_desc: 'Stats and exports',
-    dashboard_subtitle: 'Database of {n} TV programs across {g} genres',
-    view_search: 'View & search',
-    islamic_only_desc: 'Only programs related to Islamic countries',
-    has_image_only_desc: 'Only programs with images',
-    has_video_only_desc: 'Only programs with videos',
-    view_only_desc: 'View only — sign in as admin/editor to edit',
-    selected: 'selected',
-    publish_social: 'Publish to social media',
-    pdf_report: 'PDF report',
-    excel_report: 'Excel report',
-    decor_classic_traditional: 'Classic/Traditional',
-    decor_lux_decorative: 'Lux/Decorative',
-    decor_unknown: 'Unknown',
-    decor_neutral: 'Neutral',
-    decor_warm: 'Warm',
-    decor_cold: 'Cold',
-    decor_dramatic: 'Dramatic',
-    with_audience: 'With audience',
-    without_audience: 'Without audience',
-    program_no_label: 'Program No.',
-    videos_of_program: 'Program videos',
-    videos_count_suffix: 'videos',
-    direct_access: 'Direct access',
-    watch_on_youtube: 'Watch on YouTube',
-    imdb_page: 'IMDb page',
-    wikipedia_page: 'Wikipedia',
-    bookmarked: 'Bookmarked',
-    bookmark_verb: 'Bookmark',
-    edit: 'Edit',
-    delete_program: 'Delete program',
-    confirm_delete_question: 'Delete this program? (cannot be undone)',
-    yes_delete: 'Yes, delete',
-    decor_scene_specs: 'Decor and scene specifications',
-    category_label: 'Category',
-    decor_style: 'Decor style',
-    studio_size: 'Studio size',
-    audience: 'Audience',
-    effects: 'Effects',
-    layout: 'Layout',
-    lighting: 'Lighting',
-    decor_elements: 'Decor elements',
-    materials: 'Materials',
-    colors: 'Colors',
-    decor_summary: 'Decor summary',
-    tags_label: 'Tags',
-    detected_countries: 'Detected countries:',
-    origin_country_entered: 'Origin country (entered):',
-    program_name_required: 'Program name *',
-    origin_country_label: 'Origin country',
-    name_placeholder: 'e.g.: BBC Breakfast',
-    country_placeholder: 'e.g.: Iran, Turkey',
-    about_program_fa: 'About this program (Persian)',
-    persian_description_placeholder: 'Persian description about the program — what kind of program it is, what content it has...',
-    decor_summary_placeholder: 'Full description of decor and scene of the program...',
-    program_images: 'Program images',
-    image_count_of: 'of',
-    first_image_cover: 'First image = cover',
-    compression_notice: '📐 Uploaded images are auto-resized to max 1280px width and compressed at JPEG 80% quality.',
-    paste_image_url: 'Paste image URL here...',
-    add_link: 'Add link',
-    upload_file: 'Upload file',
-    no_images_yet: 'No images added yet. You can paste a URL or upload a file.',
-    cover_badge: 'Cover',
-    add_btn: 'Add',
-    program_videos: 'Program videos',
-    video_constraints: '🎞 Direct videos: max 30s and 5MB. Upload longer videos to YouTube/Aparat and add the link.',
-    select_video_file: '🎞 Select video file',
-    youtube_search_link: 'YouTube search link (auto)',
-    paste_video_url: 'Paste video URL (YouTube, Aparat, Vimeo, Telegram...)',
-    add_video: 'Add video',
-    open_btn: 'Open',
-    move_left: 'Move left',
-    move_right: 'Move right',
-    edit_program: 'Edit program',
-    add_new_program: 'Add new program',
-    edit_program_no: 'Edit program No. {n}',
-    fill_form_below: 'Please fill out the form below',
-    auto_fetch_info: '⚡ Auto-fetch info',
-    auto_fetch_desc: 'Enter the program\'s IMDb or Wikipedia link to auto-fill name, description, image and other info.',
-    auto_fetch_placeholder: 'https://www.imdb.com/title/... or https://en.wikipedia.org/...',
-    fetching: '⏳ Fetching...',
-    fetch_btn: '⚡ Fetch',
-    elements_placeholder: 'e.g.: plants, screens/monitors',
-    materials_placeholder: 'e.g.: wood, glass, metal',
-    colors_placeholder: 'e.g.: red, blue, white',
-    update_btn: '✓ Update',
-    add_program_btn: '+ Add program',
-    add_genre_new: '+ Add new genre',
-    genre_name_required: 'Genre name *',
-    genre_name_placeholder: 'e.g.: Documentary, Animation, Kids...',
-    description_label: 'Description',
-    description_placeholder: 'Brief description of this genre...',
-    genre_color_label: 'Genre color',
-    preview_label: 'Preview:',
-    save_genre: '✓ Save genre',
-    publish_social_title: '📱 Publish to social media',
-    select_platform: 'Select platform',
-    post_preview: 'Post preview',
-    direct_send_to: '📡 Direct send to {platform}',
-    bot_configured: 'Bot {platform} configured — destination: {chatId}',
-    bot_config_required: 'For direct send, enter the bot token and channel ID first',
-    bot_settings: '⚙ Bot settings',
-    configure_bot: '＋ Configure bot',
-    sending: '⏳ Sending...',
-    manual_publish_to: '📤 Manual publish to {platform}',
-    select_platform_first: 'Select a platform first',
-    bot_config_title: '⚙ Publishing bot settings',
-    bot_config_help_intro: 'To send posts directly to a channel or group, create a bot and make it admin of the destination:',
-    bot_config_help_tg: '• Telegram: bot @BotFather → /newbot',
-    bot_config_help_bale: '• Bale: bot @BotFather@ → create new bot',
-    bot_config_help_admin: '• Then make the bot admin of the channel/group',
-    platform_label: 'Platform',
-    telegram_label: 'Telegram',
-    bale_label: 'Bale',
-    bot_token_label: 'Bot Token',
-    chat_id_label: 'Destination ID (Chat ID)',
-    chat_id_help: 'For channel: channel username (like @mychannel) or numeric Chat ID. For private chat: your numeric Chat ID.',
-    test_connection: '🔍 Test connection',
-    testing: '⏳ Testing...',
-    save_settings: '✓ Save settings',
-    clear_btn: '🗑 Clear',
-    hide_btn: '🙈 Hide',
-    show_btn: '👁 Show',
-    pdf_preview_title: '📄 PDF report preview',
-    excel_preview_title: '📊 Excel report preview',
-    program_count_label: 'Program count',
-    format_label: 'Format',
-    report_title_full: 'Comprehensive TV Program Archive Report',
-    banke_rasane_archive: 'Banke Rasaneh — Specialized TV Programs Archive',
-    programs_unit: 'programs',
-    genre_category_unit: 'genre categories',
-    report_structure: 'Report structure (8 sections) — each section includes full description',
-    section_exec_summary: 'Executive summary',
-    section_exec_summary_desc: 'Archive overview, data volume, key findings and important notes for decision makers',
-    section_methodology: 'Data collection methodology',
-    section_methodology_desc: 'Explanation of data sources, genre classification process and hybrid approach',
-    section_stats_overview: 'Statistical overview',
-    section_stats_overview_desc: '4 stat cards + 5 bar charts: studio size, decor style, audience, lighting, layout',
-    section_genre_analysis: 'Genre distribution analysis',
-    section_genre_analysis_desc: 'Full distribution chart + detailed introduction of each category with count, percent, and notable programs',
-    section_decor_analysis: 'Decor and scene analysis',
-    section_decor_analysis_desc: '4 charts: recurring scene elements, materials, color palette, lighting + analytical findings',
-    section_program_list: 'Detailed program list',
-    section_program_list_desc: 'Full card for each program: image, Persian description, tags, decor specs, summary',
-    section_conclusion: 'Conclusion and recommendations',
-    section_conclusion_desc: 'Summary of findings + 5 actionable recommendations + signature and date section',
-    section_appendix: 'Appendix: alphabetical index',
-    section_appendix_desc: 'Complete list of all programs in alphabetical order with number and genre category',
-    sample_program_card: 'Sample program card (from section 6)',
-    sample_program: 'Sample program',
-    identifier_label: 'ID:',
-    excel_banke_rasane: 'Banke Rasaneh — Excel output',
-    name_col: 'Name',
-    category_col: 'Category',
-    generating: '⏳ Generating...',
-    download_file: '⬇ Download {format} file',
-    pdf_help_text: 'The report includes 8 sections: title page, table of contents, executive summary, methodology, statistical overview, genre analysis, decor analysis, and detailed program introductions.',
-    print_dialog_help: 'After clicking download, a print dialog will open — choose "A4" size and "Save as PDF".',
-    banke_rasane_stats_reports: 'Banke Rasaneh stats & reports',
-    no_programs_for_report: 'No programs for this report',
-    system_settings_title: '⚙ System settings',
-    close_settings: 'Close settings',
-    tab_server: 'Server',
-    tab_users: 'Users',
-    tab_password: 'Password',
-    tab_audit: 'Audit log',
-    api_server_url: '🖥 API server URL',
-    api_server_desc: 'Address of the API service this app connects to. Default:',
-    save_address: '✓ Save address',
-    server_help: 'Help: the entered address should be the root of the API service (without /api/... paths). If you are using the Caddy gateway, you can enter a relative address. After saving, your current token remains valid.',
-    users_management: '👥 Users management',
-    users_management_desc: 'Add, delete or change roles of system users. Roles: admin (full access), editor (add/edit programs), viewer (view only).',
-    add_new_user: '＋ Add new user',
-    username_placeholder: 'Username',
-    display_name_optional: 'Display name (optional)',
-    password_placeholder_min: 'Password (min 4 chars)',
-    create_user: '＋ Create user',
-    creating: '⏳ Creating...',
-    current_users: 'Current users',
-    change_password_title: '🔑 Change password',
-    change_password_desc: 'Change your password. After changing, all your active sessions will be invalidated and you must sign in again.',
-    current_account: '👤 Current account:',
-    current_password: 'Current password',
-    new_password: 'New password',
-    confirm_new_password: 'Confirm new password',
-    password_mismatch: '⚠ New password and confirmation do not match',
-    change_password_btn: '✓ Change password',
-    audit_log_title: '📜 Audit log',
-    audit_log_desc: 'Recent reports of program additions, edits and deletions with the user and exact time.',
-    refresh: '↻ Refresh',
-    action_create: 'Create',
-    action_update: 'Update',
-    action_delete: 'Delete',
-    program_hash: 'Program #',
-    program_created_log: 'Program "{name}" was created.',
-    program_deleted_log: 'Program "{name}" was deleted.',
-    field_log: 'Field',
-    no_changes_recorded: 'No changes recorded.',
-    loading_users: 'Loading...',
-    loading_history: 'Loading...',
-    error_loading_users: 'Error loading users',
-    error_loading_history: 'Error loading history',
-    cannot_delete_self: 'You cannot delete your own account',
-    cannot_change_role_self: 'You cannot change your own role',
-    help_label: 'Help:',
-    clear_compare_list: 'Clear compare list',
-    values_differ: 'Values differ between the two programs',
-    name_program: 'Program name',
-    connection_ok: 'Connection established ✓',
-    connection_invalid_response: 'Invalid response: {body}',
-    connection_error: 'Connection error: {msg}',
-    server_url_saved: 'Server URL saved. To fully apply, reload the page.',
-    user_created_toast: 'User "{name}" created',
-    user_deleted_toast: 'User deleted',
-    user_role_changed_toast: 'Role of "{name}" changed to {role}',
-    role_changed_self_toast: 'You cannot change your own role',
-    fill_three_fields: 'Please fill out all three fields',
-    password_min_length: 'New password must be at least 4 characters',
-    passwords_dont_match: 'New password and confirmation do not match',
-    password_must_differ: 'New password must differ from current password',
-    password_changed_toast: 'Password changed successfully. Please sign in again.',
-    error_changing_password: 'Error changing password',
-    fetch_imdb_wiki_prompt: 'Please enter IMDb or Wikipedia link',
-    fetch_error_toast: 'Error fetching info',
-    fetch_success_toast: 'Info fetched successfully',
-    name_required_toast: 'Program name is required',
-    max_images_toast: 'Max {n} images allowed',
-    image_duplicate_toast: 'This image is already added',
-    images_added_partial_toast: 'Only {added} image(s) added (max {max})',
-    image_compress_error_toast: 'Error compressing: {name}',
-    fetch_failed_toast: 'Error: {msg}',
-    delete_user_confirm: 'Delete user "{name}"?',
-    tags_hint: 'Separate tags with commas (, or ،) — e.g.: modern, warm, wood',
-    tags_placeholder: 'modern, warm, wood...',
-    preset_tags_hint: 'Suggested tags for this genre:',
-    clear_all: 'Clear all',
-    banke_rasane_brand: 'Banke Rasaneh',
-    bot_token_required: 'Please enter the bot token',
-    bot_test_ok: '✅ Bot "@{name}" identified',
-    bot_test_invalid: '❌ Invalid token',
-    bot_test_network_error: '❌ Network error',
-    bot_config_required_toast: 'Please configure the bot first',
-    post_sent_to: '✅ Post sent to {platform}',
-    post_send_failed: '❌ {msg}',
-    post_send_network_error: '❌ Network error while sending',
-    edit_field: 'Edit',
-    archive_intro_subtitle: '{n} TV programs across {g} genres',
-    archive_comprehensive_report: 'Comprehensive TV Program Archive Report',
-    report_sample_card_intro: 'Sample program card (from section 6)',
-    full_report_detailed_first: 'In the full report, the first 80 programs are detailed and all {n} programs are in the alphabetical index',
-    social_card_brand: 'Banke Rasaneh',
-    social_card_programs_count: '{n} selected programs',
-    social_card_more_count: 'and {n} more programs...',
-    genre_preview_default: '—',
-    genre_default_desc: 'Description...',
-  },
-};
-
-// Language context — wraps the entire app and exposes { lang, setLang, t }.
-type LangContextValue = {
-  lang: Lang;
-  setLang: (l: Lang) => void;
-  t: (key: StringKey, params?: Record<string, string | number>) => string;
-};
-const LangContext = createContext<LangContextValue>({
-  lang: 'fa',
-  setLang: () => {},
-  t: (k) => STRINGS.fa[k],
-});
-
-function LangProvider({ lang, setLang, children }: { lang: Lang; setLang: (l: Lang) => void; children: React.ReactNode }) {
-  const value = useMemo<LangContextValue>(() => ({
-    lang,
-    setLang,
-    t: (k: StringKey, params?: Record<string, string | number>) => {
-      let s = STRINGS[lang][k] || STRINGS.fa[k] || k;
-      if (params) {
-        for (const pk of Object.keys(params)) {
-          s = s.split(`{${pk}}`).join(String(params[pk]));
-        }
-      }
-      return s;
-    },
-  }), [lang, setLang]);
-  return <LangContext.Provider value={value}>{children}</LangContext.Provider>;
-}
-
-function useLang() {
-  return useContext(LangContext);
-}
-
 export default function Home() {
-  const [currentView, setCurrentView] = useState<'dashboard' | 'programs' | 'genre' | 'reports' | 'add' | 'bookmarks'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'programs' | 'genre' | 'reports' | 'add'>('dashboard');
   const [selectedGenre, setSelectedGenre] = useState<Genre | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
@@ -1785,22 +614,6 @@ export default function Home() {
   // When AddEditView opens with a preset genre, its preset tags are offered as quick-adds.
   const [presetGenre, setPresetGenre] = useState<Genre | null>(null);
 
-  // ★ Bookmarks — stored in localStorage as an array of show nums.
-  const [bookmarks, setBookmarks] = useState<number[]>([]);
-  const BOOKMARKS_KEY = 'bankresaneh_bookmarks_v1';
-
-  // ⚖ Compare — list of show nums queued for side-by-side comparison (max 2).
-  const [compareList, setCompareList] = useState<number[]>([]);
-  const [showCompareModal, setShowCompareModal] = useState(false);
-
-  // 🌗 Theme — dark (deep navy/teal) by default; light theme also supported.
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-  const THEME_KEY = 'bankresaneh_theme_v1';
-
-  // 🌐 Language — 'fa' (Persian, default) or 'en' (English UI strings).
-  const [lang, setLang] = useState<'fa' | 'en'>('fa');
-  const LANG_KEY = 'bankresaneh_lang_v1';
-
   // The full list of genres = default GENRES + user customGenres.
   const genres: Genre[] = useMemo(() => [...GENRES, ...customGenres], [customGenres]);
 
@@ -1822,17 +635,6 @@ export default function Home() {
     setOverrides(saved);
     // Restore custom genres saved in a previous session.
     setCustomGenres(loadCustomGenres());
-    // Restore bookmarks saved in a previous session.
-    try {
-      const savedBookmarks = JSON.parse(window.localStorage.getItem(BOOKMARKS_KEY) || '[]');
-      if (Array.isArray(savedBookmarks)) setBookmarks(savedBookmarks);
-    } catch {}
-    // Theme — restore saved preference (dark by default).
-    const savedTheme = window.localStorage.getItem(THEME_KEY);
-    if (savedTheme === 'light' || savedTheme === 'dark') setTheme(savedTheme);
-    // Restore language.
-    const savedLang = window.localStorage.getItem(LANG_KEY);
-    if (savedLang === 'fa' || savedLang === 'en') setLang(savedLang);
     fetch('/talk-shows-data.json')
       .then(r => r.json())
       .then((data: TalkShow[]) => {
@@ -1841,26 +643,6 @@ export default function Home() {
       })
       .catch(e => console.error('Failed to load data:', e));
   }, []);
-
-  // Apply theme + language to the root element.
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const root = document.documentElement;
-    if (theme === 'light') {
-      root.classList.add('light-theme');
-      root.classList.remove('dark-theme');
-    } else {
-      root.classList.add('dark-theme');
-      root.classList.remove('light-theme');
-    }
-  }, [theme]);
-
-  // Apply document direction based on language.
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    document.documentElement.lang = lang;
-    document.documentElement.dir = lang === 'en' ? 'ltr' : 'rtl';
-  }, [lang]);
 
   // On mount: check if a token exists in localStorage, validate via /api/auth/me.
   // If valid → set currentUser (skip login). If invalid → clear token, show login.
@@ -1922,7 +704,7 @@ export default function Home() {
   };
 
   // Push the current view onto the history stack, then go to `to`.
-  const navigate = (to: 'dashboard' | 'programs' | 'genre' | 'reports' | 'add' | 'bookmarks', genre: Genre | null = null) => {
+  const navigate = (to: typeof currentView, genre: Genre | null = null) => {
     setViewStack(prev => [...prev, { view: currentView, genre: selectedGenre }]);
     setCurrentView(to);
     setSelectedGenre(genre);
@@ -1945,7 +727,7 @@ export default function Home() {
 
   const canGoBack = viewStack.length > 0;
 
-  const handleNavigate = (v: 'dashboard' | 'programs' | 'reports' | 'add' | 'bookmarks') => {
+  const handleNavigate = (v: 'dashboard' | 'programs' | 'reports' | 'add') => {
     navigate(v, null);
   };
 
@@ -1972,63 +754,6 @@ export default function Home() {
     setCustomGenres(next);
     saveCustomGenres(next);
     showToast(`ژانر «${g.nameFa}» اضافه شد`);
-  };
-
-  // ★ Toggle a show's bookmark status (added to / removed from bookmarks list).
-  const handleToggleBookmark = (num: number) => {
-    setBookmarks(prev => {
-      const next = prev.includes(num) ? prev.filter(n => n !== num) : [...prev, num];
-      try { window.localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(next)); } catch {}
-      return next;
-    });
-  };
-
-  // ⚖ Toggle a show in the compare queue (max 2 items).
-  // When the SECOND item is added (queue goes from 1 → 2), automatically open the compare modal —
-  // this makes the workflow discoverable. When the user removes items, the modal stays open until
-  // they explicitly close it.
-  const handleToggleCompare = (num: number) => {
-    setCompareList(prev => {
-      if (prev.includes(num)) return prev.filter(n => n !== num);
-      if (prev.length >= 2) {
-        // Replace oldest entry to keep only the latest two.
-        return [prev[1], num];
-      }
-      // Auto-open modal as soon as 2 items are queued.
-      if (prev.length === 1) {
-        // Defer the modal-open to the next tick so compareList updates first.
-        setTimeout(() => setShowCompareModal(true), 0);
-      }
-      return [...prev, num];
-    });
-  };
-
-  // ⚖ Open the compare modal (only meaningful when 2 shows are queued).
-  const handleCompare = () => {
-    if (compareList.length !== 2) {
-      showToast('برای مقایسه، دو برنامه را انتخاب کنید');
-      return;
-    }
-    setShowCompareModal(true);
-  };
-
-
-  // 🌐 Toggle language (fa ↔ en), persist to localStorage.
-  const handleToggleLang = () => {
-    setLang(prev => {
-      const next = prev === 'fa' ? 'en' : 'fa';
-      try { window.localStorage.setItem(LANG_KEY, next); } catch {}
-      return next;
-    });
-  };
-
-  // 🌗 Toggle theme (dark ↔ light), persist to localStorage.
-  const handleToggleTheme = () => {
-    setTheme(prev => {
-      const next = prev === 'dark' ? 'light' : 'dark';
-      try { window.localStorage.setItem(THEME_KEY, next); } catch {}
-      return next;
-    });
   };
 
   const handleLogout = async () => {
@@ -2059,40 +784,30 @@ export default function Home() {
 
   if (authLoading) {
     return (
-      <LangProvider lang={lang} setLang={setLang}>
-        <div className="login-screen min-h-screen relative flex flex-col items-center justify-center">
-          <div className="login-ambient-light green-1"></div>
-          <div className="login-ambient-light green-2"></div>
-          <div className="login-ambient-light green-3"></div>
-          <div className="relative z-20 flex flex-col items-center" style={{ gap: '16px' }}>
-            <div className="w-10 h-10 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(255,255,255,0.25)', borderTopColor: '#26c6da' }}></div>
-            <span style={{ color: 'rgba(128, 222, 234, 0.85)', fontSize: '14px' }}>{STRINGS[lang].loading}</span>
-          </div>
+      <div className="login-screen min-h-screen relative flex flex-col items-center justify-center">
+        <div className="login-ambient-light green-1"></div>
+        <div className="login-ambient-light green-2"></div>
+        <div className="login-ambient-light green-3"></div>
+        <div className="relative z-20 flex flex-col items-center" style={{ gap: '16px' }}>
+          <div className="w-10 h-10 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(255,255,255,0.25)', borderTopColor: '#26c6da' }}></div>
+          <span style={{ color: 'rgba(168, 230, 193, 0.85)', fontSize: '14px' }}>در حال بارگذاری...</span>
         </div>
-      </LangProvider>
+      </div>
     );
   }
 
   if (!currentUser) {
-    return (
-      <LangProvider lang={lang} setLang={setLang}>
-        <LoginScreen onLogin={handleLoginSuccess} />
-      </LangProvider>
-    );
+    return <LoginScreen onLogin={handleLoginSuccess} />;
   }
 
   return (
-    <LangProvider lang={lang} setLang={setLang}>
-      <div className="app-content min-h-screen">
+    <div className="app-content min-h-screen">
       <TopAppBar
         onMenuClick={() => setDrawerOpen(true)}
         isMobile={isMobile}
         currentView={currentView}
         onBack={goBack}
         canGoBack={canGoBack}
-        theme={theme}
-        onToggleTheme={handleToggleTheme}
-        onToggleLang={handleToggleLang}
       />
 
       <DrawerMenu
@@ -2107,39 +822,18 @@ export default function Home() {
         isAdmin={isAdmin}
         talkShows={talkShows}
         genres={genres}
-        bookmarks={bookmarks}
-        onOpenBookmarks={() => navigate('bookmarks', null)}
       />
 
       <main className={isMobile ? 'p-4 pt-20 pb-28' : 'p-8 pt-24'}>
         {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} />}
-        {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} bookmarks={bookmarks} onToggleBookmark={handleToggleBookmark} compareList={compareList} onToggleCompare={handleToggleCompare} onCompare={handleCompare} />}
-        {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} bookmarks={bookmarks} onToggleBookmark={handleToggleBookmark} compareList={compareList} onToggleCompare={handleToggleCompare} onCompare={handleCompare} />}
-        {currentView === 'bookmarks' && (
-          <ProgramsView
-            talkShows={talkShows.filter(s => bookmarks.includes(s.num))}
-            uploadedShows={uploadedShows}
-            setUploadedShows={setUploadedShows}
-            onShowClick={setSelectedShow}
-            onEdit={setEditingShow}
-            showToast={showToast}
-            onPublish={setPublishShows}
-            onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })}
-            canEdit={canEdit}
-            bookmarks={bookmarks}
-            onToggleBookmark={handleToggleBookmark}
-            compareList={compareList}
-            onToggleCompare={handleToggleCompare}
-            onCompare={handleCompare}
-            overrideTitle="برنامه‌های نشان‌شده"
-          />
-        )}
+        {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} />}
+        {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} />}
         {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} onExport={(shows, format) => setExportPreview({ shows, format })} />}
         {currentView === 'add' && canEdit && <AddEditView talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setPresetCategory(undefined); setPresetGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} presetCategory={presetCategory} presetGenre={presetGenre} genres={genres} />}
         {currentView === 'add' && !canEdit && (
           <div className="premium-glass p-8 text-center">
             <h2 className="text-2xl font-bold mb-2" style={{ color: '#dc2626' }}>دسترسی غیرمجاز</h2>
-            <p style={{ color: '#9CA3AF' }}>شما اجازهٔ افزودن یا ویرایش برنامه‌ها را ندارید. برای دسترسی کامل با حساب مدیر یا ویراستار وارد شوید.</p>
+            <p style={{ color: '#8b9bb4' }}>شما اجازهٔ افزودن یا ویرایش برنامه‌ها را ندارید. برای دسترسی کامل با حساب مدیر یا ویراستار وارد شوید.</p>
           </div>
         )}
       </main>
@@ -2169,21 +863,6 @@ export default function Home() {
           isUploaded={uploadedShows.includes(selectedShow.num)}
           canEdit={canEdit}
           onSwapShow={(s) => setSelectedShow(s)}
-          isBookmarked={bookmarks.includes(selectedShow.num)}
-          onToggleBookmark={() => handleToggleBookmark(selectedShow.num)}
-          onAddToCompare={() => {
-            handleToggleCompare(selectedShow.num);
-            showToast(`برنامه به فهرست مقایسه اضافه شد (${Math.min(compareList.length + 1, 2)} از ۲)`);
-          }}
-        />
-      )}
-
-      {/* Compare two programs modal */}
-      {showCompareModal && compareList.length === 2 && (
-        <CompareModal
-          shows={compareList.map(n => talkShows.find(s => s.num === n)).filter(Boolean) as TalkShow[]}
-          onClose={() => setShowCompareModal(false)}
-          onClear={() => { setCompareList([]); setShowCompareModal(false); showToast('فهرست مقایسه پاک شد'); }}
         />
       )}
 
@@ -2254,7 +933,6 @@ export default function Home() {
         </div>
       )}
     </div>
-    </LangProvider>
   );
 }
 
@@ -2262,7 +940,6 @@ export default function Home() {
 // LOGIN SCREEN — real auth (username + password)
 // ============================================
 function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
-  const { t, lang } = useLang();
   const [isReady, setIsReady] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -2277,7 +954,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
     if (loading) return;
     setError(null);
     if (!username.trim() || !password) {
-      setError(t('enter_username_password'));
+      setError('نام کاربری و رمز عبور را وارد کنید');
       return;
     }
     setLoading(true);
@@ -2285,7 +962,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
       const data = await api.login(username.trim(), password);
       onLogin(data.user);
     } catch (err: any) {
-      setError(err?.message || t('login_failed'));
+      setError(err?.message || 'ورود ناموفق بود');
     } finally {
       setLoading(false);
     }
@@ -2297,40 +974,34 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
       <div className="login-ambient-light green-2"></div>
       <div className="login-ambient-light green-3"></div>
 
-      {/* Subtle vignette layer — adds drama around the centered card */}
-      <div
-        aria-hidden
-        className="absolute inset-0 z-0 pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse 60% 50% at 50% 50%, transparent 30%, rgba(0,0,0,0.45) 100%)' }}
-      />
-
       <div
         className={`relative z-20 flex flex-col items-center px-8 transition-all duration-1000 ${isReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
-        style={{ maxWidth: '480px', width: '100%' }}
+        style={{ maxWidth: '440px', width: '100%' }}
       >
-        {/* Logo — larger + dramatic shimmer sweep */}
-        <div className="mb-12 flex justify-center">
+        {/* Logo — gradient light beam sweeps ONLY across the logo pixels.
+            The beam is masked to the logo's own shape via mask-image,
+            so the "برق" appears only on the icon + "بانک رسانه" text. */}
+        <div className="mb-10 flex justify-center">
           <div
             className="logo-shimmer"
             style={{ ['--logo-mask' as string]: 'url(/banke-rasane-logo.png)' }}
           >
             <Image
               src="/banke-rasane-logo.png"
-              alt={t('banke_rasane')}
-              width={440}
-              height={240}
+              alt="بانک رسانه"
+              width={360}
+              height={196}
               priority
-              style={{ width: '100%', height: 'auto', maxWidth: '440px' }}
             />
           </div>
         </div>
 
         {/* Login form */}
-        <form onSubmit={handleSubmit} className="w-full" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <form onSubmit={handleSubmit} className="w-full" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {/* Username */}
           <div>
-            <label htmlFor="login-username" className="block text-sm font-bold mb-2" style={{ color: 'rgba(128, 222, 234, 0.9)' }}>
-              {t('username')}
+            <label htmlFor="login-username" className="block text-sm font-bold mb-2" style={{ color: 'rgba(168, 230, 193, 0.9)' }}>
+              نام کاربری
             </label>
             <input
               id="login-username"
@@ -2341,30 +1012,26 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
               onChange={(e) => setUsername(e.target.value)}
               placeholder="admin"
               disabled={loading}
-              className="input-base"
               style={{
                 width: '100%',
-                background: 'rgba(30, 34, 40, 0.9)',
-                border: '1px solid rgba(0, 188, 212, 0.4)',
-                borderRadius: '14px',
-                padding: '14px 18px',
-                color: '#FFFFFF',
+                background: 'rgba(255, 255, 255, 0.95)',
+                border: '1px solid rgba(38, 198, 218, 0.4)',
+                borderRadius: '12px',
+                padding: '12px 16px',
+                color: '#e2e8f0',
                 fontSize: '15px',
                 fontFamily: 'inherit',
                 outline: 'none',
                 textAlign: 'left',
                 direction: 'ltr',
-                transition: 'border-color 0.25s ease, box-shadow 0.25s ease',
               }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = '#26c6da'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,188,212,0.18)'; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(0, 188, 212, 0.4)'; e.currentTarget.style.boxShadow = 'none'; }}
             />
           </div>
 
           {/* Password with show/hide */}
           <div>
-            <label htmlFor="login-password" className="block text-sm font-bold mb-2" style={{ color: 'rgba(128, 222, 234, 0.9)' }}>
-              {t('password')}
+            <label htmlFor="login-password" className="block text-sm font-bold mb-2" style={{ color: 'rgba(168, 230, 193, 0.9)' }}>
+              رمز عبور
             </label>
             <div className="relative">
               <input
@@ -2378,30 +1045,26 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 disabled={loading}
                 style={{
                   width: '100%',
-                  background: 'rgba(30, 34, 40, 0.9)',
-                  border: '1px solid rgba(0, 188, 212, 0.4)',
-                  borderRadius: '14px',
-                  padding: '14px 52px 14px 18px',
-                  color: '#FFFFFF',
+                  background: 'rgba(255, 255, 255, 0.95)',
+                  border: '1px solid rgba(38, 198, 218, 0.4)',
+                  borderRadius: '12px',
+                  padding: '12px 48px 12px 16px',
+                  color: '#e2e8f0',
                   fontSize: '15px',
                   fontFamily: 'inherit',
                   outline: 'none',
                   textAlign: 'left',
                   direction: 'ltr',
-                  transition: 'border-color 0.25s ease, box-shadow 0.25s ease',
                 }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = '#26c6da'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,188,212,0.18)'; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(0, 188, 212, 0.4)'; e.currentTarget.style.boxShadow = 'none'; }}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? t('hide_password') : t('show_password')}
-                title={showPassword ? t('hide_password') : t('show_password')}
+                aria-label={showPassword ? 'پنهان کردن رمز' : 'نمایش رمز'}
                 disabled={loading}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-colors z-10"
-                style={{ color: showPassword ? '#26c6da' : 'rgba(128, 222, 234, 0.6)', background: 'transparent', cursor: 'pointer' }}
-                onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = 'rgba(0, 188, 212, 0.15)'; }}
+                className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-colors"
+                style={{ color: '#8b9bb4', background: 'transparent' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0, 188, 212, 0.1)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
                 {showPassword ? (
@@ -2443,11 +1106,11 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
               {loading ? (
                 <>
                   <div className="w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(255,255,255,0.35)', borderTopColor: '#ffffff' }}></div>
-                  <span>{t('logging_in')}</span>
+                  <span>در حال ورود...</span>
                 </>
               ) : (
                 <>
-                  <span>{t('login_btn')}</span>
+                  <span>ورود به برنامه</span>
                   <svg
                     className="w-5 h-5 rtl-flip group-hover:-translate-x-1.5 transition-transform"
                     fill="none"
@@ -2464,13 +1127,11 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
         </form>
 
         <div className="mt-10 text-center">
-          <p style={{ color: 'rgba(128, 222, 234, 0.6)' }} className="text-xs tracking-wider">
-            {t('version')} • {t('app_subtitle')}
+          <p style={{ color: 'rgba(168, 230, 193, 0.6)' }} className="text-xs tracking-wider">
+            نسخه ۲.۰.۰ • بانک اطلاعاتی برنامه‌های تلویزیونی
           </p>
-          <p style={{ color: 'rgba(128, 222, 234, 0.45)' }} className="text-xs mt-2">
-            {t('default_user_hint')}
-            <span dir="ltr">admin</span> / {lang === 'en' ? 'pass: ' : 'رمز: '}
-            <span dir="ltr">admin</span>
+          <p style={{ color: 'rgba(168, 230, 193, 0.45)' }} className="text-xs mt-2">
+            نام کاربری پیش‌فرض: <span dir="ltr">admin</span> / رمز: <span dir="ltr">admin</span>
           </p>
         </div>
       </div>
@@ -2480,68 +1141,61 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
 
 // ============================================
 // TOP APP BAR — fixed at top, hamburger (3-line) on the right,
-// logo + title in the center, visible on BOTH desktop and mobile.
-// Theme-aware via the `.top-app-bar` className (CSS variables in globals.css).
+// logo + title in the center, visible on BOTH desktop and mobile
 // ============================================
-function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, theme, onToggleTheme, onToggleLang }: {
+function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack }: {
   onMenuClick: () => void;
   isMobile: boolean;
   currentView: string;
   onBack: () => void;
   canGoBack: boolean;
-  theme: 'dark' | 'light';
-  onToggleTheme: () => void;
-
-  onToggleLang?: () => void;
 }) {
-  const { t, lang } = useLang();
   const viewTitles: Record<string, string> = {
-    dashboard: t('archive_title'),
-    programs: t('all_programs'),
-    genre: t('preserved_genre'),
-    reports: t('reports'),
-    add: t('add_program'),
-    bookmarks: t('bookmarks'),
+    dashboard: 'آرشیو تخصصی برنامه‌های تلویزیونی',
+    programs: 'همهٔ برنامه‌ها',
+    genre: 'برنامه‌های ژانر',
+    reports: 'گزارش‌ها',
+    add: 'افزودن / ویرایش برنامه',
   };
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-40 top-app-bar"
+      className="fixed top-0 left-0 right-0 z-40"
       style={{
-        transition: 'background 0.35s ease, color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease',
+        background: 'linear-gradient(180deg, rgba(4, 40, 23, 0.98) 0%, rgba(2, 80, 45, 0.96) 100%)',
+        backdropFilter: 'blur(24px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+        borderBottom: '1px solid rgba(38, 198, 218, 0.4)',
+        boxShadow: '0 8px 32px rgba(0, 188, 212, 0.25), inset 0 1px 0 rgba(38, 198, 218, 0.2)',
       }}
     >
       <div
         className="flex items-center justify-between"
         style={{
-          padding: isMobile ? '12px 16px' : '16px 32px',
-          minHeight: isMobile ? '64px' : '72px',
+          padding: isMobile ? '12px 16px' : '14px 28px',
+          minHeight: '64px',
           gap: '12px',
         }}
       >
         {/* Hamburger button — 3 lines — opens the drawer from the right */}
         <button
           onClick={onMenuClick}
-          aria-label={t('menu')}
-          title={t('menu')}
-          className="btn-base flex flex-col justify-center items-center p-2.5 rounded-xl"
+          aria-label="باز کردن منو"
+          className="flex flex-col justify-center items-center p-2.5 rounded-xl transition-all"
           style={{
-            background: 'rgba(255, 255, 255, 0.06)',
-            border: '1px solid #2A2E35',
+            background: 'linear-gradient(135deg, rgba(0, 188, 212, 0.4) 0%, rgba(0, 188, 212, 0.15) 100%)',
+            border: '1px solid rgba(38, 198, 218, 0.4)',
             color: 'white',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15), 0 4px 14px rgba(0, 188, 212, 0.3)',
             minWidth: '44px',
             minHeight: '44px',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(0, 188, 212, 0.15)';
-            e.currentTarget.style.borderColor = 'rgba(0, 188, 212, 0.45)';
-            e.currentTarget.style.color = '#26c6da';
+            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 188, 212, 0.6) 0%, rgba(0, 188, 212, 0.3) 100%)';
             e.currentTarget.style.transform = 'translateY(-1px)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
-            e.currentTarget.style.borderColor = '#2A2E35';
-            e.currentTarget.style.color = 'white';
+            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 188, 212, 0.4) 0%, rgba(0, 188, 212, 0.15) 100%)';
             e.currentTarget.style.transform = 'translateY(0)';
           }}
         >
@@ -2557,9 +1211,9 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, them
         >
           <Image
             src="/banke-rasane-logo.png"
-            alt={t('banke_rasane')}
-            width={isMobile ? 96 : 140}
-            height={isMobile ? 26 : 36}
+            alt="بانک رسانه"
+            width={isMobile ? 90 : 130}
+            height={isMobile ? 24 : 34}
             priority
             style={{
               filter: 'drop-shadow(0 2px 10px rgba(0, 188, 212, 0.5))',
@@ -2568,97 +1222,63 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, them
           />
           {!isMobile && (
             <div
-              className="flex flex-col bar-title"
-              style={{ borderRight: '1px solid #2A2E35', paddingRight: '14px' }}
+              className="flex flex-col"
+              style={{ borderRight: '1px solid rgba(38, 198, 218, 0.3)', paddingRight: '12px' }}
             >
-              <span className="bar-title" style={{ color: 'white', fontWeight: 700, fontSize: '15px', lineHeight: 1.2 }}>
-                {viewTitles[currentView] || t('banke_rasane')}
+              <span style={{ color: 'white', fontWeight: 700, fontSize: '15px', lineHeight: 1.2 }}>
+                {viewTitles[currentView] || 'بانک رسانه'}
               </span>
-              <span className="bar-title-sub" style={{ fontSize: '11px', marginTop: '2px' }}>
-                {t('version')}
+              <span style={{ color: 'rgba(168, 230, 193, 0.6)', fontSize: '11px', marginTop: '2px' }}>
+                نسخه ۲.۰.۰
               </span>
             </div>
           )}
         </div>
 
-        {/* Left cluster: theme + language toggles + back button (when there is history) */}
-        <div className="flex items-center gap-2" style={{ minWidth: '44px', justifyContent: 'flex-end' }}>
-
-          {/* 🌗 Theme toggle (dark ↔ light) */}
-          {onToggleTheme && (
-            <button
-              onClick={onToggleTheme}
-              aria-label={theme === 'dark' ? t('switch_to_light') : t('switch_to_dark')}
-              title={theme === 'dark' ? t('switch_to_light') : t('switch_to_dark')}
-              className="btn-base bar-toggle flex items-center justify-center rounded-xl"
-              style={{
-                width: '44px',
-                height: '44px',
-                fontSize: '18px',
-              }}
-            >
-              {theme === 'dark' ? '☀️' : '🌙'}
-            </button>
-          )}
-
-          {/* 🌐 Language toggle (fa ↔ en) */}
-          {onToggleLang && (
-            <button
-              onClick={onToggleLang}
-              aria-label={lang === 'fa' ? t('switch_to_en') : t('switch_to_fa')}
-              title={lang === 'fa' ? t('switch_to_en') : t('switch_to_fa')}
-              className="btn-base bar-toggle flex items-center justify-center rounded-xl font-bold"
-              style={{
-                width: '44px',
-                height: '44px',
-                fontSize: '13px',
-                direction: 'ltr',
-              }}
-            >
-              {lang === 'fa' ? 'EN' : 'فا'}
-            </button>
-          )}
+        {/* Left placeholder: back button (when there is history), else status badge */}
+        <div style={{ minWidth: '44px', display: 'flex', justifyContent: 'flex-end' }}>
           {canGoBack ? (
             <button
               onClick={onBack}
-              aria-label={t('back')}
-              title={t('back')}
-              className="btn-base flex items-center gap-2 rounded-xl"
+              aria-label="بازگشت به صفحهٔ قبل"
+              title="بازگشت به صفحهٔ قبل"
+              className="flex items-center gap-2 rounded-xl transition-all"
               style={{
-                background: 'rgba(0, 188, 212, 0.15)',
-                border: '1px solid rgba(0, 188, 212, 0.45)',
-                color: '#26c6da',
+                background: 'rgba(255, 255, 255, 0.96)',
+                border: '1px solid rgba(38, 198, 218, 0.55)',
+                color: '#0097a7',
                 padding: isMobile ? '9px 12px' : '9px 16px',
+                boxShadow: '0 4px 14px rgba(0, 188, 212, 0.32), inset 0 1px 0 rgba(255,255,255,0.7)',
                 minWidth: '44px',
                 minHeight: '44px',
                 fontWeight: 700,
                 fontSize: '14px',
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0, 188, 212, 0.25)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0, 188, 212, 0.15)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.96)'; e.currentTarget.style.transform = 'translateY(0)'; }}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
-              {!isMobile && <span>{t('back')}</span>}
+              {!isMobile && <span>بازگشت</span>}
             </button>
           ) : isMobile ? (
             <span
-              className="px-2.5 py-1 rounded-full text-xs font-bold bar-title"
+              className="px-2.5 py-1 rounded-full text-xs font-bold"
               style={{
-                background: 'rgba(0, 188, 212, 0.15)',
+                background: 'rgba(0, 188, 212, 0.35)',
                 color: '#26c6da',
-                border: '1px solid rgba(0, 188, 212, 0.35)',
+                border: '1px solid rgba(38, 198, 218, 0.35)',
               }}
             >
-              {t('banke_rasane')}
+              بانک رسانه
             </span>
           ) : (
             <div
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bar-title"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl"
               style={{
-                background: 'rgba(0, 188, 212, 0.1)',
-                border: '1px solid rgba(0, 188, 212, 0.3)',
+                background: 'rgba(0, 188, 212, 0.18)',
+                border: '1px solid rgba(0, 188, 212, 0.35)',
               }}
             >
               <span
@@ -2669,7 +1289,7 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, them
                   animation: 'pulse 2s ease-in-out infinite',
                 }}
               ></span>
-              <span className="bar-title-sub" style={{ fontSize: '12px' }}>{t('connected')}</span>
+              <span style={{ color: 'rgba(168, 230, 193, 0.85)', fontSize: '12px' }}>متصل</span>
             </div>
           )}
         </div>
@@ -2697,13 +1317,11 @@ function DrawerMenu({
   isAdmin,
   talkShows,
   genres = GENRES,
-  bookmarks = [],
-  onOpenBookmarks,
 }: {
   open: boolean;
   onClose: () => void;
   currentView: string;
-  onNavigate: (v: 'dashboard' | 'programs' | 'reports' | 'add' | 'bookmarks') => void;
+  onNavigate: (v: 'dashboard' | 'programs' | 'reports' | 'add') => void;
   onGenreSelect: (g: Genre) => void;
   onLogout: () => void;
   onOpenSettings: () => void;
@@ -2711,63 +1329,62 @@ function DrawerMenu({
   isAdmin: boolean;
   talkShows: TalkShow[];
   genres?: Genre[];
-  bookmarks?: number[];
-  onOpenBookmarks?: () => void;
 }) {
   const [genresExpanded, setGenresExpanded] = useState(true);
-  const { t, lang } = useLang();
 
   const navItems = [
-    { key: 'dashboard', label: t('dashboard'), icon: 'home', desc: t('nav_dashboard_desc') },
-    { key: 'programs', label: t('all_programs'), icon: 'grid', desc: t('nav_programs_desc') },
-    { key: 'bookmarks', label: t('bookmarks'), icon: 'bookmark', desc: t('nav_bookmarks_desc') },
-    { key: 'add', label: t('add_program'), icon: 'plus', desc: t('nav_add_desc') },
-    { key: 'reports', label: t('reports'), icon: 'reports', desc: t('nav_reports_desc') },
+    { key: 'dashboard', label: 'آرشیو', icon: 'home', desc: 'صفحهٔ اصلی و ژانرها' },
+    { key: 'programs', label: 'همهٔ برنامه‌ها', icon: 'grid', desc: 'لیست کامل ۵۶۰ برنامه' },
+    { key: 'add', label: 'افزودن برنامه', icon: 'plus', desc: 'افزودن یا ویرایش برنامه' },
+    { key: 'reports', label: 'گزارش‌ها', icon: 'reports', desc: 'آمار و خروجی' },
   ] as const;
 
   // Don't render anything if not open — keeps DOM clean
   if (!open) return null;
 
   const roleLabel: Record<string, string> = {
-    admin: t('role_admin'),
-    editor: t('role_editor'),
-    viewer: t('role_viewer'),
+    admin: 'مدیر سیستم',
+    editor: 'ویراستار',
+    viewer: 'بیننده',
   };
 
   return (
     <div
       className="fixed inset-0 z-50"
-      style={{ background: 'var(--overlay-strong)', backdropFilter: 'blur(4px)', animation: 'fade-in 0.2s ease-out' }}
+      style={{ background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(4px)', animation: 'fade-in 0.2s ease-out' }}
       onClick={onClose}
     >
       <aside
-        className="drawer-aside fixed top-0 right-0 bottom-0 animate-drawer-slide-in flex flex-col"
+        className="fixed top-0 right-0 bottom-0 animate-drawer-slide-in flex flex-col"
         style={{
           width: 'min(340px, 88vw)',
-          transition: 'background 0.35s ease, color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease',
+          background: 'linear-gradient(180deg, #042817 0%, #035932 40%, #024a28 70%, #042817 100%)',
+          borderLeft: '1px solid rgba(38, 198, 218, 0.45)',
+          boxShadow: '-16px 0 56px rgba(0, 188, 212, 0.4), inset 1px 0 0 rgba(38, 198, 218, 0.15)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drawer header — logo + close */}
         <div
-          className="p-4 flex items-center justify-between flex-shrink-0 drawer-divider"
-          style={{ borderBottom: '1px solid #2A2E35' }}
+          className="p-4 flex items-center justify-between flex-shrink-0"
+          style={{ borderBottom: '1px solid rgba(38, 198, 218, 0.3)' }}
         >
           <Image
             src="/banke-rasane-logo.png"
-            alt={t('banke_rasane')}
-            width={140}
-            height={36}
+            alt="بانک رسانه"
+            width={130}
+            height={34}
             priority
             style={{ filter: 'drop-shadow(0 2px 10px rgba(0, 188, 212, 0.5))' }}
           />
           <button
             onClick={onClose}
-            className="btn-base p-2 rounded-lg drawer-fg-muted"
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'; e.currentTarget.style.color = '#FCA5A5'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = ''; }}
-            title={t('close')}
-            aria-label={t('close')}
+            className="p-2 rounded-lg transition-colors"
+            style={{ color: 'rgba(255, 255, 255, 0.6)' }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(220, 38, 38, 0.2)'; e.currentTarget.style.color = '#fca5a5'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)'; }}
+            title="بستن منو"
+            aria-label="بستن منو"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -2787,30 +1404,33 @@ function DrawerMenu({
                 <button
                   key={item.key}
                   onClick={() => onNavigate(item.key as any)}
-                  className="btn-base drawer-fg flex items-center gap-3 px-3 py-2.5 rounded-xl w-full text-right"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all w-full text-right"
                   style={isActive ? {
-                    background: 'rgba(0, 188, 212, 0.18)',
-                    border: '1px solid rgba(0, 188, 212, 0.45)',
+                    background: 'linear-gradient(135deg, rgba(0, 188, 212, 0.55) 0%, rgba(0, 188, 212, 0.25) 100%)',
+                    border: '1px solid rgba(0, 188, 212, 0.65)',
                     color: '#26c6da',
+                    boxShadow: '0 4px 12px rgba(0, 188, 212, 0.35), inset 0 1px 0 rgba(38, 198, 218, 0.25)',
                   } : {
                     border: '1px solid transparent',
-                    color: 'var(--drawer-fg)',
+                    color: 'rgba(255, 255, 255, 0.95)',
                   }}
                   onMouseEnter={(e) => {
                     if (!isActive) {
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                      e.currentTarget.style.background = 'rgba(38, 198, 218, 0.12)';
+                      e.currentTarget.style.color = 'white';
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!isActive) {
                       e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = 'rgba(255, 255, 255, 0.95)';
                     }
                   }}
                 >
                   <NavIcon name={item.icon} />
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm">{item.label}</div>
-                    <div className="text-xs drawer-fg-muted" style={{ marginTop: '2px' }}>{item.desc}</div>
+                    <div className="text-xs" style={{ color: 'rgba(168, 230, 193, 0.75)', marginTop: '2px' }}>{item.desc}</div>
                   </div>
                 </button>
               );
@@ -2821,9 +1441,10 @@ function DrawerMenu({
           <div className="mt-6">
             <button
               onClick={() => setGenresExpanded(!genresExpanded)}
-              className="btn-base drawer-fg-muted flex items-center justify-between w-full px-3 mb-2 text-xs font-bold uppercase tracking-wider"
+              className="flex items-center justify-between w-full px-3 mb-2 text-xs font-bold uppercase tracking-wider"
+              style={{ color: 'rgba(255, 255, 255, 0.5)' }}
             >
-              <span>{t('genres_section')} ({genres.length})</span>
+              <span>ژانرها ({genres.length})</span>
               <svg
                 className="w-4 h-4 transition-transform"
                 style={{ transform: genresExpanded ? 'rotate(0deg)' : 'rotate(-90deg)' }}
@@ -2841,12 +1462,15 @@ function DrawerMenu({
                     <button
                       key={g.id}
                       onClick={() => onGenreSelect(g)}
-                      className="btn-base drawer-fg flex items-center gap-3 px-3 py-2 rounded-lg group w-full"
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg transition-all group w-full"
+                      style={{ color: 'rgba(255, 255, 255, 0.95)' }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = `${g.color}25`;
+                        e.currentTarget.style.background = `${g.color}30`;
+                        e.currentTarget.style.color = 'white';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = 'rgba(255, 255, 255, 0.95)';
                       }}
                     >
                       <div
@@ -2873,24 +1497,24 @@ function DrawerMenu({
 
         {/* User info + settings + logout footer */}
         <div
-          className="p-3 flex-shrink-0 drawer-divider"
-          style={{ borderTop: '1px solid #2A2E35' }}
+          className="p-3 flex-shrink-0"
+          style={{ borderTop: '1px solid rgba(38, 198, 218, 0.3)' }}
         >
           {currentUser && (
             <div
               className="mb-2 p-3 rounded-xl"
               style={{
-                background: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid #2A2E35',
+                background: 'rgba(255, 255, 255, 0.06)',
+                border: '1px solid rgba(38, 198, 218, 0.2)',
               }}
             >
               <div className="flex items-center gap-3">
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
                   style={{
-                    background: 'rgba(0, 188, 212, 0.18)',
+                    background: 'linear-gradient(135deg, rgba(0, 188, 212, 0.7) 0%, rgba(0, 188, 212, 0.4) 100%)',
                     color: '#26c6da',
-                    border: '1px solid rgba(0, 188, 212, 0.45)',
+                    border: '1px solid rgba(38, 198, 218, 0.5)',
                     fontWeight: 700,
                     fontSize: '14px',
                   }}
@@ -2898,20 +1522,20 @@ function DrawerMenu({
                   {(currentUser.name || currentUser.username).charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm drawer-fg-active" style={{ color: '#26c6da' }} title={currentUser.username}>
+                  <div className="font-bold text-sm" style={{ color: '#26c6da' }} title={currentUser.username}>
                     {currentUser.name || currentUser.username}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span
                       className="text-xs px-1.5 py-0.5 rounded-md font-bold"
                       style={{
-                        background: currentUser.role === 'admin' ? 'rgba(239, 68, 68, 0.18)' : currentUser.role === 'editor' ? 'rgba(250, 204, 21, 0.18)' : 'rgba(0, 188, 212, 0.18)',
-                        color: currentUser.role === 'admin' ? '#FCA5A5' : currentUser.role === 'editor' ? '#FACC15' : '#26c6da',
+                        background: currentUser.role === 'admin' ? 'rgba(220, 38, 38, 0.25)' : currentUser.role === 'editor' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(0, 188, 212, 0.25)',
+                        color: currentUser.role === 'admin' ? '#fca5a5' : currentUser.role === 'editor' ? '#fcd34d' : '#26c6da',
                       }}
                     >
                       {roleLabel[currentUser.role] || currentUser.role}
                     </span>
-                    <span className="text-xs drawer-fg-muted" dir="ltr">
+                    <span className="text-xs" style={{ color: 'rgba(168, 230, 193, 0.6)' }} dir="ltr">
                       @{currentUser.username}
                     </span>
                   </div>
@@ -2924,38 +1548,40 @@ function DrawerMenu({
           {isAdmin && (
             <button
               onClick={onOpenSettings}
-              className="btn-base drawer-fg flex items-center gap-3 px-3 py-2.5 rounded-lg w-full mb-1"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all w-full mb-1"
+              style={{ color: 'rgba(255, 255, 255, 0.85)' }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(0, 188, 212, 0.15)';
+                e.currentTarget.style.background = 'rgba(0, 188, 212, 0.25)';
                 e.currentTarget.style.color = '#26c6da';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'transparent';
-                e.currentTarget.style.color = '';
+                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.85)';
               }}
             >
               <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-              <span className="font-medium text-sm">⚙ {t('settings')}</span>
+              <span className="font-medium text-sm">⚙ تنظیمات</span>
             </button>
           )}
 
           <button
             onClick={onLogout}
-            className="btn-base drawer-fg flex items-center gap-3 px-3 py-2.5 rounded-lg w-full"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all w-full"
+            style={{ color: 'rgba(255, 255, 255, 0.85)' }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)';
-              e.currentTarget.style.color = '#FCA5A5';
+              e.currentTarget.style.background = 'rgba(220, 38, 38, 0.2)';
+              e.currentTarget.style.color = '#fca5a5';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = '';
+              e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
             }}
           >
             <NavIcon name="exit" />
-            <span className="font-medium text-sm">{t('logout')}</span>
+            <span className="font-medium text-sm">خروج از حساب</span>
           </button>
         </div>
       </aside>
@@ -2970,7 +1596,6 @@ function NavIcon({ name }: { name: string }) {
     plus: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />,
     reports: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />,
     exit: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />,
-    bookmark: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />,
   };
   return (
     <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3002,25 +1627,24 @@ function MobileBottomNav({
   genres?: Genre[];
 }) {
   const [showGenres, setShowGenres] = useState(false);
-  const { t, lang } = useLang();
 
   return (
     <>
       {showGenres && (
         <div
           className="fixed inset-0 z-40"
-          style={{ background: 'rgba(0, 0, 0, 0.6)' }}
+          style={{ background: 'rgba(0, 0, 0, 0.4)' }}
           onClick={() => setShowGenres(false)}
         >
           <div
             className="fixed bottom-0 left-0 right-0 p-4 animate-slide-up-nav"
             style={{
-              background: 'rgba(15, 17, 21, 0.95)',
-              backdropFilter: 'blur(28px) saturate(160%)',
-              WebkitBackdropFilter: 'blur(28px) saturate(160%)',
-              borderTop: '1px solid #2A2E35',
+              background: 'rgba(238, 246, 241, 0.6)',
+              backdropFilter: 'blur(26px) saturate(160%)',
+              WebkitBackdropFilter: 'blur(26px) saturate(160%)',
+              borderTop: '1px solid rgba(255, 255, 255, 0.55)',
               borderRadius: '24px 24px 0 0',
-              boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255,255,255,0.05)',
+              boxShadow: '0 -10px 40px rgba(0, 188, 212, 0.16), inset 0 1px 0 rgba(255,255,255,0.4)',
               paddingBottom: '32px',
               maxHeight: '70vh',
               overflowY: 'auto',
@@ -3028,11 +1652,11 @@ function MobileBottomNav({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg" style={{ color: '#FFFFFF' }}>{t('genres_section')} ({genres.length})</h3>
+              <h3 className="font-bold text-lg" style={{ color: '#e2e8f0' }}>ژانرها ({genres.length})</h3>
               <button
                 onClick={() => setShowGenres(false)}
                 className="p-2 rounded-lg"
-                style={{ color: '#9CA3AF', background: 'rgba(255, 255, 255, 0.05)' }}
+                style={{ color: '#64748b', background: 'rgba(0, 0, 0, 0.05)' }}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -3048,7 +1672,7 @@ function MobileBottomNav({
                     onClick={() => { onGenreSelect(g); setShowGenres(false); }}
                     className="p-3 rounded-2xl text-right transition-all"
                     style={{
-                      background: `${g.color}1A`,
+                      background: `${g.color}18`,
                       border: `1px solid ${g.color}40`,
                     }}
                   >
@@ -3066,9 +1690,9 @@ function MobileBottomNav({
                         </svg>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-bold truncate" style={{ color: '#FFFFFF' }}>{g.nameFa}</div>
+                        <div className="text-sm font-bold truncate" style={{ color: '#e2e8f0' }}>{g.nameFa}</div>
                         <div className="text-xs font-bold" style={{ color: g.color }}>
-                          {count.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')} {t('programs_count')}
+                          {count.toLocaleString('fa-IR')} برنامه
                         </div>
                       </div>
                     </div>
@@ -3084,21 +1708,21 @@ function MobileBottomNav({
         <div
           className="flex items-center justify-around no-scrollbar"
           style={{
-            background: 'rgba(15, 17, 21, 0.85)',
-            backdropFilter: 'blur(28px) saturate(160%)',
-            WebkitBackdropFilter: 'blur(28px) saturate(160%)',
-            border: '1px solid #2A2E35',
-            borderRadius: '18px',
-            boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
+            background: 'rgba(238, 246, 241, 0.5)',
+            backdropFilter: 'blur(24px) saturate(160%)',
+            WebkitBackdropFilter: 'blur(24px) saturate(160%)',
+            border: '1px solid rgba(255, 255, 255, 0.55)',
+            borderRadius: '22px',
+            boxShadow: '0 8px 30px rgba(0, 188, 212, 0.16), inset 0 1px 0 rgba(255,255,255,0.4)',
             padding: '8px',
           }}
         >
-          <MobileNavBtn label={t('menu')} icon="menu" active={false} onClick={onOpenDrawer} highlight />
-          <MobileNavBtn label={t('dashboard')} icon="home" active={currentView === 'dashboard'} onClick={() => onNavigate('dashboard')} />
-          <MobileNavBtn label={t('all_programs')} icon="grid" active={currentView === 'programs'} onClick={() => onNavigate('programs')} />
-          <MobileNavBtn label={t('genres_section')} icon="genre" active={showGenres} onClick={() => setShowGenres(!showGenres)} highlight />
-          <MobileNavBtn label={t('add_program')} icon="plus" active={currentView === 'add'} onClick={() => onNavigate('add')} />
-          <MobileNavBtn label={t('logout')} icon="exit" active={false} onClick={onLogout} />
+          <MobileNavBtn label="منو" icon="menu" active={false} onClick={onOpenDrawer} highlight />
+          <MobileNavBtn label="آرشیو" icon="home" active={currentView === 'dashboard'} onClick={() => onNavigate('dashboard')} />
+          <MobileNavBtn label="برنامه‌ها" icon="grid" active={currentView === 'programs'} onClick={() => onNavigate('programs')} />
+          <MobileNavBtn label="ژانرها" icon="genre" active={showGenres} onClick={() => setShowGenres(!showGenres)} highlight />
+          <MobileNavBtn label="افزودن" icon="plus" active={currentView === 'add'} onClick={() => onNavigate('add')} />
+          <MobileNavBtn label="خروج" icon="exit" active={false} onClick={onLogout} />
         </div>
       </nav>
     </>
@@ -3117,7 +1741,7 @@ function MobileNavBtn({ label, icon, active, onClick, highlight }: {
       onClick={onClick}
       className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all"
       style={{
-        background: active ? 'rgba(0, 188, 212, 0.15)' : 'transparent',
+        background: active ? 'linear-gradient(135deg, rgba(0, 188, 212, 0.18) 0%, rgba(0, 188, 212, 0.08) 100%)' : 'transparent',
         border: active ? '1px solid rgba(0, 188, 212, 0.35)' : '1px solid transparent',
         minWidth: '56px',
       }}
@@ -3125,9 +1749,9 @@ function MobileNavBtn({ label, icon, active, onClick, highlight }: {
       <svg
         className="w-6 h-6"
         fill="none"
-        stroke={active ? '#26c6da' : highlight ? '#26c6da' : '#9CA3AF'}
+        stroke={active ? '#00bcd4' : highlight ? '#0097a7' : '#64748b'}
         viewBox="0 0 24 24"
-        style={{ filter: active ? 'drop-shadow(0 0 6px rgba(0, 188, 212, 0.45))' : 'none' }}
+        style={{ filter: active ? 'drop-shadow(0 0 6px rgba(0, 188, 212, 0.4))' : 'none' }}
       >
         {icon === 'home' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />}
         {icon === 'grid' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />}
@@ -3136,7 +1760,7 @@ function MobileNavBtn({ label, icon, active, onClick, highlight }: {
         {icon === 'exit' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />}
         {icon === 'menu' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />}
       </svg>
-      <span className="text-xs font-medium" style={{ color: active ? '#26c6da' : highlight ? '#26c6da' : '#9CA3AF' }}>
+      <span className="text-xs font-medium" style={{ color: active ? '#00bcd4' : highlight ? '#0097a7' : '#64748b' }}>
         {label}
       </span>
     </button>
@@ -3157,28 +1781,27 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
   onAddGenre?: (g: Genre) => void;
 }) {
   const [showAddGenre, setShowAddGenre] = useState(false);
-  const { t, lang } = useLang();
   const stats = [
-    { label: t('total_programs'), value: talkShows.length, color: '#00bcd4', icon: 'film' },
-    { label: t('genre'), value: genres.length, color: '#2563eb', icon: 'tag' },
-    { label: t('uploaded'), value: uploadedCount, color: '#7c3aed', icon: 'cloud' },
-    { label: t('with_image'), value: talkShows.filter(s => s.images && s.images.length > 0).length, color: '#db2777', icon: 'image' },
+    { label: 'کل برنامه‌ها', value: talkShows.length, color: '#00bcd4', icon: 'film' },
+    { label: 'ژانرها', value: genres.length, color: '#2563eb', icon: 'tag' },
+    { label: 'آپلود شده در فضای مجازی', value: uploadedCount, color: '#7c3aed', icon: 'cloud' },
+    { label: 'با تصویر (PDF + وب)', value: 149 + 23, color: '#db2777', icon: 'image' },
   ];
 
   return (
     <>
-      <header className="mb-8 animate-view-enter">
+      <header className="mb-8 animate-fade-in">
         <div className="flex items-center gap-3 mb-2 flex-wrap">
-          <h1 className="text-3xl font-bold text-fg-strong" style={{ color: 'var(--fg-strong)' }}>{t('archive_title')}</h1>
+          <h1 className="text-3xl font-bold" style={{ color: '#e2e8f0' }}>آرشیو تخصصی برنامه‌های تلویزیونی</h1>
           <span
             className="text-sm px-3 py-1 rounded-full"
-            style={{ background: 'var(--accent-bg-soft)', color: 'var(--accent-text)' }}
+            style={{ background: 'rgba(0, 188, 212, 0.1)', color: '#0097a7' }}
           >
-            {t('banke_rasane')}
+            بانک رسانه
           </span>
         </div>
-        <p className="text-fg-muted" style={{ color: 'var(--fg-muted)' }}>
-          {t('dashboard_subtitle', { n: talkShows.length.toLocaleString('fa-IR'), g: genres.length })}
+        <p style={{ color: '#64748b' }}>
+          بانک اطلاعاتی {talkShows.length.toLocaleString('fa-IR')} برنامهٔ تلویزیونی در {genres.length} ژانر
         </p>
       </header>
 
@@ -3220,19 +1843,19 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
       </div>
 
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <h2 className="text-xl font-bold text-fg-strong" style={{ color: 'var(--fg-strong)' }}>{t('genres_section')}</h2>
+        <h2 className="text-xl font-bold" style={{ color: '#e2e8f0' }}>ژانرها</h2>
         <div className="flex items-center gap-2 flex-wrap">
           {isAdmin && onAddGenre && (
             <button
               onClick={() => setShowAddGenre(true)}
-              className="btn-base px-4 py-2 rounded-xl text-sm font-medium"
+              className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
               style={{
                 background: 'rgba(7, 89, 133, 0.12)',
                 color: '#075985',
                 border: '1px solid rgba(7, 89, 133, 0.3)',
               }}
             >
-              + {t('add_genre')}
+              + افزودن ژانر
             </button>
           )}
           {canEdit && (
@@ -3241,7 +1864,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
               className="btn-enter-premium text-sm"
               style={{ padding: '8px 20px', fontSize: '14px' }}
             >
-              + {t('add_program')}
+              + افزودن برنامه
             </button>
           )}
         </div>
@@ -3293,13 +1916,13 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                   <div className="text-4xl font-black text-white">
                     {count.toLocaleString('fa-IR')}
                   </div>
-                  <div className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>{t('programs_count')}</div>
+                  <div className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>برنامه</div>
                 </div>
               </div>
               <h3 className="font-bold text-lg mb-1 text-white">{g.nameFa}</h3>
               <p className="text-sm mt-3" style={{ color: 'rgba(255,255,255,0.8)' }}>{g.description}</p>
               <div className="mt-4 flex items-center text-sm font-bold text-white">
-                {t('view_search')}
+                مشاهده و جستجو
                 <svg className="w-4 h-4 mr-1 rtl-flip" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
@@ -3348,12 +1971,6 @@ function ProgramsView({
   onExport,
   canEdit,
   onAdd,
-  bookmarks,
-  onToggleBookmark,
-  compareList,
-  onToggleCompare,
-  onCompare,
-  overrideTitle,
 }: {
   genre?: Genre;
   talkShows: TalkShow[];
@@ -3366,12 +1983,6 @@ function ProgramsView({
   onExport: (shows: TalkShow[], format: 'pdf' | 'excel') => void;
   canEdit: boolean;
   onAdd?: () => void;
-  bookmarks?: number[];
-  onToggleBookmark?: (num: number) => void;
-  compareList?: number[];
-  onToggleCompare?: (num: number) => void;
-  onCompare?: () => void;
-  overrideTitle?: string;
 }) {
   const [search, setSearch] = useState('');
   const [view, setView] = useState<'grid' | 'list'>('grid');
@@ -3381,32 +1992,14 @@ function ProgramsView({
   const [filterViewers, setFilterViewers] = useState('all');
   const [filterStyle, setFilterStyle] = useState('all');
   const [islamicOnly, setIslamicOnly] = useState(false);
-  const [hasImageOnly, setHasImageOnly] = useState(false);
-  const [hasVideoOnly, setHasVideoOnly] = useState(false);
-  const [page, setPage] = useState(1);
-  const [compareMode, setCompareMode] = useState(false);
-  const [loading, setLoading] = useState(talkShows.length === 0);
-  const PAGE_SIZE = 24;
-  const { t, lang } = useLang();
-
-  // Decor-specific size & style filters ONLY apply in the "decor" view (no genre) or
-  // when explicitly inside the decor genre. Other genres hide these filter rows so
-  // the toolbar does not display irrelevant decor dimensions.
-  const decorFiltersVisible = !genre || genre.id === 'decor';
 
   const filteredShows = useMemo(() => {
     let shows = [...talkShows];
     if (genre) shows = shows.filter(genre.filterFn);
-    // Size & style filters are decor-specific — only apply them when they are visible
-    // so other genre views don't accidentally restrict results.
-    if (decorFiltersVisible) {
-      if (filterSize !== 'all') shows = shows.filter(s => s.size === filterSize);
-      if (filterStyle !== 'all') shows = shows.filter(s => s.style === filterStyle);
-    }
+    if (filterSize !== 'all') shows = shows.filter(s => s.size === filterSize);
     if (filterViewers !== 'all') shows = shows.filter(s => s.viewers === filterViewers);
+    if (filterStyle !== 'all') shows = shows.filter(s => s.style === filterStyle);
     if (islamicOnly) shows = shows.filter(s => detectCountries(s).length > 0);
-    if (hasImageOnly) shows = shows.filter(s => Array.isArray(s.images) && s.images.length > 0);
-    if (hasVideoOnly) shows = shows.filter(s => Array.isArray(s.videos) && s.videos.length > 0);
     if (search) {
       const q = search.toLowerCase();
       // Section-specific search: use genre.searchFields if defined, else default to name+summary+category.
@@ -3424,29 +2017,7 @@ function ProgramsView({
       });
     }
     return shows;
-  }, [talkShows, genre, search, filterSize, filterViewers, filterStyle, islamicOnly, hasImageOnly, hasVideoOnly, decorFiltersVisible]);
-
-  // Reset to first page whenever filters change (so user doesn't see an empty page).
-  useEffect(() => { setPage(1); }, [search, filterSize, filterStyle, filterViewers, islamicOnly, hasImageOnly, hasVideoOnly, genre]);
-
-  // Loading state — show skeletons for ~600ms after data first arrives (or instantly if we have data).
-  useEffect(() => {
-    if (talkShows.length > 0) {
-      // Simulate brief loading shimmer on first arrival so users see the skeleton pattern.
-      const timer = setTimeout(() => setLoading(false), 350);
-      return () => clearTimeout(timer);
-    } else {
-      setLoading(true);
-    }
-  }, [talkShows.length]);
-
-  // ⚖ Compare auto-open behaviour lives in Home.handleToggleCompare — when the second item is
-  // queued, the modal opens automatically. No additional effect needed here.
-
-  const totalPages = Math.max(1, Math.ceil(filteredShows.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const pageStart = (currentPage - 1) * PAGE_SIZE;
-  const pageShows = filteredShows.slice(pageStart, pageStart + PAGE_SIZE);
+  }, [talkShows, genre, search, filterSize, filterViewers, filterStyle, islamicOnly]);
 
   const handleUploadSelected = () => {
     const selectedShows = filteredShows.filter(s => selectedIds.includes(s.num));
@@ -3473,19 +2044,19 @@ function ProgramsView({
 
   return (
     <>
-      <header className="mb-6 animate-view-enter">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-1 text-fg-strong" style={{ color: 'var(--fg-strong)' }}>
-          {overrideTitle || (genre ? genre.nameFa : t('all_programs'))}
+      <header className="mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-1" style={{ color: '#e2e8f0' }}>
+          {genre ? genre.nameFa : 'همهٔ برنامه‌ها'}
         </h1>
-        <p className="text-fg-muted" style={{ color: 'var(--fg-muted)' }}>
-          {filteredShows.length.toLocaleString('fa-IR')} {t('programs_count')}
+        <p style={{ color: '#64748b' }}>
+          {filteredShows.length.toLocaleString('fa-IR')} برنامه
           {genre && ` • ${genre.description}`}
         </p>
       </header>
 
       {genre && (
         <div
-          className="premium-card mb-6 p-6 animate-view-enter"
+          className="premium-card mb-6 p-6"
           style={{
             background: `linear-gradient(135deg, ${gc}22 0%, ${gc}08 100%)`,
             border: `1px solid ${gc}50`,
@@ -3508,30 +2079,30 @@ function ProgramsView({
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-3 flex-wrap">
-                <h2 className="text-xl sm:text-2xl font-bold mb-1 text-fg-strong" style={{ color: 'var(--fg-strong)' }}>{genre.nameFa}</h2>
+                <h2 className="text-xl sm:text-2xl font-bold mb-1" style={{ color: '#e2e8f0' }}>{genre.nameFa}</h2>
                 {canEdit && onAdd && (
                   <button
                     onClick={onAdd}
                     className="btn-enter-premium text-sm"
                     style={{ padding: '6px 16px', fontSize: '13px' }}
                   >
-                    + {t('add_program')}
+                    + افزودن برنامه
                   </button>
                 )}
               </div>
-              <p className="text-fg-muted text-sm mt-1" style={{ color: 'var(--fg-muted)' }}>{genre.description}</p>
+              <p style={{ color: '#8b9bb4' }} className="text-sm mt-1">{genre.description}</p>
             </div>
           </div>
         </div>
       )}
 
       {/* Search & toolbar — mobile-friendly: full-width search, actions row, horizontally scrollable filter chips */}
-      <div className="premium-glass p-3 sm:p-4 mb-6 space-y-3 animate-view-enter">
+      <div className="premium-glass p-3 sm:p-4 mb-6 space-y-3">
         {/* Search — full width on every screen size */}
         <div className="relative">
           <svg
             className="w-5 h-5 absolute right-3 top-1/2 -translate-y-1/2"
-            style={{ color: 'var(--fg-muted)' }}
+            style={{ color: '#64748b' }}
             fill="none" stroke="currentColor" viewBox="0 0 24 24"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -3540,40 +2111,35 @@ function ProgramsView({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={`${t('search_in')} ${genre ? genre.nameFa : t('all_programs')}...`}
-            className="input-base"
+            placeholder={`جستجو در ${genre ? genre.nameFa : 'همهٔ برنامه‌ها'}...`}
             style={{
-              background: 'var(--input-bg)',
-              border: '1px solid var(--input-border)',
+              background: 'rgba(255, 255, 255, 0.9)',
+              border: '1px solid rgba(0, 188, 212, 0.15)',
               borderRadius: '12px',
               padding: '11px 36px 11px 16px',
               width: '100%',
               fontFamily: 'inherit',
-              color: 'var(--input-fg)',
+              color: '#e2e8f0',
               outline: 'none',
               fontSize: '15px',
-              transition: 'border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease',
             }}
-            onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.boxShadow = '0 0 0 3px var(--accent-bg-soft)'; }}
-            onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--input-border)'; e.currentTarget.style.boxShadow = 'none'; }}
           />
         </div>
 
         {/* Actions row — view toggle + multi-select + Islamic filter */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
           <div
             className="flex items-center gap-1 rounded-xl p-1 flex-shrink-0"
             style={{
-              background: 'var(--input-bg)',
-              border: '1px solid var(--input-border)',
+              background: 'rgba(255, 255, 255, 0.9)',
+              border: '1px solid rgba(0, 188, 212, 0.15)',
             }}
           >
             <button
               onClick={() => setView('grid')}
-              className="btn-base p-2 rounded-lg"
-              style={view === 'grid' ? { background: 'var(--accent)', color: 'white' } : { color: 'var(--fg-muted)' }}
-              aria-label={t('grid_view')}
-              title={t('grid_view')}
+              className="p-2 rounded-lg transition-colors"
+              style={view === 'grid' ? { background: '#00bcd4', color: 'white' } : { color: '#8b9bb4' }}
+              aria-label="نمایش شبکه‌ای"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
@@ -3581,10 +2147,9 @@ function ProgramsView({
             </button>
             <button
               onClick={() => setView('list')}
-              className="btn-base p-2 rounded-lg"
-              style={view === 'list' ? { background: 'var(--accent)', color: 'white' } : { color: 'var(--fg-muted)' }}
-              aria-label={t('list_view')}
-              title={t('list_view')}
+              className="p-2 rounded-lg transition-colors"
+              style={view === 'list' ? { background: '#00bcd4', color: 'white' } : { color: '#8b9bb4' }}
+              aria-label="نمایش لیستی"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -3595,273 +2160,153 @@ function ProgramsView({
           {/* 🌍 Islamic-countries filter — toggles whether shows must mention an Islamic country */}
           <button
             onClick={() => setIslamicOnly(!islamicOnly)}
-            className="btn-base px-3 py-2 rounded-xl text-sm font-medium flex-shrink-0"
-            title={t('islamic_only_desc')}
+            className="px-3 py-2 rounded-xl text-sm font-medium transition-all flex-shrink-0"
+            title="فقط برنامه‌های مرتبط با کشورهای اسلامی"
             style={islamicOnly ? {
-              background: 'linear-gradient(135deg, #0097a7 0%, #0e7490 100%)',
+              background: 'linear-gradient(135deg, #0891b2 0%, #0e7490 100%)',
               color: 'white',
               border: '1px solid rgba(8, 145, 178, 0.5)',
             } : {
-              background: 'var(--input-bg)',
-              color: 'var(--fg-muted)',
-              border: '1px solid var(--input-border)',
+              background: 'rgba(255, 255, 255, 0.9)',
+              color: '#8b9bb4',
+              border: '1px solid rgba(0, 188, 212, 0.15)',
             }}
           >
-            🌍 {t('islamic')}
+            🌍 اسلامی
           </button>
-
-          {/* 🖼 Has-image filter — only shows with at least one image attached */}
-          <button
-            onClick={() => setHasImageOnly(!hasImageOnly)}
-            className="btn-base px-3 py-2 rounded-xl text-sm font-medium flex-shrink-0"
-            title={t('has_image_only_desc')}
-            style={hasImageOnly ? {
-              background: 'linear-gradient(135deg, #db2777 0%, #9d174d 100%)',
-              color: 'white',
-              border: '1px solid rgba(219, 39, 119, 0.5)',
-            } : {
-              background: 'var(--input-bg)',
-              color: 'var(--fg-muted)',
-              border: '1px solid var(--input-border)',
-            }}
-          >
-            🖼 {t('has_image')}
-          </button>
-
-          {/* 🎬 Has-video filter — only shows with at least one video link */}
-          <button
-            onClick={() => setHasVideoOnly(!hasVideoOnly)}
-            className="btn-base px-3 py-2 rounded-xl text-sm font-medium flex-shrink-0"
-            title={t('has_video_only_desc')}
-            style={hasVideoOnly ? {
-              background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
-              color: 'white',
-              border: '1px solid rgba(220, 38, 38, 0.5)',
-            } : {
-              background: 'var(--input-bg)',
-              color: 'var(--fg-muted)',
-              border: '1px solid var(--input-border)',
-            }}
-          >
-            🎬 {t('has_video')}
-          </button>
-
-          {/* ⚖ Compare MODE toggle — always visible. Flips `compareMode`, which
-              reveals the ⚖ button on every program card. When 2 are selected, the
-              ⚖ مقایسه (N) action button below opens the modal. */}
-          {onToggleCompare && onCompare && (
-            <button
-              onClick={() => setCompareMode(!compareMode)}
-              className="btn-base px-4 py-2 rounded-xl text-sm font-medium flex-shrink-0"
-              title={t('compare_mode')}
-              style={compareMode ? {
-                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                color: 'white',
-                border: '1px solid rgba(245, 158, 11, 0.5)',
-                boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4)',
-              } : {
-                background: 'var(--input-bg)',
-                color: 'var(--fg-muted)',
-                border: '1px solid var(--input-border)',
-              }}
-            >
-              ⚖ {compareMode && Array.isArray(compareList) && compareList.length > 0
-                ? `${t('compare')} (${compareList.length.toLocaleString('fa-IR')})`
-                : t('compare')}
-            </button>
-          )}
-
-          {/* ⚖ Open-compare button — only when exactly 2 programs are queued AND compare mode is on. */}
-          {compareMode && onCompare && Array.isArray(compareList) && compareList.length === 2 && (
-            <button
-              onClick={onCompare}
-              className="btn-base px-4 py-2 rounded-xl text-sm font-bold flex-shrink-0 animate-fade-in"
-              style={{
-                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                color: 'white',
-                border: '1px solid rgba(245, 158, 11, 0.5)',
-                boxShadow: '0 4px 14px rgba(245, 158, 11, 0.5)',
-              }}
-              title={t('compare_two_programs')}
-            >
-              ⚖ {t('compare')} ({compareList.length.toLocaleString('fa-IR')})
-            </button>
-          )}
 
           {canEdit && (
             <button
               onClick={() => setSelectionMode(!selectionMode)}
-              className="btn-base px-4 py-2 rounded-xl text-sm font-medium flex-1"
+              className="px-4 py-2 rounded-xl text-sm font-medium transition-all flex-1"
               style={selectionMode ? {
-                background: 'var(--accent-bg-soft)',
-                border: '1px solid var(--accent-border)',
-                color: 'var(--accent-text)',
+                background: 'rgba(0, 188, 212, 0.15)',
+                border: '1px solid rgba(0, 188, 212, 0.3)',
+                color: '#0097a7',
               } : {
-                background: 'var(--input-bg)',
-                border: '1px solid var(--input-border)',
-                color: 'var(--fg-muted)',
+                background: 'rgba(255, 255, 255, 0.9)',
+                border: '1px solid rgba(0, 188, 212, 0.15)',
+                color: '#8b9bb4',
               }}
             >
-              {selectionMode ? `✓ ${t('multi_select_count')} (${selectedIds.length.toLocaleString('fa-IR')})` : t('multi_select')}
+              {selectionMode ? `✓ انتخاب (${selectedIds.length.toLocaleString('fa-IR')})` : 'انتخاب چندتایی'}
             </button>
           )}
           {!canEdit && (
             <div
-              className="px-4 py-2 rounded-xl text-sm font-medium flex-1 text-center text-fg-muted"
+              className="px-4 py-2 rounded-xl text-sm font-medium flex-1 text-center"
               style={{
                 background: 'rgba(122, 138, 128, 0.08)',
-                color: 'var(--fg-muted)',
-                border: '1px solid var(--input-border)',
+                color: '#64748b',
+                border: '1px solid rgba(122, 138, 128, 0.2)',
               }}
-              title={t('no_access_desc')}
+              title="برای افزودن یا ویرایش برنامه‌ها با حساب مدیر یا ویراستار وارد شوید"
             >
-              🔒 {t('view_only_desc')}
+              🔒 فقط مشاهده — برای افزودن یا ویرایش با حساب مدیر وارد شوید
             </div>
           )}
         </div>
 
-        {/* Filters — decor size & style chips ONLY render in the decor (all-programs) view.
-            Other genres hide these because they are decor-specific dimensions. */}
-        {decorFiltersVisible && (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-              <span className="text-sm flex-shrink-0 text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('size_label')}</span>
-              {[
-                { key: 'all', label: t('all') },
-                { key: 'بزرگ/لوکس', label: t('large_lux') },
-                { key: 'متوسط/استاندارد', label: t('medium_std') },
-                { key: 'کوچک/اقتصادی', label: t('small_econ') },
-              ].map(f => (
-                <button
-                  key={f.key}
-                  onClick={() => setFilterSize(f.key)}
-                  className="btn-base px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
-                  style={filterSize === f.key ? {
-                    background: 'linear-gradient(135deg, #26c6da 0%, #00bcd4 100%)',
-                    color: 'white',
-                  } : {
-                    background: 'var(--input-bg)',
-                    color: 'var(--fg-muted)',
-                  }}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-              <span className="text-sm flex-shrink-0 text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('style_label')}</span>
-              {[
-                { key: 'all', label: t('all') },
-                { key: 'مدرن', label: t('modern') },
-                { key: 'ترکیبی', label: t('composite') },
-                { key: 'مینیمال', label: t('minimal') },
-                { key: 'کلاسیک/سنتی', label: t('classic') },
-              ].map(f => (
-                <button
-                  key={f.key}
-                  onClick={() => setFilterStyle(f.key)}
-                  className="btn-base px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
-                  style={filterStyle === f.key ? {
-                    background: 'linear-gradient(135deg, #26c6da 0%, #00bcd4 100%)',
-                    color: 'white',
-                  } : {
-                    background: 'var(--input-bg)',
-                    color: 'var(--fg-muted)',
-                  }}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
+        {/* Filters — two horizontally scrollable rows (no chaotic wrapping on mobile) */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+            <span className="text-sm flex-shrink-0" style={{ color: '#64748b' }}>اندازه:</span>
+            {[
+              { key: 'all', label: 'همه' },
+              { key: 'بزرگ/لوکس', label: 'بزرگ/لوکس' },
+              { key: 'متوسط/استاندارد', label: 'متوسط' },
+              { key: 'کوچک/اقتصادی', label: 'کوچک' },
+            ].map(f => (
+              <button
+                key={f.key}
+                onClick={() => setFilterSize(f.key)}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
+                style={filterSize === f.key ? {
+                  background: 'linear-gradient(135deg, #00bcd4 0%, #0097a7 100%)',
+                  color: 'white',
+                } : {
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  color: '#8b9bb4',
+                }}
+              >
+                {f.label}
+              </button>
+            ))}
           </div>
-        )}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+            <span className="text-sm flex-shrink-0" style={{ color: '#64748b' }}>سبک:</span>
+            {[
+              { key: 'all', label: 'همه' },
+              { key: 'مدرن', label: 'مدرن' },
+              { key: 'ترکیبی', label: 'ترکیبی' },
+              { key: 'مینیمال', label: 'مینیمال' },
+              { key: 'کلاسیک/سنتی', label: 'کلاسیک' },
+            ].map(f => (
+              <button
+                key={f.key}
+                onClick={() => setFilterStyle(f.key)}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
+                style={filterStyle === f.key ? {
+                  background: 'linear-gradient(135deg, #00bcd4 0%, #0097a7 100%)',
+                  color: 'white',
+                } : {
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  color: '#8b9bb4',
+                }}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {selectionMode && selectedIds.length > 0 && (
           <div
             className="flex flex-wrap items-center gap-3 pt-3"
-            style={{ borderTop: '1px solid var(--input-border)' }}
+            style={{ borderTop: '1px solid rgba(0, 188, 212, 0.1)' }}
           >
-            <span className="font-medium text-sm text-fg-strong" style={{ color: 'var(--accent-text)' }}>
-              {selectedIds.length.toLocaleString('fa-IR')} {t('selected')}
+            <span style={{ color: '#0097a7' }} className="font-medium text-sm">
+              {selectedIds.length.toLocaleString('fa-IR')} برنامه انتخاب شده
             </span>
             <button
               onClick={handleUploadSelected}
-              className="btn-base px-3 py-1.5 rounded-lg text-sm font-medium"
+              className="px-3 py-1.5 rounded-lg text-sm font-medium"
               style={{ background: 'rgba(124, 58, 237, 0.15)', color: '#7c3aed', border: '1px solid rgba(124, 58, 237, 0.3)' }}
             >
-              📱 {t('publish_social')}
+              📱 انتشار در شبکه‌های اجتماعی
             </button>
             <button
               onClick={handlePDF}
-              className="btn-base px-3 py-1.5 rounded-lg text-sm font-medium"
+              className="px-3 py-1.5 rounded-lg text-sm font-medium"
               style={{ background: 'rgba(220, 38, 38, 0.15)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}
             >
-              📄 {t('pdf_report')}
+              📄 گزارش PDF
             </button>
             <button
               onClick={handleExcel}
-              className="btn-base px-3 py-1.5 rounded-lg text-sm font-medium"
+              className="px-3 py-1.5 rounded-lg text-sm font-medium"
               style={{ background: 'rgba(0, 188, 212, 0.15)', color: '#0097a7', border: '1px solid rgba(0, 188, 212, 0.3)' }}
             >
-              📊 {t('excel_report')}
+              📊 گزارش Excel
             </button>
             <button
               onClick={() => { setSelectedIds([]); setSelectionMode(false); }}
-              className="btn-base px-3 py-1.5 rounded-lg text-sm font-medium"
-              style={{ background: 'rgba(122, 138, 128, 0.15)', color: 'var(--fg-muted)', border: '1px solid var(--input-border)' }}
+              className="px-3 py-1.5 rounded-lg text-sm font-medium"
+              style={{ background: 'rgba(122, 138, 128, 0.15)', color: '#8b9bb4', border: '1px solid rgba(122, 138, 128, 0.3)' }}
             >
-              {t('cancel')}
+              لغو
             </button>
           </div>
         )}
       </div>
 
-      {/* Loading skeletons — shown while data is arriving */}
-      {loading && (
-        <div className={view === 'grid'
-          ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-fade-in"
-          : "space-y-2 animate-fade-in"}>
-          {Array.from({ length: view === 'grid' ? 8 : 5 }).map((_, i) => (
-            <div key={i} className="skeleton-card" style={{ height: view === 'grid' ? 320 : 100 }}>
-              <div className="p-4 flex flex-col gap-3" style={{ height: '100%' }}>
-                {view === 'grid' ? (
-                  <>
-                    <div className="skeleton-line" style={{ height: '140px', borderRadius: '12px' }} />
-                    <div className="skeleton-line" style={{ width: '60%' }} />
-                    <div className="skeleton-line" style={{ width: '90%' }} />
-                    <div className="skeleton-line" style={{ width: '40%' }} />
-                  </>
-                ) : (
-                  <div className="flex items-center gap-3 h-full">
-                    <div className="skeleton-line" style={{ width: '56px', height: '56px', borderRadius: '12px' }} />
-                    <div className="flex-1 flex flex-col gap-2">
-                      <div className="skeleton-line" style={{ width: '50%' }} />
-                      <div className="skeleton-line" style={{ width: '80%' }} />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
+      {filteredShows.length === 0 ? (
+        <div className="text-center py-20" style={{ color: '#64748b' }}>
+          <p>برنامه‌ای یافت نشد</p>
         </div>
-      )}
-
-      {!loading && filteredShows.length === 0 ? (
-        <div className="empty-state animate-fade-in">
-          <div className="empty-state-icon">
-            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="7" />
-              <path d="M21 21l-4-4" />
-            </svg>
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-fg-strong" style={{ color: 'var(--fg-strong)' }}>{t('no_programs')}</h3>
-            <p className="text-sm mt-1 text-fg-muted" style={{ color: 'var(--fg-muted)', maxWidth: '420px' }}>{t('no_programs_desc')}</p>
-          </div>
-        </div>
-      ) : !loading && view === 'grid' ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-view-enter">
-          {pageShows.map(s => (
+      ) : view === 'grid' ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredShows.slice(0, 60).map(s => (
             <ProgramCard
               key={s.num}
               show={s}
@@ -3869,25 +2314,17 @@ function ProgramsView({
               selectionMode={selectionMode}
               selected={selectedIds.includes(s.num)}
               isUploaded={uploadedShows.includes(s.num)}
-              isBookmarked={bookmarks?.includes(s.num)}
-              compareActive={compareMode}
-              compareSelected={compareList?.includes(s.num) || false}
               onToggle={() => {
                 if (selectedIds.includes(s.num)) setSelectedIds(selectedIds.filter(x => x !== s.num));
                 else setSelectedIds([...selectedIds, s.num]);
               }}
-              onClick={() => {
-                if (compareMode && onToggleCompare) { onToggleCompare(s.num); return; }
-                if (!selectionMode) onShowClick(s);
-              }}
-              onToggleBookmark={onToggleBookmark ? () => onToggleBookmark(s.num) : undefined}
-              onToggleCompare={onToggleCompare ? () => onToggleCompare(s.num) : undefined}
+              onClick={() => !selectionMode && onShowClick(s)}
             />
           ))}
         </div>
-      ) : !loading && (
-        <div className="space-y-2 animate-view-enter">
-          {pageShows.map(s => (
+      ) : (
+        <div className="space-y-2">
+          {filteredShows.slice(0, 60).map(s => (
             <ProgramListRow
               key={s.num}
               show={s}
@@ -3895,99 +2332,20 @@ function ProgramsView({
               selectionMode={selectionMode}
               selected={selectedIds.includes(s.num)}
               isUploaded={uploadedShows.includes(s.num)}
-              isBookmarked={bookmarks?.includes(s.num)}
-              compareActive={compareMode}
-              compareSelected={compareList?.includes(s.num) || false}
               onToggle={() => {
                 if (selectedIds.includes(s.num)) setSelectedIds(selectedIds.filter(x => x !== s.num));
                 else setSelectedIds([...selectedIds, s.num]);
               }}
-              onClick={() => {
-                if (compareMode && onToggleCompare) { onToggleCompare(s.num); return; }
-                if (!selectionMode) onShowClick(s);
-              }}
-              onToggleBookmark={onToggleBookmark ? () => onToggleBookmark(s.num) : undefined}
-              onToggleCompare={onToggleCompare ? () => onToggleCompare(s.num) : undefined}
+              onClick={() => !selectionMode && onShowClick(s)}
             />
           ))}
         </div>
       )}
 
-      {/* Real pagination — 24 programs per page with numbered page buttons */}
-      {totalPages > 1 && (
-        <div
-          className="flex items-center justify-center gap-2 mt-8 flex-wrap animate-view-enter"
-          style={{ direction: 'ltr' }}
-        >
-          <button
-            onClick={() => setPage(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-            className="btn-base px-3 py-2 rounded-lg text-sm font-medium"
-            style={{
-              background: currentPage === 1 ? 'rgba(0,0,0,0.04)' : 'var(--accent-bg-soft)',
-              color: currentPage === 1 ? '#bbb' : 'var(--accent-text)',
-              border: '1px solid var(--accent-border)',
-              cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-              opacity: currentPage === 1 ? 0.6 : 1,
-            }}
-            aria-label={t('prev')}
-          >
-            › {t('prev')}
-          </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1)
-            .filter(p => {
-              if (p === 1 || p === totalPages) return true;
-              if (Math.abs(p - currentPage) <= 2) return true;
-              return false;
-            })
-            .map((p, idx, arr) => {
-              const prev = arr[idx - 1];
-              const showEllipsisBefore = prev && p - prev > 1;
-              return (
-                <span key={p} className="flex items-center gap-1">
-                  {showEllipsisBefore && <span style={{ color: 'var(--fg-muted)', padding: '0 4px' }}>…</span>}
-                  <button
-                    onClick={() => setPage(p)}
-                    className="btn-base min-w-[40px] px-3 py-2 rounded-lg text-sm font-bold"
-                    style={p === currentPage ? {
-                      background: 'linear-gradient(135deg, #26c6da 0%, #00bcd4 100%)',
-                      color: 'white',
-                      border: '1px solid #00bcd4',
-                      boxShadow: '0 4px 12px rgba(0, 188, 212, 0.3)',
-                    } : {
-                      background: 'var(--glass-bg-solid)',
-                      color: 'var(--fg-muted)',
-                      border: '1px solid var(--input-border)',
-                    }}
-                  >
-                    {p.toLocaleString('fa-IR')}
-                  </button>
-                </span>
-              );
-            })}
-          <button
-            onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage === totalPages}
-            className="btn-base px-3 py-2 rounded-lg text-sm font-medium"
-            style={{
-              background: currentPage === totalPages ? 'rgba(0,0,0,0.04)' : 'var(--accent-bg-soft)',
-              color: currentPage === totalPages ? '#bbb' : 'var(--accent-text)',
-              border: '1px solid var(--accent-border)',
-              cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-              opacity: currentPage === totalPages ? 0.6 : 1,
-            }}
-            aria-label={t('next')}
-          >
-            {t('next')} ‹
-          </button>
-        </div>
-      )}
-
-      {filteredShows.length > 0 && (
-        <div className="text-center mt-4 text-fg-muted" style={{ color: 'var(--fg-muted)' }}>
+      {filteredShows.length > 60 && (
+        <div className="text-center mt-8" style={{ color: '#64748b' }}>
           <p className="text-sm">
-            {t('page_x_of_y')} {currentPage.toLocaleString('fa-IR')} / {totalPages.toLocaleString('fa-IR')} •
-            {t('showing_x_y_of_z')} {(pageStart + 1).toLocaleString('fa-IR')}–{Math.min(pageStart + PAGE_SIZE, filteredShows.length).toLocaleString('fa-IR')} / {filteredShows.length.toLocaleString('fa-IR')} {t('programs_count')}
+            نمایش ۶۰ برنامه از {filteredShows.length.toLocaleString('fa-IR')} • برای مشاهده همه، جستجو را فیلتر کنید
           </p>
         </div>
       )}
@@ -3995,7 +2353,7 @@ function ProgramsView({
   );
 }
 
-function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onClick, genre, isBookmarked, onToggleBookmark, compareActive, compareSelected, onToggleCompare }: {
+function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onClick, genre }: {
   show: TalkShow;
   selectionMode: boolean;
   selected: boolean;
@@ -4003,52 +2361,37 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
   onToggle: () => void;
   onClick: () => void;
   genre?: Genre | null;
-  isBookmarked?: boolean;
-  onToggleBookmark?: () => void;
-  compareActive?: boolean;
-  compareSelected?: boolean;
-  onToggleCompare?: () => void;
 }) {
   const thumb = getShowThumbnail(show);
-  const { t } = useLang();
+  const dark = adjustColor(thumb.accent, -40);
+  const darker = adjustColor(thumb.accent, -70);
   // Section-specific tags derived from the genre (fallback to decor's style/size/viewers).
   const genreTags = renderGenreTags(show, genre);
   // User-defined tags on the show itself (purple badges).
   const userTags = show.tags && show.tags.length > 0 ? show.tags : [];
-  // Teal pill style for all metadata badges — small, rounded, minimal.
-  const tealPill: React.CSSProperties = {
-    backgroundColor: 'rgba(0, 188, 212, 0.15)',
-    color: '#26c6da',
-    border: '1px solid rgba(0, 188, 212, 0.3)',
-  };
   return (
     <div
       onClick={selectionMode ? onToggle : onClick}
-      className={`premium-show-card${selected ? ' is-selected' : ''}`}
+      className="premium-show-card"
       style={{
         background: 'rgba(13, 31, 44, 0.8)',
-        border: compareSelected
-          ? '2px solid #FACC15'
-          : selected
-          ? '2px solid #00bcd4'
-          : '1px solid rgba(0, 188, 212, 0.2)',
-        boxShadow: compareSelected
-          ? '0 0 0 2px rgba(250, 204, 21, 0.5), 0 8px 32px rgba(250, 204, 21, 0.18), 0 0 20px rgba(250, 204, 21, 0.12)'
-          : selected
-          ? '0 0 0 2px rgba(0, 188, 212, 0.5), 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 188, 212, 0.2)'
+        backdropFilter: 'blur(10px)',
+        border: selected ? '2px solid #00bcd4' : '1px solid rgba(0, 188, 212, 0.2)',
+        boxShadow: selected
+          ? '0 0 0 3px rgba(0, 188, 212, 0.3), 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 188, 212, 0.2)'
           : '0 8px 32px rgba(0, 0, 0, 0.4)',
       }}
       onMouseEnter={(e) => {
-        if (!selected && !compareSelected) {
+        if (!selected) {
           e.currentTarget.style.transform = 'translateY(-3px) scale(1.02)';
-          e.currentTarget.style.borderColor = 'rgba(0, 188, 212, 0.5)';
-          e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 188, 212, 0.15)';
+          e.currentTarget.style.border = '1px solid rgba(0, 188, 212, 0.5)';
+          e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.4), 0 0 20px rgba(0, 188, 212, 0.15)';
         }
       }}
       onMouseLeave={(e) => {
-        if (!selected && !compareSelected) {
+        if (!selected) {
           e.currentTarget.style.transform = 'translateY(0) scale(1)';
-          e.currentTarget.style.borderColor = 'rgba(0, 188, 212, 0.2)';
+          e.currentTarget.style.border = '1px solid rgba(0, 188, 212, 0.2)';
           e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.4)';
         }
       }}
@@ -4058,7 +2401,7 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
         className="aspect-video relative overflow-hidden"
         style={{
           background: thumb.gradient,
-          borderRadius: '16px 16px 0 0',
+          borderRadius: '22px 22px 0 0',
         }}
       >
         {thumb.image ? (
@@ -4066,7 +2409,7 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
             src={thumb.image}
             alt={show.name}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
         ) : (
           <>
@@ -4093,7 +2436,7 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
                 </div>
                 <div
                   className="text-xs font-medium px-2 py-0.5 rounded-full inline-block"
-                  style={tealPill}
+                  style={{ background: 'rgba(255,255,255,0.25)', color: 'white', backdropFilter: 'blur(8px)' }}
                 >
                   {show.style}
                 </div>
@@ -4102,80 +2445,11 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
           </>
         )}
 
-        {/* Image gradient overlay — strong dark fade at bottom for text readability
-            (linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.8) 100%)) */}
-        <div className="image-overlay" />
-
-        {/* ★ Bookmark button — top-right of thumbnail */}
-        {onToggleBookmark && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onToggleBookmark(); }}
-            aria-label={isBookmarked ? t('remove_from_bookmarks') : t('add_to_bookmarks')}
-            title={isBookmarked ? t('remove_from_bookmarks') : t('add_to_bookmarks')}
-            className="btn-base absolute p-1.5 rounded-full"
-            style={{
-              top: '8px',
-              right: '8px',
-              background: isBookmarked ? 'rgba(245, 158, 11, 0.95)' : 'rgba(13, 31, 44, 0.7)',
-              color: isBookmarked ? 'white' : '#26c6da',
-              border: '1px solid rgba(0, 188, 212, 0.3)',
-              backdropFilter: 'blur(6px)',
-              WebkitBackdropFilter: 'blur(6px)',
-              zIndex: 15,
-              fontSize: '14px',
-              lineHeight: 1,
-              minWidth: '32px',
-              minHeight: '32px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: isBookmarked ? '0 2px 8px rgba(245,158,11,0.6)' : 'none',
-            }}
-          >
-            {isBookmarked ? '★' : '☆'}
-          </button>
-        )}
-
-        {/* ⚖ Compare toggle — bottom-right of thumbnail (only shown when compare is active) */}
-        {onToggleCompare && compareActive && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onToggleCompare(); }}
-            aria-label={compareSelected ? t('remove_from_compare') : t('add_to_compare')}
-            title={compareSelected ? t('remove_from_compare') : t('add_to_compare')}
-            className="btn-base absolute p-1.5 rounded-full"
-            style={{
-              bottom: '8px',
-              left: '8px',
-              background: compareSelected ? 'rgba(245, 158, 11, 0.95)' : 'rgba(13, 31, 44, 0.7)',
-              color: compareSelected ? 'white' : '#26c6da',
-              border: '1px solid rgba(0, 188, 212, 0.3)',
-              backdropFilter: 'blur(6px)',
-              WebkitBackdropFilter: 'blur(6px)',
-              zIndex: 15,
-              fontSize: '13px',
-              lineHeight: 1,
-              minWidth: '32px',
-              minHeight: '32px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: compareSelected ? '0 2px 8px rgba(245,158,11,0.6)' : 'none',
-            }}
-          >
-            ⚖
-          </button>
-        )}
-
         {/* Multi-image badge — shows count when more than 1 image */}
         {show.images && show.images.length > 1 && (
           <span
-            className="absolute text-xs px-2 py-0.5 rounded-md backdrop-blur font-bold flex items-center gap-1"
-            style={{
-              background: 'rgba(13, 31, 44, 0.85)', color: '#26c6da',
-              border: '1px solid rgba(0, 188, 212, 0.3)',
-              top: onToggleBookmark ? '44px' : '8px',
-              right: '8px',
-            }}
+            className="absolute top-2 right-2 text-xs px-2 py-0.5 rounded-md backdrop-blur font-bold flex items-center gap-1"
+            style={{ background: 'rgba(0, 0, 0, 0.75)', color: 'white' }}
           >
             🖼 {show.images.length.toLocaleString('fa-IR')}
           </span>
@@ -4188,7 +2462,7 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
             style={{
               background: 'rgba(220, 38, 38, 0.85)',
               color: 'white',
-              top: show.images && show.images.length > 1 ? (onToggleBookmark ? '80px' : '44px') : (onToggleBookmark ? '44px' : '8px'),
+              top: show.images && show.images.length > 1 ? '36px' : '8px',
               right: '8px',
             }}
           >
@@ -4196,11 +2470,11 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
           </span>
         )}
 
-        {/* Uploaded badge — minimal dark glass instead of purple gradient */}
+        {/* Uploaded badge */}
         {isUploaded && (
           <span
             className="absolute top-2 left-2 text-xs px-2 py-0.5 rounded-md backdrop-blur font-medium"
-            style={{ background: 'rgba(0, 188, 212, 0.85)', color: '#0a1929' }}
+            style={{ background: 'rgba(124, 58, 237, 0.9)', color: 'white' }}
           >
             ☁ آپلود شده
           </span>
@@ -4210,11 +2484,11 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
           <div
             className="absolute top-2 left-2 w-6 h-6 rounded-md border-2 flex items-center justify-center"
             style={selected ? {
-              background: '#00bcd4',
-              borderColor: '#00bcd4',
+              background: thumb.accent,
+              borderColor: thumb.accent,
             } : {
-              background: 'rgba(13, 31, 44, 0.85)',
-              borderColor: 'rgba(0, 188, 212, 0.5)',
+              background: 'rgba(255,255,255,0.85)',
+              borderColor: `${thumb.accent}90`,
             }}
           >
             {selected && (
@@ -4227,7 +2501,7 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
 
         <div
           className="absolute bottom-2 right-2 text-xs px-2 py-0.5 rounded-md backdrop-blur font-medium"
-          style={{ background: 'rgba(13, 31, 44, 0.85)', color: '#26c6da', border: '1px solid rgba(0, 188, 212, 0.3)' }}
+          style={{ background: 'rgba(0, 0, 0, 0.75)', color: 'white' }}
         >
           {show.size}
         </div>
@@ -4237,33 +2511,33 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
         <div className="flex items-center gap-2 mb-2 flex-wrap">
           <span
             className="text-xs px-2 py-0.5 rounded-full font-medium"
-            style={tealPill}
+            style={{ backgroundColor: 'rgba(255,255,255,0.25)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}
           >
             {show.style}
           </span>
           {show.viewers === 'با تماشاگر' && (
-            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={tealPill}>
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}>
               👥 تماشاگر
             </span>
           )}
         </div>
 
-        <h3 className="font-bold text-sm leading-snug mb-2 line-clamp-2 text-white" style={{ direction: 'ltr', textAlign: 'right' }}>
+        <h3 className="font-bold text-sm leading-snug mb-2 line-clamp-2 text-white" style={{ direction: 'ltr', textAlign: 'right', textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}>
           {show.name}
         </h3>
 
-        <p className="text-xs line-clamp-2 mb-3" style={{ color: '#8b9bb4' }}>
+        <p className="text-xs line-clamp-2 mb-3" style={{ color: 'rgba(255,255,255,0.8)' }}>
           {show.summary && show.summary !== '—' ? show.summary : show.category}
         </p>
 
-        {/* Section-specific genre tags (small teal pills) */}
+        {/* Section-specific genre tags (small white badges) */}
         {genreTags.length > 0 && (
           <div className="flex items-center gap-1 flex-wrap mb-2">
             {genreTags.map(t => (
               <span
                 key={t.id}
                 className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
-                style={tealPill}
+                style={{ backgroundColor: 'rgba(255,255,255,0.22)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}
               >
                 {t.label}
               </span>
@@ -4271,14 +2545,14 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
           </div>
         )}
 
-        {/* User-defined tags (subtle purple-tinted pills for distinction) */}
+        {/* User-defined tags (purple badges) */}
         {userTags.length > 0 && (
           <div className="flex items-center gap-1 flex-wrap mb-2">
             {userTags.slice(0, 4).map((t, i) => (
               <span
                 key={i}
                 className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
-                style={{ backgroundColor: 'rgba(124, 58, 237, 0.25)', color: '#c4b5fd', border: '1px solid rgba(124, 58, 237, 0.4)' }}
+                style={{ backgroundColor: 'rgba(124, 58, 237, 0.65)', color: 'white', border: '1px solid rgba(168, 85, 247, 0.7)' }}
               >
                 #{t}
               </span>
@@ -4286,18 +2560,18 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
           </div>
         )}
 
-        <div className="flex items-center justify-between text-xs" style={{ color: '#8b9bb4' }}>
+        <div className="flex items-center justify-between text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>
           <span className="truncate" title={show.category}>
             {show.category.replace(/^\d+\.\s*/, '').substring(0, 18)}
           </span>
-          <span className="font-bold" style={{ color: '#26c6da' }}>#{show.num.toLocaleString('fa-IR')}</span>
+          <span className="font-bold text-white">#{show.num.toLocaleString('fa-IR')}</span>
         </div>
       </div>
     </div>
   );
 }
 
-function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, onClick, genre, isBookmarked, onToggleBookmark, compareActive, compareSelected, onToggleCompare }: {
+function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, onClick, genre }: {
   show: TalkShow;
   selectionMode: boolean;
   selected: boolean;
@@ -4305,37 +2579,22 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
   onToggle: () => void;
   onClick: () => void;
   genre?: Genre | null;
-  isBookmarked?: boolean;
-  onToggleBookmark?: () => void;
-  compareActive?: boolean;
-  compareSelected?: boolean;
-  onToggleCompare?: () => void;
 }) {
   const thumb = getShowThumbnail(show);
+  const dark = adjustColor(thumb.accent, -40);
+  const darker = adjustColor(thumb.accent, -70);
   const genreTags = renderGenreTags(show, genre);
   const userTags = show.tags && show.tags.length > 0 ? show.tags : [];
-  const { t } = useLang();
-  // Teal pill style — consistent with ProgramCard for a unified dark media-asset look.
-  const tealPill: React.CSSProperties = {
-    backgroundColor: 'rgba(0, 188, 212, 0.15)',
-    color: '#26c6da',
-    border: '1px solid rgba(0, 188, 212, 0.3)',
-  };
   return (
     <div
       onClick={selectionMode ? onToggle : onClick}
       className="premium-show-card"
       style={{
         background: 'rgba(13, 31, 44, 0.8)',
-        border: compareSelected
-          ? '2px solid #FACC15'
-          : selected
-          ? '2px solid #00bcd4'
-          : '1px solid rgba(0, 188, 212, 0.2)',
-        boxShadow: compareSelected
-          ? '0 0 0 2px rgba(250, 204, 21, 0.5), 0 8px 32px rgba(250, 204, 21, 0.18), 0 0 20px rgba(250, 204, 21, 0.12)'
-          : selected
-          ? '0 0 0 2px rgba(0, 188, 212, 0.5), 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 188, 212, 0.2)'
+        backdropFilter: 'blur(10px)',
+        border: selected ? '2px solid #00bcd4' : '1px solid rgba(0, 188, 212, 0.2)',
+        boxShadow: selected
+          ? '0 0 0 3px rgba(0, 188, 212, 0.3), 0 8px 32px rgba(0, 0, 0, 0.4)'
           : '0 8px 32px rgba(0, 0, 0, 0.4)',
         padding: '16px',
         display: 'flex',
@@ -4343,16 +2602,16 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
         gap: '16px',
       }}
       onMouseEnter={(e) => {
-        if (!selected && !compareSelected) {
+        if (!selected) {
           e.currentTarget.style.transform = 'translateY(-2px)';
-          e.currentTarget.style.borderColor = 'rgba(0, 188, 212, 0.5)';
-          e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 188, 212, 0.15)';
+          e.currentTarget.style.border = '1px solid rgba(0, 188, 212, 0.5)';
+          e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.4), 0 0 20px rgba(0, 188, 212, 0.15)';
         }
       }}
       onMouseLeave={(e) => {
-        if (!selected && !compareSelected) {
+        if (!selected) {
           e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.borderColor = 'rgba(0, 188, 212, 0.2)';
+          e.currentTarget.style.border = '1px solid rgba(0, 188, 212, 0.2)';
           e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.4)';
         }
       }}
@@ -4361,11 +2620,11 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
         <div
           className="w-6 h-6 rounded-md border-2 flex items-center justify-center flex-shrink-0"
           style={selected ? {
-            background: '#00bcd4',
-            borderColor: '#00bcd4',
+            background: thumb.accent,
+            borderColor: thumb.accent,
           } : {
-            background: 'rgba(13, 31, 44, 0.85)',
-            borderColor: 'rgba(0, 188, 212, 0.5)',
+            borderColor: `${thumb.accent}90`,
+            background: 'rgba(255,255,255,0.7)',
           }}
         >
           {selected && (
@@ -4378,55 +2637,47 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
 
       <div
         className="w-14 h-14 rounded-xl flex-shrink-0 relative overflow-hidden"
-        style={{ background: thumb.gradient, border: '1px solid rgba(0, 188, 212, 0.25)' }}
+        style={{ background: thumb.gradient }}
       >
-        {thumb.image ? (
-          <img
-            src={thumb.image}
-            alt={show.name}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
-          />
-        ) : (
-          <>
-            <div className="absolute inset-0" style={{ background: thumb.pattern }}></div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-lg font-black" style={{ color: 'white', textShadow: '0 1px 4px rgba(0,0,0,0.4)' }}>
-                {show.name.charAt(0).toUpperCase()}
-              </span>
-            </div>
-          </>
-        )}
+        <div className="absolute inset-0" style={{ background: thumb.pattern }}></div>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-lg font-black" style={{ color: 'white', textShadow: '0 1px 4px rgba(0,0,0,0.4)' }}>
+            {show.name.charAt(0).toUpperCase()}
+          </span>
+        </div>
       </div>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1 flex-wrap">
-          <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={tealPill}>
+          <span
+            className="text-xs px-2 py-0.5 rounded-full font-medium"
+            style={{ backgroundColor: 'rgba(255,255,255,0.25)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}
+          >
             {show.style}
           </span>
-          <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={tealPill}>
+          <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.25)' }}>
             {show.size}
           </span>
           {show.viewers === 'با تماشاگر' && (
-            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={tealPill}>
-              👥 تماشاگر
+            <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white' }}>
+              👥
             </span>
           )}
           {isUploaded && (
-            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={tealPill}>
-              ☁ آپلود
+            <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white' }}>
+              ☁
             </span>
           )}
         </div>
-        <h3 className="font-bold text-sm mb-1 truncate text-white" style={{ direction: 'ltr', textAlign: 'right' }}>{show.name}</h3>
-        <p className="text-xs truncate" style={{ color: '#8b9bb4' }}>{show.summary && show.summary !== '—' ? show.summary : show.category}</p>
+        <h3 className="font-bold text-sm mb-1 truncate text-white" style={{ direction: 'ltr', textAlign: 'right', textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}>{show.name}</h3>
+        <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.8)' }}>{show.summary && show.summary !== '—' ? show.summary : show.category}</p>
         {(genreTags.length > 0 || userTags.length > 0) && (
           <div className="flex items-center gap-1 flex-wrap mt-1.5">
             {genreTags.map(t => (
               <span
                 key={t.id}
                 className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
-                style={tealPill}
+                style={{ backgroundColor: 'rgba(255,255,255,0.22)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}
               >
                 {t.label}
               </span>
@@ -4435,7 +2686,7 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
               <span
                 key={`u${i}`}
                 className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
-                style={{ backgroundColor: 'rgba(124, 58, 237, 0.25)', color: '#c4b5fd', border: '1px solid rgba(124, 58, 237, 0.4)' }}
+                style={{ backgroundColor: 'rgba(124, 58, 237, 0.65)', color: 'white', border: '1px solid rgba(168, 85, 247, 0.7)' }}
               >
                 #{t}
               </span>
@@ -4445,58 +2696,8 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
       </div>
 
       <div className="text-center flex-shrink-0">
-        {/* ★ Bookmark button — top-right of row */}
-        {onToggleBookmark && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onToggleBookmark(); }}
-            aria-label={isBookmarked ? t('remove_from_bookmarks') : t('add_to_bookmarks')}
-            title={isBookmarked ? t('remove_from_bookmarks') : t('add_to_bookmarks')}
-            className="btn-base block mb-2 mx-auto"
-            style={{
-              background: isBookmarked ? 'rgba(245, 158, 11, 0.95)' : 'rgba(13, 31, 44, 0.7)',
-              color: isBookmarked ? 'white' : '#26c6da',
-              border: '1px solid rgba(0, 188, 212, 0.3)',
-              borderRadius: '999px',
-              width: '32px',
-              height: '32px',
-              fontSize: '14px',
-              lineHeight: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: isBookmarked ? '0 2px 8px rgba(245,158,11,0.6)' : 'none',
-            }}
-          >
-            {isBookmarked ? '★' : '☆'}
-          </button>
-        )}
-        {/* ⚖ Compare toggle (only when compare mode is active) */}
-        {onToggleCompare && compareActive && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onToggleCompare(); }}
-            aria-label={compareSelected ? t('remove_from_compare') : t('add_to_compare')}
-            title={compareSelected ? t('remove_from_compare') : t('add_to_compare')}
-            className="btn-base block mb-2 mx-auto"
-            style={{
-              background: compareSelected ? 'rgba(245, 158, 11, 0.95)' : 'rgba(13, 31, 44, 0.7)',
-              color: compareSelected ? 'white' : '#26c6da',
-              border: '1px solid rgba(0, 188, 212, 0.3)',
-              borderRadius: '999px',
-              width: '32px',
-              height: '32px',
-              fontSize: '13px',
-              lineHeight: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: compareSelected ? '0 2px 8px rgba(245,158,11,0.6)' : 'none',
-            }}
-          >
-            ⚖
-          </button>
-        )}
-        <div className="text-xs" style={{ color: '#8b9bb4' }}>{t('show_num')}</div>
-        <div className="font-bold text-sm" style={{ color: '#26c6da' }}>#{show.num.toLocaleString('fa-IR')}</div>
+        <div className="text-xs" style={{ color: 'rgba(255,255,255,0.6)' }}>شماره</div>
+        <div className="font-bold text-sm text-white">#{show.num.toLocaleString('fa-IR')}</div>
       </div>
     </div>
   );
@@ -4505,7 +2706,7 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
 // ============================================
 // SHOW DETAILS MODAL — with Persian description, links, publish, export
 // ============================================
-function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport, isUploaded, canEdit, allShows = [], onSwapShow, isBookmarked, onToggleBookmark, onAddToCompare }: {
+function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport, isUploaded, canEdit, allShows = [], onSwapShow }: {
   show: TalkShow;
   onClose: () => void;
   onEdit: (s: TalkShow) => void;
@@ -4516,13 +2717,9 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
   canEdit: boolean;
   allShows?: TalkShow[];
   onSwapShow?: (s: TalkShow) => void;
-  isBookmarked?: boolean;
-  onToggleBookmark?: () => void;
-  onAddToCompare?: () => void;
 }) {
   const thumb = getShowThumbnail(show);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const { t } = useLang();
   // Related programs computed from the full list — capped at 6.
   const related = useMemo(
     () => allShows.length > 0 ? findRelated(show, allShows, 6) : [],
@@ -4554,30 +2751,17 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                 top: 0,
                 left: 0,
               }}
-              onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
           )}
           {!thumb.image && <div className="absolute inset-0" style={{ background: thumb.pattern }}></div>}
           <button
-            onClick={(e) => { e.stopPropagation(); onClose(); }}
-            aria-label={t('close')}
-            className="absolute p-2.5 rounded-lg"
-            style={{
-              top: '16px',
-              left: '16px',
-              background: 'rgba(0,0,0,0.55)',
-              color: 'white',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-              zIndex: 20,
-              pointerEvents: 'auto',
-              cursor: 'pointer',
-              border: '1px solid rgba(255,255,255,0.25)',
-              boxShadow: '0 4px 14px rgba(0,0,0,0.35)',
-            }}
+            onClick={onClose}
+            className="absolute top-4 left-4 p-2 rounded-lg z-10"
+            style={{ background: 'rgba(0,0,0,0.4)', color: 'white', backdropFilter: 'blur(8px)' }}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
           <div className="relative z-10 text-white">
@@ -4603,7 +2787,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
             <h2 className="text-2xl font-bold mb-2" style={{ direction: 'ltr', textAlign: 'right', textShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
               {show.name}
             </h2>
-            <p className="text-sm opacity-90">{t('program_no_label')} {show.num.toLocaleString('fa-IR')}</p>
+            <p className="text-sm opacity-90">برنامهٔ شمارهٔ {show.num.toLocaleString('fa-IR')}</p>
           </div>
         </div>
 
@@ -4616,17 +2800,17 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
 
           {/* Persian description */}
           <div className="mb-6 p-4 rounded-xl" style={{ background: `${thumb.accent}10`, border: `1px solid ${thumb.accent}25` }}>
-            <h4 className="font-bold mb-2" style={{ color: '#FFFFFF' }}>{t('about_program')}</h4>
-            <p style={{ color: '#9CA3AF', lineHeight: 1.8 }}>{show.descriptionFa}</p>
+            <h4 className="font-bold mb-2" style={{ color: '#e2e8f0' }}>دربارهٔ برنامه</h4>
+            <p style={{ color: '#8b9bb4', lineHeight: 1.8 }}>{show.descriptionFa}</p>
           </div>
 
           {/* Video links gallery */}
           {show.videos && show.videos.length > 0 && (
             <div className="mb-6">
-              <h4 className="font-bold mb-3" style={{ color: '#FFFFFF' }}>
-                🎬 {t('videos_of_program')}
-                <span className="text-xs font-normal mr-2" style={{ color: '#6B7280' }}>
-                  ({show.videos.length.toLocaleString('fa-IR')} {t('videos_count_suffix')})
+              <h4 className="font-bold mb-3" style={{ color: '#e2e8f0' }}>
+                🎬 ویدیوهای برنامه
+                <span className="text-xs font-normal mr-2" style={{ color: '#64748b' }}>
+                  ({show.videos.length.toLocaleString('fa-IR')} ویدیو)
                 </span>
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -4651,7 +2835,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                         style={{ background: thumbUrl ? '#000' : `${platform.color}20` }}
                       >
                         {thumbUrl ? (
-                          <img src={thumbUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }} />
+                          <img src={thumbUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                         ) : (
                           <span className="text-2xl">{platform.icon}</span>
                         )}
@@ -4673,7 +2857,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                         </span>
                         <div
                           className="text-xs truncate"
-                          style={{ color: '#9CA3AF', direction: 'ltr', textAlign: 'left' }}
+                          style={{ color: '#8b9bb4', direction: 'ltr', textAlign: 'left' }}
                           title={url}
                         >
                           {url}
@@ -4688,7 +2872,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
 
           {/* Access links */}
           <div className="mb-6">
-            <h4 className="font-bold mb-3" style={{ color: '#FFFFFF' }}>{t('direct_access')}</h4>
+            <h4 className="font-bold mb-3" style={{ color: '#e2e8f0' }}>دسترسی مستقیم</h4>
             <div className="flex flex-wrap gap-2">
               <a
                 href={show.youtube}
@@ -4697,7 +2881,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                 className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
                 style={{ background: 'rgba(220, 38, 38, 0.15)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)', textDecoration: 'none' }}
               >
-                ▶ {t('watch_on_youtube')}
+                ▶ تماشا در یوتیوب
               </a>
               <a
                 href={show.imdb}
@@ -4706,7 +2890,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                 className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
                 style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#d97706', border: '1px solid rgba(245, 158, 11, 0.3)', textDecoration: 'none' }}
               >
-                🎬 {t('imdb_page')}
+                🎬 صفحهٔ IMDb
               </a>
               <a
                 href={show.wikipedia}
@@ -4715,7 +2899,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                 className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
                 style={{ background: 'rgba(37, 99, 235, 0.15)', color: '#2563eb', border: '1px solid rgba(37, 99, 235, 0.3)', textDecoration: 'none' }}
               >
-                📖 {t('wikipedia_page')}
+                📖 ویکی‌پدیا
               </a>
             </div>
           </div>
@@ -4727,38 +2911,15 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
               className="px-4 py-2 rounded-xl text-sm font-medium"
               style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)', color: 'white' }}
             >
-              📱 {t('publish_social')}
+              📱 انتشار در شبکه‌های اجتماعی
             </button>
-            {onToggleBookmark && (
-              <button
-                onClick={onToggleBookmark}
-                className="px-4 py-2 rounded-xl text-sm font-medium"
-                style={isBookmarked
-                  ? { background: 'rgba(245, 158, 11, 0.25)', color: '#b45309', border: '1px solid rgba(245, 158, 11, 0.55)' }
-                  : { background: 'rgba(245, 158, 11, 0.12)', color: '#b45309', border: '1px solid rgba(245, 158, 11, 0.3)' }
-                }
-                title={isBookmarked ? t('remove_from_bookmarks') : t('add_to_bookmarks')}
-              >
-                {isBookmarked ? `★ ${t('bookmarked')}` : `☆ ${t('bookmark_verb')}`}
-              </button>
-            )}
-            {onAddToCompare && (
-              <button
-                onClick={onAddToCompare}
-                className="px-4 py-2 rounded-xl text-sm font-medium"
-                style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#b45309', border: '1px solid rgba(245, 158, 11, 0.3)' }}
-                title={t('add_to_compare')}
-              >
-                ⚖ {t('add_to_compare')}
-              </button>
-            )}
             {canEdit && (
               <button
                 onClick={() => onEdit(show)}
                 className="px-4 py-2 rounded-xl text-sm font-medium"
                 style={{ background: 'rgba(0, 188, 212, 0.15)', color: '#0097a7', border: '1px solid rgba(0, 188, 212, 0.3)' }}
               >
-                ✏ {t('edit')}
+                ✏ ویرایش
               </button>
             )}
             <button
@@ -4766,14 +2927,14 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
               className="px-4 py-2 rounded-xl text-sm font-medium"
               style={{ background: 'rgba(220, 38, 38, 0.15)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}
             >
-              📄 {t('pdf_report')}
+              📄 گزارش PDF
             </button>
             <button
               onClick={() => onExport(show, 'excel')}
               className="px-4 py-2 rounded-xl text-sm font-medium"
               style={{ background: 'rgba(0, 188, 212, 0.15)', color: '#0097a7', border: '1px solid rgba(0, 188, 212, 0.3)' }}
             >
-              📊 {t('excel_report')}
+              📊 گزارش Excel
             </button>
             {canEdit && (
               <button
@@ -4781,7 +2942,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                 className="px-4 py-2 rounded-xl text-sm font-medium"
                 style={{ background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}
               >
-                🗑 {t('delete_program')}
+                🗑 حذف برنامه
               </button>
             )}
           </div>
@@ -4793,22 +2954,22 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
               style={{ background: 'rgba(220, 38, 38, 0.08)', border: '1px solid rgba(220, 38, 38, 0.25)' }}
             >
               <span className="text-sm font-medium" style={{ color: '#dc2626' }}>
-                {t('confirm_delete_question')}
+                این برنامه حذف شود؟ (قابل بازگشت نیست)
               </span>
               <div className="flex gap-2 flex-shrink-0">
                 <button
                   onClick={() => setConfirmDelete(false)}
                   className="px-3 py-1.5 rounded-lg text-sm font-medium"
-                  style={{ background: 'rgba(122, 138, 128, 0.15)', color: '#9CA3AF', border: '1px solid rgba(122, 138, 128, 0.3)' }}
+                  style={{ background: 'rgba(122, 138, 128, 0.15)', color: '#8b9bb4', border: '1px solid rgba(122, 138, 128, 0.3)' }}
                 >
-                  {t('cancel')}
+                  انصراف
                 </button>
                 <button
                   onClick={() => { onDelete(show.num); onClose(); }}
                   className="px-3 py-1.5 rounded-lg text-sm font-bold"
                   style={{ background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)', color: 'white' }}
                 >
-                  {t('yes_delete')}
+                  بله، حذف کن
                 </button>
               </div>
             </div>
@@ -4816,20 +2977,20 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
 
           {/* Decor details */}
           <div>
-            <h4 className="font-bold mb-3" style={{ color: '#FFFFFF' }}>{t('decor_scene_specs')}</h4>
+            <h4 className="font-bold mb-3" style={{ color: '#e2e8f0' }}>مشخصات دکور و صحنه</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <DetailField label={t('category_label')} value={show.category} />
-              <DetailField label={t('decor_style')} value={show.style} />
-              <DetailField label={t('studio_size')} value={show.size} />
-              <DetailField label={t('audience')} value={show.viewers} />
-              <DetailField label={t('decor_style')} value={show.style} />
-              <DetailField label={t('effects')} value={show.effects} />
-              <DetailField label={t('layout')} value={show.layout} />
-              <DetailField label={t('lighting')} value={show.lighting} />
-              <DetailField label={t('decor_elements')} value={show.elements} />
-              <DetailField label={t('materials')} value={show.materials} />
+              <DetailField label="دسته‌بندی" value={show.category} />
+              <DetailField label="منبع داده" value={show.source} />
+              <DetailField label="اندازهٔ استودیو" value={show.size} />
+              <DetailField label="تماشاگر" value={show.viewers} />
+              <DetailField label="سبک دکور" value={show.style} />
+              <DetailField label="جلوه‌ها" value={show.effects} />
+              <DetailField label="چیدمان" value={show.layout} />
+              <DetailField label="نورپردازی" value={show.lighting} />
+              <DetailField label="عناصر دکور" value={show.elements} />
+              <DetailField label="مواد" value={show.materials} />
               <div className="sm:col-span-2">
-                <DetailField label={t('colors')} value={show.colors} />
+                <DetailField label="رنگ‌آمیزی" value={show.colors} />
               </div>
             </div>
           </div>
@@ -4837,15 +2998,15 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
           {/* Decor summary */}
           {show.summary && show.summary !== '—' && (
             <div className="mt-6 p-4 rounded-xl" style={{ background: `${thumb.accent}10`, border: `1px solid ${thumb.accent}25` }}>
-              <h4 className="font-bold mb-2" style={{ color: '#FFFFFF' }}>{t('decor_summary')}</h4>
-              <p style={{ color: '#9CA3AF', lineHeight: 1.7 }}>{show.summary}</p>
+              <h4 className="font-bold mb-2" style={{ color: '#e2e8f0' }}>خلاصهٔ دکور</h4>
+              <p style={{ color: '#8b9bb4', lineHeight: 1.7 }}>{show.summary}</p>
             </div>
           )}
 
           {/* Tags section — user-defined tags + detected Islamic countries */}
           {((show.tags && show.tags.length > 0) || countries.length > 0 || show.country) && (
             <div className="mt-6 p-4 rounded-xl" style={{ background: 'rgba(124, 58, 237, 0.06)', border: '1px solid rgba(124, 58, 237, 0.2)' }}>
-              <h4 className="font-bold mb-3" style={{ color: '#FFFFFF' }}>🏷 {t('tags_label')}</h4>
+              <h4 className="font-bold mb-3" style={{ color: '#e2e8f0' }}>🏷 برچسب‌ها</h4>
               {show.tags && show.tags.length > 0 && (
                 <div className="flex items-center gap-2 flex-wrap mb-2">
                   {show.tags.map((t, i) => (
@@ -4861,7 +3022,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
               )}
               {countries.length > 0 && (
                 <div className="flex items-center gap-2 flex-wrap mb-2">
-                  <span className="text-xs font-bold" style={{ color: '#6B7280' }}>🌍 {t('detected_countries')}</span>
+                  <span className="text-xs font-bold" style={{ color: '#64748b' }}>🌍 کشورهای شناسایی‌شده:</span>
                   {countries.map((c, i) => (
                     <span
                       key={i}
@@ -4874,8 +3035,8 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                 </div>
               )}
               {show.country && (
-                <div className="text-xs" style={{ color: '#6B7280' }}>
-                  {t('origin_country_entered')} <strong style={{ color: '#FFFFFF' }}>{show.country}</strong>
+                <div className="text-xs" style={{ color: '#64748b' }}>
+                  کشور مبدا (وارد شده): <strong style={{ color: '#e2e8f0' }}>{show.country}</strong>
                 </div>
               )}
             </div>
@@ -4884,7 +3045,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
           {/* 🔗 Related programs — computed from allShows via findRelated */}
           {related.length > 0 && (
             <div className="mt-6">
-              <h4 className="font-bold mb-3 text-fg-strong" style={{ color: 'var(--fg-strong)' }}>🔗 {t('related_programs')}</h4>
+              <h4 className="font-bold mb-3" style={{ color: '#e2e8f0' }}>🔗 برنامه‌های مرتبط</h4>
               <div className="flex items-center gap-3 overflow-x-auto pb-3 no-scrollbar">
                 {related.map(r => {
                   const rThumb = getShowThumbnail(r);
@@ -4905,7 +3066,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                     >
                       <div className="aspect-video relative overflow-hidden">
                         {rThumb.image ? (
-                          <img src={rThumb.image} alt={r.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }} />
+                          <img src={rThumb.image} alt={r.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                         ) : (
                           <div className="absolute inset-0" style={{ background: rThumb.gradient }}></div>
                         )}
@@ -4929,8 +3090,8 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
 function DetailField({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-xs font-bold mb-1" style={{ color: '#6B7280' }}>{label}</div>
-      <div className="text-sm" style={{ color: '#FFFFFF' }}>{value || '—'}</div>
+      <div className="text-xs font-bold mb-1" style={{ color: '#64748b' }}>{label}</div>
+      <div className="text-sm" style={{ color: '#e2e8f0' }}>{value || '—'}</div>
     </div>
   );
 }
@@ -4949,13 +3110,12 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
   presetGenre?: Genre | null;
   genres?: Genre[];
 }) {
-  const { t } = useLang();
   const [form, setForm] = useState<Partial<TalkShow>>(
     editingShow || {
       num: Math.max(0, ...talkShows.map(s => s.num)) + 1,
       name: '',
       category: presetCategory || '',
-      source: '',
+      source: 'متن',
       size: 'متوسط/استاندارد',
       viewers: 'بدون تماشاگر',
       style: 'مدرن',
@@ -4979,7 +3139,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
 
   const handleAutoFetch = async () => {
     if (!fetchUrl) {
-      showToast(t('fetch_imdb_wiki_prompt'));
+      showToast('لینک IMDb یا ویکی‌پدیا را وارد کنید');
       return;
     }
     setFetching(true);
@@ -4991,7 +3151,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       });
       const data = await res.json();
       if (data.error) {
-        showToast(t('fetch_failed_toast', { msg: data.error }));
+        showToast(`خطا: ${data.error}`);
       } else {
         const info = data.info;
         const updated = { ...form };
@@ -5021,10 +3181,10 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
           updated.socialPost = `🎬 ${updated.name}\n\n📝 ${updated.descriptionFa || ''}\n\n#بانک_رسانه #تاک_شو`;
         }
         setForm(updated);
-        showToast(t('fetch_success_toast'));
+        showToast('اطلاعات با موفقیت دریافت شد');
       }
     } catch (e) {
-      showToast(t('fetch_error_toast'));
+      showToast('خطا در دریافت اطلاعات');
     } finally {
       setFetching(false);
     }
@@ -5032,7 +3192,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
 
   const handleSubmit = () => {
     if (!form.name) {
-      showToast(t('name_required_toast'));
+      showToast('نام برنامه الزامی است');
       return;
     }
     // Auto-generate links if not set
@@ -5062,32 +3222,34 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
   return (
     <>
       <header className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-1" style={{ color: '#FFFFFF' }}>
-          {editingShow ? t('edit_program') : t('add_new_program')}
+        <h1 className="text-2xl sm:text-3xl font-bold mb-1" style={{ color: '#e2e8f0' }}>
+          {editingShow ? 'ویرایش برنامه' : 'افزودن برنامهٔ جدید'}
         </h1>
-        <p style={{ color: '#6B7280' }}>
-          {editingShow ? t('edit_program_no', { n: editingShow.num.toLocaleString('fa-IR') }) : t('fill_form_below')}
+        <p style={{ color: '#64748b' }}>
+          {editingShow ? `ویرایش برنامهٔ شمارهٔ ${editingShow.num.toLocaleString('fa-IR')}` : 'فرم زیر را پر کنید'}
         </p>
       </header>
 
       <div className="premium-glass p-6 space-y-4">
         {/* Auto-fetch from IMDb/Wikipedia */}
-        <div className="p-4 rounded-xl" style={{ background: 'rgba(0,188,212,0.06)', border: '1px solid #2A2E35' }}>
-          <h4 className="font-bold mb-2" style={{ color: 'var(--fg-strong)' }}>{t('auto_fetch_info')}</h4>
-          <p className="text-xs mb-3" style={{ color: 'var(--fg-muted)' }}>
-            {t('auto_fetch_desc')}
+        <div className="p-4 rounded-xl" style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.15)' }}>
+          <h4 className="font-bold mb-2" style={{ color: '#e2e8f0' }}>⚡ دریافت خودکار اطلاعات</h4>
+          <p className="text-xs mb-3" style={{ color: '#64748b' }}>
+            لینک IMDb یا ویکی‌پدیا برنامه را وارد کنید تا نام، توضیحات، تصویر و سایر اطلاعات خودکار دریافت شود.
           </p>
           <div className="flex gap-2">
             <input
               type="text"
               value={fetchUrl}
               onChange={(e) => setFetchUrl(e.target.value)}
-              placeholder={t('auto_fetch_placeholder')}
-              className="input-base"
+              placeholder="https://www.imdb.com/title/... یا https://fa.wikipedia.org/..."
               style={{
                 flex: 1,
                 padding: '10px 16px',
-                borderRadius: '10px',
+                borderRadius: '12px',
+                border: '1px solid rgba(2,144,72,0.15)',
+                background: 'rgba(255,255,255,0.85)',
+                color: '#e2e8f0',
                 fontFamily: 'inherit',
                 outline: 'none',
                 direction: 'ltr',
@@ -5100,86 +3262,96 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
               className="btn-enter-premium"
               style={{ padding: '10px 24px', fontSize: '14px', whiteSpace: 'nowrap' }}
             >
-              {fetching ? t('fetching') : t('fetch_btn')}
+              {fetching ? '⏳ در حال دریافت...' : '⚡ دریافت'}
             </button>
           </div>
         </div>
 
-        <FormField label={t('program_name_required')} value={form.name || ''} onChange={v => setForm({ ...form, name: v })} placeholder={t('name_placeholder')} />
+        <FormField label="نام برنامه *" value={form.name || ''} onChange={v => setForm({ ...form, name: v })} placeholder="مثلاً: BBC Breakfast" />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormSelect
-            label={t('category_label')}
+            label="دسته‌بندی"
             value={form.category || ''}
             onChange={v => setForm({ ...form, category: v })}
             options={genres.map(g => ({ value: g.nameFa, label: g.nameFa }))}
           />
-          <FormField label={t('origin_country_label')} value={form.country || ''} onChange={v => setForm({ ...form, country: v })} placeholder={t('country_placeholder')} />
+          <FormField label="کشور مبدا" value={form.country || ''} onChange={v => setForm({ ...form, country: v })} placeholder="مثلاً: ایران، ترکیه" />
           <FormSelect
-            label={t('studio_size')}
+            label="منبع داده"
+            value={form.source || ''}
+            onChange={v => setForm({ ...form, source: v })}
+            options={[
+              { value: 'تصویر PDF', label: 'تصویر PDF' },
+              { value: 'تصویر وب', label: 'تصویر وب' },
+              { value: 'متن', label: 'تحلیل متنی' },
+            ]}
+          />
+          <FormSelect
+            label="اندازهٔ استودیو"
             value={form.size || ''}
             onChange={v => setForm({ ...form, size: v })}
             options={[
-              { value: 'بزرگ/لوکس', label: t('large_lux') },
-              { value: 'متوسط/استاندارد', label: t('medium_std') },
-              { value: 'کوچک/اقتصادی', label: t('small_econ') },
+              { value: 'بزرگ/لوکس', label: 'بزرگ/لوکس' },
+              { value: 'متوسط/استاندارد', label: 'متوسط/استاندارد' },
+              { value: 'کوچک/اقتصادی', label: 'کوچک/اقتصادی' },
             ]}
           />
           <FormSelect
-            label={t('audience')}
+            label="تماشاگر"
             value={form.viewers || ''}
             onChange={v => setForm({ ...form, viewers: v })}
             options={[
-              { value: 'با تماشاگر', label: t('with_audience') },
-              { value: 'بدون تماشاگر', label: t('without_audience') },
-              { value: 'نامشخص', label: t('decor_unknown') },
+              { value: 'با تماشاگر', label: 'با تماشاگر' },
+              { value: 'بدون تماشاگر', label: 'بدون تماشاگر' },
+              { value: 'نامشخص', label: 'نامشخص' },
             ]}
           />
           <FormSelect
-            label={t('decor_style')}
+            label="سبک دکور"
             value={form.style || ''}
             onChange={v => setForm({ ...form, style: v })}
             options={[
-              { value: 'مدرن', label: t('modern') },
-              { value: 'ترکیبی', label: t('composite') },
-              { value: 'مینیمال', label: t('minimal') },
-              { value: 'کلاسیک/سنتی', label: t('decor_classic_traditional') },
-              { value: 'فاخر/تزئینی', label: t('decor_lux_decorative') },
+              { value: 'مدرن', label: 'مدرن' },
+              { value: 'ترکیبی', label: 'ترکیبی' },
+              { value: 'مینیمال', label: 'مینیمال' },
+              { value: 'کلاسیک/سنتی', label: 'کلاسیک/سنتی' },
+              { value: 'فاخر/تزئینی', label: 'فاخر/تزئینی' },
             ]}
           />
           <FormSelect
-            label={t('lighting')}
+            label="نورپردازی"
             value={form.lighting || ''}
             onChange={v => setForm({ ...form, lighting: v })}
             options={[
-              { value: 'خنثی', label: t('decor_neutral') },
-              { value: 'گرم', label: t('decor_warm') },
-              { value: 'سرد', label: t('decor_cold') },
-              { value: 'ترکیبی', label: t('composite') },
-              { value: 'دراماتیک', label: t('decor_dramatic') },
+              { value: 'خنثی', label: 'خنثی' },
+              { value: 'گرم', label: 'گرم' },
+              { value: 'سرد', label: 'سرد' },
+              { value: 'ترکیبی', label: 'ترکیبی' },
+              { value: 'دراماتیک', label: 'دراماتیک' },
             ]}
           />
         </div>
 
-        <FormField label={t('decor_elements')} value={form.elements || ''} onChange={v => setForm({ ...form, elements: v })} placeholder={t('elements_placeholder')} />
-        <FormField label={t('materials')} value={form.materials || ''} onChange={v => setForm({ ...form, materials: v })} placeholder={t('materials_placeholder')} />
-        <FormField label={t('colors')} value={form.colors || ''} onChange={v => setForm({ ...form, colors: v })} placeholder={t('colors_placeholder')} />
+        <FormField label="عناصر دکور" value={form.elements || ''} onChange={v => setForm({ ...form, elements: v })} placeholder="مثلاً: plants, screens/monitors" />
+        <FormField label="مواد" value={form.materials || ''} onChange={v => setForm({ ...form, materials: v })} placeholder="مثلاً: wood, glass, metal" />
+        <FormField label="رنگ‌آمیزی" value={form.colors || ''} onChange={v => setForm({ ...form, colors: v })} placeholder="مثلاً: red, blue, white" />
 
         {/* Persian description */}
         <div>
-          <label className="text-sm font-bold mb-2 block" style={{ color: '#FFFFFF' }}>{t('about_program_fa')}</label>
+          <label className="text-sm font-bold mb-2 block" style={{ color: '#e2e8f0' }}>دربارهٔ برنامه (فارسی)</label>
           <textarea
             value={form.descriptionFa || ''}
             onChange={(e) => setForm({ ...form, descriptionFa: e.target.value })}
-            placeholder={t('persian_description_placeholder')}
+            placeholder="توضیحات فارسی دربارهٔ برنامه — چه برنامه‌ای است، چه محتوایی دارد..."
             rows={3}
             style={{
               width: '100%',
               padding: '12px 16px',
               borderRadius: '12px',
               border: '1px solid rgba(0, 188, 212, 0.15)',
-              background: 'rgba(30, 34, 40, 0.75)',
-              color: '#FFFFFF',
+              background: 'rgba(255, 255, 255, 0.85)',
+              color: '#e2e8f0',
               fontFamily: 'inherit',
               outline: 'none',
               resize: 'vertical',
@@ -5188,19 +3360,19 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
         </div>
 
         <div>
-          <label className="text-sm font-bold mb-2 block" style={{ color: '#FFFFFF' }}>{t('decor_summary')}</label>
+          <label className="text-sm font-bold mb-2 block" style={{ color: '#e2e8f0' }}>خلاصهٔ دکور</label>
           <textarea
             value={form.summary || ''}
             onChange={(e) => setForm({ ...form, summary: e.target.value })}
-            placeholder={t('decor_summary_placeholder')}
+            placeholder="توضیحات کامل دکور و صحنهٔ برنامه..."
             rows={4}
             style={{
               width: '100%',
               padding: '12px 16px',
               borderRadius: '12px',
               border: '1px solid rgba(0, 188, 212, 0.15)',
-              background: 'rgba(30, 34, 40, 0.75)',
-              color: '#FFFFFF',
+              background: 'rgba(255, 255, 255, 0.85)',
+              color: '#e2e8f0',
               fontFamily: 'inherit',
               outline: 'none',
               resize: 'vertical',
@@ -5236,14 +3408,14 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
             className="btn-enter-premium"
             style={{ padding: '12px 32px', fontSize: '15px' }}
           >
-            {editingShow ? t('update_btn') : t('add_program_btn')}
+            {editingShow ? '✓ بروزرسانی' : '+ افزودن برنامه'}
           </button>
           <button
             onClick={() => { setEditingShow(null); onDone(); }}
             className="px-6 py-3 rounded-xl text-sm font-medium"
-            style={{ background: 'rgba(122, 138, 128, 0.15)', color: '#9CA3AF', border: '1px solid rgba(122, 138, 128, 0.3)' }}
+            style={{ background: 'rgba(122, 138, 128, 0.15)', color: '#8b9bb4', border: '1px solid rgba(122, 138, 128, 0.3)' }}
           >
-            {t('cancel')}
+            انصراف
           </button>
         </div>
       </div>
@@ -5259,17 +3431,19 @@ function FormField({ label, value, onChange, placeholder }: {
 }) {
   return (
     <div>
-      <label className="text-sm font-bold mb-2 block" style={{ color: 'var(--fg-soft)' }}>{label}</label>
+      <label className="text-sm font-bold mb-2 block" style={{ color: '#e2e8f0' }}>{label}</label>
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="input-base"
         style={{
           width: '100%',
           padding: '10px 16px',
-          borderRadius: '10px',
+          borderRadius: '12px',
+          border: '1px solid rgba(0, 188, 212, 0.15)',
+          background: 'rgba(255, 255, 255, 0.85)',
+          color: '#e2e8f0',
           fontFamily: 'inherit',
           outline: 'none',
         }}
@@ -5286,15 +3460,17 @@ function FormSelect({ label, value, onChange, options }: {
 }) {
   return (
     <div>
-      <label className="text-sm font-bold mb-2 block" style={{ color: 'var(--fg-soft)' }}>{label}</label>
+      <label className="text-sm font-bold mb-2 block" style={{ color: '#e2e8f0' }}>{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="input-base"
         style={{
           width: '100%',
           padding: '10px 16px',
-          borderRadius: '10px',
+          borderRadius: '12px',
+          border: '1px solid rgba(0, 188, 212, 0.15)',
+          background: 'rgba(255, 255, 255, 0.85)',
+          color: '#e2e8f0',
           fontFamily: 'inherit',
           outline: 'none',
         }}
@@ -5316,104 +3492,53 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
   onChange: (imgs: string[]) => void;
   showToast: (msg: string) => void;
 }) {
-  const { t, lang } = useLang();
   const [urlInput, setUrlInput] = useState('');
-  const [compressing, setCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Keep a ref to the latest images array so async FileReader callbacks always see current state
   const imagesRef = useRef<string[]>(images);
   imagesRef.current = images;
   const MAX_IMAGES = 8;
-  const MAX_WIDTH = 1280;
-  const JPEG_QUALITY = 0.8;
-
-  // Compress a single image file via Canvas API:
-  // - If wider than MAX_WIDTH (1280px), downscale to MAX_WIDTH preserving aspect ratio.
-  // - Always re-encode as JPEG at JPEG_QUALITY (0.8) regardless of the source format.
-  // This keeps localStorage usage small and avoids storing multi-MB base64 strings.
-  const compressImage = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onerror = () => reject(new Error(t('image_compress_error_toast', { name: file.name })));
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        const img = new window.Image();
-        img.onerror = () => reject(new Error(t('image_compress_error_toast', { name: file.name })));
-        img.onload = () => {
-          let { width, height } = img;
-          if (width > MAX_WIDTH) {
-            height = Math.round((height * MAX_WIDTH) / width);
-            width = MAX_WIDTH;
-          }
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            // Canvas unavailable — fall back to original data URL.
-            resolve(dataUrl);
-            return;
-          }
-          // White background so transparent PNGs do not turn black when JPEG-encoded.
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, width, height);
-          ctx.drawImage(img, 0, 0, width, height);
-          // Re-encode as JPEG at quality 0.8.
-          try {
-            const compressed = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
-            resolve(compressed);
-          } catch (e) {
-            // Some browsers refuse to export large canvases — fall back to original.
-            resolve(dataUrl);
-          }
-        };
-        img.src = dataUrl;
-      };
-      reader.readAsDataURL(file);
-    });
-  };
 
   const addUrl = () => {
     if (!urlInput.trim()) return;
     if (images.length >= MAX_IMAGES) {
-      showToast(t('max_images_toast', { n: MAX_IMAGES }));
+      showToast(`حداکثر ${MAX_IMAGES.toLocaleString('fa-IR')} تصویر مجاز است`);
       return;
     }
     if (images.includes(urlInput.trim())) {
-      showToast(t('image_duplicate_toast'));
+      showToast('این تصویر قبلاً اضافه شده');
       return;
     }
     onChange([...images, urlInput.trim()]);
     setUrlInput('');
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     const fileArr = Array.from(files);
     const remaining = MAX_IMAGES - imagesRef.current.length;
     const toAdd = fileArr.slice(0, remaining);
     if (toAdd.length < fileArr.length) {
-      showToast(t('images_added_partial_toast', { added: toAdd.length, max: MAX_IMAGES }));
+      showToast(`فقط ${toAdd.length.toLocaleString('fa-IR')} تصویر اضافه شد (حداکثر ${MAX_IMAGES.toLocaleString('fa-IR')})`);
     }
-    setCompressing(true);
-    try {
-      for (const file of toAdd) {
-        try {
-          const compressed = await compressImage(file);
-          const current = imagesRef.current;
-          if (current.length < MAX_IMAGES && !current.includes(compressed)) {
-            onChange([...current, compressed]);
-          }
-        } catch (err: any) {
-          showToast(err?.message || t('image_compress_error_toast', { name: file.name }));
+    // Read files sequentially to preserve order
+    toAdd.forEach((file, i) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const current = imagesRef.current;
+        if (current.length < MAX_IMAGES && !current.includes(result)) {
+          onChange([...current, result]);
         }
-      }
-    } finally {
-      setCompressing(false);
-      // Reset file input so same file can be re-selected later
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
+      };
+      reader.onerror = () => {
+        showToast(`خطا در خواندن فایل: ${file.name}`);
+      };
+      reader.readAsDataURL(file);
+    });
+    // Reset file input so same file can be re-selected later
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const removeImage = (idx: number) => {
@@ -5429,22 +3554,17 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
   };
 
   return (
-    <div className="p-4 rounded-xl" style={{ background: 'rgba(0,188,212,0.06)', border: '1px solid rgba(0,188,212,0.15)' }}>
+    <div className="p-4 rounded-xl" style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.15)' }}>
       <div className="flex items-center justify-between mb-3">
-        <h4 className="font-bold" style={{ color: '#FFFFFF' }}>
-          🖼 {t('program_images')}
-          <span className="text-xs font-normal mr-2" style={{ color: '#6B7280' }}>
-            ({images.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')} {t('image_count_of')} {MAX_IMAGES.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')})
+        <h4 className="font-bold" style={{ color: '#e2e8f0' }}>
+          🖼 تصاویر برنامه
+          <span className="text-xs font-normal mr-2" style={{ color: '#64748b' }}>
+            ({images.length.toLocaleString('fa-IR')} از {MAX_IMAGES.toLocaleString('fa-IR')})
           </span>
         </h4>
         {images.length > 0 && (
-          <span className="text-xs" style={{ color: '#0097a7' }}>{t('first_image_cover')}</span>
+          <span className="text-xs" style={{ color: '#0097a7' }}>تصویر اول = کاور</span>
         )}
-      </div>
-
-      {/* Compression notice */}
-      <div className="text-xs mb-3" style={{ color: '#6B7280' }}>
-        {t('compression_notice')}
       </div>
 
       {/* URL input + file upload */}
@@ -5454,15 +3574,15 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
           value={urlInput}
           onChange={(e) => setUrlInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addUrl())}
-          placeholder={t('paste_image_url')}
+          placeholder="لینک تصویر را اینجا بچسبانید..."
           disabled={images.length >= MAX_IMAGES}
           style={{
             flex: 1,
             padding: '10px 16px',
             borderRadius: '12px',
-            border: '1px solid rgba(0,188,212,0.15)',
+            border: '1px solid rgba(2,144,72,0.15)',
             background: images.length >= MAX_IMAGES ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.85)',
-            color: '#FFFFFF',
+            color: '#e2e8f0',
             fontFamily: 'inherit',
             outline: 'none',
             direction: 'ltr',
@@ -5475,26 +3595,26 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
           disabled={images.length >= MAX_IMAGES || !urlInput.trim()}
           className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
           style={{
-            background: images.length >= MAX_IMAGES || !urlInput.trim() ? 'rgba(0,0,0,0.05)' : 'linear-gradient(135deg, #26c6da 0%, #00bcd4 100%)',
+            background: images.length >= MAX_IMAGES || !urlInput.trim() ? 'rgba(0,0,0,0.05)' : 'linear-gradient(135deg, #00bcd4 0%, #0097a7 100%)',
             color: images.length >= MAX_IMAGES || !urlInput.trim() ? '#999' : 'white',
-            border: '1px solid rgba(0,188,212,0.3)',
+            border: '1px solid rgba(2,144,72,0.3)',
             whiteSpace: 'nowrap',
           }}
         >
-          + {t('add_link')}
+          + افزودن لینک
         </button>
         <button
           onClick={() => fileInputRef.current?.click()}
-          disabled={images.length >= MAX_IMAGES || compressing}
+          disabled={images.length >= MAX_IMAGES}
           className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
           style={{
-            background: images.length >= MAX_IMAGES || compressing ? 'rgba(0,0,0,0.05)' : 'rgba(0,188,212,0.1)',
-            color: images.length >= MAX_IMAGES || compressing ? '#999' : '#0097a7',
-            border: '1px solid rgba(0,188,212,0.3)',
+            background: images.length >= MAX_IMAGES ? 'rgba(0,0,0,0.05)' : 'rgba(2,144,72,0.1)',
+            color: images.length >= MAX_IMAGES ? '#999' : '#0097a7',
+            border: '1px solid rgba(2,144,72,0.3)',
             whiteSpace: 'nowrap',
           }}
         >
-          {compressing ? t('fetching') : `📁 ${t('upload_file')}`}
+          📁 آپلود فایل
         </button>
         <input
           ref={fileInputRef}
@@ -5510,11 +3630,11 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
       {images.length === 0 ? (
         <div
           className="text-center py-8 rounded-xl"
-          style={{ background: 'rgba(255,255,255,0.5)', border: '2px dashed rgba(0,188,212,0.2)' }}
+          style={{ background: 'rgba(255,255,255,0.5)', border: '2px dashed rgba(2,144,72,0.2)' }}
         >
           <div className="text-3xl mb-2 opacity-40">🖼</div>
-          <p className="text-xs" style={{ color: '#6B7280' }}>
-            {t('no_images_yet')}
+          <p className="text-xs" style={{ color: '#64748b' }}>
+            هنوز تصویری اضافه نشده. می‌تونید لینک بچسبانید یا فایل آپلود کنید.
           </p>
         </div>
       ) : (
@@ -5543,7 +3663,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
                   className="absolute top-1 right-1 text-xs px-2 py-0.5 rounded-md font-bold"
                   style={{ background: '#00bcd4', color: 'white' }}
                 >
-                  {t('cover_badge')}
+                  کاور
                 </span>
               )}
               {/* Number badge */}
@@ -5564,10 +3684,10 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
                   className="p-1.5 rounded-lg transition-colors"
                   style={{
                     background: idx === 0 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.9)',
-                    color: idx === 0 ? 'rgba(255,255,255,0.5)' : '#0d1f2c',
+                    color: idx === 0 ? 'rgba(255,255,255,0.5)' : '#e2e8f0',
                     cursor: idx === 0 ? 'not-allowed' : 'pointer',
                   }}
-                  title={t('move_left')}
+                  title="به چپ"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -5577,7 +3697,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
                   onClick={() => removeImage(idx)}
                   className="p-1.5 rounded-lg"
                   style={{ background: 'rgba(220,38,38,0.9)', color: 'white' }}
-                  title={t('cancel')}
+                  title="حذف"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -5589,10 +3709,10 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
                   className="p-1.5 rounded-lg transition-colors"
                   style={{
                     background: idx === images.length - 1 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.9)',
-                    color: idx === images.length - 1 ? 'rgba(255,255,255,0.5)' : '#0d1f2c',
+                    color: idx === images.length - 1 ? 'rgba(255,255,255,0.5)' : '#e2e8f0',
                     cursor: idx === images.length - 1 ? 'not-allowed' : 'pointer',
                   }}
-                  title={t('move_right')}
+                  title="به راست"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -5608,8 +3728,8 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
               className="rounded-xl flex flex-col items-center justify-center transition-all"
               style={{
                 aspectRatio: '4/3',
-                border: '2px dashed rgba(0,188,212,0.3)',
-                background: 'rgba(0,188,212,0.04)',
+                border: '2px dashed rgba(2,144,72,0.3)',
+                background: 'rgba(2,144,72,0.04)',
                 color: '#0097a7',
                 cursor: 'pointer',
               }}
@@ -5617,7 +3737,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
               <svg className="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
               </svg>
-              <span className="text-xs font-medium">{t('add_btn')}</span>
+              <span className="text-xs font-medium">افزودن</span>
             </button>
           )}
         </div>
@@ -5635,10 +3755,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
   onVideosChange: (vids: string[]) => void;
   onYoutubeChange: (url: string) => void;
 }) {
-  const { t, lang } = useLang();
   const [urlInput, setUrlInput] = useState('');
-  const [uploadWarning, setUploadWarning] = useState<string | null>(null);
-  const videoFileRef = useRef<HTMLInputElement>(null);
 
   const addVideo = () => {
     if (!urlInput.trim()) return;
@@ -5651,116 +3768,18 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
     onVideosChange(videos.filter((_, i) => i !== idx));
   };
 
-  // Validate a video file:
-  // - Max file size: 5 MB
-  // - Max duration: 30 seconds (checked by loading it into a <video> element)
-  // The video file is NOT stored locally (too large for localStorage); we just
-  // surface warnings and let the user know the file is too big / too long.
-  const MAX_VIDEO_BYTES = 5 * 1024 * 1024;
-  const MAX_VIDEO_DURATION = 30;
-
-  const formatBytes = (bytes: number): string => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-  };
-
-  const handleVideoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadWarning(null);
-    // Size check
-    if (file.size > MAX_VIDEO_BYTES) {
-      setUploadWarning(
-        lang === 'en'
-          ? `⚠ File size ${formatBytes(file.size)} exceeds the limit (${formatBytes(MAX_VIDEO_BYTES)}). Please choose a smaller file.`
-          : `⚠ حجم فایل ${formatBytes(file.size)} است — بیش از حد مجاز (${formatBytes(MAX_VIDEO_BYTES)}). لطفاً فایل کوچک‌تری انتخاب کنید.`
-      );
-      if (videoFileRef.current) videoFileRef.current.value = '';
-      return;
-    }
-    // Duration check via a temporary <video> element.
-    const url = URL.createObjectURL(file);
-    const v = document.createElement('video');
-    v.preload = 'metadata';
-    v.onloadedmetadata = () => {
-      URL.revokeObjectURL(url);
-      const duration = v.duration;
-      if (duration > MAX_VIDEO_DURATION) {
-        setUploadWarning(
-          lang === 'en'
-            ? `⚠ Video duration ${duration.toFixed(1)}s exceeds the limit (${MAX_VIDEO_DURATION}s). Please choose a shorter video.`
-            : `⚠ مدت ویدیو ${duration.toFixed(1)} ثانیه است — بیش از حد مجاز (${MAX_VIDEO_DURATION} ثانیه). لطفاً ویدیوی کوتاه‌تری انتخاب کنید.`
-        );
-      } else {
-        setUploadWarning(lang === 'en'
-          ? `✓ File "${file.name}" accepted (${formatBytes(file.size)}, ${duration.toFixed(1)}s) — but videos are not stored locally in this version. Please upload it to a video sharing service (YouTube, Aparat, ...) and add the link.`
-          : `✓ فایل «${file.name}» قابل قبول است (${formatBytes(file.size)}، ${duration.toFixed(1)} ثانیه) — اما ویدیوها در نسخهٔ فعلی به‌صورت بومی ذخیره نمی‌شوند. لطفاً آن را در سرویس اشتراک‌گذاری ویدیو (یوتیوب، آپارات و...) آپلود کنید و لینک را اضافه کنید.`
-        );
-      }
-      if (videoFileRef.current) videoFileRef.current.value = '';
-    };
-    v.onerror = () => {
-      URL.revokeObjectURL(url);
-      setUploadWarning(lang === 'en' ? '⚠ Invalid video file or cannot be read.' : '⚠ فایل ویدیو نامعتبر است یا قابل خواندن نیست.');
-      if (videoFileRef.current) videoFileRef.current.value = '';
-    };
-    v.src = url;
-  };
-
   return (
-    <div className="p-4 rounded-xl" style={{ background: 'rgba(0,188,212,0.06)', border: '1px solid rgba(0,188,212,0.15)' }}>
-      <h4 className="font-bold mb-3" style={{ color: '#FFFFFF' }}>
-        🎬 {t('program_videos')}
-        <span className="text-xs font-normal mr-2" style={{ color: '#6B7280' }}>
-          ({videos.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')} {t('videos_count_suffix')})
+    <div className="p-4 rounded-xl" style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.15)' }}>
+      <h4 className="font-bold mb-3" style={{ color: '#e2e8f0' }}>
+        🎬 ویدیوهای برنامه
+        <span className="text-xs font-normal mr-2" style={{ color: '#64748b' }}>
+          ({videos.length.toLocaleString('fa-IR')} ویدیو)
         </span>
       </h4>
 
-      {/* Constraints reminder */}
-      <div className="text-xs mb-3" style={{ color: '#6B7280' }}>
-        {t('video_constraints')}
-      </div>
-
-      {/* Video file upload (with size + duration validation) */}
-      <div className="mb-3 flex gap-2">
-        <button
-          onClick={() => videoFileRef.current?.click()}
-          className="px-3 py-2 rounded-xl text-sm font-medium"
-          style={{
-            background: 'rgba(220, 38, 38, 0.1)',
-            color: '#dc2626',
-            border: '1px solid rgba(220, 38, 38, 0.3)',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {t('select_video_file')}
-        </button>
-        <input
-          ref={videoFileRef}
-          type="file"
-          accept="video/*"
-          onChange={handleVideoFile}
-          style={{ display: 'none' }}
-        />
-      </div>
-
-      {uploadWarning && (
-        <div
-          className="mb-3 p-3 rounded-xl text-xs font-medium"
-          style={{
-            background: uploadWarning.startsWith('✓') ? 'rgba(0,188,212,0.1)' : 'rgba(220,38,38,0.1)',
-            color: uploadWarning.startsWith('✓') ? '#0097a7' : '#dc2626',
-            border: uploadWarning.startsWith('✓') ? '1px solid rgba(0,188,212,0.3)' : '1px solid rgba(220,38,38,0.3)',
-          }}
-        >
-          {uploadWarning}
-        </div>
-      )}
-
       {/* Main YouTube search link field (auto-generated) */}
       <div className="mb-3">
-        <label className="text-xs font-bold mb-1 block" style={{ color: '#9CA3AF' }}>{t('youtube_search_link')}</label>
+        <label className="text-xs font-bold mb-1 block" style={{ color: '#8b9bb4' }}>لینک جستجوی یوتیوب (خودکار)</label>
         <input
           type="text"
           value={youtube}
@@ -5770,9 +3789,9 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
             width: '100%',
             padding: '8px 12px',
             borderRadius: '10px',
-            border: '1px solid rgba(0,188,212,0.15)',
+            border: '1px solid rgba(2,144,72,0.15)',
             background: 'rgba(255,255,255,0.85)',
-            color: '#FFFFFF',
+            color: '#e2e8f0',
             fontFamily: 'inherit',
             outline: 'none',
             direction: 'ltr',
@@ -5789,14 +3808,14 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
           value={urlInput}
           onChange={(e) => setUrlInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addVideo())}
-          placeholder={t('paste_video_url')}
+          placeholder="لینک ویدیو (یوتیوب، آپارات، Vimeo، تلگرام و...) را بچسبانید"
           style={{
             flex: 1,
             padding: '10px 16px',
             borderRadius: '12px',
-            border: '1px solid rgba(0,188,212,0.15)',
+            border: '1px solid rgba(2,144,72,0.15)',
             background: 'rgba(255,255,255,0.85)',
-            color: '#FFFFFF',
+            color: '#e2e8f0',
             fontFamily: 'inherit',
             outline: 'none',
             direction: 'ltr',
@@ -5809,13 +3828,13 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
           disabled={!urlInput.trim()}
           className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
           style={{
-            background: !urlInput.trim() ? 'rgba(0,0,0,0.05)' : 'linear-gradient(135deg, #26c6da 0%, #00bcd4 100%)',
+            background: !urlInput.trim() ? 'rgba(0,0,0,0.05)' : 'linear-gradient(135deg, #00bcd4 0%, #0097a7 100%)',
             color: !urlInput.trim() ? '#999' : 'white',
-            border: '1px solid rgba(0,188,212,0.3)',
+            border: '1px solid rgba(2,144,72,0.3)',
             whiteSpace: 'nowrap',
           }}
         >
-          + {t('add_video')}
+          + افزودن ویدیو
         </button>
       </div>
 
@@ -5829,7 +3848,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
               <div
                 key={idx}
                 className="flex items-center gap-3 p-2 rounded-xl"
-                style={{ background: 'rgba(255,255,255,0.85)', border: '1px solid rgba(0,188,212,0.1)' }}
+                style={{ background: 'rgba(255,255,255,0.85)', border: '1px solid rgba(2,144,72,0.1)' }}
               >
                 {/* Thumbnail or icon */}
                 <div
@@ -5837,7 +3856,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
                   style={{ background: thumb ? '#000' : `${platform.color}20` }}
                 >
                   {thumb ? (
-                    <img src={thumb} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }} />
+                    <img src={thumb} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                   ) : (
                     <span className="text-xl">{platform.icon}</span>
                   )}
@@ -5852,7 +3871,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
                   </span>
                   <div
                     className="text-xs truncate"
-                    style={{ color: '#9CA3AF', direction: 'ltr', textAlign: 'left' }}
+                    style={{ color: '#8b9bb4', direction: 'ltr', textAlign: 'left' }}
                     title={url}
                   >
                     {url}
@@ -5864,8 +3883,8 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-2 rounded-lg flex-shrink-0"
-                  style={{ background: 'rgba(0,188,212,0.1)', color: '#0097a7' }}
-                  title={t('open_btn')}
+                  style={{ background: 'rgba(2,144,72,0.1)', color: '#0097a7' }}
+                  title="باز کردن"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -5876,7 +3895,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
                   onClick={() => removeVideo(idx)}
                   className="p-2 rounded-lg flex-shrink-0"
                   style={{ background: 'rgba(220,38,38,0.1)', color: '#dc2626' }}
-                  title={t('cancel')}
+                  title="حذف"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -5938,15 +3957,14 @@ function TagsEditor({ tags, onChange, presetTags }: {
   onChange: (tags: string[]) => void;
   presetTags?: string[];
 }) {
-  const { t, lang } = useLang();
   const [input, setInput] = useState('');
 
   const commit = (next: string[]) => {
     // De-duplicate + trim. Empty strings are dropped.
     const seen = new Set<string>();
     const clean: string[] = [];
-    for (const tag of next) {
-      const s = (tag || '').trim();
+    for (const t of next) {
+      const s = (t || '').trim();
       if (!s) continue;
       const key = s.toLowerCase();
       if (seen.has(key)) continue;
@@ -5968,25 +3986,25 @@ function TagsEditor({ tags, onChange, presetTags }: {
     onChange(tags.filter((_, i) => i !== idx));
   };
 
-  const togglePreset = (tag: string) => {
-    const exists = tags.some(x => x.toLowerCase() === tag.toLowerCase());
+  const togglePreset = (t: string) => {
+    const exists = tags.some(x => x.toLowerCase() === t.toLowerCase());
     if (exists) {
-      onChange(tags.filter(x => x.toLowerCase() !== tag.toLowerCase()));
+      onChange(tags.filter(x => x.toLowerCase() !== t.toLowerCase()));
     } else {
-      commit([...tags, tag]);
+      commit([...tags, t]);
     }
   };
 
   return (
     <div className="p-4 rounded-xl" style={{ background: 'rgba(124, 58, 237, 0.06)', border: '1px solid rgba(124, 58, 237, 0.2)' }}>
-      <h4 className="font-bold mb-2" style={{ color: '#FFFFFF' }}>
-        🏷 {t('tags_label')}
-        <span className="text-xs font-normal mr-2" style={{ color: '#6B7280' }}>
-          ({tags.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')} {t('tags_label')})
+      <h4 className="font-bold mb-2" style={{ color: '#e2e8f0' }}>
+        🏷 برچسب‌ها
+        <span className="text-xs font-normal mr-2" style={{ color: '#64748b' }}>
+          ({tags.length.toLocaleString('fa-IR')} برچسب)
         </span>
       </h4>
-      <p className="text-xs mb-3" style={{ color: '#6B7280' }}>
-        {t('tags_hint')}
+      <p className="text-xs mb-3" style={{ color: '#64748b' }}>
+        برچسب‌ها را با کاما (، یا ,) جدا کنید — مثلاً: مدرن، گرم، چوبی
       </p>
 
       {/* Comma-separated input + Add button */}
@@ -5996,14 +4014,14 @@ function TagsEditor({ tags, onChange, presetTags }: {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addFromInput(); } }}
-          placeholder={t('tags_placeholder')}
+          placeholder="مدرن، گرم، چوبی..."
           style={{
             flex: 1,
             padding: '10px 16px',
             borderRadius: '12px',
             border: '1px solid rgba(124, 58, 237, 0.2)',
             background: 'rgba(255,255,255,0.85)',
-            color: '#FFFFFF',
+            color: '#e2e8f0',
             fontFamily: 'inherit',
             outline: 'none',
           }}
@@ -6019,26 +4037,26 @@ function TagsEditor({ tags, onChange, presetTags }: {
             whiteSpace: 'nowrap',
           }}
         >
-          + {t('add_btn')}
+          + افزودن
         </button>
       </div>
 
       {/* Removable pill list */}
       {tags.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap mb-3">
-          {tags.map((tag, i) => (
+          {tags.map((t, i) => (
             <span
               key={i}
               className="text-xs px-2 py-1 rounded-md font-medium flex items-center gap-1"
               style={{ background: 'rgba(124, 58, 237, 0.18)', color: '#6d28d9', border: '1px solid rgba(124, 58, 237, 0.3)' }}
             >
-              #{tag}
+              #{t}
               <button
                 onClick={() => removeTag(i)}
-                aria-label={`${t('cancel')} ${tag}`}
+                aria-label={`حذف ${t}`}
                 className="hover:opacity-70"
                 style={{ color: '#7c3aed', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1 }}
-                title={t('cancel')}
+                title="حذف"
               >
                 ×
               </button>
@@ -6048,9 +4066,9 @@ function TagsEditor({ tags, onChange, presetTags }: {
             onClick={() => onChange([])}
             className="text-xs px-2 py-1 rounded-md font-medium"
             style={{ background: 'rgba(220, 38, 38, 0.1)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.25)' }}
-            title={t('clear_all')}
+            title="پاک کردن همه"
           >
-            {t('clear_all')}
+            پاک کردن همه
           </button>
         </div>
       )}
@@ -6058,14 +4076,14 @@ function TagsEditor({ tags, onChange, presetTags }: {
       {/* Preset quick-add buttons (from the genre's presetTags) */}
       {presetTags && presetTags.length > 0 && (
         <div>
-          <div className="text-xs font-bold mb-2" style={{ color: '#9CA3AF' }}>{t('preset_tags_hint')}</div>
+          <div className="text-xs font-bold mb-2" style={{ color: '#8b9bb4' }}>برچسب‌های پیشنهادی این ژانر:</div>
           <div className="flex items-center gap-2 flex-wrap">
-            {presetTags.map(tag => {
-              const selected = tags.some(x => x.toLowerCase() === tag.toLowerCase());
+            {presetTags.map(t => {
+              const selected = tags.some(x => x.toLowerCase() === t.toLowerCase());
               return (
                 <button
-                  key={tag}
-                  onClick={() => togglePreset(tag)}
+                  key={t}
+                  onClick={() => togglePreset(t)}
                   className="text-xs px-2 py-1 rounded-md font-medium transition-all"
                   style={selected ? {
                     background: 'rgba(124, 58, 237, 0.4)',
@@ -6077,7 +4095,7 @@ function TagsEditor({ tags, onChange, presetTags }: {
                     border: '1px solid rgba(124, 58, 237, 0.2)',
                   }}
                 >
-                  {selected ? '✓ ' : '+ '}{tag}
+                  {selected ? '✓ ' : '+ '}{t}
                 </button>
               );
             })}
@@ -6092,14 +4110,13 @@ function TagsEditor({ tags, onChange, presetTags }: {
 // ADD GENRE MODAL — admin creates a new Genre (name + description + color)
 // ============================================
 const GENRE_COLOR_PRESETS = [
-  '#00bcd4', '#0097a7', '#7c3aed', '#db2777', '#dc2626', '#ea580c', '#16a34a', '#0e7490',
+  '#00bcd4', '#0891b2', '#7c3aed', '#db2777', '#dc2626', '#ea580c', '#16a34a', '#0e7490',
 ];
 
 function AddGenreModal({ onClose, onSave }: {
   onClose: () => void;
   onSave: (g: Genre) => void;
 }) {
-  const { t, lang } = useLang();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [color, setColor] = useState(GENRE_COLOR_PRESETS[0]);
@@ -6114,7 +4131,7 @@ function AddGenreModal({ onClose, onSave }: {
       nameFa: trimmed,
       name: trimmed,
       color,
-      description: description.trim() || (lang === 'en' ? `Custom genre: ${trimmed}` : `ژانر سفارشی: ${trimmed}`),
+      description: description.trim() || `ژانر سفارشی: ${trimmed}`,
       filterFn: (s: TalkShow) => s.category.includes(trimmed),
       isCustom: true,
       tags: DEFAULT_GENRE_TAGS,
@@ -6128,9 +4145,9 @@ function AddGenreModal({ onClose, onSave }: {
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content" style={{ maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(0,188,212,0.1)' }}>
-          <h2 className="text-xl font-bold" style={{ color: '#FFFFFF' }}>{t('add_genre_new')}</h2>
-          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#6B7280' }}>
+        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.1)' }}>
+          <h2 className="text-xl font-bold" style={{ color: '#e2e8f0' }}>+ افزودن ژانر جدید</h2>
+          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#64748b' }}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -6139,19 +4156,19 @@ function AddGenreModal({ onClose, onSave }: {
 
         <div className="p-6 space-y-4">
           <div>
-            <label className="text-sm font-bold mb-2 block" style={{ color: '#FFFFFF' }}>{t('genre_name_required')}</label>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#e2e8f0' }}>نام ژانر *</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder={t('genre_name_placeholder')}
+              placeholder="مثلاً: مستند، انیمیشن، کودک..."
               style={{
                 width: '100%',
                 padding: '10px 16px',
                 borderRadius: '12px',
                 border: '1px solid rgba(0, 188, 212, 0.15)',
                 background: 'rgba(255,255,255,0.85)',
-                color: '#FFFFFF',
+                color: '#e2e8f0',
                 fontFamily: 'inherit',
                 outline: 'none',
               }}
@@ -6159,11 +4176,11 @@ function AddGenreModal({ onClose, onSave }: {
           </div>
 
           <div>
-            <label className="text-sm font-bold mb-2 block" style={{ color: '#FFFFFF' }}>{t('description_label')}</label>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#e2e8f0' }}>توضیحات</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder={t('description_placeholder')}
+              placeholder="توضیح کوتاه دربارهٔ این ژانر..."
               rows={2}
               style={{
                 width: '100%',
@@ -6171,7 +4188,7 @@ function AddGenreModal({ onClose, onSave }: {
                 borderRadius: '12px',
                 border: '1px solid rgba(0, 188, 212, 0.15)',
                 background: 'rgba(255,255,255,0.85)',
-                color: '#FFFFFF',
+                color: '#e2e8f0',
                 fontFamily: 'inherit',
                 outline: 'none',
                 resize: 'vertical',
@@ -6180,7 +4197,7 @@ function AddGenreModal({ onClose, onSave }: {
           </div>
 
           <div>
-            <label className="text-sm font-bold mb-2 block" style={{ color: '#FFFFFF' }}>{t('genre_color_label')}</label>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#e2e8f0' }}>رنگ ژانر</label>
             <div className="flex items-center gap-2 flex-wrap">
               {GENRE_COLOR_PRESETS.map(c => (
                 <button
@@ -6189,7 +4206,7 @@ function AddGenreModal({ onClose, onSave }: {
                   className="w-9 h-9 rounded-full transition-all"
                   style={{
                     background: c,
-                    border: color === c ? '3px solid #00bcd4' : '3px solid transparent',
+                    border: color === c ? '3px solid #e2e8f0' : '3px solid transparent',
                     boxShadow: color === c ? `0 0 0 3px ${c}40` : 'none',
                     cursor: 'pointer',
                   }}
@@ -6207,15 +4224,15 @@ function AddGenreModal({ onClose, onSave }: {
               border: `1px solid ${color}50`,
             }}
           >
-            <div className="text-xs font-bold mb-1" style={{ color: '#6B7280' }}>{t('preview_label')}</div>
+            <div className="text-xs font-bold mb-1" style={{ color: '#64748b' }}>پیش‌نمایش:</div>
             <div className="flex items-center gap-2">
               <span
                 className="w-3 h-3 rounded-full"
                 style={{ background: color, boxShadow: `0 0 10px ${color}` }}
               ></span>
-              <strong style={{ color: '#FFFFFF' }}>{name || t('genre_preview_default')}</strong>
+              <strong style={{ color: '#e2e8f0' }}>{name || '—'}</strong>
             </div>
-            <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>{description || t('genre_default_desc')}</p>
+            <p className="text-xs mt-1" style={{ color: '#8b9bb4' }}>{description || 'توضیحات...'}</p>
           </div>
 
           <div className="flex gap-3 pt-2">
@@ -6225,14 +4242,14 @@ function AddGenreModal({ onClose, onSave }: {
               className="btn-enter-premium flex-1"
               style={{ opacity: name.trim() ? 1 : 0.5, cursor: name.trim() ? 'pointer' : 'not-allowed' }}
             >
-              {t('save_genre')}
+              ✓ ذخیره ژانر
             </button>
             <button
               onClick={onClose}
               className="px-6 py-3 rounded-xl text-sm font-medium"
-              style={{ background: 'rgba(122,138,128,0.15)', color: '#9CA3AF', border: '1px solid rgba(122,138,128,0.3)' }}
+              style={{ background: 'rgba(122,138,128,0.15)', color: '#8b9bb4', border: '1px solid rgba(122,138,128,0.3)' }}
             >
-              {t('cancel')}
+              انصراف
             </button>
           </div>
         </div>
@@ -6246,7 +4263,7 @@ const SOCIAL_PLATFORMS = [
   { id: 'bale', name: 'بله', color: '#ffaa00', icon: '💬' },
   { id: 'ita', name: 'ایفا', color: '#3b82f6', icon: '📧' },
   { id: 'soroush', name: 'سروش', color: '#f97316', icon: '📱' },
-  { id: 'gap', name: 'گپ', color: '#26c6da', icon: '💬' },
+  { id: 'gap', name: 'گپ', color: '#22c55e', icon: '💬' },
   { id: 'instagram', name: 'اینستاگرام', color: '#e1306c', icon: '📷' },
 ];
 
@@ -6256,7 +4273,6 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
   onConfirm: (platform: string) => void;
   onOpenBotConfig: () => void;
 }) {
-  const { t, lang } = useLang();
   const [selectedPlatform, setSelectedPlatform] = useState<string>('');
   const [postText, setPostText] = useState(
     shows.length === 1
@@ -6268,12 +4284,12 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
-  const directSendSupported = selectedPlatform === t('telegram_label') || selectedPlatform === t('bale_label');
+  const directSendSupported = selectedPlatform === 'تلگرام' || selectedPlatform === 'بله';
 
   // Send the post directly to the selected channel via the /api/publish-social route.
   const handleDirectSend = async () => {
     if (!botConfig || !botConfig.token || !botConfig.chatId) {
-      setSendResult({ ok: false, msg: t('bot_config_required_toast') });
+      setSendResult({ ok: false, msg: 'ابتدا تنظیمات ربات را وارد کنید' });
       return;
     }
     setSending(true);
@@ -6296,12 +4312,12 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
       });
       const data = await res.json();
       if (data.ok) {
-        setSendResult({ ok: true, msg: t('post_sent_to', { platform: selectedPlatform }) });
+        setSendResult({ ok: true, msg: `✅ پست به ${selectedPlatform} ارسال شد` });
       } else {
-        setSendResult({ ok: false, msg: t('post_send_failed', { msg: data.error || t('post_send_failed', { msg: '' }) }) });
+        setSendResult({ ok: false, msg: `❌ ${data.error || 'ارسال ناموفق'}` });
       }
     } catch {
-      setSendResult({ ok: false, msg: t('post_send_network_error') });
+      setSendResult({ ok: false, msg: '❌ خطای شبکه هنگام ارسال' });
     } finally {
       setSending(false);
     }
@@ -6321,12 +4337,12 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
     const grad = ctx.createLinearGradient(0, 0, 1080, 1080);
     grad.addColorStop(0, '#00bcd4');
     grad.addColorStop(0.6, '#0097a7');
-    grad.addColorStop(1, '#014824');
+    grad.addColorStop(1, '#006978');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 1080, 1080);
 
     // Decorative circles
-    ctx.fillStyle = 'rgba(0, 188, 212, 0.15)';
+    ctx.fillStyle = 'rgba(38, 198, 218, 0.15)';
     ctx.beginPath();
     ctx.arc(900, 200, 300, 0, Math.PI * 2);
     ctx.fill();
@@ -6433,9 +4449,9 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content" style={{ maxWidth: '700px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(0,188,212,0.1)' }}>
-          <h2 className="text-xl font-bold" style={{ color: '#FFFFFF' }}>{t('publish_social_title')}</h2>
-          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#6B7280' }}>
+        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.1)' }}>
+          <h2 className="text-xl font-bold" style={{ color: '#e2e8f0' }}>📱 انتشار در شبکه‌های اجتماعی</h2>
+          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#64748b' }}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -6445,7 +4461,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
         <div className="p-6 space-y-5">
           {/* Platform selection */}
           <div>
-            <h4 className="font-bold mb-3" style={{ color: '#FFFFFF' }}>{t('select_platform')}</h4>
+            <h4 className="font-bold mb-3" style={{ color: '#e2e8f0' }}>انتخاب پلتفرم</h4>
             <div className="grid grid-cols-3 gap-2">
               {SOCIAL_PLATFORMS.map(p => (
                 <button
@@ -6471,14 +4487,14 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
 
           {/* Post preview — with image + description */}
           <div>
-            <h4 className="font-bold mb-3" style={{ color: '#FFFFFF' }}>{t('post_preview')}</h4>
+            <h4 className="font-bold mb-3" style={{ color: '#e2e8f0' }}>پیش‌نمایش پست</h4>
             <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(0,0,0,0.1)' }}>
               {/* Card image preview — real program image or 1080x1080 social card */}
               <div
                 className="relative overflow-hidden"
                 style={{
                   aspectRatio: '1/1',
-                  background: 'linear-gradient(135deg, #26c6da 0%, #00bcd4 60%, #0097a7 100%)',
+                  background: 'linear-gradient(135deg, #00bcd4 0%, #0097a7 60%, #006978 100%)',
                   maxHeight: '400px',
                 }}
               >
@@ -6496,16 +4512,16 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
                       left: 0,
                       opacity: 0.7,
                     }}
-                    onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                   />
                 )}
                 {/* Dark overlay for text readability */}
                 <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(1,10,5,0.3) 0%, rgba(1,10,5,0.8) 100%)' }}></div>
 
                 <div className="relative z-10 h-full flex flex-col items-center justify-center p-8 text-center text-white">
-                  <div className="text-xs mb-3 opacity-60">{t('banke_rasane_brand')}</div>
+                  <div className="text-xs mb-3 opacity-60">بانک رسانه</div>
                   <div className="text-2xl font-bold mb-4">
-                    {shows.length === 1 ? shows[0].name : t('social_card_programs_count', { n: shows.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR') })}
+                    {shows.length === 1 ? shows[0].name : `${shows.length.toLocaleString('fa-IR')} برنامهٔ منتخب`}
                   </div>
                   {/* Description */}
                   <div className="text-sm opacity-80 max-w-xs line-clamp-3" style={{ lineHeight: 1.6 }}>
@@ -6516,7 +4532,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
                   </div>
                   {/* Category badge */}
                   <div className="mt-4 px-4 py-1.5 rounded-full text-xs" style={{ background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)' }}>
-                    {shows[0]?.category?.replace(/^\d+\.\s*/, '') || (lang === 'en' ? 'Talk show' : 'تاک‌شو')}
+                    {shows[0]?.category?.replace(/^\d+\.\s*/, '') || 'تاک‌شو'}
                   </div>
                 </div>
               </div>
@@ -6529,8 +4545,8 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
                   width: '100%',
                   padding: '12px 16px',
                   border: 'none',
-                  background: '#1E2228',
-                  color: '#FFFFFF',
+                  background: 'white',
+                  color: '#e2e8f0',
                   fontFamily: 'inherit',
                   outline: 'none',
                   resize: 'vertical',
@@ -6545,23 +4561,23 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
             {directSendSupported && (
               <div
                 className="p-3 rounded-xl"
-                style={{ background: 'rgba(0,188,212,0.06)', border: '1px solid rgba(0,188,212,0.18)' }}
+                style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.18)' }}
               >
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-bold" style={{ color: '#FFFFFF' }}>{t('direct_send_to', { platform: selectedPlatform })}</div>
-                    <div className="text-xs" style={{ color: '#6B7280' }}>
+                    <div className="text-sm font-bold" style={{ color: '#e2e8f0' }}>📡 ارسال مستقیم به {selectedPlatform}</div>
+                    <div className="text-xs" style={{ color: '#64748b' }}>
                       {botConfig
-                        ? t('bot_configured', { platform: botConfig.platform === 'telegram' ? t('telegram_label') : t('bale_label'), chatId: botConfig.chatId })
-                        : t('bot_config_required')}
+                        ? `ربات ${botConfig.platform === 'telegram' ? 'تلگرام' : 'بله'} پیکربندی شده — مقصد: ${botConfig.chatId}`
+                        : 'برای ارسال مستقیم، ابتدا توکن ربات و شناسهٔ کانال را وارد کنید'}
                     </div>
                   </div>
                   <button
                     onClick={onOpenBotConfig}
                     className="px-3 py-1.5 rounded-lg text-xs font-medium flex-shrink-0"
-                    style={{ background: 'rgba(0,188,212,0.12)', color: '#0097a7', border: '1px solid rgba(0,188,212,0.3)' }}
+                    style={{ background: 'rgba(2,144,72,0.12)', color: '#0097a7', border: '1px solid rgba(2,144,72,0.3)' }}
                   >
-                    {botConfig ? t('bot_settings') : t('configure_bot')}
+                    {botConfig ? '⚙ تنظیمات ربات' : '＋ پیکربندی ربات'}
                   </button>
                 </div>
                 <button
@@ -6570,13 +4586,13 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
                   className="btn-enter-premium w-full mt-3"
                   style={{ opacity: botConfig && !sending ? 1 : 0.5, cursor: botConfig && !sending ? 'pointer' : 'not-allowed' }}
                 >
-                  {sending ? t('sending') : t('direct_send_to', { platform: selectedPlatform })}
+                  {sending ? '⏳ در حال ارسال...' : `📡 ارسال مستقیم به ${selectedPlatform}`}
                 </button>
                 {sendResult && (
                   <div
                     className="mt-2 text-xs font-medium px-3 py-2 rounded-lg"
                     style={{
-                      background: sendResult.ok ? 'rgba(0,188,212,0.12)' : 'rgba(220,38,38,0.1)',
+                      background: sendResult.ok ? 'rgba(2,144,72,0.12)' : 'rgba(220,38,38,0.1)',
                       color: sendResult.ok ? '#0097a7' : '#dc2626',
                     }}
                   >
@@ -6594,14 +4610,14 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
                 className="btn-enter-premium flex-1"
                 style={{ opacity: selectedPlatform ? 1 : 0.5, cursor: selectedPlatform ? 'pointer' : 'not-allowed' }}
               >
-                {selectedPlatform ? t('manual_publish_to', { platform: selectedPlatform }) : t('select_platform_first')}
+                {selectedPlatform ? `📤 انتشار دستی در ${selectedPlatform}` : 'ابتدا پلتفرم را انتخاب کنید'}
               </button>
               <button
                 onClick={onClose}
                 className="px-6 py-3 rounded-xl text-sm font-medium"
-                style={{ background: 'rgba(122,138,128,0.15)', color: '#9CA3AF', border: '1px solid rgba(122,138,128,0.3)' }}
+                style={{ background: 'rgba(122,138,128,0.15)', color: '#8b9bb4', border: '1px solid rgba(122,138,128,0.3)' }}
               >
-                {t('cancel')}
+                انصراف
               </button>
             </div>
           </div>
@@ -6615,7 +4631,6 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
 // BOT CONFIG MODAL — configure Telegram/Bale bot token + chat ID
 // ============================================
 function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
-  const { t } = useLang();
   const initial = loadBotConfig();
   const [platform, setPlatform] = useState<'telegram' | 'bale'>(initial?.platform || 'telegram');
   const [token, setToken] = useState(initial?.token || '');
@@ -6625,19 +4640,19 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
   const [showToken, setShowToken] = useState(false);
 
   const handleTest = async () => {
-    if (!token) { setTestResult({ ok: false, msg: t('bot_token_required') }); return; }
+    if (!token) { setTestResult({ ok: false, msg: 'توکن را وارد کنید' }); return; }
     setTesting(true);
     setTestResult(null);
     try {
       const res = await fetch(`/api/publish-social?platform=${platform}&token=${encodeURIComponent(token)}`);
       const data = await res.json();
       if (data.ok) {
-        setTestResult({ ok: true, msg: t('bot_test_ok', { name: data.bot.username }) });
+        setTestResult({ ok: true, msg: `✅ ربات «@${data.bot.username}» شناسایی شد` });
       } else {
-        setTestResult({ ok: false, msg: t('post_send_failed', { msg: data.error || t('bot_test_invalid') }) });
+        setTestResult({ ok: false, msg: `❌ ${data.error || 'توکن نامعتبر'}` });
       }
     } catch {
-      setTestResult({ ok: false, msg: t('bot_test_network_error') });
+      setTestResult({ ok: false, msg: '❌ خطای شبکه' });
     } finally {
       setTesting(false);
     }
@@ -6660,9 +4675,9 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content" style={{ maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(0,188,212,0.1)' }}>
-          <h2 className="text-xl font-bold" style={{ color: '#FFFFFF' }}>{t('bot_config_title')}</h2>
-          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#6B7280' }}>
+        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.1)' }}>
+          <h2 className="text-xl font-bold" style={{ color: '#e2e8f0' }}>⚙ تنظیمات ربات انتشار</h2>
+          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#64748b' }}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -6671,18 +4686,18 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
 
         <div className="p-6 space-y-5">
           {/* Intro help */}
-          <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(0,188,212,0.06)', border: '1px solid rgba(0,188,212,0.15)', color: '#9CA3AF' }}>
-            {t('bot_config_help_intro')}
-            <ul className="mt-2 space-y-1 text-xs" style={{ color: '#6B7280' }}>
-              <li>{t('bot_config_help_tg')}</li>
-              <li>{t('bot_config_help_bale')}</li>
-              <li>{t('bot_config_help_admin')}</li>
+          <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.15)', color: '#8b9bb4' }}>
+            برای ارسال مستقیم پست‌ها به کانال یا گروه، یک ربات بسازید و آن را ادمین مقصد کنید:
+            <ul className="mt-2 space-y-1 text-xs" style={{ color: '#64748b' }}>
+              <li>• تلگرام: ربات <code style={{ direction: 'ltr' }}>@BotFather</code> → /newbot</li>
+              <li>• بله: ربات <code style={{ direction: 'ltr' }}>@BotFather@</code> → ساخت ربات جدید</li>
+              <li>• سپس ربات را به کانال/گروه ادمین کنید</li>
             </ul>
           </div>
 
           {/* Platform picker */}
           <div>
-            <label className="text-sm font-bold mb-2 block" style={{ color: '#FFFFFF' }}>{t('platform_label')}</label>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#e2e8f0' }}>پلتفرم</label>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => setPlatform('telegram')}
@@ -6690,7 +4705,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
                 style={platform === 'telegram' ? { background: '#0088cc', color: 'white', border: '2px solid #0088cc' } : { background: '#0088cc15', color: '#0088cc', border: '1px solid #0088cc30' }}
               >
                 <div className="text-2xl mb-1">✈</div>
-                <div className="text-sm font-bold">{t('telegram_label')}</div>
+                <div className="text-sm font-bold">تلگرام</div>
               </button>
               <button
                 onClick={() => setPlatform('bale')}
@@ -6698,14 +4713,14 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
                 style={platform === 'bale' ? { background: '#ffaa00', color: 'white', border: '2px solid #ffaa00' } : { background: '#ffaa0015', color: '#ffaa00', border: '1px solid #ffaa0030' }}
               >
                 <div className="text-2xl mb-1">💬</div>
-                <div className="text-sm font-bold">{t('bale_label')}</div>
+                <div className="text-sm font-bold">بله</div>
               </button>
             </div>
           </div>
 
           {/* Bot token */}
           <div>
-            <label className="text-sm font-bold mb-2 block" style={{ color: '#FFFFFF' }}>{t('bot_token_label')}</label>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#e2e8f0' }}>توکن ربات (Bot Token)</label>
             <div className="flex gap-2">
               <input
                 type={showToken ? 'text' : 'password'}
@@ -6717,9 +4732,9 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
                   flex: 1,
                   padding: '10px 14px',
                   borderRadius: '12px',
-                  border: '1px solid rgba(0,188,212,0.15)',
+                  border: '1px solid rgba(2,144,72,0.15)',
                   background: 'rgba(255,255,255,0.9)',
-                  color: '#FFFFFF',
+                  color: '#e2e8f0',
                   fontFamily: 'monospace',
                   outline: 'none',
                   textAlign: 'left',
@@ -6728,16 +4743,16 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
               <button
                 onClick={() => setShowToken(!showToken)}
                 className="px-3 rounded-xl text-sm font-medium"
-                style={{ background: 'rgba(122,138,128,0.15)', color: '#9CA3AF', border: '1px solid rgba(122,138,128,0.3)' }}
+                style={{ background: 'rgba(122,138,128,0.15)', color: '#8b9bb4', border: '1px solid rgba(122,138,128,0.3)' }}
               >
-                {showToken ? t('hide_btn') : t('show_btn')}
+                {showToken ? '🙈 پنهان' : '👁 نمایش'}
               </button>
             </div>
           </div>
 
           {/* Chat ID */}
           <div>
-            <label className="text-sm font-bold mb-2 block" style={{ color: '#FFFFFF' }}>{t('chat_id_label')}</label>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#e2e8f0' }}>شناسهٔ مقصد (Chat ID)</label>
             <input
               type="text"
               value={chatId}
@@ -6748,16 +4763,16 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
                 width: '100%',
                 padding: '10px 14px',
                 borderRadius: '12px',
-                border: '1px solid rgba(0,188,212,0.15)',
+                border: '1px solid rgba(2,144,72,0.15)',
                 background: 'rgba(255,255,255,0.9)',
-                color: '#FFFFFF',
+                color: '#e2e8f0',
                 fontFamily: 'monospace',
                 outline: 'none',
                 textAlign: 'left',
               }}
             />
-            <p className="text-xs mt-1" style={{ color: '#6B7280' }}>
-              {t('chat_id_help')}
+            <p className="text-xs mt-1" style={{ color: '#64748b' }}>
+              برای کانال: نام کاربری کانال (مثل @mychannel) یا Chat ID عددی. برای چت خصوصی: Chat ID عددی شما.
             </p>
           </div>
 
@@ -6767,19 +4782,19 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
             disabled={testing || !token}
             className="px-4 py-2 rounded-xl text-sm font-medium w-full"
             style={{
-              background: testing || !token ? 'rgba(122,138,128,0.15)' : 'rgba(0,188,212,0.12)',
+              background: testing || !token ? 'rgba(122,138,128,0.15)' : 'rgba(2,144,72,0.12)',
               color: testing || !token ? '#64748b' : '#0097a7',
-              border: '1px solid ' + (testing || !token ? 'rgba(122,138,128,0.3)' : 'rgba(0,188,212,0.3)'),
+              border: '1px solid ' + (testing || !token ? 'rgba(122,138,128,0.3)' : 'rgba(2,144,72,0.3)'),
               cursor: testing || !token ? 'not-allowed' : 'pointer',
             }}
           >
-            {testing ? t('testing') : t('test_connection')}
+            {testing ? '⏳ در حال بررسی...' : '🔍 تست اتصال ربات'}
           </button>
           {testResult && (
             <div
               className="text-sm font-medium px-3 py-2 rounded-lg"
               style={{
-                background: testResult.ok ? 'rgba(0,188,212,0.12)' : 'rgba(220,38,38,0.1)',
+                background: testResult.ok ? 'rgba(2,144,72,0.12)' : 'rgba(220,38,38,0.1)',
                 color: testResult.ok ? '#0097a7' : '#dc2626',
               }}
             >
@@ -6795,7 +4810,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
               className="btn-enter-premium flex-1"
               style={{ opacity: token && chatId ? 1 : 0.5, cursor: token && chatId ? 'pointer' : 'not-allowed' }}
             >
-              {t('save_settings')}
+              ✓ ذخیره تنظیمات
             </button>
             {initial && (
               <button
@@ -6803,7 +4818,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
                 className="px-4 py-2 rounded-xl text-sm font-medium"
                 style={{ background: 'rgba(220,38,38,0.12)', color: '#dc2626', border: '1px solid rgba(220,38,38,0.3)' }}
               >
-                {t('clear_btn')}
+                🗑 پاک کردن
               </button>
             )}
           </div>
@@ -6822,7 +4837,6 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
   onClose: () => void;
   onDownload: () => void;
 }) {
-  const { t, lang } = useLang();
   const [downloading, setDownloading] = useState(false);
 
   const handleDownload = async () => {
@@ -6846,42 +4860,24 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
           }
         }
       } else {
-        // Excel: generate a proper .xls file (HTML table that Excel opens natively).
-        // Persian text is preserved by emitting UTF-8 + BOM and the meta charset.
-        const headers = [
-          t('show_num'),
-          t('name_program'),
-          t('category_label'),
-          t('studio_size'),
-          t('decor_style'),
-          t('decor_summary'),
-          t('about_program'),
-        ];
-        const escapeHtml = (s: unknown) => String(s ?? '')
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;');
-        const headerRow = `<tr>${headers.map(h => `<th style="background:#00bcd4;color:white;padding:8px;border:1px solid #ccc;text-align:center;font-family:Tahoma;">${escapeHtml(h)}</th>`).join('')}</tr>`;
-        const bodyRows = shows.map((s, i) => {
-          const cells = [
-            i + 1,
-            s.name || '',
-            (s.category || '').replace(/^\d+\.\s*/, ''),
-            s.size || '',
-            s.style || '',
-            (s.summary || '').substring(0, 200),
-            (s.descriptionFa || s.summary || '').substring(0, 500),
-          ];
-          return `<tr>${cells.map((c, idx) => `<td style="padding:6px 8px;border:1px solid #ddd;font-family:Tahoma;font-size:12px;${idx === 0 ? 'text-align:center;' : 'text-align:right;'}">${escapeHtml(c)}</td>`).join('')}</tr>`;
-        }).join('');
-        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${t('excel_banke_rasane')}</title></head><body><table style="border-collapse:collapse;width:100%;">${headerRow}${bodyRows}</table></body></html>`;
-        // Prepend UTF-8 BOM so Excel detects Persian correctly.
-        const blob = new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+        // Excel: generate CSV
+        const headers = ['شماره', 'نام برنامه', 'دسته‌بندی', 'منبع', 'اندازه', 'تماشاگر', 'سبک', 'توضیحات'];
+        const rows = shows.map((s, i) => [
+          i + 1,
+          s.name,
+          (s.category || '').replace(/^\d+\.\s*/, ''),
+          s.source || '',
+          s.size || '',
+          s.viewers || '',
+          s.style || '',
+          (s.descriptionFa || s.summary || '').substring(0, 200),
+        ]);
+        const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+        const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `banke-rasane-${Date.now()}.xls`;
+        a.download = `banke-rasane-${Date.now()}.csv`;
         a.click();
         URL.revokeObjectURL(url);
       }
@@ -6897,11 +4893,11 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content" style={{ maxWidth: '800px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(0,188,212,0.1)' }}>
-          <h2 className="text-xl font-bold" style={{ color: '#FFFFFF' }}>
-            {format === 'pdf' ? t('pdf_preview_title') : t('excel_preview_title')}
+        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.1)' }}>
+          <h2 className="text-xl font-bold" style={{ color: '#e2e8f0' }}>
+            {format === 'pdf' ? '📄 پیش‌نمایش گزارش PDF' : '📊 پیش‌نمایش گزارش Excel'}
           </h2>
-          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#6B7280' }}>
+          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#64748b' }}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -6910,19 +4906,19 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
 
         <div className="p-6">
           {/* Summary */}
-          <div className="mb-4 p-4 rounded-xl" style={{ background: 'rgba(0,188,212,0.08)', border: '1px solid rgba(0,188,212,0.2)' }}>
+          <div className="mb-4 p-4 rounded-xl" style={{ background: 'rgba(2,144,72,0.08)', border: '1px solid rgba(2,144,72,0.2)' }}>
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm" style={{ color: '#9CA3AF' }}>{t('program_count_label')}</div>
-                <div className="text-2xl font-bold" style={{ color: '#0097a7' }}>{shows.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
+                <div className="text-sm" style={{ color: '#8b9bb4' }}>تعداد برنامه‌ها</div>
+                <div className="text-2xl font-bold" style={{ color: '#0097a7' }}>{shows.length.toLocaleString('fa-IR')}</div>
               </div>
               <div>
-                <div className="text-sm" style={{ color: '#9CA3AF' }}>{t('format_label')}</div>
+                <div className="text-sm" style={{ color: '#8b9bb4' }}>فرمت</div>
                 <div className="text-2xl font-bold" style={{ color: format === 'pdf' ? '#dc2626' : '#0097a7' }}>{format.toUpperCase()}</div>
               </div>
               <div>
-                <div className="text-sm" style={{ color: '#9CA3AF' }}>{t('date')}</div>
-                <div className="text-2xl font-bold" style={{ color: '#FFFFFF' }}>{new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
+                <div className="text-sm" style={{ color: '#8b9bb4' }}>تاریخ</div>
+                <div className="text-2xl font-bold" style={{ color: '#e2e8f0' }}>{new Date().toLocaleDateString('fa-IR')}</div>
               </div>
             </div>
           </div>
@@ -6934,24 +4930,24 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
               <div
                 className="p-6 text-center relative overflow-hidden"
                 style={{
-                  background: 'radial-gradient(ellipse 80% 60% at 70% 20%, rgba(0, 188, 212, 0.35) 0%, transparent 60%), radial-gradient(ellipse 70% 50% at 25% 80%, rgba(0, 188, 212, 0.4) 0%, transparent 60%), linear-gradient(160deg, #010a05 0%, #02150c 50%, #010a05 100%)',
+                  background: 'radial-gradient(ellipse 80% 60% at 70% 20%, rgba(54, 179, 126, 0.35) 0%, transparent 60%), radial-gradient(ellipse 70% 50% at 25% 80%, rgba(0, 188, 212, 0.4) 0%, transparent 60%), linear-gradient(160deg, #010a05 0%, #02150c 50%, #010a05 100%)',
                   color: 'white',
                 }}
               >
-                <div style={{ color: 'rgba(128, 222, 234, 0.6)', fontSize: '11px', letterSpacing: '4px', marginBottom: '12px' }}>{t('banke_rasane_brand')}</div>
-                <div style={{ color: '#26c6da', marginBottom: '10px', filter: 'drop-shadow(0 0 16px rgba(0, 188, 212, 0.5))' }}>
+                <div style={{ color: 'rgba(168, 230, 193, 0.6)', fontSize: '11px', letterSpacing: '4px', marginBottom: '12px' }}>بانک رسانه</div>
+                <div style={{ color: '#26c6da', marginBottom: '10px', filter: 'drop-shadow(0 0 16px rgba(38, 198, 218, 0.5))' }}>
                   <svg viewBox="0 0 64 64" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="2" style={{ display: 'inline-block' }}>
                     <rect x="6" y="14" width="52" height="36" rx="4" />
                     <path d="M6 22h52M14 14v-4M50 14v-4M20 32l10 6-10 6z" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-black mb-2" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.4)' }}>{t('report_title_full')}</h3>
-                <p className="text-xs" style={{ color: 'rgba(128, 222, 234, 0.8)' }}>{t('banke_rasane_archive')}</p>
+                <h3 className="text-xl font-black mb-2" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.4)' }}>گزارش جامع آرشیو برنامه‌های تلویزیونی</h3>
+                <p className="text-xs" style={{ color: 'rgba(168, 230, 193, 0.8)' }}>بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی</p>
                 <div
                   className="flex justify-center gap-4 mt-4 mx-auto"
                   style={{
                     background: 'rgba(0, 188, 212, 0.1)',
-                    border: '1px solid rgba(0, 188, 212, 0.25)',
+                    border: '1px solid rgba(38, 198, 218, 0.25)',
                     borderRadius: '12px',
                     padding: '12px 16px',
                     maxWidth: '380px',
@@ -6959,18 +4955,18 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
                   }}
                 >
                   <div>
-                    <div className="text-xl font-black" style={{ color: '#26c6da' }}>{shows.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
-                    <div className="text-xs" style={{ color: 'rgba(128, 222, 234, 0.7)' }}>{t('programs_unit')}</div>
+                    <div className="text-xl font-black" style={{ color: '#26c6da' }}>{shows.length.toLocaleString('fa-IR')}</div>
+                    <div className="text-xs" style={{ color: 'rgba(168, 230, 193, 0.7)' }}>برنامه</div>
                   </div>
-                  <div style={{ width: '1px', background: 'rgba(0, 188, 212, 0.3)' }}></div>
+                  <div style={{ width: '1px', background: 'rgba(38, 198, 218, 0.3)' }}></div>
                   <div>
-                    <div className="text-xl font-black" style={{ color: '#26c6da' }}>{new Set(shows.map(s => s.category)).size.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
-                    <div className="text-xs" style={{ color: 'rgba(128, 222, 234, 0.7)' }}>{t('genre_category_unit')}</div>
+                    <div className="text-xl font-black" style={{ color: '#26c6da' }}>{new Set(shows.map(s => s.category)).size.toLocaleString('fa-IR')}</div>
+                    <div className="text-xs" style={{ color: 'rgba(168, 230, 193, 0.7)' }}>دستهٔ ژانری</div>
                   </div>
-                  <div style={{ width: '1px', background: 'rgba(0, 188, 212, 0.3)' }}></div>
+                  <div style={{ width: '1px', background: 'rgba(38, 198, 218, 0.3)' }}></div>
                   <div>
-                    <div className="text-xl font-black" style={{ color: '#26c6da' }}>{new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
-                    <div className="text-xs" style={{ color: 'rgba(128, 222, 234, 0.7)' }}>{t('date')}</div>
+                    <div className="text-xl font-black" style={{ color: '#26c6da' }}>{new Date().toLocaleDateString('fa-IR')}</div>
+                    <div className="text-xs" style={{ color: 'rgba(168, 230, 193, 0.7)' }}>تاریخ</div>
                   </div>
                 </div>
               </div>
@@ -6978,36 +4974,36 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
               {/* Sections list — shows the report structure with descriptions */}
               <div className="p-4" style={{ background: '#f8faf9' }}>
                 <div className="text-xs font-bold mb-3" style={{ color: '#0097a7', paddingRight: '8px', borderRight: '3px solid #00bcd4' }}>
-                  {t('report_structure')}
+                  ساختار گزارش (۸ بخش) — هر بخش شامل توضیحات کامل
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {[
-                    { n: 1, t: t('section_exec_summary'), icon: '📋', desc: t('section_exec_summary_desc') },
-                    { n: 2, t: t('section_methodology'), icon: '🔬', desc: t('section_methodology_desc') },
-                    { n: 3, t: t('section_stats_overview'), icon: '📊', desc: t('section_stats_overview_desc') },
-                    { n: 4, t: t('section_genre_analysis'), icon: '🏷', desc: t('section_genre_analysis_desc') },
-                    { n: 5, t: t('section_decor_analysis'), icon: '🎨', desc: t('section_decor_analysis_desc') },
-                    { n: 6, t: t('section_program_list'), icon: '📚', desc: t('section_program_list_desc') },
-                    { n: 7, t: t('section_conclusion'), icon: '💡', desc: t('section_conclusion_desc') },
-                    { n: 8, t: t('section_appendix'), icon: '📑', desc: t('section_appendix_desc') },
+                    { n: 1, t: 'خلاصه اجرایی', icon: '📋', desc: 'مرور کلی آرشیو، حجم داده‌ها، یافته‌های کلیدی و نکات مهم برای تصمیم‌گیرندگان' },
+                    { n: 2, t: 'روش جمع‌آوری داده', icon: '🔬', desc: 'توضیح منابع داده (اکسل، PDF، تصاویر وب)، فرایند طبقه‌بندی ژانری و رویکرد ترکیبی' },
+                    { n: 3, t: 'نمای آماری کلی', icon: '📊', desc: '۴ کارت آماری + ۵ نمودار میله‌ای: منبع داده، اندازه استودیو، سبک دکور، تماشاگر، نورپردازی' },
+                    { n: 4, t: 'تحلیل توزیع ژانرها', icon: '🏷', desc: 'نمودار کامل توزیع + معرفی تفصیلی هر دسته با شمارش، درصد، و برنامه‌های شاخص' },
+                    { n: 5, t: 'تحلیل دکور و صحنه', icon: '🎨', desc: '۴ نمودار: عناصر پرتکرار صحنه، مصالح، طیف رنگی، نورپردازی + یافته‌های تحلیلی' },
+                    { n: 6, t: 'فهرست تفصیلی برنامه‌ها', icon: '📚', desc: 'کارت کامل برای هر برنامه: تصویر، توضیحات فارسی، تگ‌ها، مشخصات دکور، خلاصه' },
+                    { n: 7, t: 'نتیجه‌گیری و پیشنهادها', icon: '💡', desc: 'جمع‌بندی یافته‌ها + ۵ پیشنهاد اجرایی + بخش امضا و تاریخ' },
+                    { n: 8, t: 'پیوست: نمایهٔ الفبایی', icon: '📑', desc: 'فهرست کامل همهٔ برنامه‌ها به ترتیب الفبایی با شماره و دستهٔ ژانری' },
                   ].map(s => (
                     <div
                       key={s.n}
                       className="p-3 rounded-lg flex gap-2.5"
-                      style={{ background: '#1E2228', border: '1px solid #e0e8e4' }}
+                      style={{ background: 'white', border: '1px solid #e0e8e4' }}
                     >
                       <span
                         className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0"
-                        style={{ background: 'linear-gradient(135deg, #26c6da 0%, #00bcd4 100%)', color: 'white', boxShadow: '0 2px 6px rgba(0, 188, 212, 0.3)' }}
+                        style={{ background: 'linear-gradient(135deg, #00bcd4 0%, #0097a7 100%)', color: 'white', boxShadow: '0 2px 6px rgba(0, 188, 212, 0.3)' }}
                       >
-                        {s.n.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}
+                        {s.n.toLocaleString('fa-IR')}
                       </span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 mb-1">
                           <span className="text-sm">{s.icon}</span>
-                          <span className="text-xs font-bold" style={{ color: '#FFFFFF' }}>{s.t}</span>
+                          <span className="text-xs font-bold" style={{ color: '#e2e8f0' }}>{s.t}</span>
                         </div>
-                        <p className="text-xs leading-relaxed" style={{ color: '#9CA3AF', fontSize: '10.5px' }}>
+                        <p className="text-xs leading-relaxed" style={{ color: '#8b9bb4', fontSize: '10.5px' }}>
                           {s.desc}
                         </p>
                       </div>
@@ -7017,8 +5013,8 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
               </div>
 
               {/* Sample program card preview */}
-              <div className="p-4" style={{ background: '#1E2228', borderTop: '1px solid #e0e8e4' }}>
-                <div className="text-xs font-bold mb-2" style={{ color: '#0097a7' }}>{t('sample_program_card')}</div>
+              <div className="p-4" style={{ background: 'white', borderTop: '1px solid #e0e8e4' }}>
+                <div className="text-xs font-bold mb-2" style={{ color: '#0097a7' }}>نمونه کارت برنامه (از بخش ۶)</div>
                 <div
                   className="rounded-lg overflow-hidden"
                   style={{ border: '1px solid #e0e8e4', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}
@@ -7030,24 +5026,24 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
                     <span
                       className="w-5 h-5 rounded flex items-center justify-center text-xs font-bold flex-shrink-0"
                       style={{ background: '#00bcd4', color: 'white' }}
-                    >{lang === 'en' ? '1' : '۱'}</span>
-                    <span className="text-xs font-bold flex-1" style={{ color: '#FFFFFF', direction: 'ltr', textAlign: 'right' }}>
-                      {shows[0]?.name || t('sample_program')}
+                    >۱</span>
+                    <span className="text-xs font-bold flex-1" style={{ color: '#e2e8f0', direction: 'ltr', textAlign: 'right' }}>
+                      {shows[0]?.name || 'نمونه برنامه'}
                     </span>
-                    <span className="text-xs" style={{ color: '#6B7280' }}>{t('identifier_label')} {lang === 'en' ? '1' : '۱'}</span>
+                    <span className="text-xs" style={{ color: '#64748b' }}>شناسه: ۱</span>
                   </div>
                   <div className="p-2 flex gap-2">
                     <div
                       className="w-12 h-9 rounded flex-shrink-0"
-                      style={{ background: 'linear-gradient(135deg, #26c6da 0%, #00bcd4 100%)' }}
+                      style={{ background: 'linear-gradient(135deg, #00bcd4 0%, #0097a7 100%)' }}
                     ></div>
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap gap-1 mb-1">
-                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(0,188,212,0.08)', color: '#0097a7', fontSize: '9px' }}>
-                          {shows[0]?.style || t('modern')}
+                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(2,144,72,0.08)', color: '#0097a7', fontSize: '9px' }}>
+                          {shows[0]?.style || 'مدرن'}
                         </span>
-                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(0,188,212,0.08)', color: '#0097a7', fontSize: '9px' }}>
-                          {shows[0]?.size || t('medium_std')}
+                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(2,144,72,0.08)', color: '#0097a7', fontSize: '9px' }}>
+                          {shows[0]?.size || 'متوسط'}
                         </span>
                       </div>
                       <p className="text-xs" style={{ color: '#2a3a30', lineHeight: 1.5 }}>
@@ -7059,8 +5055,8 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
               </div>
 
               {shows.length > 80 && (
-                <div className="p-2 text-center text-xs" style={{ background: '#fef9e7', color: '#6B7280' }}>
-                  {t('full_report_detailed_first', { n: shows.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR') })}
+                <div className="p-2 text-center text-xs" style={{ background: '#fef9e7', color: '#64748b' }}>
+                  در گزارش کامل، ۸۰ برنامهٔ نخست به‌صورت تفصیلی و همهٔ {shows.length.toLocaleString('fa-IR')} برنامه در نمایهٔ الفبایی
                 </div>
               )}
             </div>
@@ -7069,29 +5065,29 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
           {/* Excel preview */}
           {format === 'excel' && (
             <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(0,0,0,0.1)' }}>
-              <div className="p-3 text-center" style={{ background: 'linear-gradient(135deg, #26c6da 0%, #00bcd4 100%)', color: 'white' }}>
-                <div className="text-lg font-bold">{t('excel_banke_rasane')}</div>
-                <div className="text-xs opacity-80">{shows.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')} {t('programs_unit')}</div>
+              <div className="p-3 text-center" style={{ background: 'linear-gradient(135deg, #00bcd4 0%, #0097a7 100%)', color: 'white' }}>
+                <div className="text-lg font-bold">بانک رسانه — خروجی Excel</div>
+                <div className="text-xs opacity-80">{shows.length.toLocaleString('fa-IR')} برنامه</div>
               </div>
               <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
                 <table className="w-full" style={{ fontSize: '12px' }}>
                   <thead style={{ position: 'sticky', top: 0, background: '#f5efe0', zIndex: 1 }}>
                     <tr>
-                      <th className="text-right p-2 font-bold" style={{ color: '#9CA3AF' }}>#</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#9CA3AF' }}>{t('name_col')}</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#9CA3AF' }}>{t('category_col')}</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#9CA3AF' }}>{t('decor_style')}</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#9CA3AF' }}>{t('studio_size')}</th>
+                      <th className="text-right p-2 font-bold" style={{ color: '#8b9bb4' }}>#</th>
+                      <th className="text-right p-2 font-bold" style={{ color: '#8b9bb4' }}>نام</th>
+                      <th className="text-right p-2 font-bold" style={{ color: '#8b9bb4' }}>دسته</th>
+                      <th className="text-right p-2 font-bold" style={{ color: '#8b9bb4' }}>سبک</th>
+                      <th className="text-right p-2 font-bold" style={{ color: '#8b9bb4' }}>اندازه</th>
                     </tr>
                   </thead>
                   <tbody>
                     {shows.slice(0, 50).map((s, i) => (
                       <tr key={s.num} style={{ borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-                        <td className="p-2" style={{ color: '#6B7280' }}>{(i + 1).toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</td>
-                        <td className="p-2 font-medium" style={{ color: '#FFFFFF', direction: 'ltr', textAlign: 'right' }}>{s.name}</td>
-                        <td className="p-2" style={{ color: '#9CA3AF' }}>{s.category.replace(/^\d+\.\s*/, '').substring(0, 20)}</td>
-                        <td className="p-2" style={{ color: '#9CA3AF' }}>{s.style}</td>
-                        <td className="p-2" style={{ color: '#9CA3AF' }}>{s.size}</td>
+                        <td className="p-2" style={{ color: '#64748b' }}>{(i + 1).toLocaleString('fa-IR')}</td>
+                        <td className="p-2 font-medium" style={{ color: '#e2e8f0', direction: 'ltr', textAlign: 'right' }}>{s.name}</td>
+                        <td className="p-2" style={{ color: '#8b9bb4' }}>{s.category.replace(/^\d+\.\s*/, '').substring(0, 20)}</td>
+                        <td className="p-2" style={{ color: '#8b9bb4' }}>{s.style}</td>
+                        <td className="p-2" style={{ color: '#8b9bb4' }}>{s.size}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -7107,20 +5103,20 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
               disabled={downloading}
               className="btn-enter-premium flex-1"
             >
-              {downloading ? t('generating') : t('download_file', { format: format.toUpperCase() })}
+              {downloading ? '⏳ در حال تولید...' : `⬇ دانلود فایل ${format.toUpperCase()}`}
             </button>
             <button
               onClick={onClose}
               className="px-6 py-3 rounded-xl text-sm font-medium"
-              style={{ background: 'rgba(122,138,128,0.15)', color: '#9CA3AF', border: '1px solid rgba(122,138,128,0.3)' }}
+              style={{ background: 'rgba(122,138,128,0.15)', color: '#8b9bb4', border: '1px solid rgba(122,138,128,0.3)' }}
             >
-              {t('cancel')}
+              انصراف
             </button>
           </div>
           {format === 'pdf' && (
-            <p className="mt-3 text-xs text-center" style={{ color: '#6B7280', lineHeight: 1.7 }}>
-              {t('pdf_help_text')}<br />
-              {t('print_dialog_help')}
+            <p className="mt-3 text-xs text-center" style={{ color: '#64748b', lineHeight: 1.7 }}>
+              گزارش شامل ۸ بخش است: صفحهٔ عنوان، فهرست مطالب، خلاصهٔ اجرایی، روش تحقیق، نمای آماری، تحلیل ژانرها، تحلیل دکور، و معرفی تفصیلی برنامه‌ها.<br />
+              پس از کلیک روی دانلود، پنجره چاپ باز می‌شود — مقاس «A4» و «Save as PDF» را انتخاب کنید.
             </p>
           )}
         </div>
@@ -7138,70 +5134,72 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
   showToast: (msg: string) => void;
   onExport: (shows: TalkShow[], format: 'pdf' | 'excel') => void;
 }) {
-  const { t, lang } = useLang();
   const stats = {
     total: talkShows.length,
+    pdf: talkShows.filter(s => s.source === 'تصویر PDF').length,
+    web: talkShows.filter(s => s.source === 'تصویر وب').length,
+    text: talkShows.filter(s => s.source === 'متن').length,
     uploaded: uploadedShows.length,
-    withImage: talkShows.filter(s => s.images && s.images.length > 0).length,
   };
 
   const reports = [
-    { id: 1, title: lang === 'en' ? 'Full report of all programs' : 'گزارش کامل همهٔ برنامه‌ها', type: 'pdf', count: stats.total, date: lang === 'en' ? new Date().toLocaleDateString('en-US') : new Date().toLocaleDateString('fa-IR') },
-    { id: 2, title: lang === 'en' ? 'Report of programs uploaded to social media' : 'گزارش برنامه‌های آپلود شده در فضای مجازی', type: 'excel', count: stats.uploaded, date: lang === 'en' ? new Date().toLocaleDateString('en-US') : new Date().toLocaleDateString('fa-IR') },
+    { id: 1, title: 'گزارش کامل همهٔ برنامه‌ها', type: 'pdf', count: stats.total, date: '۱۴۰۴/۰۸/۲۵' },
+    { id: 2, title: 'گزارش برنامه‌های آپلود شده در فضای مجازی', type: 'excel', count: stats.uploaded, date: '۱۴۰۴/۰۸/۲۵' },
+    { id: 3, title: 'گزارش برنامه‌های با تصویر PDF', type: 'pdf', count: stats.pdf, date: '۱۴۰۴/۰۷/۱۸' },
+    { id: 4, title: 'گزارش برنامه‌های با تصویر وب', type: 'excel', count: stats.web, date: '۱۴۰۴/۰۷/۱۳' },
   ];
 
   return (
     <>
-      <header className="mb-8 animate-view-enter">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-fg-strong" style={{ color: 'var(--fg-strong)' }}>{t('reports')}</h1>
-        <p className="text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('banke_rasane_stats_reports')}</p>
+      <header className="mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2" style={{ color: '#e2e8f0' }}>گزارش‌ها</h1>
+        <p style={{ color: '#64748b' }}>آمار و گزارش‌های بانک رسانه</p>
       </header>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 animate-view-enter">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="premium-glass p-5">
-          <div className="text-3xl font-black mb-1" style={{ color: '#00bcd4' }}>{stats.total.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
-          <div className="text-sm text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('total_programs')}</div>
+          <div className="text-3xl font-black mb-1" style={{ color: '#00bcd4' }}>{stats.total.toLocaleString('fa-IR')}</div>
+          <div style={{ color: '#8b9bb4' }} className="text-sm">کل برنامه‌ها</div>
         </div>
         <div className="premium-glass p-5">
-          <div className="text-3xl font-black mb-1" style={{ color: '#7c3aed' }}>{stats.uploaded.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
-          <div className="text-sm text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('uploaded')}</div>
+          <div className="text-3xl font-black mb-1" style={{ color: '#7c3aed' }}>{stats.uploaded.toLocaleString('fa-IR')}</div>
+          <div style={{ color: '#8b9bb4' }} className="text-sm">آپلود شده</div>
         </div>
         <div className="premium-glass p-5">
-          <div className="text-3xl font-black mb-1" style={{ color: '#0097a7' }}>{GENRES.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
-          <div className="text-sm text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('genre')}</div>
+          <div className="text-3xl font-black mb-1" style={{ color: '#dc2626' }}>{stats.pdf.toLocaleString('fa-IR')}</div>
+          <div style={{ color: '#8b9bb4' }} className="text-sm">با تصویر PDF</div>
         </div>
         <div className="premium-glass p-5">
-          <div className="text-3xl font-black mb-1" style={{ color: '#2563eb' }}>{stats.withImage.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
-          <div className="text-sm text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('with_image')}</div>
+          <div className="text-3xl font-black mb-1" style={{ color: '#2563eb' }}>{stats.web.toLocaleString('fa-IR')}</div>
+          <div style={{ color: '#8b9bb4' }} className="text-sm">با تصویر وب</div>
         </div>
       </div>
 
-      <div className="premium-glass overflow-hidden animate-view-enter">
-        <div className="p-5" style={{ borderBottom: '1px solid var(--input-border)' }}>
-          <h3 className="font-bold text-fg-strong" style={{ color: 'var(--fg-strong)' }}>{t('available_reports')}</h3>
+      <div className="premium-glass overflow-hidden">
+        <div className="p-5" style={{ borderBottom: '1px solid rgba(0, 188, 212, 0.1)' }}>
+          <h3 className="font-bold" style={{ color: '#e2e8f0' }}>گزارش‌های موجود</h3>
         </div>
         <table className="w-full">
-          <thead className="table-head">
-            <tr style={{ background: 'var(--table-head-bg)', borderBottom: '1px solid var(--table-border)' }}>
-              <th className="text-right p-4 text-xs font-bold text-fg-muted" style={{ color: 'var(--fg-muted)' }}>#</th>
-              <th className="text-right p-4 text-xs font-bold text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('title')}</th>
-              <th className="text-right p-4 text-xs font-bold hidden sm:table-cell text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('type')}</th>
-              <th className="text-right p-4 text-xs font-bold text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('total')}</th>
-              <th className="text-right p-4 text-xs font-bold hidden sm:table-cell text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('date')}</th>
-              <th className="text-right p-4 text-xs font-bold text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('action')}</th>
+          <thead>
+            <tr style={{ background: 'rgba(0, 188, 212, 0.08)', borderBottom: '1px solid rgba(0, 188, 212, 0.2)' }}>
+              <th className="text-right p-4 text-xs font-bold" style={{ color: '#8b9bb4' }}>#</th>
+              <th className="text-right p-4 text-xs font-bold" style={{ color: '#8b9bb4' }}>عنوان</th>
+              <th className="text-right p-4 text-xs font-bold hidden sm:table-cell" style={{ color: '#8b9bb4' }}>نوع</th>
+              <th className="text-right p-4 text-xs font-bold" style={{ color: '#8b9bb4' }}>تعداد</th>
+              <th className="text-right p-4 text-xs font-bold hidden sm:table-cell" style={{ color: '#8b9bb4' }}>تاریخ</th>
+              <th className="text-right p-4 text-xs font-bold" style={{ color: '#8b9bb4' }}>عملیات</th>
             </tr>
           </thead>
           <tbody>
             {reports.map((r, idx) => (
               <tr
                 key={r.id}
-                className="table-row"
-                style={{ borderBottom: '1px solid var(--table-border)' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--table-row-bg-odd)'; }}
+                style={{ borderBottom: '1px solid rgba(0, 188, 212, 0.08)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.55)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
-                <td className="p-4 text-sm text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{(idx + 1).toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</td>
-                <td className="p-4 text-sm font-medium text-fg-strong" style={{ color: 'var(--fg-strong)' }}>{r.title}</td>
+                <td className="p-4 text-sm" style={{ color: '#64748b' }}>{(idx + 1).toLocaleString('fa-IR')}</td>
+                <td className="p-4 text-sm font-medium" style={{ color: '#e2e8f0' }}>{r.title}</td>
                 <td className="p-4 hidden sm:table-cell">
                   <span
                     className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium"
@@ -7210,24 +5208,26 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                       : { background: 'rgba(0, 188, 212, 0.15)', color: '#0097a7' }
                     }
                   >
-                    {r.type === 'pdf' ? t('pdf') : t('excel')}
+                    {r.type === 'pdf' ? 'PDF' : 'Excel'}
                   </span>
                 </td>
-                <td className="p-4 text-sm text-fg-soft" style={{ color: 'var(--fg-soft)' }}>{r.count.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</td>
-                <td className="p-4 text-sm hidden sm:table-cell text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{r.date}</td>
+                <td className="p-4 text-sm" style={{ color: '#8b9bb4' }}>{r.count.toLocaleString('fa-IR')}</td>
+                <td className="p-4 text-sm hidden sm:table-cell" style={{ color: '#64748b' }}>{r.date}</td>
                 <td className="p-4">
                   <button
-                    className="btn-base text-sm hover:underline"
-                    style={{ color: 'var(--accent-text)' }}
+                    className="text-sm hover:underline"
+                    style={{ color: '#00bcd4' }}
                     onClick={() => {
                       let shows: TalkShow[] = [];
                       if (r.id === 1) shows = talkShows;
                       else if (r.id === 2) shows = talkShows.filter(s => uploadedShows.includes(s.num));
-                      if (shows.length === 0) { showToast(t('no_programs_for_report')); return; }
+                      else if (r.id === 3) shows = talkShows.filter(s => s.source === 'تصویر PDF');
+                      else if (r.id === 4) shows = talkShows.filter(s => s.source === 'تصویر وب');
+                      if (shows.length === 0) { showToast('برنامه‌ای برای این گزارش وجود ندارد'); return; }
                       onExport(shows, r.type === 'pdf' ? 'pdf' : 'excel');
                     }}
                   >
-                    {t('download')}
+                    دانلود
                   </button>
                 </td>
               </tr>
@@ -7256,14 +5256,12 @@ function SettingsModal({
   showToast: (msg: string) => void;
   onLogout: () => void;
 }) {
-  const { t } = useLang();
-  const [tab, setTab] = useState<'server' | 'users' | 'password' | 'audit'>('server');
+  const [tab, setTab] = useState<'server' | 'users' | 'password'>('server');
 
   const tabs = [
-    { key: 'server' as const,   label: t('tab_server'),     icon: '🖥' },
-    { key: 'users' as const,    label: t('tab_users'),     icon: '👥' },
-    { key: 'password' as const, label: t('tab_password'),  icon: '🔑' },
-    { key: 'audit' as const,    label: t('tab_audit'),     icon: '📜' },
+    { key: 'server' as const,   label: 'سرور',     icon: '🖥' },
+    { key: 'users' as const,    label: 'کاربران',  icon: '👥' },
+    { key: 'password' as const, label: 'رمز عبور', icon: '🔑' },
   ];
 
   return (
@@ -7290,13 +5288,13 @@ function SettingsModal({
           className="flex items-center justify-between p-4 flex-shrink-0"
           style={{
             background: 'linear-gradient(180deg, rgba(4, 40, 23, 0.98) 0%, rgba(2, 80, 45, 0.96) 100%)',
-            borderBottom: '1px solid rgba(0, 188, 212, 0.4)',
+            borderBottom: '1px solid rgba(38, 198, 218, 0.4)',
           }}
         >
-          <h2 className="text-lg font-bold" style={{ color: 'white' }}>{t('system_settings_title')}</h2>
+          <h2 className="text-lg font-bold" style={{ color: 'white' }}>⚙ تنظیمات سیستم</h2>
           <button
             onClick={onClose}
-            aria-label={t('close_settings')}
+            aria-label="بستن تنظیمات"
             className="p-2 rounded-lg transition-colors"
             style={{ color: 'rgba(255, 255, 255, 0.7)' }}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(220, 38, 38, 0.25)'; e.currentTarget.style.color = '#fca5a5'; }}
@@ -7313,24 +5311,24 @@ function SettingsModal({
           className="flex items-center gap-1 p-2 flex-shrink-0"
           style={{ background: 'rgba(0, 188, 212, 0.05)', borderBottom: '1px solid rgba(0, 188, 212, 0.12)' }}
         >
-          {tabs.map((tabItem) => {
-            const active = tab === tabItem.key;
+          {tabs.map((t) => {
+            const active = tab === t.key;
             return (
               <button
-                key={tabItem.key}
-                onClick={() => setTab(tabItem.key)}
+                key={t.key}
+                onClick={() => setTab(t.key)}
                 className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition-all"
                 style={active ? {
-                  background: 'linear-gradient(135deg, #26c6da 0%, #00bcd4 100%)',
+                  background: 'linear-gradient(135deg, #00bcd4 0%, #0097a7 100%)',
                   color: 'white',
-                  boxShadow: '0 4px 12px rgba(0, 188, 212, 0.3), inset 0 1px 0 rgba(0, 188, 212, 0.4)',
+                  boxShadow: '0 4px 12px rgba(0, 188, 212, 0.3), inset 0 1px 0 rgba(38, 198, 218, 0.4)',
                 } : {
-                  color: '#9CA3AF',
+                  color: '#8b9bb4',
                   border: '1px solid transparent',
                 }}
               >
-                <span>{tabItem.icon}</span>
-                <span>{tabItem.label}</span>
+                <span>{t.icon}</span>
+                <span>{t.label}</span>
               </button>
             );
           })}
@@ -7341,7 +5339,6 @@ function SettingsModal({
           {tab === 'server' && <SettingsServerTab showToast={showToast} />}
           {tab === 'users' && <SettingsUsersTab currentUser={currentUser} showToast={showToast} />}
           {tab === 'password' && <SettingsPasswordTab currentUser={currentUser} showToast={showToast} onLogout={onLogout} />}
-          {tab === 'audit' && <SettingsAuditTab />}
         </div>
       </div>
     </div>
@@ -7350,7 +5347,6 @@ function SettingsModal({
 
 // --- Tab 1: Server URL ---
 function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) {
-  const { t } = useLang();
   const [url, setUrl] = useState('');
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -7366,12 +5362,12 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
       const res = await fetch(`${url.replace(/\/+$/, '')}/api/health`, { method: 'GET' });
       const data = await res.json();
       if (res.ok && data?.status === 'ok') {
-        setTestResult({ ok: true, msg: t('connection_ok') });
+        setTestResult({ ok: true, msg: 'اتصال برقرار شد ✓' });
       } else {
-        setTestResult({ ok: false, msg: t('connection_invalid_response', { body: JSON.stringify(data).slice(0, 100) }) });
+        setTestResult({ ok: false, msg: `پاسخ نامعتبر: ${JSON.stringify(data).slice(0, 100)}` });
       }
     } catch (e: any) {
-      setTestResult({ ok: false, msg: t('connection_error', { msg: e?.message || '' }) });
+      setTestResult({ ok: false, msg: `خطا در اتصال: ${e?.message || 'نامشخص'}` });
     } finally {
       setTesting(false);
     }
@@ -7379,16 +5375,16 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
 
   const handleSave = () => {
     setApiBase(url);
-    showToast(t('server_url_saved'));
-    setTestResult({ ok: true, msg: t('server_url_saved') });
+    showToast('آدرس سرور ذخیره شد. برای اعمال کامل، صفحه را بارگذاری مجدد کنید.');
+    setTestResult({ ok: true, msg: 'ذخیره شد ✓ — آدرس جدید اعمال شد.' });
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div>
-        <h3 className="text-base font-bold mb-1" style={{ color: '#FFFFFF' }}>{t('api_server_url')}</h3>
-        <p className="text-sm mb-3" style={{ color: '#6B7280' }}>
-          {t('api_server_desc')} <code dir="ltr" style={{ background: 'rgba(0,188,212,0.1)', padding: '2px 6px', borderRadius: '6px', color: '#0097a7' }}>http://localhost:3002</code>
+        <h3 className="text-base font-bold mb-1" style={{ color: '#e2e8f0' }}>🖥 آدرس سرور API</h3>
+        <p className="text-sm mb-3" style={{ color: '#64748b' }}>
+          آدرس سرویس API که این برنامه به آن متصل می‌شود. پیش‌فرض: <code dir="ltr" style={{ background: 'rgba(2,144,72,0.1)', padding: '2px 6px', borderRadius: '6px', color: '#0097a7' }}>http://localhost:3002</code>
         </p>
         <input
           type="text"
@@ -7398,11 +5394,11 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
           placeholder="http://localhost:3002"
           style={{
             width: '100%',
-            background: 'rgba(30, 34, 40, 0.9)',
+            background: 'rgba(255, 255, 255, 0.95)',
             border: '1px solid rgba(0, 188, 212, 0.25)',
             borderRadius: '12px',
             padding: '12px 16px',
-            color: '#FFFFFF',
+            color: '#e2e8f0',
             fontSize: '14px',
             fontFamily: 'inherit',
             outline: 'none',
@@ -7438,26 +5434,27 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
             cursor: testing || !url ? 'not-allowed' : 'pointer',
           }}
         >
-          {testing ? t('testing') : t('test_connection')}
+          {testing ? '⏳ در حال تست...' : '🔍 تست اتصال'}
         </button>
         <button
           onClick={handleSave}
           className="px-4 py-2 rounded-xl text-sm font-bold transition-all flex-1"
           style={{
-            background: 'linear-gradient(135deg, #26c6da 0%, #00bcd4 100%)',
+            background: 'linear-gradient(135deg, #00bcd4 0%, #0097a7 100%)',
             color: 'white',
             boxShadow: '0 4px 12px rgba(0, 188, 212, 0.3)',
           }}
         >
-          {t('save_address')}
+          ✓ ذخیره آدرس
         </button>
       </div>
 
       <div
         className="p-3 rounded-xl text-xs"
-        style={{ background: 'rgba(0, 188, 212, 0.05)', border: '1px solid rgba(0, 188, 212, 0.15)', color: '#9CA3AF', lineHeight: 1.7 }}
+        style={{ background: 'rgba(0, 188, 212, 0.05)', border: '1px solid rgba(0, 188, 212, 0.15)', color: '#8b9bb4', lineHeight: 1.7 }}
       >
-        {t('server_help')}
+        <strong>راهنما:</strong> آدرس وارد شده باید ریشهٔ سرویس API باشد (بدون مسیرهای <code dir="ltr">/api/...</code>).
+        اگر از گیتوی Caddy استفاده می‌کنید، می‌توانید آدرس نسبی وارد کنید. پس از ذخیره، توکن فعلی شما معتبر می‌ماند.
       </div>
     </div>
   );
@@ -7465,7 +5462,6 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
 
 // --- Tab 2: Users management ---
 function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showToast: (msg: string) => void }) {
-  const { t, lang } = useLang();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -7479,7 +5475,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
       const list = await api.getUsers();
       setUsers(list);
     } catch (e: any) {
-      setError(e?.message || t('error_loading_users'));
+      setError(e?.message || 'خطا در بارگذاری کاربران');
     } finally {
       setLoading(false);
     }
@@ -7489,7 +5485,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
 
   const handleCreate = async () => {
     if (!newUser.username.trim() || !newUser.password) {
-      showToast(t('enter_username_password'));
+      showToast('نام کاربری و رمز را وارد کنید');
       return;
     }
     setCreating(true);
@@ -7500,11 +5496,11 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
         role: newUser.role,
         name: newUser.name,
       });
-      showToast(t('user_created_toast', { name: newUser.username }));
+      showToast(`کاربر «${newUser.username}» ساخته شد`);
       setNewUser({ username: '', password: '', role: 'viewer', name: '' });
       await load();
     } catch (e: any) {
-      showToast(e?.message || t('error_loading_users'));
+      showToast(e?.message || 'خطا در ایجاد کاربر');
     } finally {
       setCreating(false);
     }
@@ -7512,46 +5508,38 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
 
   const handleDelete = async (u: User) => {
     if (u.id === currentUser.id) {
-      showToast(t('cannot_delete_self'));
+      showToast('نمی‌توانید حساب خودتان را حذف کنید');
       return;
     }
-    if (!confirm(t('delete_user_confirm', { name: u.username }))) return;
+    if (!confirm(`کاربر «${u.username}» حذف شود؟`)) return;
     try {
       await api.deleteUser(u.id);
-      showToast(t('user_deleted_toast'));
+      showToast('کاربر حذف شد');
       await load();
     } catch (e: any) {
-      showToast(e?.message || t('error_loading_users'));
+      showToast(e?.message || 'خطا در حذف کاربر');
     }
   };
 
   const handleChangeRole = async (u: User, newRole: string) => {
     if (newRole === u.role) return;
-    if (u.id === currentUser.id) {
-      showToast(t('cannot_change_role_self'));
-      return;
-    }
     try {
       await api.updateUser(u.id, { role: newRole });
-      showToast(t('user_role_changed_toast', { name: u.username, role: newRole }));
+      showToast(`نقش «${u.username}» به ${newRole} تغییر کرد`);
       await load();
     } catch (e: any) {
-      showToast(e?.message || t('error_loading_users'));
+      showToast(e?.message || 'خطا در تغییر نقش');
     }
   };
 
-  const roleLabel: Record<string, string> = {
-    admin: t('role_admin'),
-    editor: t('role_editor'),
-    viewer: t('role_viewer'),
-  };
+  const roleLabel: Record<string, string> = { admin: 'مدیر', editor: 'ویراستار', viewer: 'بیننده' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div>
-        <h3 className="text-base font-bold mb-1" style={{ color: '#FFFFFF' }}>{t('users_management')}</h3>
-        <p className="text-sm" style={{ color: '#6B7280' }}>
-          {t('users_management_desc')}
+        <h3 className="text-base font-bold mb-1" style={{ color: '#e2e8f0' }}>👥 مدیریت کاربران</h3>
+        <p className="text-sm" style={{ color: '#64748b' }}>
+          افزودن، حذف یا تغییر نقش کاربران سیستم. نقش‌ها: مدیر (دسترسی کامل)، ویراستار (افزودن/ویرایش برنامه‌ها)، بیننده (فقط مشاهده).
         </p>
       </div>
 
@@ -7560,21 +5548,21 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
         className="p-4 rounded-xl"
         style={{ background: 'rgba(0, 188, 212, 0.05)', border: '1px solid rgba(0, 188, 212, 0.15)' }}
       >
-        <h4 className="font-bold text-sm mb-3" style={{ color: '#FFFFFF' }}>{t('add_new_user')}</h4>
+        <h4 className="font-bold text-sm mb-3" style={{ color: '#e2e8f0' }}>＋ افزودن کاربر جدید</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
           <input
             type="text"
             dir="ltr"
-            placeholder={t('username_placeholder')}
+            placeholder="نام کاربری"
             value={newUser.username}
             onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
             style={{
-              background: '#1E2228',
+              background: 'white',
               border: '1px solid rgba(0, 188, 212, 0.2)',
               borderRadius: '10px',
               padding: '10px 14px',
               fontSize: '14px',
-              color: '#FFFFFF',
+              color: '#e2e8f0',
               outline: 'none',
               textAlign: 'left',
               direction: 'ltr',
@@ -7582,32 +5570,32 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
           />
           <input
             type="text"
-            placeholder={t('display_name_optional')}
+            placeholder="نام نمایشی (اختیاری)"
             value={newUser.name}
             onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
             style={{
-              background: '#1E2228',
+              background: 'white',
               border: '1px solid rgba(0, 188, 212, 0.2)',
               borderRadius: '10px',
               padding: '10px 14px',
               fontSize: '14px',
-              color: '#FFFFFF',
+              color: '#e2e8f0',
               outline: 'none',
             }}
           />
           <input
             type="password"
             dir="ltr"
-            placeholder={t('password_placeholder_min')}
+            placeholder="رمز عبور (حداقل ۴ کاراکتر)"
             value={newUser.password}
             onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
             style={{
-              background: '#1E2228',
+              background: 'white',
               border: '1px solid rgba(0, 188, 212, 0.2)',
               borderRadius: '10px',
               padding: '10px 14px',
               fontSize: '14px',
-              color: '#FFFFFF',
+              color: '#e2e8f0',
               outline: 'none',
               textAlign: 'left',
               direction: 'ltr',
@@ -7617,19 +5605,19 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
             value={newUser.role}
             onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
             style={{
-              background: '#1E2228',
+              background: 'white',
               border: '1px solid rgba(0, 188, 212, 0.2)',
               borderRadius: '10px',
               padding: '10px 14px',
               fontSize: '14px',
-              color: '#FFFFFF',
+              color: '#e2e8f0',
               outline: 'none',
               fontFamily: 'inherit',
             }}
           >
-            <option value="viewer">{t('role_viewer')}</option>
-            <option value="editor">{t('role_editor')}</option>
-            <option value="admin">{t('role_admin')}</option>
+            <option value="viewer">بیننده</option>
+            <option value="editor">ویراستار</option>
+            <option value="admin">مدیر</option>
           </select>
         </div>
         <button
@@ -7637,24 +5625,24 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
           disabled={creating}
           className="px-4 py-2 rounded-xl text-sm font-bold transition-all"
           style={{
-            background: creating ? 'rgba(122, 138, 128, 0.5)' : 'linear-gradient(135deg, #26c6da 0%, #00bcd4 100%)',
+            background: creating ? 'rgba(122, 138, 128, 0.5)' : 'linear-gradient(135deg, #00bcd4 0%, #0097a7 100%)',
             color: 'white',
             boxShadow: '0 4px 12px rgba(0, 188, 212, 0.3)',
             opacity: creating ? 0.6 : 1,
             cursor: creating ? 'not-allowed' : 'pointer',
           }}
         >
-          {creating ? t('creating') : t('create_user')}
+          {creating ? '⏳ در حال ایجاد...' : '＋ ایجاد کاربر'}
         </button>
       </div>
 
       {/* Users list */}
       <div>
-        <h4 className="font-bold text-sm mb-2" style={{ color: '#FFFFFF' }}>
-          {t('current_users')} ({users.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')})
+        <h4 className="font-bold text-sm mb-2" style={{ color: '#e2e8f0' }}>
+          کاربران فعلی ({users.length.toLocaleString('fa-IR')})
         </h4>
         {loading && (
-          <div className="p-4 text-center text-sm" style={{ color: '#6B7280' }}>{t('loading_users')}</div>
+          <div className="p-4 text-center text-sm" style={{ color: '#64748b' }}>در حال بارگذاری...</div>
         )}
         {error && (
           <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}>
@@ -7667,7 +5655,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
               <div
                 key={u.id}
                 className="p-3 rounded-xl flex items-center gap-3"
-                style={{ background: '#1E2228', border: '1px solid rgba(0, 188, 212, 0.15)' }}
+                style={{ background: 'white', border: '1px solid rgba(0, 188, 212, 0.15)' }}
               >
                 <div
                   className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm"
@@ -7680,13 +5668,13 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
                   {(u.name || u.username).charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm" style={{ color: '#FFFFFF' }} title={u.username}>
+                  <div className="font-bold text-sm" style={{ color: '#e2e8f0' }} title={u.username}>
                     {u.name || u.username}{' '}
                     {u.id === currentUser.id && (
-                      <span className="text-xs font-normal" style={{ color: '#6B7280' }}>({lang === 'en' ? 'you' : 'شما'})</span>
+                      <span className="text-xs font-normal" style={{ color: '#64748b' }}>(شما)</span>
                     )}
                   </div>
-                  <div className="text-xs" style={{ color: '#6B7280' }} dir="ltr">@{u.username}</div>
+                  <div className="text-xs" style={{ color: '#64748b' }} dir="ltr">@{u.username}</div>
                 </div>
                 <select
                   value={u.role}
@@ -7698,17 +5686,17 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
                     borderRadius: '8px',
                     padding: '6px 10px',
                     fontSize: '13px',
-                    color: '#FFFFFF',
+                    color: '#e2e8f0',
                     outline: 'none',
                     fontFamily: 'inherit',
                     cursor: u.id === currentUser.id ? 'not-allowed' : 'pointer',
                     opacity: u.id === currentUser.id ? 0.6 : 1,
                   }}
-                  title={u.id === currentUser.id ? t('cannot_change_role_self') : t('edit_field')}
+                  title={u.id === currentUser.id ? 'نمی‌توانید نقش خودتان را تغییر دهید' : 'تغییر نقش'}
                 >
-                  <option value="viewer">{t('role_viewer')}</option>
-                  <option value="editor">{t('role_editor')}</option>
-                  <option value="admin">{t('role_admin')}</option>
+                  <option value="viewer">بیننده</option>
+                  <option value="editor">ویراستار</option>
+                  <option value="admin">مدیر</option>
                 </select>
                 <button
                   onClick={() => handleDelete(u)}
@@ -7721,8 +5709,8 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
                     cursor: u.id === currentUser.id ? 'not-allowed' : 'pointer',
                     opacity: u.id === currentUser.id ? 0.4 : 1,
                   }}
-                  title={u.id === currentUser.id ? t('cannot_delete_self') : `${t('cancel')} ${u.username}`}
-                  aria-label={`${t('cancel')} ${u.username}`}
+                  title={u.id === currentUser.id ? 'نمی‌توانید خودتان را حذف کنید' : `حذف ${u.username}`}
+                  aria-label={`حذف کاربر ${u.username}`}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -7747,7 +5735,6 @@ function SettingsPasswordTab({
   showToast: (msg: string) => void;
   onLogout: () => void;
 }) {
-  const { t } = useLang();
   const [oldPw, setOldPw] = useState('');
   const [newPw, setNewPw] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
@@ -7756,29 +5743,29 @@ function SettingsPasswordTab({
 
   const handleChange = async () => {
     if (!oldPw || !newPw || !confirmPw) {
-      showToast(t('fill_three_fields'));
+      showToast('هر سه فیلد را پر کنید');
       return;
     }
     if (newPw.length < 4) {
-      showToast(t('password_min_length'));
+      showToast('رمز جدید باید حداقل ۴ کاراکتر باشد');
       return;
     }
     if (newPw !== confirmPw) {
-      showToast(t('passwords_dont_match'));
+      showToast('رمز جدید و تأیید آن یکسان نیستند');
       return;
     }
     if (newPw === oldPw) {
-      showToast(t('password_must_differ'));
+      showToast('رمز جدید باید با رمز فعلی متفاوت باشد');
       return;
     }
     setSaving(true);
     try {
       await api.changePassword(oldPw, newPw);
-      showToast(t('password_changed_toast'));
+      showToast('رمز با موفقیت تغییر کرد. لطفاً دوباره وارد شوید.');
       // Force re-login since the API invalidated the session.
       setTimeout(() => { onLogout(); }, 1500);
     } catch (e: any) {
-      showToast(e?.message || t('error_changing_password'));
+      showToast(e?.message || 'خطا در تغییر رمز');
     } finally {
       setSaving(false);
     }
@@ -7786,11 +5773,11 @@ function SettingsPasswordTab({
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
-    background: 'rgba(30, 34, 40, 0.9)',
+    background: 'rgba(255, 255, 255, 0.95)',
     border: '1px solid rgba(0, 188, 212, 0.25)',
     borderRadius: '12px',
     padding: '12px 48px 12px 16px',
-    color: '#FFFFFF',
+    color: '#e2e8f0',
     fontSize: '14px',
     fontFamily: 'inherit',
     outline: 'none',
@@ -7801,9 +5788,9 @@ function SettingsPasswordTab({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div>
-        <h3 className="text-base font-bold mb-1" style={{ color: '#FFFFFF' }}>{t('change_password_title')}</h3>
-        <p className="text-sm" style={{ color: '#6B7280' }}>
-          {t('change_password_desc')}
+        <h3 className="text-base font-bold mb-1" style={{ color: '#e2e8f0' }}>🔑 تغییر رمز عبور</h3>
+        <p className="text-sm" style={{ color: '#64748b' }}>
+          رمز عبور خود را تغییر دهید. پس از تغییر، تمام نشست‌های فعال شما باطل شده و باید دوباره وارد شوید.
         </p>
       </div>
 
@@ -7811,18 +5798,18 @@ function SettingsPasswordTab({
         className="p-3 rounded-xl text-sm flex items-center gap-2"
         style={{ background: 'rgba(0, 188, 212, 0.08)', border: '1px solid rgba(0, 188, 212, 0.2)', color: '#0097a7' }}
       >
-        <span>{t('current_account')}</span>
+        <span>👤 حساب فعلی:</span>
         <strong>{currentUser.name || currentUser.username}</strong>
-        <span dir="ltr" style={{ color: '#6B7280' }}>@{currentUser.username}</span>
+        <span dir="ltr" style={{ color: '#64748b' }}>@{currentUser.username}</span>
       </div>
 
       {[
-        { label: t('current_password'), val: oldPw, set: setOldPw },
-        { label: t('new_password'), val: newPw, set: setNewPw },
-        { label: t('confirm_new_password'), val: confirmPw, set: setConfirmPw },
+        { label: 'رمز فعلی', val: oldPw, set: setOldPw },
+        { label: 'رمز جدید', val: newPw, set: setNewPw },
+        { label: 'تکرار رمز جدید', val: confirmPw, set: setConfirmPw },
       ].map((f, i) => (
         <div key={i}>
-          <label className="block text-sm font-bold mb-2" style={{ color: '#FFFFFF' }}>{f.label}</label>
+          <label className="block text-sm font-bold mb-2" style={{ color: '#e2e8f0' }}>{f.label}</label>
           <div className="relative">
             <input
               type={showPw ? 'text' : 'password'}
@@ -7836,8 +5823,8 @@ function SettingsPasswordTab({
               type="button"
               onClick={() => setShowPw(!showPw)}
               className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-lg"
-              style={{ color: '#9CA3AF', background: 'transparent' }}
-              aria-label={showPw ? t('hide_password') : t('show_password')}
+              style={{ color: '#8b9bb4', background: 'transparent' }}
+              aria-label={showPw ? 'پنهان کردن رمز' : 'نمایش رمز'}
             >
               {showPw ? (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -7859,7 +5846,7 @@ function SettingsPasswordTab({
           className="p-3 rounded-xl text-sm font-medium"
           style={{ background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}
         >
-          {t('password_mismatch')}
+          ⚠ رمز جدید و تأیید آن یکسان نیستند
         </div>
       )}
 
@@ -7868,376 +5855,15 @@ function SettingsPasswordTab({
         disabled={saving}
         className="px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
         style={{
-          background: saving ? 'rgba(122, 138, 128, 0.5)' : 'linear-gradient(135deg, #26c6da 0%, #00bcd4 100%)',
+          background: saving ? 'rgba(122, 138, 128, 0.5)' : 'linear-gradient(135deg, #00bcd4 0%, #0097a7 100%)',
           color: 'white',
           boxShadow: '0 4px 12px rgba(0, 188, 212, 0.3)',
           opacity: saving ? 0.6 : 1,
           cursor: saving ? 'not-allowed' : 'pointer',
         }}
       >
-        {saving ? t('testing') : t('change_password_btn')}
+        {saving ? '⏳ در حال تغییر...' : '✓ تغییر رمز عبور'}
       </button>
-    </div>
-  );
-}
-
-// ============================================
-// COMPARE MODAL — side-by-side comparison of two programs with diff highlighting
-// ============================================
-function CompareModal({ shows, onClose, onClear }: {
-  shows: TalkShow[];
-  onClose: () => void;
-  onClear: () => void;
-}) {
-  const { t, lang } = useLang();
-  if (shows.length !== 2) return null;
-  const [a, b] = shows;
-  // Compare a single field — returns true if the two values differ.
-  const diff = (x: unknown, y: unknown): boolean => {
-    if (x == null && y == null) return false;
-    if (typeof x === 'string' && typeof y === 'string') return x.trim() !== y.trim();
-    return String(x ?? '') !== String(y ?? '');
-  };
-  const fields: { key: keyof TalkShow; label: string }[] = [
-    { key: 'num', label: t('show_num') },
-    { key: 'name', label: t('name_program') },
-    { key: 'category', label: t('category_label') },
-    { key: 'country', label: lang === 'en' ? 'Country' : 'کشور' },
-    { key: 'size', label: t('studio_size') },
-    { key: 'style', label: t('decor_style') },
-    { key: 'viewers', label: t('audience') },
-    { key: 'layout', label: t('layout') },
-    { key: 'effects', label: t('effects') },
-    { key: 'lighting', label: t('lighting') },
-    { key: 'elements', label: t('decor_elements') },
-    { key: 'materials', label: t('materials') },
-    { key: 'colors', label: t('colors') },
-    { key: 'summary', label: t('decor_summary') },
-    { key: 'descriptionFa', label: t('about_program_fa') },
-    { key: 'youtube', label: 'YouTube' },
-    { key: 'imdb', label: 'IMDb' },
-    { key: 'wikipedia', label: t('wikipedia_page') },
-  ];
-
-  return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-content" style={{ maxWidth: '1100px' }} onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid var(--input-border)' }}>
-          <h2 className="text-xl font-bold text-fg-strong" style={{ color: 'var(--fg-strong)' }}>⚖ {t('compare_two_programs')}</h2>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onClear}
-              className="btn-base px-3 py-1.5 rounded-lg text-xs font-medium"
-              style={{ background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}
-              title={t('clear_compare_list')}
-            >
-              🗑 {t('clear_list')}
-            </button>
-            <button onClick={onClose} className="btn-base p-2 rounded-lg text-fg-muted" style={{ color: 'var(--fg-muted)' }} aria-label={t('close')}>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <div className="p-4 sm:p-6">
-          {/* Two-column header with each program's name + thumbnail */}
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            {[a, b].map((s, idx) => {
-              const thumb = getShowThumbnail(s);
-              return (
-                <div
-                  key={s.num}
-                  className="rounded-xl overflow-hidden p-3"
-                  style={{
-                    background: `linear-gradient(135deg, ${thumb.accent}22 0%, ${thumb.accent}08 100%)`,
-                    border: `1px solid ${thumb.accent}55`,
-                  }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-12 h-12 rounded-lg flex-shrink-0 overflow-hidden relative"
-                      style={{ background: thumb.gradient }}
-                    >
-                      {thumb.image ? (
-                        <img src={thumb.image} alt={s.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }} />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center text-white font-black text-lg" style={{ background: thumb.gradient }}>
-                          {s.name.charAt(0).toUpperCase()}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{idx === 0 ? t('program_first') : t('program_second')}</div>
-                      <div className="font-bold text-sm truncate text-fg-strong" style={{ color: 'var(--fg-strong)', direction: 'ltr', textAlign: 'right' }}>{s.name}</div>
-                      <div className="text-xs text-fg-soft" style={{ color: 'var(--fg-soft)' }}>#{s.num.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')} • {s.style}</div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Comparison table */}
-          <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--input-border)' }}>
-            <table className="w-full" style={{ fontSize: '13px' }}>
-              <thead style={{ background: 'var(--table-head-bg)' }}>
-                <tr>
-                  <th className="text-right p-2.5 font-bold text-fg-muted" style={{ color: 'var(--fg-muted)', width: '20%' }}>{t('field')}</th>
-                  <th className="text-right p-2.5 font-bold text-fg-strong" style={{ color: 'var(--fg-strong)' }}>{t('program_first')}</th>
-                  <th className="text-right p-2.5 font-bold text-fg-strong" style={{ color: 'var(--fg-strong)' }}>{t('program_second')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {fields.map((f, idx) => {
-                  const va = a[f.key];
-                  const vb = b[f.key];
-                  const isDiff = diff(va, vb);
-                  return (
-                    <tr
-                      key={f.key}
-                      className="table-row"
-                      style={{
-                        background: idx % 2 === 0 ? 'transparent' : 'var(--table-row-bg-odd)',
-                        borderBottom: '1px solid var(--table-border)',
-                      }}
-                    >
-                      <td className="p-2.5 font-bold text-fg-muted" style={{ color: 'var(--fg-muted)', fontSize: '11.5px' }}>
-                        {f.label}
-                        {isDiff && (
-                          <span
-                            className="mr-1 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold"
-                            style={{ background: 'rgba(245, 158, 11, 0.18)', color: '#b45309' }}
-                            title={t('values_differ')}
-                          >
-                            {t('difference')}
-                          </span>
-                        )}
-                      </td>
-                      <td
-                        className="p-2.5"
-                        style={{
-                          color: 'var(--fg-strong)',
-                          background: isDiff ? 'rgba(245, 158, 11, 0.07)' : 'transparent',
-                          direction: ['name', 'youtube', 'imdb', 'wikipedia'].includes(f.key as string) ? 'ltr' : 'rtl',
-                          textAlign: ['name', 'youtube', 'imdb', 'wikipedia'].includes(f.key as string) ? 'left' : 'right',
-                          fontSize: '12px',
-                          wordBreak: 'break-word',
-                        }}
-                      >
-                        {String(va ?? '—') || '—'}
-                      </td>
-                      <td
-                        className="p-2.5"
-                        style={{
-                          color: 'var(--fg-strong)',
-                          background: isDiff ? 'rgba(245, 158, 11, 0.07)' : 'transparent',
-                          direction: ['name', 'youtube', 'imdb', 'wikipedia'].includes(f.key as string) ? 'ltr' : 'rtl',
-                          textAlign: ['name', 'youtube', 'imdb', 'wikipedia'].includes(f.key as string) ? 'left' : 'right',
-                          fontSize: '12px',
-                          wordBreak: 'break-word',
-                        }}
-                      >
-                        {String(vb ?? '—') || '—'}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Diff summary */}
-          <div
-            className="mt-4 p-3 rounded-xl text-xs text-fg-soft"
-            style={{ background: 'rgba(245, 158, 11, 0.06)', border: '1px solid rgba(245, 158, 11, 0.2)', color: 'var(--fg-soft)' }}
-          >
-            <strong style={{ color: '#b45309' }}>{t('help_label')}</strong> {t('help_diff')}
-          </div>
-
-          <div className="mt-5 flex justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="btn-base px-6 py-3 rounded-xl text-sm font-medium"
-              style={{ background: 'rgba(122,138,128,0.15)', color: 'var(--fg-soft)', border: '1px solid var(--input-border)' }}
-            >
-              {t('close_btn')}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// --- Tab 4: Audit log (تاریخچه تغییرات) ---
-function SettingsAuditTab() {
-  const { t, lang } = useLang();
-  const [changes, setChanges] = useState<Array<{
-    id: number;
-    show_num: number | null;
-    user_id: number | null;
-    username: string;
-    action: 'create' | 'update' | 'delete';
-    field: string;
-    old_value: string;
-    new_value: string;
-    created_at: number;
-  }>>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'create' | 'update' | 'delete'>('all');
-
-  const load = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const list = await api.getChanges(200);
-      setChanges(list);
-    } catch (e: any) {
-      setError(e?.message || t('error_loading_history'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { load(); }, []);
-
-  const actionLabel: Record<string, string> = {
-    create: t('action_create'),
-    update: t('action_update'),
-    delete: t('action_delete'),
-  };
-
-  const actionColor: Record<string, string> = {
-    create: '#0097a7',
-    update: '#b45309',
-    delete: '#dc2626',
-  };
-
-  const filtered = filter === 'all' ? changes : changes.filter(c => c.action === filter);
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <div className="flex items-start justify-between gap-2 flex-wrap">
-        <div>
-          <h3 className="text-base font-bold mb-1" style={{ color: '#FFFFFF' }}>{t('audit_log_title')}</h3>
-          <p className="text-sm" style={{ color: '#6B7280' }}>
-            {t('audit_log_desc')}
-          </p>
-        </div>
-        <button
-          onClick={load}
-          className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
-          style={{
-            background: 'rgba(0, 188, 212, 0.12)',
-            color: '#0097a7',
-            border: '1px solid rgba(0, 188, 212, 0.3)',
-            cursor: 'pointer',
-          }}
-        >
-          {t('refresh')}
-        </button>
-      </div>
-
-      {/* Action filter chips */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {(['all', 'create', 'update', 'delete'] as const).map(k => (
-          <button
-            key={k}
-            onClick={() => setFilter(k)}
-            className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-            style={filter === k ? {
-              background: 'linear-gradient(135deg, #26c6da 0%, #00bcd4 100%)',
-              color: 'white',
-              border: '1px solid #00bcd4',
-            } : {
-              background: '#1E2228',
-              color: '#9CA3AF',
-              border: '1px solid rgba(0, 188, 212, 0.15)',
-            }}
-          >
-            {k === 'all' ? t('all') : actionLabel[k]}
-          </button>
-        ))}
-      </div>
-
-      {loading && (
-        <div className="p-4 text-center text-sm" style={{ color: '#6B7280' }}>{t('loading_history')}</div>
-      )}
-      {error && (
-        <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}>
-          ⚠ {error}
-        </div>
-      )}
-      {!loading && !error && filtered.length === 0 && (
-        <div className="p-6 text-center text-sm" style={{ color: '#6B7280' }}>
-          {t('no_changes_recorded')}
-        </div>
-      )}
-      {!loading && !error && filtered.length > 0 && (
-        <div className="space-y-2 max-h-[50vh] overflow-y-auto">
-          {filtered.map(c => {
-            const date = new Date(c.created_at * 1000);
-            return (
-              <div
-                key={c.id}
-                className="p-3 rounded-xl flex items-start gap-3"
-                style={{ background: '#1E2228', border: '1px solid rgba(0, 188, 212, 0.15)' }}
-              >
-                <span
-                  className="text-xs px-2 py-0.5 rounded-md font-bold flex-shrink-0"
-                  style={{
-                    background: `${actionColor[c.action]}20`,
-                    color: actionColor[c.action],
-                    border: `1px solid ${actionColor[c.action]}40`,
-                  }}
-                >
-                  {actionLabel[c.action]}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-bold" style={{ color: '#FFFFFF' }}>
-                    {c.username ? `@${c.username}` : '—'}
-                    {c.show_num != null && (
-                      <span className="text-xs font-normal mr-2" style={{ color: '#6B7280' }}>
-                        {t('program_hash')}{c.show_num.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}
-                      </span>
-                    )}
-                  </div>
-                  {c.action === 'update' && c.field && (
-                    <div className="text-xs mt-1" style={{ color: '#9CA3AF' }}>
-                      {t('field_log')} <strong>{c.field}</strong>:
-                      {c.old_value && (
-                        <span style={{ color: '#dc2626', textDecoration: 'line-through', marginRight: '6px' }}>
-                          «{c.old_value.length > 60 ? c.old_value.substring(0, 60) + '…' : c.old_value}»
-                        </span>
-                      )}
-                      <span style={{ color: '#0097a7', marginRight: '6px' }}>
-                        ← «{c.new_value.length > 60 ? c.new_value.substring(0, 60) + '…' : c.new_value}»
-                      </span>
-                    </div>
-                  )}
-                  {c.action === 'create' && (
-                    <div className="text-xs mt-1" style={{ color: '#9CA3AF' }}>
-                      {t('program_created_log', { name: c.new_value || '—' })}
-                    </div>
-                  )}
-                  {c.action === 'delete' && (
-                    <div className="text-xs mt-1" style={{ color: '#9CA3AF' }}>
-                      {t('program_deleted_log', { name: c.old_value || '—' })}
-                    </div>
-                  )}
-                  <div className="text-[10px] mt-1" style={{ color: '#6B7280' }}>
-                    {date.toLocaleDateString(lang === 'en' ? 'en-US' : 'fa-IR')} {date.toLocaleTimeString(lang === 'en' ? 'en-US' : 'fa-IR', { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }

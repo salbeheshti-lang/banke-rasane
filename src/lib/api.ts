@@ -222,22 +222,6 @@ export const api = {
     return data;
   },
 
-  // Audit log (admin only) — recent create/update/delete events on shows.
-  async getChanges(limit = 200): Promise<Array<{
-    id: number;
-    show_num: number | null;
-    user_id: number | null;
-    username: string;
-    action: 'create' | 'update' | 'delete';
-    field: string;
-    old_value: string;
-    new_value: string;
-    created_at: number;
-  }>> {
-    const data = await apiRequest(`/api/changes?limit=${limit}`);
-    return data.changes;
-  },
-
   // Stats
   async getStats(): Promise<{ total: number; categories: Array<{ category: string; count: number }> }> {
     return await apiRequest('/api/stats');
