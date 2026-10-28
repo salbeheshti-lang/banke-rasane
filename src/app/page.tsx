@@ -180,7 +180,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'radio', key: 'radio', nameFa: 'تاک‌شوی رادیویی / صوتی', name: 'Radio/Audio',
-    color: '#4a5d52', description: '۶ برنامه', filterFn: s => s.category.includes('رادیویی'),
+    color: '#9CA3AF', description: '۶ برنامه', filterFn: s => s.category.includes('رادیویی'),
     tags: [TAG_LIBRARY.layout, TAG_LIBRARY.effects],
     presetTags: ['رادیویی', 'صوتی', 'گفتگو', 'مدرن', 'استودیویی'],
     searchFields: ['name', 'summary', 'layout', 'effects'],
@@ -457,7 +457,7 @@ function getVideoPlatformInfo(url: string): { name: string; icon: string; color:
   if (url.includes('dailymotion.com')) return { name: 'Dailymotion', icon: '📺', color: '#0066dc' };
   if (url.includes('t.me') || url.includes('telegram')) return { name: 'تلگرام', icon: '✈', color: '#0088cc' };
   if (url.includes('instagram.com')) return { name: 'اینستاگرام', icon: '📷', color: '#e1306c' };
-  return { name: 'ویدیو', icon: '🎬', color: '#7a8a80' };
+  return { name: 'ویدیو', icon: '🎬', color: '#6B7280' };
 }
 
 // ============================================
@@ -469,9 +469,9 @@ function ShowImageGallery({ images, showName }: { images: string[]; showName: st
 
   return (
     <div className="mb-6">
-      <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>
+      <h4 className="font-bold mb-3" style={{ color: '#FFFFFF' }}>
         🖼 تصاویر برنامه
-        <span className="text-xs font-normal mr-2" style={{ color: '#7a8a80' }}>
+        <span className="text-xs font-normal mr-2" style={{ color: '#6B7280' }}>
           ({images.length.toLocaleString('fa-IR')} تصویر)
         </span>
       </h4>
@@ -2130,7 +2130,7 @@ export default function Home() {
         {currentView === 'add' && !canEdit && (
           <div className="premium-glass p-8 text-center">
             <h2 className="text-2xl font-bold mb-2" style={{ color: '#dc2626' }}>دسترسی غیرمجاز</h2>
-            <p style={{ color: '#4a5d52' }}>شما اجازهٔ افزودن یا ویرایش برنامه‌ها را ندارید. برای دسترسی کامل با حساب مدیر یا ویراستار وارد شوید.</p>
+            <p style={{ color: '#9CA3AF' }}>شما اجازهٔ افزودن یا ویرایش برنامه‌ها را ندارید. برای دسترسی کامل با حساب مدیر یا ویراستار وارد شوید.</p>
           </div>
         )}
       </main>
@@ -2335,11 +2335,11 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
               className="input-base"
               style={{
                 width: '100%',
-                background: 'rgba(255, 255, 255, 0.95)',
+                background: 'rgba(30, 34, 40, 0.9)',
                 border: '1px solid rgba(74, 222, 128, 0.4)',
                 borderRadius: '14px',
                 padding: '14px 18px',
-                color: '#1a2e22',
+                color: '#FFFFFF',
                 fontSize: '15px',
                 fontFamily: 'inherit',
                 outline: 'none',
@@ -2369,11 +2369,11 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 disabled={loading}
                 style={{
                   width: '100%',
-                  background: 'rgba(255, 255, 255, 0.95)',
+                  background: 'rgba(30, 34, 40, 0.9)',
                   border: '1px solid rgba(74, 222, 128, 0.4)',
                   borderRadius: '14px',
                   padding: '14px 52px 14px 18px',
-                  color: '#1a2e22',
+                  color: '#FFFFFF',
                   fontSize: '15px',
                   fontFamily: 'inherit',
                   outline: 'none',
@@ -2497,11 +2497,6 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, onTo
     <header
       className="fixed top-0 left-0 right-0 z-40 top-app-bar"
       style={{
-        background: 'linear-gradient(180deg, rgba(4, 40, 23, 0.98) 0%, rgba(2, 80, 45, 0.96) 100%)',
-        backdropFilter: 'blur(24px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-        borderBottom: '1px solid rgba(74, 222, 128, 0.4)',
-        boxShadow: '0 8px 32px rgba(2, 144, 72, 0.25), inset 0 1px 0 rgba(74, 222, 128, 0.2)',
         transition: 'background 0.35s ease, color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease',
       }}
     >
@@ -2520,19 +2515,22 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, onTo
           title={t('menu')}
           className="btn-base flex flex-col justify-center items-center p-2.5 rounded-xl"
           style={{
-            background: 'linear-gradient(135deg, rgba(2, 144, 72, 0.4) 0%, rgba(2, 144, 72, 0.15) 100%)',
-            border: '1px solid rgba(74, 222, 128, 0.4)',
+            background: 'rgba(255, 255, 255, 0.06)',
+            border: '1px solid #2A2E35',
             color: 'white',
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15), 0 4px 14px rgba(2, 144, 72, 0.3)',
             minWidth: '44px',
             minHeight: '44px',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(2, 144, 72, 0.6) 0%, rgba(2, 144, 72, 0.3) 100%)';
+            e.currentTarget.style.background = 'rgba(34, 197, 94, 0.15)';
+            e.currentTarget.style.borderColor = 'rgba(34, 197, 94, 0.45)';
+            e.currentTarget.style.color = '#22C55E';
             e.currentTarget.style.transform = 'translateY(-1px)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(2, 144, 72, 0.4) 0%, rgba(2, 144, 72, 0.15) 100%)';
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
+            e.currentTarget.style.borderColor = '#2A2E35';
+            e.currentTarget.style.color = 'white';
             e.currentTarget.style.transform = 'translateY(0)';
           }}
         >
@@ -2553,19 +2551,19 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, onTo
             height={isMobile ? 26 : 36}
             priority
             style={{
-              filter: 'drop-shadow(0 2px 10px rgba(2, 144, 72, 0.5))',
+              filter: 'drop-shadow(0 2px 10px rgba(34, 197, 94, 0.5))',
               flexShrink: 0,
             }}
           />
           {!isMobile && (
             <div
               className="flex flex-col bar-title"
-              style={{ borderRight: '1px solid rgba(74, 222, 128, 0.3)', paddingRight: '14px' }}
+              style={{ borderRight: '1px solid #2A2E35', paddingRight: '14px' }}
             >
               <span className="bar-title" style={{ color: 'white', fontWeight: 700, fontSize: '15px', lineHeight: 1.2 }}>
                 {viewTitles[currentView] || t('banke_rasane')}
               </span>
-              <span className="bar-title-sub" style={{ color: 'rgba(168, 230, 193, 0.6)', fontSize: '11px', marginTop: '2px' }}>
+              <span className="bar-title-sub" style={{ fontSize: '11px', marginTop: '2px' }}>
                 {t('version')}
               </span>
             </div>
@@ -2583,9 +2581,6 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, onTo
               title={lang === 'fa' ? t('switch_to_en') : t('switch_to_fa')}
               className="btn-base bar-toggle flex items-center justify-center rounded-xl font-bold"
               style={{
-                background: 'rgba(255, 255, 255, 0.15)',
-                border: '1px solid rgba(74, 222, 128, 0.45)',
-                color: 'white',
                 width: '44px',
                 height: '44px',
                 fontSize: '13px',
@@ -2602,18 +2597,17 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, onTo
               title={t('back')}
               className="btn-base flex items-center gap-2 rounded-xl"
               style={{
-                background: 'rgba(255, 255, 255, 0.96)',
-                border: '1px solid rgba(74, 222, 128, 0.55)',
-                color: '#016035',
+                background: 'rgba(34, 197, 94, 0.15)',
+                border: '1px solid rgba(34, 197, 94, 0.45)',
+                color: '#22C55E',
                 padding: isMobile ? '9px 12px' : '9px 16px',
-                boxShadow: '0 4px 14px rgba(2, 144, 72, 0.32), inset 0 1px 0 rgba(255,255,255,0.7)',
                 minWidth: '44px',
                 minHeight: '44px',
                 fontWeight: 700,
                 fontSize: '14px',
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.96)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(34, 197, 94, 0.25)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(34, 197, 94, 0.15)'; e.currentTarget.style.transform = 'translateY(0)'; }}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -2624,9 +2618,9 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, onTo
             <span
               className="px-2.5 py-1 rounded-full text-xs font-bold bar-title"
               style={{
-                background: 'rgba(2, 144, 72, 0.35)',
-                color: '#4ade80',
-                border: '1px solid rgba(74, 222, 128, 0.35)',
+                background: 'rgba(34, 197, 94, 0.15)',
+                color: '#22C55E',
+                border: '1px solid rgba(34, 197, 94, 0.35)',
               }}
             >
               {t('banke_rasane')}
@@ -2635,19 +2629,19 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, onTo
             <div
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl bar-title"
               style={{
-                background: 'rgba(2, 144, 72, 0.18)',
-                border: '1px solid rgba(2, 144, 72, 0.35)',
+                background: 'rgba(34, 197, 94, 0.1)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
               }}
             >
               <span
                 className="w-2 h-2 rounded-full"
                 style={{
-                  backgroundColor: '#4ade80',
-                  boxShadow: '0 0 8px #4ade80',
+                  backgroundColor: '#22C55E',
+                  boxShadow: '0 0 8px #22C55E',
                   animation: 'pulse 2s ease-in-out infinite',
                 }}
               ></span>
-              <span className="bar-title-sub" style={{ color: 'rgba(168, 230, 193, 0.85)', fontSize: '12px' }}>{t('connected')}</span>
+              <span className="bar-title-sub" style={{ fontSize: '12px' }}>{t('connected')}</span>
             </div>
           )}
         </div>
@@ -2722,9 +2716,6 @@ function DrawerMenu({
         className="drawer-aside fixed top-0 right-0 bottom-0 animate-drawer-slide-in flex flex-col"
         style={{
           width: 'min(340px, 88vw)',
-          background: 'linear-gradient(180deg, #042817 0%, #035932 40%, #024a28 70%, #042817 100%)',
-          borderLeft: '1px solid rgba(74, 222, 128, 0.45)',
-          boxShadow: '-16px 0 56px rgba(2, 144, 72, 0.4), inset 1px 0 0 rgba(74, 222, 128, 0.15)',
           transition: 'background 0.35s ease, color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease',
         }}
         onClick={(e) => e.stopPropagation()}
@@ -2732,7 +2723,7 @@ function DrawerMenu({
         {/* Drawer header — logo + close */}
         <div
           className="p-4 flex items-center justify-between flex-shrink-0 drawer-divider"
-          style={{ borderBottom: '1px solid rgba(74, 222, 128, 0.3)' }}
+          style={{ borderBottom: '1px solid #2A2E35' }}
         >
           <Image
             src="/banke-rasane-logo.png"
@@ -2740,14 +2731,13 @@ function DrawerMenu({
             width={140}
             height={36}
             priority
-            style={{ filter: 'drop-shadow(0 2px 10px rgba(2, 144, 72, 0.5))' }}
+            style={{ filter: 'drop-shadow(0 2px 10px rgba(34, 197, 94, 0.5))' }}
           />
           <button
             onClick={onClose}
             className="btn-base p-2 rounded-lg drawer-fg-muted"
-            style={{ color: 'rgba(255, 255, 255, 0.6)' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(220, 38, 38, 0.2)'; e.currentTarget.style.color = '#fca5a5'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'; e.currentTarget.style.color = '#FCA5A5'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = ''; }}
             title={t('close')}
             aria-label={t('close')}
           >
@@ -2771,31 +2761,28 @@ function DrawerMenu({
                   onClick={() => onNavigate(item.key as any)}
                   className="btn-base drawer-fg flex items-center gap-3 px-3 py-2.5 rounded-xl w-full text-right"
                   style={isActive ? {
-                    background: 'linear-gradient(135deg, rgba(2, 144, 72, 0.55) 0%, rgba(2, 144, 72, 0.25) 100%)',
-                    border: '1px solid rgba(2, 144, 72, 0.65)',
-                    color: '#4ade80',
-                    boxShadow: '0 4px 12px rgba(2, 144, 72, 0.35), inset 0 1px 0 rgba(74, 222, 128, 0.25)',
+                    background: 'rgba(34, 197, 94, 0.18)',
+                    border: '1px solid rgba(34, 197, 94, 0.45)',
+                    color: '#22C55E',
                   } : {
                     border: '1px solid transparent',
-                    color: 'rgba(255, 255, 255, 0.95)',
+                    color: 'var(--drawer-fg)',
                   }}
                   onMouseEnter={(e) => {
                     if (!isActive) {
-                      e.currentTarget.style.background = 'rgba(74, 222, 128, 0.12)';
-                      e.currentTarget.style.color = 'white';
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!isActive) {
                       e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.color = 'rgba(255, 255, 255, 0.95)';
                     }
                   }}
                 >
                   <NavIcon name={item.icon} />
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm">{item.label}</div>
-                    <div className="text-xs drawer-fg-muted" style={{ color: 'rgba(168, 230, 193, 0.75)', marginTop: '2px' }}>{item.desc}</div>
+                    <div className="text-xs drawer-fg-muted" style={{ marginTop: '2px' }}>{item.desc}</div>
                   </div>
                 </button>
               );
@@ -2807,7 +2794,6 @@ function DrawerMenu({
             <button
               onClick={() => setGenresExpanded(!genresExpanded)}
               className="btn-base drawer-fg-muted flex items-center justify-between w-full px-3 mb-2 text-xs font-bold uppercase tracking-wider"
-              style={{ color: 'rgba(255, 255, 255, 0.5)' }}
             >
               <span>{t('genres_section')} ({genres.length})</span>
               <svg
@@ -2828,14 +2814,11 @@ function DrawerMenu({
                       key={g.id}
                       onClick={() => onGenreSelect(g)}
                       className="btn-base drawer-fg flex items-center gap-3 px-3 py-2 rounded-lg group w-full"
-                      style={{ color: 'rgba(255, 255, 255, 0.95)' }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = `${g.color}30`;
-                        e.currentTarget.style.color = 'white';
+                        e.currentTarget.style.background = `${g.color}25`;
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.background = 'transparent';
-                        e.currentTarget.style.color = 'rgba(255, 255, 255, 0.95)';
                       }}
                     >
                       <div
@@ -2863,23 +2846,23 @@ function DrawerMenu({
         {/* User info + settings + logout footer */}
         <div
           className="p-3 flex-shrink-0 drawer-divider"
-          style={{ borderTop: '1px solid rgba(74, 222, 128, 0.3)' }}
+          style={{ borderTop: '1px solid #2A2E35' }}
         >
           {currentUser && (
             <div
               className="mb-2 p-3 rounded-xl"
               style={{
-                background: 'rgba(255, 255, 255, 0.06)',
-                border: '1px solid rgba(74, 222, 128, 0.2)',
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid #2A2E35',
               }}
             >
               <div className="flex items-center gap-3">
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
                   style={{
-                    background: 'linear-gradient(135deg, rgba(2, 144, 72, 0.7) 0%, rgba(2, 144, 72, 0.4) 100%)',
-                    color: '#4ade80',
-                    border: '1px solid rgba(74, 222, 128, 0.5)',
+                    background: 'rgba(34, 197, 94, 0.18)',
+                    color: '#22C55E',
+                    border: '1px solid rgba(34, 197, 94, 0.45)',
                     fontWeight: 700,
                     fontSize: '14px',
                   }}
@@ -2887,20 +2870,20 @@ function DrawerMenu({
                   {(currentUser.name || currentUser.username).charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm drawer-fg-active" style={{ color: '#4ade80' }} title={currentUser.username}>
+                  <div className="font-bold text-sm drawer-fg-active" style={{ color: '#22C55E' }} title={currentUser.username}>
                     {currentUser.name || currentUser.username}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span
                       className="text-xs px-1.5 py-0.5 rounded-md font-bold"
                       style={{
-                        background: currentUser.role === 'admin' ? 'rgba(220, 38, 38, 0.25)' : currentUser.role === 'editor' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(2, 144, 72, 0.25)',
-                        color: currentUser.role === 'admin' ? '#fca5a5' : currentUser.role === 'editor' ? '#fcd34d' : '#4ade80',
+                        background: currentUser.role === 'admin' ? 'rgba(239, 68, 68, 0.18)' : currentUser.role === 'editor' ? 'rgba(250, 204, 21, 0.18)' : 'rgba(34, 197, 94, 0.18)',
+                        color: currentUser.role === 'admin' ? '#FCA5A5' : currentUser.role === 'editor' ? '#FACC15' : '#22C55E',
                       }}
                     >
                       {roleLabel[currentUser.role] || currentUser.role}
                     </span>
-                    <span className="text-xs drawer-fg-muted" style={{ color: 'rgba(168, 230, 193, 0.6)' }} dir="ltr">
+                    <span className="text-xs drawer-fg-muted" dir="ltr">
                       @{currentUser.username}
                     </span>
                   </div>
@@ -2914,14 +2897,13 @@ function DrawerMenu({
             <button
               onClick={onOpenSettings}
               className="btn-base drawer-fg flex items-center gap-3 px-3 py-2.5 rounded-lg w-full mb-1"
-              style={{ color: 'rgba(255, 255, 255, 0.85)' }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(2, 144, 72, 0.25)';
-                e.currentTarget.style.color = '#4ade80';
+                e.currentTarget.style.background = 'rgba(34, 197, 94, 0.15)';
+                e.currentTarget.style.color = '#22C55E';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'transparent';
-                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.85)';
+                e.currentTarget.style.color = '';
               }}
             >
               <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -2935,14 +2917,13 @@ function DrawerMenu({
           <button
             onClick={onLogout}
             className="btn-base drawer-fg flex items-center gap-3 px-3 py-2.5 rounded-lg w-full"
-            style={{ color: 'rgba(255, 255, 255, 0.85)' }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(220, 38, 38, 0.2)';
-              e.currentTarget.style.color = '#fca5a5';
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)';
+              e.currentTarget.style.color = '#FCA5A5';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+              e.currentTarget.style.color = '';
             }}
           >
             <NavIcon name="exit" />
@@ -3000,18 +2981,18 @@ function MobileBottomNav({
       {showGenres && (
         <div
           className="fixed inset-0 z-40"
-          style={{ background: 'rgba(0, 0, 0, 0.4)' }}
+          style={{ background: 'rgba(0, 0, 0, 0.6)' }}
           onClick={() => setShowGenres(false)}
         >
           <div
             className="fixed bottom-0 left-0 right-0 p-4 animate-slide-up-nav"
             style={{
-              background: 'rgba(238, 246, 241, 0.6)',
-              backdropFilter: 'blur(26px) saturate(160%)',
-              WebkitBackdropFilter: 'blur(26px) saturate(160%)',
-              borderTop: '1px solid rgba(255, 255, 255, 0.55)',
+              background: 'rgba(15, 17, 21, 0.95)',
+              backdropFilter: 'blur(28px) saturate(160%)',
+              WebkitBackdropFilter: 'blur(28px) saturate(160%)',
+              borderTop: '1px solid #2A2E35',
               borderRadius: '24px 24px 0 0',
-              boxShadow: '0 -10px 40px rgba(2, 144, 72, 0.16), inset 0 1px 0 rgba(255,255,255,0.4)',
+              boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255,255,255,0.05)',
               paddingBottom: '32px',
               maxHeight: '70vh',
               overflowY: 'auto',
@@ -3019,11 +3000,11 @@ function MobileBottomNav({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg" style={{ color: '#1a2e22' }}>{t('genres_section')} ({genres.length})</h3>
+              <h3 className="font-bold text-lg" style={{ color: '#FFFFFF' }}>{t('genres_section')} ({genres.length})</h3>
               <button
                 onClick={() => setShowGenres(false)}
                 className="p-2 rounded-lg"
-                style={{ color: '#7a8a80', background: 'rgba(0, 0, 0, 0.05)' }}
+                style={{ color: '#9CA3AF', background: 'rgba(255, 255, 255, 0.05)' }}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -3039,7 +3020,7 @@ function MobileBottomNav({
                     onClick={() => { onGenreSelect(g); setShowGenres(false); }}
                     className="p-3 rounded-2xl text-right transition-all"
                     style={{
-                      background: `${g.color}18`,
+                      background: `${g.color}1A`,
                       border: `1px solid ${g.color}40`,
                     }}
                   >
@@ -3057,7 +3038,7 @@ function MobileBottomNav({
                         </svg>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-bold truncate" style={{ color: '#1a2e22' }}>{g.nameFa}</div>
+                        <div className="text-sm font-bold truncate" style={{ color: '#FFFFFF' }}>{g.nameFa}</div>
                         <div className="text-xs font-bold" style={{ color: g.color }}>
                           {count.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')} {t('programs_count')}
                         </div>
@@ -3075,12 +3056,12 @@ function MobileBottomNav({
         <div
           className="flex items-center justify-around no-scrollbar"
           style={{
-            background: 'rgba(238, 246, 241, 0.5)',
-            backdropFilter: 'blur(24px) saturate(160%)',
-            WebkitBackdropFilter: 'blur(24px) saturate(160%)',
-            border: '1px solid rgba(255, 255, 255, 0.55)',
-            borderRadius: '22px',
-            boxShadow: '0 8px 30px rgba(2, 144, 72, 0.16), inset 0 1px 0 rgba(255,255,255,0.4)',
+            background: 'rgba(15, 17, 21, 0.85)',
+            backdropFilter: 'blur(28px) saturate(160%)',
+            WebkitBackdropFilter: 'blur(28px) saturate(160%)',
+            border: '1px solid #2A2E35',
+            borderRadius: '18px',
+            boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
             padding: '8px',
           }}
         >
@@ -3108,17 +3089,17 @@ function MobileNavBtn({ label, icon, active, onClick, highlight }: {
       onClick={onClick}
       className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all"
       style={{
-        background: active ? 'linear-gradient(135deg, rgba(2, 144, 72, 0.18) 0%, rgba(2, 144, 72, 0.08) 100%)' : 'transparent',
-        border: active ? '1px solid rgba(2, 144, 72, 0.35)' : '1px solid transparent',
+        background: active ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
+        border: active ? '1px solid rgba(34, 197, 94, 0.35)' : '1px solid transparent',
         minWidth: '56px',
       }}
     >
       <svg
         className="w-6 h-6"
         fill="none"
-        stroke={active ? '#029048' : highlight ? '#016035' : '#7a8a80'}
+        stroke={active ? '#22C55E' : highlight ? '#22C55E' : '#9CA3AF'}
         viewBox="0 0 24 24"
-        style={{ filter: active ? 'drop-shadow(0 0 6px rgba(2, 144, 72, 0.4))' : 'none' }}
+        style={{ filter: active ? 'drop-shadow(0 0 6px rgba(34, 197, 94, 0.45))' : 'none' }}
       >
         {icon === 'home' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />}
         {icon === 'grid' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />}
@@ -3127,7 +3108,7 @@ function MobileNavBtn({ label, icon, active, onClick, highlight }: {
         {icon === 'exit' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />}
         {icon === 'menu' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />}
       </svg>
-      <span className="text-xs font-medium" style={{ color: active ? '#029048' : highlight ? '#016035' : '#7a8a80' }}>
+      <span className="text-xs font-medium" style={{ color: active ? '#22C55E' : highlight ? '#22C55E' : '#9CA3AF' }}>
         {label}
       </span>
     </button>
@@ -3728,7 +3709,7 @@ function ProgramsView({
                   onClick={() => setFilterSize(f.key)}
                   className="btn-base px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
                   style={filterSize === f.key ? {
-                    background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
+                    background: 'linear-gradient(135deg, #22C55E 0%, #10B981 100%)',
                     color: 'white',
                   } : {
                     background: 'var(--input-bg)',
@@ -3753,7 +3734,7 @@ function ProgramsView({
                   onClick={() => setFilterStyle(f.key)}
                   className="btn-base px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
                   style={filterStyle === f.key ? {
-                    background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
+                    background: 'linear-gradient(135deg, #22C55E 0%, #10B981 100%)',
                     color: 'white',
                   } : {
                     background: 'var(--input-bg)',
@@ -3941,7 +3922,7 @@ function ProgramsView({
                     onClick={() => setPage(p)}
                     className="btn-base min-w-[40px] px-3 py-2 rounded-lg text-sm font-bold"
                     style={p === currentPage ? {
-                      background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
+                      background: 'linear-gradient(135deg, #22C55E 0%, #10B981 100%)',
                       color: 'white',
                       border: '1px solid #029048',
                       boxShadow: '0 4px 12px rgba(2, 144, 72, 0.3)',
@@ -4011,28 +3992,28 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
   return (
     <div
       onClick={selectionMode ? onToggle : onClick}
-      className="premium-show-card"
+      className={`premium-show-card${selected ? ' is-selected' : ''}`}
       style={{
-        background: `linear-gradient(135deg, ${thumb.accent} 0%, ${dark} 60%, ${darker} 100%)`,
-        border: selected ? `3px solid white` : compareSelected ? `3px solid #f59e0b` : `1px solid ${adjustColor(thumb.accent, 30)}`,
-        boxShadow: selected
-          ? `0 0 0 3px ${thumb.accent}, 0 16px 56px ${thumb.accent}60`
-          : compareSelected
-          ? `0 0 0 3px #f59e0b, 0 16px 56px ${thumb.accent}60`
-          : `0 12px 40px ${thumb.accent}45, 0 4px 12px ${thumb.accent}30, inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.2)`,
+        background: 'var(--card-bg)',
+        border: compareSelected ? '2px solid #FACC15' : selected ? '2px solid #22C55E' : '1px solid var(--card-border)',
+        boxShadow: compareSelected
+          ? '0 0 0 2px rgba(250, 204, 21, 0.5), 0 8px 32px rgba(250, 204, 21, 0.18), 0 4px 16px rgba(0,0,0,0.5)'
+          : selected
+          ? '0 0 0 2px rgba(34, 197, 94, 0.5), 0 8px 32px rgba(34, 197, 94, 0.25), 0 4px 16px rgba(0,0,0,0.5)'
+          : '0 4px 16px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04)',
       }}
       onMouseEnter={(e) => {
-        if (!selected) {
-          e.currentTarget.style.transform = 'translateY(-6px) scale(1.02)';
-          e.currentTarget.style.filter = 'brightness(1.1) saturate(1.05)';
-          e.currentTarget.style.boxShadow = `0 20px 60px ${thumb.accent}70, 0 8px 24px ${thumb.accent}45, inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -1px 0 rgba(0,0,0,0.2)`;
+        if (!selected && !compareSelected) {
+          e.currentTarget.style.transform = 'translateY(-3px)';
+          e.currentTarget.style.borderColor = '#FACC15';
+          e.currentTarget.style.boxShadow = '0 8px 32px rgba(250, 204, 21, 0.18), 0 4px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05)';
         }
       }}
       onMouseLeave={(e) => {
-        if (!selected) {
-          e.currentTarget.style.transform = 'translateY(0) scale(1)';
-          e.currentTarget.style.filter = 'brightness(1) saturate(1)';
-          e.currentTarget.style.boxShadow = `0 12px 40px ${thumb.accent}45, 0 4px 12px ${thumb.accent}30, inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.2)`;
+        if (!selected && !compareSelected) {
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.borderColor = 'var(--card-border)';
+          e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04)';
         }
       }}
     >
@@ -4041,7 +4022,7 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
         className="aspect-video relative overflow-hidden"
         style={{
           background: thumb.gradient,
-          borderRadius: '16px 16px 0 0',
+          borderRadius: '14px 14px 0 0',
         }}
       >
         {thumb.image ? (
@@ -4579,16 +4560,16 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
 
           {/* Persian description */}
           <div className="mb-6 p-4 rounded-xl" style={{ background: `${thumb.accent}10`, border: `1px solid ${thumb.accent}25` }}>
-            <h4 className="font-bold mb-2" style={{ color: '#1a2e22' }}>{t('about_program')}</h4>
-            <p style={{ color: '#4a5d52', lineHeight: 1.8 }}>{show.descriptionFa}</p>
+            <h4 className="font-bold mb-2" style={{ color: '#FFFFFF' }}>{t('about_program')}</h4>
+            <p style={{ color: '#9CA3AF', lineHeight: 1.8 }}>{show.descriptionFa}</p>
           </div>
 
           {/* Video links gallery */}
           {show.videos && show.videos.length > 0 && (
             <div className="mb-6">
-              <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>
+              <h4 className="font-bold mb-3" style={{ color: '#FFFFFF' }}>
                 🎬 {t('videos_of_program')}
-                <span className="text-xs font-normal mr-2" style={{ color: '#7a8a80' }}>
+                <span className="text-xs font-normal mr-2" style={{ color: '#6B7280' }}>
                   ({show.videos.length.toLocaleString('fa-IR')} {t('videos_count_suffix')})
                 </span>
               </h4>
@@ -4636,7 +4617,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                         </span>
                         <div
                           className="text-xs truncate"
-                          style={{ color: '#4a5d52', direction: 'ltr', textAlign: 'left' }}
+                          style={{ color: '#9CA3AF', direction: 'ltr', textAlign: 'left' }}
                           title={url}
                         >
                           {url}
@@ -4651,7 +4632,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
 
           {/* Access links */}
           <div className="mb-6">
-            <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>{t('direct_access')}</h4>
+            <h4 className="font-bold mb-3" style={{ color: '#FFFFFF' }}>{t('direct_access')}</h4>
             <div className="flex flex-wrap gap-2">
               <a
                 href={show.youtube}
@@ -4762,7 +4743,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                 <button
                   onClick={() => setConfirmDelete(false)}
                   className="px-3 py-1.5 rounded-lg text-sm font-medium"
-                  style={{ background: 'rgba(122, 138, 128, 0.15)', color: '#4a5d52', border: '1px solid rgba(122, 138, 128, 0.3)' }}
+                  style={{ background: 'rgba(122, 138, 128, 0.15)', color: '#9CA3AF', border: '1px solid rgba(122, 138, 128, 0.3)' }}
                 >
                   {t('cancel')}
                 </button>
@@ -4779,7 +4760,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
 
           {/* Decor details */}
           <div>
-            <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>{t('decor_scene_specs')}</h4>
+            <h4 className="font-bold mb-3" style={{ color: '#FFFFFF' }}>{t('decor_scene_specs')}</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <DetailField label={t('category_label')} value={show.category} />
               <DetailField label={t('decor_style')} value={show.style} />
@@ -4800,15 +4781,15 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
           {/* Decor summary */}
           {show.summary && show.summary !== '—' && (
             <div className="mt-6 p-4 rounded-xl" style={{ background: `${thumb.accent}10`, border: `1px solid ${thumb.accent}25` }}>
-              <h4 className="font-bold mb-2" style={{ color: '#1a2e22' }}>{t('decor_summary')}</h4>
-              <p style={{ color: '#4a5d52', lineHeight: 1.7 }}>{show.summary}</p>
+              <h4 className="font-bold mb-2" style={{ color: '#FFFFFF' }}>{t('decor_summary')}</h4>
+              <p style={{ color: '#9CA3AF', lineHeight: 1.7 }}>{show.summary}</p>
             </div>
           )}
 
           {/* Tags section — user-defined tags + detected Islamic countries */}
           {((show.tags && show.tags.length > 0) || countries.length > 0 || show.country) && (
             <div className="mt-6 p-4 rounded-xl" style={{ background: 'rgba(124, 58, 237, 0.06)', border: '1px solid rgba(124, 58, 237, 0.2)' }}>
-              <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>🏷 {t('tags_label')}</h4>
+              <h4 className="font-bold mb-3" style={{ color: '#FFFFFF' }}>🏷 {t('tags_label')}</h4>
               {show.tags && show.tags.length > 0 && (
                 <div className="flex items-center gap-2 flex-wrap mb-2">
                   {show.tags.map((t, i) => (
@@ -4824,7 +4805,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
               )}
               {countries.length > 0 && (
                 <div className="flex items-center gap-2 flex-wrap mb-2">
-                  <span className="text-xs font-bold" style={{ color: '#7a8a80' }}>🌍 {t('detected_countries')}</span>
+                  <span className="text-xs font-bold" style={{ color: '#6B7280' }}>🌍 {t('detected_countries')}</span>
                   {countries.map((c, i) => (
                     <span
                       key={i}
@@ -4837,8 +4818,8 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                 </div>
               )}
               {show.country && (
-                <div className="text-xs" style={{ color: '#7a8a80' }}>
-                  {t('origin_country_entered')} <strong style={{ color: '#1a2e22' }}>{show.country}</strong>
+                <div className="text-xs" style={{ color: '#6B7280' }}>
+                  {t('origin_country_entered')} <strong style={{ color: '#FFFFFF' }}>{show.country}</strong>
                 </div>
               )}
             </div>
@@ -4892,8 +4873,8 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
 function DetailField({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-xs font-bold mb-1" style={{ color: '#7a8a80' }}>{label}</div>
-      <div className="text-sm" style={{ color: '#1a2e22' }}>{value || '—'}</div>
+      <div className="text-xs font-bold mb-1" style={{ color: '#6B7280' }}>{label}</div>
+      <div className="text-sm" style={{ color: '#FFFFFF' }}>{value || '—'}</div>
     </div>
   );
 }
@@ -5025,19 +5006,19 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
   return (
     <>
       <header className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-1" style={{ color: '#1a2e22' }}>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-1" style={{ color: '#FFFFFF' }}>
           {editingShow ? t('edit_program') : t('add_new_program')}
         </h1>
-        <p style={{ color: '#7a8a80' }}>
+        <p style={{ color: '#6B7280' }}>
           {editingShow ? t('edit_program_no', { n: editingShow.num.toLocaleString('fa-IR') }) : t('fill_form_below')}
         </p>
       </header>
 
       <div className="premium-glass p-6 space-y-4">
         {/* Auto-fetch from IMDb/Wikipedia */}
-        <div className="p-4 rounded-xl" style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.15)' }}>
-          <h4 className="font-bold mb-2" style={{ color: '#1a2e22' }}>{t('auto_fetch_info')}</h4>
-          <p className="text-xs mb-3" style={{ color: '#7a8a80' }}>
+        <div className="p-4 rounded-xl" style={{ background: 'rgba(34,197,94,0.06)', border: '1px solid #2A2E35' }}>
+          <h4 className="font-bold mb-2" style={{ color: 'var(--fg-strong)' }}>{t('auto_fetch_info')}</h4>
+          <p className="text-xs mb-3" style={{ color: 'var(--fg-muted)' }}>
             {t('auto_fetch_desc')}
           </p>
           <div className="flex gap-2">
@@ -5046,13 +5027,11 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
               value={fetchUrl}
               onChange={(e) => setFetchUrl(e.target.value)}
               placeholder={t('auto_fetch_placeholder')}
+              className="input-base"
               style={{
                 flex: 1,
                 padding: '10px 16px',
-                borderRadius: '12px',
-                border: '1px solid rgba(2,144,72,0.15)',
-                background: 'rgba(255,255,255,0.85)',
-                color: '#1a2e22',
+                borderRadius: '10px',
                 fontFamily: 'inherit',
                 outline: 'none',
                 direction: 'ltr',
@@ -5132,7 +5111,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
 
         {/* Persian description */}
         <div>
-          <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>{t('about_program_fa')}</label>
+          <label className="text-sm font-bold mb-2 block" style={{ color: '#FFFFFF' }}>{t('about_program_fa')}</label>
           <textarea
             value={form.descriptionFa || ''}
             onChange={(e) => setForm({ ...form, descriptionFa: e.target.value })}
@@ -5143,8 +5122,8 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
               padding: '12px 16px',
               borderRadius: '12px',
               border: '1px solid rgba(2, 144, 72, 0.15)',
-              background: 'rgba(255, 255, 255, 0.85)',
-              color: '#1a2e22',
+              background: 'rgba(30, 34, 40, 0.75)',
+              color: '#FFFFFF',
               fontFamily: 'inherit',
               outline: 'none',
               resize: 'vertical',
@@ -5153,7 +5132,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
         </div>
 
         <div>
-          <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>{t('decor_summary')}</label>
+          <label className="text-sm font-bold mb-2 block" style={{ color: '#FFFFFF' }}>{t('decor_summary')}</label>
           <textarea
             value={form.summary || ''}
             onChange={(e) => setForm({ ...form, summary: e.target.value })}
@@ -5164,8 +5143,8 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
               padding: '12px 16px',
               borderRadius: '12px',
               border: '1px solid rgba(2, 144, 72, 0.15)',
-              background: 'rgba(255, 255, 255, 0.85)',
-              color: '#1a2e22',
+              background: 'rgba(30, 34, 40, 0.75)',
+              color: '#FFFFFF',
               fontFamily: 'inherit',
               outline: 'none',
               resize: 'vertical',
@@ -5206,7 +5185,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
           <button
             onClick={() => { setEditingShow(null); onDone(); }}
             className="px-6 py-3 rounded-xl text-sm font-medium"
-            style={{ background: 'rgba(122, 138, 128, 0.15)', color: '#4a5d52', border: '1px solid rgba(122, 138, 128, 0.3)' }}
+            style={{ background: 'rgba(122, 138, 128, 0.15)', color: '#9CA3AF', border: '1px solid rgba(122, 138, 128, 0.3)' }}
           >
             {t('cancel')}
           </button>
@@ -5224,19 +5203,17 @@ function FormField({ label, value, onChange, placeholder }: {
 }) {
   return (
     <div>
-      <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>{label}</label>
+      <label className="text-sm font-bold mb-2 block" style={{ color: 'var(--fg-soft)' }}>{label}</label>
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
+        className="input-base"
         style={{
           width: '100%',
           padding: '10px 16px',
-          borderRadius: '12px',
-          border: '1px solid rgba(2, 144, 72, 0.15)',
-          background: 'rgba(255, 255, 255, 0.85)',
-          color: '#1a2e22',
+          borderRadius: '10px',
           fontFamily: 'inherit',
           outline: 'none',
         }}
@@ -5253,17 +5230,15 @@ function FormSelect({ label, value, onChange, options }: {
 }) {
   return (
     <div>
-      <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>{label}</label>
+      <label className="text-sm font-bold mb-2 block" style={{ color: 'var(--fg-soft)' }}>{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        className="input-base"
         style={{
           width: '100%',
           padding: '10px 16px',
-          borderRadius: '12px',
-          border: '1px solid rgba(2, 144, 72, 0.15)',
-          background: 'rgba(255, 255, 255, 0.85)',
-          color: '#1a2e22',
+          borderRadius: '10px',
           fontFamily: 'inherit',
           outline: 'none',
         }}
@@ -5400,9 +5375,9 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
   return (
     <div className="p-4 rounded-xl" style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.15)' }}>
       <div className="flex items-center justify-between mb-3">
-        <h4 className="font-bold" style={{ color: '#1a2e22' }}>
+        <h4 className="font-bold" style={{ color: '#FFFFFF' }}>
           🖼 {t('program_images')}
-          <span className="text-xs font-normal mr-2" style={{ color: '#7a8a80' }}>
+          <span className="text-xs font-normal mr-2" style={{ color: '#6B7280' }}>
             ({images.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')} {t('image_count_of')} {MAX_IMAGES.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')})
           </span>
         </h4>
@@ -5412,7 +5387,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
       </div>
 
       {/* Compression notice */}
-      <div className="text-xs mb-3" style={{ color: '#7a8a80' }}>
+      <div className="text-xs mb-3" style={{ color: '#6B7280' }}>
         {t('compression_notice')}
       </div>
 
@@ -5431,7 +5406,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
             borderRadius: '12px',
             border: '1px solid rgba(2,144,72,0.15)',
             background: images.length >= MAX_IMAGES ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.85)',
-            color: '#1a2e22',
+            color: '#FFFFFF',
             fontFamily: 'inherit',
             outline: 'none',
             direction: 'ltr',
@@ -5444,7 +5419,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
           disabled={images.length >= MAX_IMAGES || !urlInput.trim()}
           className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
           style={{
-            background: images.length >= MAX_IMAGES || !urlInput.trim() ? 'rgba(0,0,0,0.05)' : 'linear-gradient(135deg, #029048 0%, #016035 100%)',
+            background: images.length >= MAX_IMAGES || !urlInput.trim() ? 'rgba(0,0,0,0.05)' : 'linear-gradient(135deg, #22C55E 0%, #10B981 100%)',
             color: images.length >= MAX_IMAGES || !urlInput.trim() ? '#999' : 'white',
             border: '1px solid rgba(2,144,72,0.3)',
             whiteSpace: 'nowrap',
@@ -5482,7 +5457,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
           style={{ background: 'rgba(255,255,255,0.5)', border: '2px dashed rgba(2,144,72,0.2)' }}
         >
           <div className="text-3xl mb-2 opacity-40">🖼</div>
-          <p className="text-xs" style={{ color: '#7a8a80' }}>
+          <p className="text-xs" style={{ color: '#6B7280' }}>
             {t('no_images_yet')}
           </p>
         </div>
@@ -5679,15 +5654,15 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
 
   return (
     <div className="p-4 rounded-xl" style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.15)' }}>
-      <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>
+      <h4 className="font-bold mb-3" style={{ color: '#FFFFFF' }}>
         🎬 {t('program_videos')}
-        <span className="text-xs font-normal mr-2" style={{ color: '#7a8a80' }}>
+        <span className="text-xs font-normal mr-2" style={{ color: '#6B7280' }}>
           ({videos.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')} {t('videos_count_suffix')})
         </span>
       </h4>
 
       {/* Constraints reminder */}
-      <div className="text-xs mb-3" style={{ color: '#7a8a80' }}>
+      <div className="text-xs mb-3" style={{ color: '#6B7280' }}>
         {t('video_constraints')}
       </div>
 
@@ -5729,7 +5704,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
 
       {/* Main YouTube search link field (auto-generated) */}
       <div className="mb-3">
-        <label className="text-xs font-bold mb-1 block" style={{ color: '#4a5d52' }}>{t('youtube_search_link')}</label>
+        <label className="text-xs font-bold mb-1 block" style={{ color: '#9CA3AF' }}>{t('youtube_search_link')}</label>
         <input
           type="text"
           value={youtube}
@@ -5741,7 +5716,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
             borderRadius: '10px',
             border: '1px solid rgba(2,144,72,0.15)',
             background: 'rgba(255,255,255,0.85)',
-            color: '#1a2e22',
+            color: '#FFFFFF',
             fontFamily: 'inherit',
             outline: 'none',
             direction: 'ltr',
@@ -5765,7 +5740,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
             borderRadius: '12px',
             border: '1px solid rgba(2,144,72,0.15)',
             background: 'rgba(255,255,255,0.85)',
-            color: '#1a2e22',
+            color: '#FFFFFF',
             fontFamily: 'inherit',
             outline: 'none',
             direction: 'ltr',
@@ -5778,7 +5753,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
           disabled={!urlInput.trim()}
           className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
           style={{
-            background: !urlInput.trim() ? 'rgba(0,0,0,0.05)' : 'linear-gradient(135deg, #029048 0%, #016035 100%)',
+            background: !urlInput.trim() ? 'rgba(0,0,0,0.05)' : 'linear-gradient(135deg, #22C55E 0%, #10B981 100%)',
             color: !urlInput.trim() ? '#999' : 'white',
             border: '1px solid rgba(2,144,72,0.3)',
             whiteSpace: 'nowrap',
@@ -5821,7 +5796,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
                   </span>
                   <div
                     className="text-xs truncate"
-                    style={{ color: '#4a5d52', direction: 'ltr', textAlign: 'left' }}
+                    style={{ color: '#9CA3AF', direction: 'ltr', textAlign: 'left' }}
                     title={url}
                   >
                     {url}
@@ -5948,13 +5923,13 @@ function TagsEditor({ tags, onChange, presetTags }: {
 
   return (
     <div className="p-4 rounded-xl" style={{ background: 'rgba(124, 58, 237, 0.06)', border: '1px solid rgba(124, 58, 237, 0.2)' }}>
-      <h4 className="font-bold mb-2" style={{ color: '#1a2e22' }}>
+      <h4 className="font-bold mb-2" style={{ color: '#FFFFFF' }}>
         🏷 {t('tags_label')}
-        <span className="text-xs font-normal mr-2" style={{ color: '#7a8a80' }}>
+        <span className="text-xs font-normal mr-2" style={{ color: '#6B7280' }}>
           ({tags.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')} {t('tags_label')})
         </span>
       </h4>
-      <p className="text-xs mb-3" style={{ color: '#7a8a80' }}>
+      <p className="text-xs mb-3" style={{ color: '#6B7280' }}>
         {t('tags_hint')}
       </p>
 
@@ -5972,7 +5947,7 @@ function TagsEditor({ tags, onChange, presetTags }: {
             borderRadius: '12px',
             border: '1px solid rgba(124, 58, 237, 0.2)',
             background: 'rgba(255,255,255,0.85)',
-            color: '#1a2e22',
+            color: '#FFFFFF',
             fontFamily: 'inherit',
             outline: 'none',
           }}
@@ -6027,7 +6002,7 @@ function TagsEditor({ tags, onChange, presetTags }: {
       {/* Preset quick-add buttons (from the genre's presetTags) */}
       {presetTags && presetTags.length > 0 && (
         <div>
-          <div className="text-xs font-bold mb-2" style={{ color: '#4a5d52' }}>{t('preset_tags_hint')}</div>
+          <div className="text-xs font-bold mb-2" style={{ color: '#9CA3AF' }}>{t('preset_tags_hint')}</div>
           <div className="flex items-center gap-2 flex-wrap">
             {presetTags.map(tag => {
               const selected = tags.some(x => x.toLowerCase() === tag.toLowerCase());
@@ -6098,8 +6073,8 @@ function AddGenreModal({ onClose, onSave }: {
       <div className="modal-content" style={{ maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.1)' }}>
-          <h2 className="text-xl font-bold" style={{ color: '#1a2e22' }}>{t('add_genre_new')}</h2>
-          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#7a8a80' }}>
+          <h2 className="text-xl font-bold" style={{ color: '#FFFFFF' }}>{t('add_genre_new')}</h2>
+          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#6B7280' }}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -6108,7 +6083,7 @@ function AddGenreModal({ onClose, onSave }: {
 
         <div className="p-6 space-y-4">
           <div>
-            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>{t('genre_name_required')}</label>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#FFFFFF' }}>{t('genre_name_required')}</label>
             <input
               type="text"
               value={name}
@@ -6120,7 +6095,7 @@ function AddGenreModal({ onClose, onSave }: {
                 borderRadius: '12px',
                 border: '1px solid rgba(2, 144, 72, 0.15)',
                 background: 'rgba(255,255,255,0.85)',
-                color: '#1a2e22',
+                color: '#FFFFFF',
                 fontFamily: 'inherit',
                 outline: 'none',
               }}
@@ -6128,7 +6103,7 @@ function AddGenreModal({ onClose, onSave }: {
           </div>
 
           <div>
-            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>{t('description_label')}</label>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#FFFFFF' }}>{t('description_label')}</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -6140,7 +6115,7 @@ function AddGenreModal({ onClose, onSave }: {
                 borderRadius: '12px',
                 border: '1px solid rgba(2, 144, 72, 0.15)',
                 background: 'rgba(255,255,255,0.85)',
-                color: '#1a2e22',
+                color: '#FFFFFF',
                 fontFamily: 'inherit',
                 outline: 'none',
                 resize: 'vertical',
@@ -6149,7 +6124,7 @@ function AddGenreModal({ onClose, onSave }: {
           </div>
 
           <div>
-            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>{t('genre_color_label')}</label>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#FFFFFF' }}>{t('genre_color_label')}</label>
             <div className="flex items-center gap-2 flex-wrap">
               {GENRE_COLOR_PRESETS.map(c => (
                 <button
@@ -6176,15 +6151,15 @@ function AddGenreModal({ onClose, onSave }: {
               border: `1px solid ${color}50`,
             }}
           >
-            <div className="text-xs font-bold mb-1" style={{ color: '#7a8a80' }}>{t('preview_label')}</div>
+            <div className="text-xs font-bold mb-1" style={{ color: '#6B7280' }}>{t('preview_label')}</div>
             <div className="flex items-center gap-2">
               <span
                 className="w-3 h-3 rounded-full"
                 style={{ background: color, boxShadow: `0 0 10px ${color}` }}
               ></span>
-              <strong style={{ color: '#1a2e22' }}>{name || t('genre_preview_default')}</strong>
+              <strong style={{ color: '#FFFFFF' }}>{name || t('genre_preview_default')}</strong>
             </div>
-            <p className="text-xs mt-1" style={{ color: '#4a5d52' }}>{description || t('genre_default_desc')}</p>
+            <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>{description || t('genre_default_desc')}</p>
           </div>
 
           <div className="flex gap-3 pt-2">
@@ -6199,7 +6174,7 @@ function AddGenreModal({ onClose, onSave }: {
             <button
               onClick={onClose}
               className="px-6 py-3 rounded-xl text-sm font-medium"
-              style={{ background: 'rgba(122,138,128,0.15)', color: '#4a5d52', border: '1px solid rgba(122,138,128,0.3)' }}
+              style={{ background: 'rgba(122,138,128,0.15)', color: '#9CA3AF', border: '1px solid rgba(122,138,128,0.3)' }}
             >
               {t('cancel')}
             </button>
@@ -6403,8 +6378,8 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
       <div className="modal-content" style={{ maxWidth: '700px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.1)' }}>
-          <h2 className="text-xl font-bold" style={{ color: '#1a2e22' }}>{t('publish_social_title')}</h2>
-          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#7a8a80' }}>
+          <h2 className="text-xl font-bold" style={{ color: '#FFFFFF' }}>{t('publish_social_title')}</h2>
+          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#6B7280' }}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -6414,7 +6389,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
         <div className="p-6 space-y-5">
           {/* Platform selection */}
           <div>
-            <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>{t('select_platform')}</h4>
+            <h4 className="font-bold mb-3" style={{ color: '#FFFFFF' }}>{t('select_platform')}</h4>
             <div className="grid grid-cols-3 gap-2">
               {SOCIAL_PLATFORMS.map(p => (
                 <button
@@ -6440,14 +6415,14 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
 
           {/* Post preview — with image + description */}
           <div>
-            <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>{t('post_preview')}</h4>
+            <h4 className="font-bold mb-3" style={{ color: '#FFFFFF' }}>{t('post_preview')}</h4>
             <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(0,0,0,0.1)' }}>
               {/* Card image preview — real program image or 1080x1080 social card */}
               <div
                 className="relative overflow-hidden"
                 style={{
                   aspectRatio: '1/1',
-                  background: 'linear-gradient(135deg, #029048 0%, #016035 60%, #014824 100%)',
+                  background: 'linear-gradient(135deg, #22C55E 0%, #10B981 60%, #059669 100%)',
                   maxHeight: '400px',
                 }}
               >
@@ -6498,8 +6473,8 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
                   width: '100%',
                   padding: '12px 16px',
                   border: 'none',
-                  background: 'white',
-                  color: '#1a2e22',
+                  background: '#1E2228',
+                  color: '#FFFFFF',
                   fontFamily: 'inherit',
                   outline: 'none',
                   resize: 'vertical',
@@ -6518,8 +6493,8 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
               >
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-bold" style={{ color: '#1a2e22' }}>{t('direct_send_to', { platform: selectedPlatform })}</div>
-                    <div className="text-xs" style={{ color: '#7a8a80' }}>
+                    <div className="text-sm font-bold" style={{ color: '#FFFFFF' }}>{t('direct_send_to', { platform: selectedPlatform })}</div>
+                    <div className="text-xs" style={{ color: '#6B7280' }}>
                       {botConfig
                         ? t('bot_configured', { platform: botConfig.platform === 'telegram' ? t('telegram_label') : t('bale_label'), chatId: botConfig.chatId })
                         : t('bot_config_required')}
@@ -6568,7 +6543,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
               <button
                 onClick={onClose}
                 className="px-6 py-3 rounded-xl text-sm font-medium"
-                style={{ background: 'rgba(122,138,128,0.15)', color: '#4a5d52', border: '1px solid rgba(122,138,128,0.3)' }}
+                style={{ background: 'rgba(122,138,128,0.15)', color: '#9CA3AF', border: '1px solid rgba(122,138,128,0.3)' }}
               >
                 {t('cancel')}
               </button>
@@ -6630,8 +6605,8 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
       <div className="modal-content" style={{ maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.1)' }}>
-          <h2 className="text-xl font-bold" style={{ color: '#1a2e22' }}>{t('bot_config_title')}</h2>
-          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#7a8a80' }}>
+          <h2 className="text-xl font-bold" style={{ color: '#FFFFFF' }}>{t('bot_config_title')}</h2>
+          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#6B7280' }}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -6640,9 +6615,9 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
 
         <div className="p-6 space-y-5">
           {/* Intro help */}
-          <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.15)', color: '#4a5d52' }}>
+          <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.15)', color: '#9CA3AF' }}>
             {t('bot_config_help_intro')}
-            <ul className="mt-2 space-y-1 text-xs" style={{ color: '#7a8a80' }}>
+            <ul className="mt-2 space-y-1 text-xs" style={{ color: '#6B7280' }}>
               <li>{t('bot_config_help_tg')}</li>
               <li>{t('bot_config_help_bale')}</li>
               <li>{t('bot_config_help_admin')}</li>
@@ -6651,7 +6626,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
 
           {/* Platform picker */}
           <div>
-            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>{t('platform_label')}</label>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#FFFFFF' }}>{t('platform_label')}</label>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => setPlatform('telegram')}
@@ -6674,7 +6649,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
 
           {/* Bot token */}
           <div>
-            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>{t('bot_token_label')}</label>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#FFFFFF' }}>{t('bot_token_label')}</label>
             <div className="flex gap-2">
               <input
                 type={showToken ? 'text' : 'password'}
@@ -6688,7 +6663,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
                   borderRadius: '12px',
                   border: '1px solid rgba(2,144,72,0.15)',
                   background: 'rgba(255,255,255,0.9)',
-                  color: '#1a2e22',
+                  color: '#FFFFFF',
                   fontFamily: 'monospace',
                   outline: 'none',
                   textAlign: 'left',
@@ -6697,7 +6672,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
               <button
                 onClick={() => setShowToken(!showToken)}
                 className="px-3 rounded-xl text-sm font-medium"
-                style={{ background: 'rgba(122,138,128,0.15)', color: '#4a5d52', border: '1px solid rgba(122,138,128,0.3)' }}
+                style={{ background: 'rgba(122,138,128,0.15)', color: '#9CA3AF', border: '1px solid rgba(122,138,128,0.3)' }}
               >
                 {showToken ? t('hide_btn') : t('show_btn')}
               </button>
@@ -6706,7 +6681,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
 
           {/* Chat ID */}
           <div>
-            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>{t('chat_id_label')}</label>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#FFFFFF' }}>{t('chat_id_label')}</label>
             <input
               type="text"
               value={chatId}
@@ -6719,13 +6694,13 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
                 borderRadius: '12px',
                 border: '1px solid rgba(2,144,72,0.15)',
                 background: 'rgba(255,255,255,0.9)',
-                color: '#1a2e22',
+                color: '#FFFFFF',
                 fontFamily: 'monospace',
                 outline: 'none',
                 textAlign: 'left',
               }}
             />
-            <p className="text-xs mt-1" style={{ color: '#7a8a80' }}>
+            <p className="text-xs mt-1" style={{ color: '#6B7280' }}>
               {t('chat_id_help')}
             </p>
           </div>
@@ -6867,10 +6842,10 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
       <div className="modal-content" style={{ maxWidth: '800px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.1)' }}>
-          <h2 className="text-xl font-bold" style={{ color: '#1a2e22' }}>
+          <h2 className="text-xl font-bold" style={{ color: '#FFFFFF' }}>
             {format === 'pdf' ? t('pdf_preview_title') : t('excel_preview_title')}
           </h2>
-          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#7a8a80' }}>
+          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#6B7280' }}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -6882,16 +6857,16 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
           <div className="mb-4 p-4 rounded-xl" style={{ background: 'rgba(2,144,72,0.08)', border: '1px solid rgba(2,144,72,0.2)' }}>
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm" style={{ color: '#4a5d52' }}>{t('program_count_label')}</div>
+                <div className="text-sm" style={{ color: '#9CA3AF' }}>{t('program_count_label')}</div>
                 <div className="text-2xl font-bold" style={{ color: '#016035' }}>{shows.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
               </div>
               <div>
-                <div className="text-sm" style={{ color: '#4a5d52' }}>{t('format_label')}</div>
+                <div className="text-sm" style={{ color: '#9CA3AF' }}>{t('format_label')}</div>
                 <div className="text-2xl font-bold" style={{ color: format === 'pdf' ? '#dc2626' : '#016035' }}>{format.toUpperCase()}</div>
               </div>
               <div>
-                <div className="text-sm" style={{ color: '#4a5d52' }}>{t('date')}</div>
-                <div className="text-2xl font-bold" style={{ color: '#1a2e22' }}>{new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
+                <div className="text-sm" style={{ color: '#9CA3AF' }}>{t('date')}</div>
+                <div className="text-2xl font-bold" style={{ color: '#FFFFFF' }}>{new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
               </div>
             </div>
           </div>
@@ -6963,20 +6938,20 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
                     <div
                       key={s.n}
                       className="p-3 rounded-lg flex gap-2.5"
-                      style={{ background: 'white', border: '1px solid #e0e8e4' }}
+                      style={{ background: '#1E2228', border: '1px solid #e0e8e4' }}
                     >
                       <span
                         className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0"
-                        style={{ background: 'linear-gradient(135deg, #029048 0%, #016035 100%)', color: 'white', boxShadow: '0 2px 6px rgba(2, 144, 72, 0.3)' }}
+                        style={{ background: 'linear-gradient(135deg, #22C55E 0%, #10B981 100%)', color: 'white', boxShadow: '0 2px 6px rgba(2, 144, 72, 0.3)' }}
                       >
                         {s.n.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}
                       </span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 mb-1">
                           <span className="text-sm">{s.icon}</span>
-                          <span className="text-xs font-bold" style={{ color: '#1a2e22' }}>{s.t}</span>
+                          <span className="text-xs font-bold" style={{ color: '#FFFFFF' }}>{s.t}</span>
                         </div>
-                        <p className="text-xs leading-relaxed" style={{ color: '#4a5d52', fontSize: '10.5px' }}>
+                        <p className="text-xs leading-relaxed" style={{ color: '#9CA3AF', fontSize: '10.5px' }}>
                           {s.desc}
                         </p>
                       </div>
@@ -6986,7 +6961,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
               </div>
 
               {/* Sample program card preview */}
-              <div className="p-4" style={{ background: 'white', borderTop: '1px solid #e0e8e4' }}>
+              <div className="p-4" style={{ background: '#1E2228', borderTop: '1px solid #e0e8e4' }}>
                 <div className="text-xs font-bold mb-2" style={{ color: '#016035' }}>{t('sample_program_card')}</div>
                 <div
                   className="rounded-lg overflow-hidden"
@@ -7000,15 +6975,15 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
                       className="w-5 h-5 rounded flex items-center justify-center text-xs font-bold flex-shrink-0"
                       style={{ background: '#029048', color: 'white' }}
                     >{lang === 'en' ? '1' : '۱'}</span>
-                    <span className="text-xs font-bold flex-1" style={{ color: '#1a2e22', direction: 'ltr', textAlign: 'right' }}>
+                    <span className="text-xs font-bold flex-1" style={{ color: '#FFFFFF', direction: 'ltr', textAlign: 'right' }}>
                       {shows[0]?.name || t('sample_program')}
                     </span>
-                    <span className="text-xs" style={{ color: '#7a8a80' }}>{t('identifier_label')} {lang === 'en' ? '1' : '۱'}</span>
+                    <span className="text-xs" style={{ color: '#6B7280' }}>{t('identifier_label')} {lang === 'en' ? '1' : '۱'}</span>
                   </div>
                   <div className="p-2 flex gap-2">
                     <div
                       className="w-12 h-9 rounded flex-shrink-0"
-                      style={{ background: 'linear-gradient(135deg, #029048 0%, #016035 100%)' }}
+                      style={{ background: 'linear-gradient(135deg, #22C55E 0%, #10B981 100%)' }}
                     ></div>
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap gap-1 mb-1">
@@ -7028,7 +7003,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
               </div>
 
               {shows.length > 80 && (
-                <div className="p-2 text-center text-xs" style={{ background: '#fef9e7', color: '#7a8a80' }}>
+                <div className="p-2 text-center text-xs" style={{ background: '#fef9e7', color: '#6B7280' }}>
                   {t('full_report_detailed_first', { n: shows.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR') })}
                 </div>
               )}
@@ -7038,7 +7013,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
           {/* Excel preview */}
           {format === 'excel' && (
             <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(0,0,0,0.1)' }}>
-              <div className="p-3 text-center" style={{ background: 'linear-gradient(135deg, #029048 0%, #016035 100%)', color: 'white' }}>
+              <div className="p-3 text-center" style={{ background: 'linear-gradient(135deg, #22C55E 0%, #10B981 100%)', color: 'white' }}>
                 <div className="text-lg font-bold">{t('excel_banke_rasane')}</div>
                 <div className="text-xs opacity-80">{shows.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')} {t('programs_unit')}</div>
               </div>
@@ -7046,21 +7021,21 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
                 <table className="w-full" style={{ fontSize: '12px' }}>
                   <thead style={{ position: 'sticky', top: 0, background: '#f5efe0', zIndex: 1 }}>
                     <tr>
-                      <th className="text-right p-2 font-bold" style={{ color: '#4a5d52' }}>#</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#4a5d52' }}>{t('name_col')}</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#4a5d52' }}>{t('category_col')}</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#4a5d52' }}>{t('decor_style')}</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#4a5d52' }}>{t('studio_size')}</th>
+                      <th className="text-right p-2 font-bold" style={{ color: '#9CA3AF' }}>#</th>
+                      <th className="text-right p-2 font-bold" style={{ color: '#9CA3AF' }}>{t('name_col')}</th>
+                      <th className="text-right p-2 font-bold" style={{ color: '#9CA3AF' }}>{t('category_col')}</th>
+                      <th className="text-right p-2 font-bold" style={{ color: '#9CA3AF' }}>{t('decor_style')}</th>
+                      <th className="text-right p-2 font-bold" style={{ color: '#9CA3AF' }}>{t('studio_size')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {shows.slice(0, 50).map((s, i) => (
                       <tr key={s.num} style={{ borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-                        <td className="p-2" style={{ color: '#7a8a80' }}>{(i + 1).toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</td>
-                        <td className="p-2 font-medium" style={{ color: '#1a2e22', direction: 'ltr', textAlign: 'right' }}>{s.name}</td>
-                        <td className="p-2" style={{ color: '#4a5d52' }}>{s.category.replace(/^\d+\.\s*/, '').substring(0, 20)}</td>
-                        <td className="p-2" style={{ color: '#4a5d52' }}>{s.style}</td>
-                        <td className="p-2" style={{ color: '#4a5d52' }}>{s.size}</td>
+                        <td className="p-2" style={{ color: '#6B7280' }}>{(i + 1).toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</td>
+                        <td className="p-2 font-medium" style={{ color: '#FFFFFF', direction: 'ltr', textAlign: 'right' }}>{s.name}</td>
+                        <td className="p-2" style={{ color: '#9CA3AF' }}>{s.category.replace(/^\d+\.\s*/, '').substring(0, 20)}</td>
+                        <td className="p-2" style={{ color: '#9CA3AF' }}>{s.style}</td>
+                        <td className="p-2" style={{ color: '#9CA3AF' }}>{s.size}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -7081,13 +7056,13 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
             <button
               onClick={onClose}
               className="px-6 py-3 rounded-xl text-sm font-medium"
-              style={{ background: 'rgba(122,138,128,0.15)', color: '#4a5d52', border: '1px solid rgba(122,138,128,0.3)' }}
+              style={{ background: 'rgba(122,138,128,0.15)', color: '#9CA3AF', border: '1px solid rgba(122,138,128,0.3)' }}
             >
               {t('cancel')}
             </button>
           </div>
           {format === 'pdf' && (
-            <p className="mt-3 text-xs text-center" style={{ color: '#7a8a80', lineHeight: 1.7 }}>
+            <p className="mt-3 text-xs text-center" style={{ color: '#6B7280', lineHeight: 1.7 }}>
               {t('pdf_help_text')}<br />
               {t('print_dialog_help')}
             </p>
@@ -7290,11 +7265,11 @@ function SettingsModal({
                 onClick={() => setTab(tabItem.key)}
                 className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition-all"
                 style={active ? {
-                  background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
+                  background: 'linear-gradient(135deg, #22C55E 0%, #10B981 100%)',
                   color: 'white',
                   boxShadow: '0 4px 12px rgba(2, 144, 72, 0.3), inset 0 1px 0 rgba(74, 222, 128, 0.4)',
                 } : {
-                  color: '#4a5d52',
+                  color: '#9CA3AF',
                   border: '1px solid transparent',
                 }}
               >
@@ -7355,8 +7330,8 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div>
-        <h3 className="text-base font-bold mb-1" style={{ color: '#1a2e22' }}>{t('api_server_url')}</h3>
-        <p className="text-sm mb-3" style={{ color: '#7a8a80' }}>
+        <h3 className="text-base font-bold mb-1" style={{ color: '#FFFFFF' }}>{t('api_server_url')}</h3>
+        <p className="text-sm mb-3" style={{ color: '#6B7280' }}>
           {t('api_server_desc')} <code dir="ltr" style={{ background: 'rgba(2,144,72,0.1)', padding: '2px 6px', borderRadius: '6px', color: '#016035' }}>http://localhost:3002</code>
         </p>
         <input
@@ -7367,11 +7342,11 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
           placeholder="http://localhost:3002"
           style={{
             width: '100%',
-            background: 'rgba(255, 255, 255, 0.95)',
+            background: 'rgba(30, 34, 40, 0.9)',
             border: '1px solid rgba(2, 144, 72, 0.25)',
             borderRadius: '12px',
             padding: '12px 16px',
-            color: '#1a2e22',
+            color: '#FFFFFF',
             fontSize: '14px',
             fontFamily: 'inherit',
             outline: 'none',
@@ -7413,7 +7388,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
           onClick={handleSave}
           className="px-4 py-2 rounded-xl text-sm font-bold transition-all flex-1"
           style={{
-            background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
+            background: 'linear-gradient(135deg, #22C55E 0%, #10B981 100%)',
             color: 'white',
             boxShadow: '0 4px 12px rgba(2, 144, 72, 0.3)',
           }}
@@ -7424,7 +7399,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
 
       <div
         className="p-3 rounded-xl text-xs"
-        style={{ background: 'rgba(2, 144, 72, 0.05)', border: '1px solid rgba(2, 144, 72, 0.15)', color: '#4a5d52', lineHeight: 1.7 }}
+        style={{ background: 'rgba(2, 144, 72, 0.05)', border: '1px solid rgba(2, 144, 72, 0.15)', color: '#9CA3AF', lineHeight: 1.7 }}
       >
         {t('server_help')}
       </div>
@@ -7518,8 +7493,8 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div>
-        <h3 className="text-base font-bold mb-1" style={{ color: '#1a2e22' }}>{t('users_management')}</h3>
-        <p className="text-sm" style={{ color: '#7a8a80' }}>
+        <h3 className="text-base font-bold mb-1" style={{ color: '#FFFFFF' }}>{t('users_management')}</h3>
+        <p className="text-sm" style={{ color: '#6B7280' }}>
           {t('users_management_desc')}
         </p>
       </div>
@@ -7529,7 +7504,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
         className="p-4 rounded-xl"
         style={{ background: 'rgba(2, 144, 72, 0.05)', border: '1px solid rgba(2, 144, 72, 0.15)' }}
       >
-        <h4 className="font-bold text-sm mb-3" style={{ color: '#1a2e22' }}>{t('add_new_user')}</h4>
+        <h4 className="font-bold text-sm mb-3" style={{ color: '#FFFFFF' }}>{t('add_new_user')}</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
           <input
             type="text"
@@ -7538,12 +7513,12 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
             value={newUser.username}
             onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
             style={{
-              background: 'white',
+              background: '#1E2228',
               border: '1px solid rgba(2, 144, 72, 0.2)',
               borderRadius: '10px',
               padding: '10px 14px',
               fontSize: '14px',
-              color: '#1a2e22',
+              color: '#FFFFFF',
               outline: 'none',
               textAlign: 'left',
               direction: 'ltr',
@@ -7555,12 +7530,12 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
             value={newUser.name}
             onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
             style={{
-              background: 'white',
+              background: '#1E2228',
               border: '1px solid rgba(2, 144, 72, 0.2)',
               borderRadius: '10px',
               padding: '10px 14px',
               fontSize: '14px',
-              color: '#1a2e22',
+              color: '#FFFFFF',
               outline: 'none',
             }}
           />
@@ -7571,12 +7546,12 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
             value={newUser.password}
             onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
             style={{
-              background: 'white',
+              background: '#1E2228',
               border: '1px solid rgba(2, 144, 72, 0.2)',
               borderRadius: '10px',
               padding: '10px 14px',
               fontSize: '14px',
-              color: '#1a2e22',
+              color: '#FFFFFF',
               outline: 'none',
               textAlign: 'left',
               direction: 'ltr',
@@ -7586,12 +7561,12 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
             value={newUser.role}
             onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
             style={{
-              background: 'white',
+              background: '#1E2228',
               border: '1px solid rgba(2, 144, 72, 0.2)',
               borderRadius: '10px',
               padding: '10px 14px',
               fontSize: '14px',
-              color: '#1a2e22',
+              color: '#FFFFFF',
               outline: 'none',
               fontFamily: 'inherit',
             }}
@@ -7606,7 +7581,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
           disabled={creating}
           className="px-4 py-2 rounded-xl text-sm font-bold transition-all"
           style={{
-            background: creating ? 'rgba(122, 138, 128, 0.5)' : 'linear-gradient(135deg, #029048 0%, #016035 100%)',
+            background: creating ? 'rgba(122, 138, 128, 0.5)' : 'linear-gradient(135deg, #22C55E 0%, #10B981 100%)',
             color: 'white',
             boxShadow: '0 4px 12px rgba(2, 144, 72, 0.3)',
             opacity: creating ? 0.6 : 1,
@@ -7619,11 +7594,11 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
 
       {/* Users list */}
       <div>
-        <h4 className="font-bold text-sm mb-2" style={{ color: '#1a2e22' }}>
+        <h4 className="font-bold text-sm mb-2" style={{ color: '#FFFFFF' }}>
           {t('current_users')} ({users.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')})
         </h4>
         {loading && (
-          <div className="p-4 text-center text-sm" style={{ color: '#7a8a80' }}>{t('loading_users')}</div>
+          <div className="p-4 text-center text-sm" style={{ color: '#6B7280' }}>{t('loading_users')}</div>
         )}
         {error && (
           <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}>
@@ -7636,7 +7611,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
               <div
                 key={u.id}
                 className="p-3 rounded-xl flex items-center gap-3"
-                style={{ background: 'white', border: '1px solid rgba(2, 144, 72, 0.15)' }}
+                style={{ background: '#1E2228', border: '1px solid rgba(2, 144, 72, 0.15)' }}
               >
                 <div
                   className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm"
@@ -7649,13 +7624,13 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
                   {(u.name || u.username).charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm" style={{ color: '#1a2e22' }} title={u.username}>
+                  <div className="font-bold text-sm" style={{ color: '#FFFFFF' }} title={u.username}>
                     {u.name || u.username}{' '}
                     {u.id === currentUser.id && (
-                      <span className="text-xs font-normal" style={{ color: '#7a8a80' }}>({lang === 'en' ? 'you' : 'شما'})</span>
+                      <span className="text-xs font-normal" style={{ color: '#6B7280' }}>({lang === 'en' ? 'you' : 'شما'})</span>
                     )}
                   </div>
-                  <div className="text-xs" style={{ color: '#7a8a80' }} dir="ltr">@{u.username}</div>
+                  <div className="text-xs" style={{ color: '#6B7280' }} dir="ltr">@{u.username}</div>
                 </div>
                 <select
                   value={u.role}
@@ -7667,7 +7642,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
                     borderRadius: '8px',
                     padding: '6px 10px',
                     fontSize: '13px',
-                    color: '#1a2e22',
+                    color: '#FFFFFF',
                     outline: 'none',
                     fontFamily: 'inherit',
                     cursor: u.id === currentUser.id ? 'not-allowed' : 'pointer',
@@ -7755,11 +7730,11 @@ function SettingsPasswordTab({
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
-    background: 'rgba(255, 255, 255, 0.95)',
+    background: 'rgba(30, 34, 40, 0.9)',
     border: '1px solid rgba(2, 144, 72, 0.25)',
     borderRadius: '12px',
     padding: '12px 48px 12px 16px',
-    color: '#1a2e22',
+    color: '#FFFFFF',
     fontSize: '14px',
     fontFamily: 'inherit',
     outline: 'none',
@@ -7770,8 +7745,8 @@ function SettingsPasswordTab({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div>
-        <h3 className="text-base font-bold mb-1" style={{ color: '#1a2e22' }}>{t('change_password_title')}</h3>
-        <p className="text-sm" style={{ color: '#7a8a80' }}>
+        <h3 className="text-base font-bold mb-1" style={{ color: '#FFFFFF' }}>{t('change_password_title')}</h3>
+        <p className="text-sm" style={{ color: '#6B7280' }}>
           {t('change_password_desc')}
         </p>
       </div>
@@ -7782,7 +7757,7 @@ function SettingsPasswordTab({
       >
         <span>{t('current_account')}</span>
         <strong>{currentUser.name || currentUser.username}</strong>
-        <span dir="ltr" style={{ color: '#7a8a80' }}>@{currentUser.username}</span>
+        <span dir="ltr" style={{ color: '#6B7280' }}>@{currentUser.username}</span>
       </div>
 
       {[
@@ -7791,7 +7766,7 @@ function SettingsPasswordTab({
         { label: t('confirm_new_password'), val: confirmPw, set: setConfirmPw },
       ].map((f, i) => (
         <div key={i}>
-          <label className="block text-sm font-bold mb-2" style={{ color: '#1a2e22' }}>{f.label}</label>
+          <label className="block text-sm font-bold mb-2" style={{ color: '#FFFFFF' }}>{f.label}</label>
           <div className="relative">
             <input
               type={showPw ? 'text' : 'password'}
@@ -7805,7 +7780,7 @@ function SettingsPasswordTab({
               type="button"
               onClick={() => setShowPw(!showPw)}
               className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-lg"
-              style={{ color: '#4a5d52', background: 'transparent' }}
+              style={{ color: '#9CA3AF', background: 'transparent' }}
               aria-label={showPw ? t('hide_password') : t('show_password')}
             >
               {showPw ? (
@@ -7837,7 +7812,7 @@ function SettingsPasswordTab({
         disabled={saving}
         className="px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
         style={{
-          background: saving ? 'rgba(122, 138, 128, 0.5)' : 'linear-gradient(135deg, #029048 0%, #016035 100%)',
+          background: saving ? 'rgba(122, 138, 128, 0.5)' : 'linear-gradient(135deg, #22C55E 0%, #10B981 100%)',
           color: 'white',
           boxShadow: '0 4px 12px rgba(2, 144, 72, 0.3)',
           opacity: saving ? 0.6 : 1,
@@ -8092,8 +8067,8 @@ function SettingsAuditTab() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div className="flex items-start justify-between gap-2 flex-wrap">
         <div>
-          <h3 className="text-base font-bold mb-1" style={{ color: '#1a2e22' }}>{t('audit_log_title')}</h3>
-          <p className="text-sm" style={{ color: '#7a8a80' }}>
+          <h3 className="text-base font-bold mb-1" style={{ color: '#FFFFFF' }}>{t('audit_log_title')}</h3>
+          <p className="text-sm" style={{ color: '#6B7280' }}>
             {t('audit_log_desc')}
           </p>
         </div>
@@ -8119,12 +8094,12 @@ function SettingsAuditTab() {
             onClick={() => setFilter(k)}
             className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
             style={filter === k ? {
-              background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
+              background: 'linear-gradient(135deg, #22C55E 0%, #10B981 100%)',
               color: 'white',
               border: '1px solid #029048',
             } : {
-              background: 'white',
-              color: '#4a5d52',
+              background: '#1E2228',
+              color: '#9CA3AF',
               border: '1px solid rgba(2, 144, 72, 0.15)',
             }}
           >
@@ -8134,7 +8109,7 @@ function SettingsAuditTab() {
       </div>
 
       {loading && (
-        <div className="p-4 text-center text-sm" style={{ color: '#7a8a80' }}>{t('loading_history')}</div>
+        <div className="p-4 text-center text-sm" style={{ color: '#6B7280' }}>{t('loading_history')}</div>
       )}
       {error && (
         <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}>
@@ -8142,7 +8117,7 @@ function SettingsAuditTab() {
         </div>
       )}
       {!loading && !error && filtered.length === 0 && (
-        <div className="p-6 text-center text-sm" style={{ color: '#7a8a80' }}>
+        <div className="p-6 text-center text-sm" style={{ color: '#6B7280' }}>
           {t('no_changes_recorded')}
         </div>
       )}
@@ -8154,7 +8129,7 @@ function SettingsAuditTab() {
               <div
                 key={c.id}
                 className="p-3 rounded-xl flex items-start gap-3"
-                style={{ background: 'white', border: '1px solid rgba(2, 144, 72, 0.15)' }}
+                style={{ background: '#1E2228', border: '1px solid rgba(2, 144, 72, 0.15)' }}
               >
                 <span
                   className="text-xs px-2 py-0.5 rounded-md font-bold flex-shrink-0"
@@ -8167,16 +8142,16 @@ function SettingsAuditTab() {
                   {actionLabel[c.action]}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-bold" style={{ color: '#1a2e22' }}>
+                  <div className="text-sm font-bold" style={{ color: '#FFFFFF' }}>
                     {c.username ? `@${c.username}` : '—'}
                     {c.show_num != null && (
-                      <span className="text-xs font-normal mr-2" style={{ color: '#7a8a80' }}>
+                      <span className="text-xs font-normal mr-2" style={{ color: '#6B7280' }}>
                         {t('program_hash')}{c.show_num.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}
                       </span>
                     )}
                   </div>
                   {c.action === 'update' && c.field && (
-                    <div className="text-xs mt-1" style={{ color: '#4a5d52' }}>
+                    <div className="text-xs mt-1" style={{ color: '#9CA3AF' }}>
                       {t('field_log')} <strong>{c.field}</strong>:
                       {c.old_value && (
                         <span style={{ color: '#dc2626', textDecoration: 'line-through', marginRight: '6px' }}>
@@ -8189,16 +8164,16 @@ function SettingsAuditTab() {
                     </div>
                   )}
                   {c.action === 'create' && (
-                    <div className="text-xs mt-1" style={{ color: '#4a5d52' }}>
+                    <div className="text-xs mt-1" style={{ color: '#9CA3AF' }}>
                       {t('program_created_log', { name: c.new_value || '—' })}
                     </div>
                   )}
                   {c.action === 'delete' && (
-                    <div className="text-xs mt-1" style={{ color: '#4a5d52' }}>
+                    <div className="text-xs mt-1" style={{ color: '#9CA3AF' }}>
                       {t('program_deleted_log', { name: c.old_value || '—' })}
                     </div>
                   )}
-                  <div className="text-[10px] mt-1" style={{ color: '#7a8a80' }}>
+                  <div className="text-[10px] mt-1" style={{ color: '#6B7280' }}>
                     {date.toLocaleDateString(lang === 'en' ? 'en-US' : 'fa-IR')} {date.toLocaleTimeString(lang === 'en' ? 'en-US' : 'fa-IR', { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>

@@ -46,100 +46,117 @@
 }
 
 /* ============================================
-   THEME TOKENS — switched via html.dark-theme / html.light-theme.
-   Both themes share the same green accent palette; only the
-   neutrals (backgrounds, text, borders, glass) switch.
+   THEME TOKENS — DaVinci Resolve / Adobe Premiere style
+   Dark professional palette is the DEFAULT (html.dark-theme).
+   Light theme kept as an alternative (html.light-theme).
    ============================================ */
 :root,
 html.dark-theme {
-  /* Surface stack — dark green but not too dark */
-  --bg-deep:   #f0f7f3;
-  --bg-mid:    #e6f0ea;
-  --bg-soft:   #dceee4;
-  --bg-page-1: #f5faf7;
-  --bg-page-2: #f0f7f3;
+  /* Surface stack — very dark gray/black */
+  --bg-deep:   #0F1115;
+  --bg-mid:    #1A1D21;
+  --bg-soft:   #1E2228;
+  --bg-page-1: #0F1115;
+  --bg-page-2: #1A1D21;
 
   /* Foreground */
-  --fg-strong: #0d2418;
-  --fg-soft:   #1a2e22;
-  --fg-muted:  #4a5d52;
-  --fg-dim:    #7a8a80;
+  --fg-strong: #FFFFFF;
+  --fg-soft:   #E5E7EB;
+  --fg-muted:  #9CA3AF;
+  --fg-dim:    #6B7280;
 
-  /* Accent + brand */
-  --accent:           #4ade80;
-  --accent-bright:    #4ade80;
-  --accent-press:     #36b37e;
-  --accent-bg-soft:   rgba(74, 222, 128, 0.18);
-  --accent-border:    rgba(74, 222, 128, 0.45);
-  --accent-text:      #4ade80;
-  --accent-glow:       rgba(74, 222, 128, 0.45);
+  /* Accent green (neon) — active states, buttons, highlights */
+  --accent:           #22C55E;
+  --accent-bright:    #22C55E;
+  --accent-press:     #10B981;
+  --accent-bg-soft:   rgba(34, 197, 94, 0.15);
+  --accent-border:    rgba(34, 197, 94, 0.45);
+  --accent-text:      #22C55E;
+  --accent-glow:      rgba(34, 197, 94, 0.5);
 
-  /* Top app bar */
-  --bar-bg-1: rgba(255, 255, 255, 0.95);
-  --bar-bg-2: rgba(245, 250, 247, 0.9);
-  --bar-border: rgba(2, 144, 72, 0.15);
-  --bar-shadow: 0 4px 20px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  --bar-fg: #0d2418;
-  --bar-fg-muted: #4a5d52;
+  /* Accent gold — hover highlights */
+  --gold:        #FACC15;
+  --gold-bg:     rgba(250, 204, 21, 0.12);
+  --gold-border: rgba(250, 204, 21, 0.6);
+  --gold-glow:   rgba(250, 204, 21, 0.4);
+  --gold-text:   #FACC15;
 
-  /* Drawer */
-  --drawer-bg-1: rgba(245, 250, 247, 0.92);
-  --drawer-bg-2: rgba(240, 247, 243, 0.88);
-  --drawer-bg-3: rgba(245, 250, 247, 0.9);
-  --drawer-fg: #1a2e22;
-  --drawer-fg-active: #029048;
-  --drawer-fg-muted: #4a5d52;
-  --drawer-border: rgba(2, 144, 72, 0.2);
-  --drawer-shadow: -8px 0 32px rgba(0, 0, 0, 0.06), inset 1px 0 0 rgba(2, 144, 72, 0.1);
+  /* Danger red */
+  --danger:        #EF4444;
+  --danger-bg:     rgba(239, 68, 68, 0.12);
+  --danger-border: rgba(239, 68, 68, 0.4);
+  --danger-text:   #FCA5A5;
+
+  /* Card border + dark surface */
+  --card-bg:        #1E2228;
+  --card-border:    #2A2E35;
+  --card-border-hover: #FACC15;
+  --card-border-selected: #22C55E;
+
+  /* Top app bar — slim dark */
+  --bar-bg-1: rgba(15, 17, 21, 0.96);
+  --bar-bg-2: rgba(26, 29, 33, 0.94);
+  --bar-border: #2A2E35;
+  --bar-shadow: 0 1px 0 rgba(255, 255, 255, 0.04), 0 6px 20px rgba(0, 0, 0, 0.4);
+  --bar-fg: #FFFFFF;
+  --bar-fg-muted: #9CA3AF;
+
+  /* Drawer — dark translucent */
+  --drawer-bg-1: rgba(15, 17, 21, 0.97);
+  --drawer-bg-2: rgba(26, 29, 33, 0.95);
+  --drawer-bg-3: rgba(30, 34, 40, 0.95);
+  --drawer-fg: #E5E7EB;
+  --drawer-fg-active: #22C55E;
+  --drawer-fg-muted: #9CA3AF;
+  --drawer-border: #2A2E35;
+  --drawer-shadow: -16px 0 56px rgba(0, 0, 0, 0.6), inset 1px 0 0 rgba(255, 255, 255, 0.04);
 
   /* Premium glass (cards, toolbar, modals) — dark variant */
-  --glass-bg: rgba(255, 255, 255, 0.85);
-  --glass-bg-solid: #ffffff;
-  --glass-border: rgba(2, 144, 72, 0.15);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  --glass-hover-shadow: 0 12px 40px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.95);
-  --glass-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, transparent 100%);
+  --glass-bg: rgba(30, 34, 40, 0.85);
+  --glass-bg-solid: #1E2228;
+  --glass-border: #2A2E35;
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --glass-hover-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --glass-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, transparent 100%);
 
   /* Modal */
-  --modal-bg: rgba(255, 255, 255, 0.97);
-  --modal-border: rgba(2, 144, 72, 0.15);
-  --modal-shadow: 0 24px 80px rgba(0, 0, 0, 0.12);
+  --modal-bg: #1A1D21;
+  --modal-border: #2A2E35;
+  --modal-shadow: 0 24px 80px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.03);
 
-  /* Inputs */
-  --input-bg: rgba(255, 255, 255, 0.9);
-  --input-bg-focus: rgba(2, 144, 72, 0.05);
-  --input-border: rgba(2, 144, 72, 0.3);
-  --input-fg: #1a2e22;
-  --input-placeholder: #7a8a80;
+  /* Inputs — dark with green border on focus */
+  --input-bg: #1E2228;
+  --input-bg-focus: #0F1115;
+  --input-border: #2A2E35;
+  --input-fg: #FFFFFF;
+  --input-placeholder: #6B7280;
 
   /* Tables */
-  --table-head-bg: rgba(74, 222, 128, 0.1);
-  --table-row-bg-odd: rgba(74, 222, 128, 0.04);
+  --table-head-bg: rgba(34, 197, 94, 0.08);
+  --table-row-bg-odd: rgba(255, 255, 255, 0.015);
   --table-row-bg-even: transparent;
-  --table-border: rgba(74, 222, 128, 0.14);
+  --table-border: #2A2E35;
 
   /* Misc */
-  --skeleton-base: rgba(74, 222, 128, 0.07);
-  --skeleton-shine: rgba(74, 222, 128, 0.18);
-  --overlay-strong: rgba(0, 0, 0, 0.7);
-  --overlay-soft: rgba(0, 0, 0, 0.4);
+  --skeleton-base: #1E2228;
+  --skeleton-shine: #2A2E35;
+  --overlay-strong: rgba(0, 0, 0, 0.78);
+  --overlay-soft: rgba(0, 0, 0, 0.5);
 }
 
 html.light-theme {
-  /* Surface stack — bright cream / off-white */
+  /* Light theme — clean cream/white alternative */
   --bg-deep:   #f8faf9;
   --bg-mid:    #f1f6f3;
   --bg-soft:   #e6efe9;
   --bg-page-1: #ffffff;
   --bg-page-2: #f1f6f3;
 
-  /* Foreground */
-  --fg-strong: #0d2418;
-  --fg-soft:   #1a2e22;
-  --fg-muted:  #4a5d52;
-  --fg-dim:    #7a8a80;
+  --fg-strong: #FFFFFF;
+  --fg-soft:   #F3F4F6;
+  --fg-muted:  #9CA3AF;
+  --fg-dim:    #6B7280;
 
-  /* Accent */
   --accent:           #029048;
   --accent-bright:    #0bd05f;
   --accent-press:     #016035;
@@ -148,7 +165,22 @@ html.light-theme {
   --accent-text:      #016035;
   --accent-glow:      rgba(2, 144, 72, 0.28);
 
-  /* Top app bar — light variant keeps a subtle green tint */
+  --gold:        #d97706;
+  --gold-bg:     rgba(217, 119, 6, 0.12);
+  --gold-border: rgba(217, 119, 6, 0.45);
+  --gold-glow:   rgba(217, 119, 6, 0.32);
+  --gold-text:   #b45309;
+
+  --danger:        #dc2626;
+  --danger-bg:     rgba(220, 38, 38, 0.1);
+  --danger-border: rgba(220, 38, 38, 0.35);
+  --danger-text:   #dc2626;
+
+  --card-bg:        #ffffff;
+  --card-border:    rgba(2, 144, 72, 0.18);
+  --card-border-hover: #d97706;
+  --card-border-selected: #029048;
+
   --bar-bg-1: rgba(255, 255, 255, 0.94);
   --bar-bg-2: rgba(244, 252, 247, 0.92);
   --bar-border: rgba(2, 144, 72, 0.18);
@@ -156,7 +188,6 @@ html.light-theme {
   --bar-fg: #0d2418;
   --bar-fg-muted: #4a5d52;
 
-  /* Drawer — light variant: white card with green border */
   --drawer-bg-1: #ffffff;
   --drawer-bg-2: #f5fbf7;
   --drawer-bg-3: #eef7f1;
@@ -166,33 +197,28 @@ html.light-theme {
   --drawer-border: rgba(2, 144, 72, 0.2);
   --drawer-shadow: -16px 0 56px rgba(2, 144, 72, 0.18), inset 1px 0 0 rgba(2, 144, 72, 0.08);
 
-  /* Premium glass — light variant: pure white with green tint */
   --glass-bg: rgba(255, 255, 255, 0.96);
   --glass-bg-solid: #ffffff;
-  --glass-border: rgba(2, 144, 72, 0.12);
+  --glass-border: rgba(2, 144, 72, 0.15);
   --glass-shadow: 0 8px 32px rgba(2, 144, 72, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 1);
   --glass-hover-shadow: 0 12px 40px rgba(2, 144, 72, 0.14), 0 3px 10px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 1);
   --glass-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.85) 0%, transparent 100%);
 
-  /* Modal */
   --modal-bg: rgba(255, 255, 255, 0.98);
   --modal-border: rgba(2, 144, 72, 0.22);
   --modal-shadow: 0 24px 80px rgba(0, 0, 0, 0.18);
 
-  /* Inputs */
-  --input-bg: rgba(255, 255, 255, 0.92);
+  --input-bg: rgba(255, 255, 255, 0.95);
   --input-bg-focus: rgba(2, 144, 72, 0.05);
-  --input-border: rgba(2, 144, 72, 0.22);
+  --input-border: rgba(2, 144, 72, 0.3);
   --input-fg: #1a2e22;
   --input-placeholder: #7a8a80;
 
-  /* Tables */
   --table-head-bg: rgba(2, 144, 72, 0.08);
   --table-row-bg-odd: rgba(2, 144, 72, 0.03);
   --table-row-bg-even: transparent;
   --table-border: rgba(2, 144, 72, 0.12);
 
-  /* Misc */
   --skeleton-base: rgba(2, 144, 72, 0.07);
   --skeleton-shine: rgba(2, 144, 72, 0.14);
   --overlay-strong: rgba(20, 40, 30, 0.55);
@@ -201,21 +227,22 @@ html.light-theme {
 
 :root {
   /* Brand palette — same in both themes */
-  --brand-green: #029048;
-  --brand-green-dark: #016035;
-  --brand-green-light: #36b37e;
-  --brand-green-bright: #4ade80;
+  --brand-green: #22C55E;
+  --brand-green-dark: #10B981;
+  --brand-green-light: #4ade80;
+  --brand-green-bright: #22C55E;
+  --brand-gold: #FACC15;
 
   /* Legacy aliases kept for backward compatibility */
-  --cinema-bg-deep: #010a05;
-  --cinema-bg-mid: #02150c;
-  --cinema-bg-soft: #042817;
-  --cream-bg: #FAF6ED;
-  --cream-text: #1a2e22;
-  --cream-text-soft: #4a5d52;
-  --cream-text-muted: #7a8a80;
-  --background: #FAF6ED;
-  --foreground: #1a2e22;
+  --cinema-bg-deep: #0F1115;
+  --cinema-bg-mid: #1A1D21;
+  --cinema-bg-soft: #1E2228;
+  --cream-bg: #0F1115;
+  --cream-text: #FFFFFF;
+  --cream-text-soft: #E5E7EB;
+  --cream-text-muted: #9CA3AF;
+  --background: #0F1115;
+  --foreground: #FFFFFF;
 }
 
 * { box-sizing: border-box; }
@@ -228,6 +255,8 @@ html, body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  background: var(--bg-deep);
+  color: var(--fg-soft);
   transition: background-color 0.35s ease, color 0.35s ease;
 }
 
@@ -238,10 +267,10 @@ html, body {
    ============================================ */
 .login-screen {
   background:
-    radial-gradient(ellipse 90% 70% at 70% 25%, rgba(2, 144, 72, 0.45) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 60% at 25% 85%, rgba(54, 179, 126, 0.3) 0%, transparent 55%),
-    radial-gradient(ellipse 60% 50% at 50% 50%, rgba(74, 222, 128, 0.12) 0%, transparent 65%),
-    linear-gradient(135deg, #010a05 0%, #02150c 50%, #010a05 100%);
+    radial-gradient(ellipse 90% 70% at 70% 25%, rgba(34, 197, 94, 0.35) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 60% at 25% 85%, rgba(16, 185, 129, 0.22) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 50% 50%, rgba(34, 197, 94, 0.08) 0%, transparent 65%),
+    linear-gradient(135deg, #050708 0%, #0F1115 50%, #050708 100%);
   color: white;
   min-height: 100vh;
   position: relative;
@@ -253,34 +282,34 @@ html, body {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 30%, rgba(0, 0, 0, 0.55) 100%);
+  background: radial-gradient(ellipse at center, transparent 30%, rgba(0, 0, 0, 0.6) 100%);
   z-index: 1;
 }
 
 /* ============================================
    APP CONTENT — page background switches with theme.
-   Dark = deep green gradient. Light = soft white.
+   Dark = deep gray gradient (DaVinci/Premiere style).
    ============================================ */
 .app-content {
-  background: 
-    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(2, 144, 72, 0.08) 0%, transparent 50%),
-    linear-gradient(180deg, #f0f7f3 0%, #e6f0ea 50%, #f5faf7 100%);
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(34, 197, 94, 0.04) 0%, transparent 50%),
+    linear-gradient(180deg, #0F1115 0%, #1A1D21 100%);
   color: var(--fg-soft);
   min-height: 100vh;
   transition: background 0.35s ease, color 0.35s ease;
 }
 
 /* ============================================
-   SCROLLBAR
+   SCROLLBAR — dark slim
    ============================================ */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: var(--accent-bg-soft);
+  background: #2A2E35;
   border-radius: 8px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-border);
+  background: #3A3E45;
 }
 
 /* ============================================
@@ -322,94 +351,94 @@ html, body {
 }
 
 .logo-shimmer img {
-  filter: drop-shadow(0 0 14px rgba(2, 144, 72, 0.35));
+  filter: drop-shadow(0 0 14px rgba(34, 197, 94, 0.5));
 }
 
 /* ============================================
-   ENTER BUTTON — premium gradient, NO ring, NO shine
+   ENTER BUTTON — premium gradient (neon green)
    ============================================ */
 .btn-enter-premium {
   position: relative;
   padding: 16px 52px;
-  border-radius: 16px;
+  border-radius: 12px;
   font-size: 18px;
   font-weight: 700;
-  color: white;
+  color: #0F1115;
   cursor: pointer;
   overflow: hidden;
-  background: linear-gradient(135deg, #029048 0%, #016035 60%, #014824 100%);
-  border: 1px solid rgba(74, 222, 128, 0.4);
+  background: linear-gradient(135deg, #22C55E 0%, #10B981 60%, #059669 100%);
+  border: 1px solid rgba(34, 197, 94, 0.6);
   box-shadow:
-    0 10px 36px rgba(2, 144, 72, 0.5),
-    0 4px 12px rgba(2, 144, 72, 0.3),
+    0 8px 28px rgba(34, 197, 94, 0.4),
+    0 3px 10px rgba(34, 197, 94, 0.25),
     inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   letter-spacing: 0.5px;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.15);
 }
 
 .btn-enter-premium:hover {
   transform: translateY(-2px) scale(1.02);
   box-shadow:
-    0 16px 52px rgba(2, 144, 72, 0.65),
-    0 6px 20px rgba(2, 144, 72, 0.4),
+    0 14px 40px rgba(34, 197, 94, 0.55),
+    0 5px 16px rgba(34, 197, 94, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
-  background: linear-gradient(135deg, #36b37e 0%, #029048 60%, #027940 100%);
+    inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+  background: linear-gradient(135deg, #4ade80 0%, #22C55E 60%, #10B981 100%);
 }
 
 .btn-enter-premium:active {
   transform: translateY(0) scale(0.98);
 }
 
-/* Liquid-glass matte green — used for the login button. */
+/* Liquid-glass neon green — used for the login button. */
 .btn-enter-white {
   position: relative;
   padding: 16px 52px;
-  border-radius: 18px;
+  border-radius: 14px;
   font-size: 18px;
   font-weight: 800;
-  color: #ffffff;
+  color: #0F1115;
   cursor: pointer;
   overflow: hidden;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.08) 42%, rgba(255, 255, 255, 0) 58%),
-    radial-gradient(120% 80% at 50% 0%, rgba(74, 222, 128, 0.35) 0%, rgba(74, 222, 128, 0) 60%),
-    linear-gradient(135deg, #0e9d5a 0%, #029048 48%, #016b35 100%);
-  border: 1px solid rgba(134, 239, 172, 0.55);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.06) 42%, rgba(255, 255, 255, 0) 58%),
+    radial-gradient(120% 80% at 50% 0%, rgba(74, 222, 128, 0.45) 0%, rgba(74, 222, 128, 0) 60%),
+    linear-gradient(135deg, #22C55E 0%, #10B981 48%, #059669 100%);
+  border: 1px solid rgba(74, 222, 128, 0.6);
   box-shadow:
-    0 14px 44px rgba(2, 144, 72, 0.55),
+    0 14px 44px rgba(34, 197, 94, 0.5),
     0 6px 18px rgba(16, 185, 129, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    inset 0 -2px 6px rgba(1, 60, 30, 0.5),
+    inset 0 -2px 6px rgba(5, 25, 15, 0.4),
     inset 0 0 0 1px rgba(255, 255, 255, 0.06);
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   letter-spacing: 0.5px;
-  text-shadow: 0 1px 2px rgba(1, 60, 30, 0.5);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.25);
   backdrop-filter: blur(2px) saturate(115%);
   -webkit-backdrop-filter: blur(2px) saturate(115%);
 }
 .btn-enter-white:hover {
   transform: translateY(-2px) scale(1.02);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.1) 42%, rgba(255, 255, 255, 0) 58%),
-    radial-gradient(120% 80% at 50% 0%, rgba(134, 239, 172, 0.45) 0%, rgba(134, 239, 172, 0) 60%),
-    linear-gradient(135deg, #10b981 0%, #04a252 48%, #027940 100%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.08) 42%, rgba(255, 255, 255, 0) 58%),
+    radial-gradient(120% 80% at 50% 0%, rgba(134, 239, 172, 0.55) 0%, rgba(134, 239, 172, 0) 60%),
+    linear-gradient(135deg, #4ade80 0%, #22C55E 48%, #10B981 100%);
   box-shadow:
-    0 20px 60px rgba(2, 144, 72, 0.65),
+    0 20px 60px rgba(34, 197, 94, 0.6),
     0 8px 24px rgba(16, 185, 129, 0.45),
     inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 -2px 6px rgba(1, 60, 30, 0.5),
+    inset 0 -2px 6px rgba(5, 25, 15, 0.4),
     inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 .btn-enter-white:active {
   transform: translateY(0) scale(0.98);
   box-shadow:
-    0 8px 24px rgba(2, 144, 72, 0.45),
+    0 8px 24px rgba(34, 197, 94, 0.45),
     0 3px 10px rgba(16, 185, 129, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    inset 0 2px 8px rgba(1, 60, 30, 0.6);
+    inset 0 2px 8px rgba(5, 25, 15, 0.5);
 }
 
 /* Hide scrollbar utility — used for horizontal filter chip rows on mobile */
@@ -417,20 +446,22 @@ html, body {
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
 /* ============================================
-   PREMIUM GENRE CARD — solid gradient like button
-   Each genre has its own rich color gradient
+   PREMIUM GENRE CARD — solid gradient (Dashboard)
+   Each genre has its own rich color gradient but darkened
+   to match the DaVinci/Premiere dark theme.
    ============================================ */
 .premium-card {
   position: relative;
-  border-radius: 22px;
+  border-radius: 14px;
   padding: 22px;
   cursor: pointer;
   overflow: hidden;
   transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
               box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-              filter 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+              filter 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.3s ease;
   color: white;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 .premium-card::before {
@@ -438,15 +469,15 @@ html, body {
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 50%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, transparent 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, transparent 100%);
   pointer-events: none;
-  border-radius: 22px 22px 0 0;
+  border-radius: 14px 14px 0 0;
   z-index: 1;
 }
 
 .premium-card:hover {
-  transform: translateY(-6px) scale(1.02);
-  filter: brightness(1.08) saturate(1.05);
+  transform: translateY(-4px) scale(1.01);
+  filter: brightness(1.12) saturate(1.05);
 }
 
 .premium-card > * {
@@ -455,17 +486,21 @@ html, body {
 }
 
 /* ============================================
-   PREMIUM SHOW CARD — solid gradient for program cards
-   Rounded to 16px (was 22px) per modernized design.
+   PREMIUM SHOW CARD — dark with image at top, info below
+   Dark background (#1E2228), subtle border (#2A2E35),
+   on hover: golden yellow border glow (#FACC15),
+   on selected: green border + checkmark (#22C55E).
    ============================================ */
 .premium-show-card {
   position: relative;
-  border-radius: 16px;
+  border-radius: 14px;
   cursor: pointer;
   overflow: hidden;
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-              box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-              filter 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+  background: var(--card-bg) !important;
+  border: 1px solid var(--card-border) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               border-color 0.3s ease;
 }
 
@@ -473,12 +508,17 @@ html, body {
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0;
-  height: 35%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, transparent 100%);
+  height: 30%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, transparent 100%);
   pointer-events: none;
-  border-radius: 16px 16px 0 0;
+  border-radius: 14px 14px 0 0;
   z-index: 1;
   transition: opacity 0.35s ease;
+}
+
+.premium-show-card:hover {
+  border-color: var(--card-border-hover) !important;
+  box-shadow: 0 8px 32px rgba(250, 204, 21, 0.18), 0 4px 16px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
 }
 
 .premium-show-card > * {
@@ -486,14 +526,19 @@ html, body {
   z-index: 2;
 }
 
-/* Image gradient overlay — gives thumbnails a richer, more cinematic look.
-   The overlay sits ON TOP of the image (between image and labels). */
+/* Selected state — green border + green checkmark */
+.premium-show-card.is-selected {
+  border-color: var(--card-border-selected) !important;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.5), 0 8px 32px rgba(34, 197, 94, 0.25), 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Image gradient overlay — gives thumbnails a richer, more cinematic look */
 .image-overlay {
   position: absolute;
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.05) 50%, rgba(0, 0, 0, 0.35) 100%);
+    linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.05) 50%, rgba(0, 0, 0, 0.45) 100%);
   z-index: 2;
 }
 
@@ -502,12 +547,12 @@ html, body {
    Theme-aware via CSS variables.
    ============================================ */
 .premium-glass {
-  background: var(--glass-bg);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
-  border-radius: 22px;
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--glass-shadow) !important;
+  border-radius: 14px;
   position: relative;
   overflow: hidden;
   transition: box-shadow 0.35s cubic-bezier(0.4, 0, 0.2, 1),
@@ -523,12 +568,11 @@ html, body {
   height: 50%;
   background: var(--glass-shine);
   pointer-events: none;
-  border-radius: 22px 22px 0 0;
+  border-radius: 14px 14px 0 0;
 }
 
 .premium-glass:hover {
-  box-shadow: var(--glass-hover-shadow);
-  transform: translateY(-2px);
+  box-shadow: var(--glass-hover-shadow) !important;
 }
 
 /* ============================================
@@ -545,7 +589,7 @@ html, body {
 .login-ambient-light.green-1 {
   width: 760px;
   height: 760px;
-  background: radial-gradient(circle, rgba(2, 144, 72, 0.7) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.55) 0%, transparent 70%);
   top: 6%;
   right: -2%;
   animation: drift1 12s ease-in-out infinite alternate;
@@ -554,7 +598,7 @@ html, body {
 .login-ambient-light.green-2 {
   width: 680px;
   height: 680px;
-  background: radial-gradient(circle, rgba(54, 179, 126, 0.55) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.42) 0%, transparent 70%);
   bottom: -2%;
   left: -3%;
   animation: drift2 15s ease-in-out infinite alternate;
@@ -563,7 +607,7 @@ html, body {
 .login-ambient-light.green-3 {
   width: 560px;
   height: 560px;
-  background: radial-gradient(circle, rgba(74, 222, 128, 0.4) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(74, 222, 128, 0.3) 0%, transparent 70%);
   top: 35%;
   left: 32%;
   animation: drift3 18s ease-in-out infinite alternate;
@@ -620,7 +664,7 @@ html, body {
 .spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid rgba(2, 144, 72, 0.2);
+  border: 3px solid rgba(34, 197, 94, 0.2);
   border-top-color: var(--brand-green);
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -630,7 +674,7 @@ html, body {
 /* Skeleton shimmer — used for loading placeholders */
 .skeleton-card {
   background: var(--skeleton-base);
-  border-radius: 16px;
+  border-radius: 14px;
   overflow: hidden;
   position: relative;
   height: 280px;
@@ -697,7 +741,6 @@ html, body {
 
 /* ============================================
    DRAWER MENU — slide-in from right (RTL friendly)
-   Theme-aware: in light theme, drawer is white with green border.
    ============================================ */
 @keyframes drawer-slide-in {
   from { transform: translateX(100%); opacity: 0.5; }
@@ -723,12 +766,12 @@ html, body {
 }
 
 .modal-content {
-  background: var(--modal-bg);
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  border: 1px solid var(--modal-border);
-  border-radius: 24px;
-  box-shadow: var(--modal-shadow);
+  background: var(--modal-bg) !important;
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  border: 1px solid var(--modal-border) !important;
+  border-radius: 16px;
+  box-shadow: var(--modal-shadow) !important;
   max-width: 900px;
   width: 100%;
   max-height: 90vh;
@@ -738,73 +781,165 @@ html, body {
 }
 
 /* ============================================
-   THEME-FLAVORED OVERRIDES
-   For dark theme (default), most surfaces are deep green.
-   For light theme, surfaces become white/cream with green accents.
-   These selectors override inline styles by targeting className hooks.
+   THEME-AWARE HOOKS — override inline styles with !important
+   so the dark professional theme reaches every inline-styled surface.
    ============================================ */
 
-/* === Top App Bar === */
+/* === Top App Bar — dark slim bar === */
 .top-app-bar {
-  /* No-op: visual driven by inline style — but we provide a fallback for both themes */
+  background: linear-gradient(180deg, var(--bar-bg-1) 0%, var(--bar-bg-2) 100%) !important;
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border-bottom: 1px solid var(--bar-border) !important;
+  box-shadow: var(--bar-shadow) !important;
   color: var(--bar-fg) !important;
   transition: background 0.35s ease, color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
 }
-html.light-theme .top-app-bar {
-  background: linear-gradient(180deg, var(--bar-bg-1) 0%, var(--bar-bg-2) 100%) !important;
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border-bottom-color: var(--bar-border) !important;
-  box-shadow: var(--bar-shadow) !important;
-}
-html.dark-theme .top-app-bar,
-html:not(.light-theme) .top-app-bar {
-  background: linear-gradient(180deg, var(--bar-bg-1) 0%, var(--bar-bg-2) 100%);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border-bottom: 1px solid var(--bar-border);
-  box-shadow: var(--bar-shadow);
-}
-/* Title text in top bar — visible in both themes */
-html.light-theme .top-app-bar .bar-title,
-html.light-theme .top-app-bar .bar-title-sub {
+.top-app-bar .bar-title { color: var(--bar-fg) !important; }
+.top-app-bar .bar-title-sub { color: var(--bar-fg-muted) !important; }
+.top-app-bar .bar-toggle {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid #2A2E35 !important;
   color: var(--bar-fg) !important;
 }
-/* Theme/lang toggle button backgrounds adapt to theme */
-html.light-theme .top-app-bar .bar-toggle {
-  background: rgba(2, 144, 72, 0.1) !important;
-  border-color: rgba(2, 144, 72, 0.3) !important;
-  color: var(--bar-fg) !important;
-}
-html.dark-theme .top-app-bar .bar-toggle,
-html:not(.light-theme) .top-app-bar .bar-toggle {
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(74, 222, 128, 0.45);
-  color: white;
+.top-app-bar .bar-toggle:hover {
+  background: rgba(34, 197, 94, 0.15) !important;
+  border-color: var(--accent-border) !important;
+  color: var(--accent-text) !important;
 }
 
-/* === Drawer === */
+/* === Drawer — dark translucent === */
 .drawer-aside {
   background: linear-gradient(180deg, var(--drawer-bg-1) 0%, var(--drawer-bg-2) 40%, var(--drawer-bg-3) 70%, var(--drawer-bg-1) 100%) !important;
-  border-left-color: var(--drawer-border) !important;
+  border-left: 1px solid var(--drawer-border) !important;
   box-shadow: var(--drawer-shadow) !important;
   color: var(--drawer-fg) !important;
   transition: background 0.35s ease, color 0.35s ease, border-color 0.35s ease;
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
 }
 .drawer-aside .drawer-fg { color: var(--drawer-fg) !important; }
 .drawer-aside .drawer-fg-muted { color: var(--drawer-fg-muted) !important; }
 .drawer-aside .drawer-fg-active { color: var(--drawer-fg-active) !important; }
 .drawer-aside .drawer-divider { border-color: var(--drawer-border) !important; }
 
-/* === Inputs (login + forms) === */
+/* === Inputs (login + forms) — dark with green focus === */
 .input-base {
   background: var(--input-bg) !important;
   border: 1px solid var(--input-border) !important;
   color: var(--input-fg) !important;
-  transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+  transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
 }
-.input-base::placeholder { color: var(--input-placeholder); }
-.input-base:focus { background: var(--input-bg-focus) !important; border-color: var(--accent) !important; }
+.input-base::placeholder { color: var(--input-placeholder) !important; }
+.input-base:focus {
+  background: var(--input-bg-focus) !important;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px var(--accent-bg-soft) !important;
+}
+
+/* Premium-glass hardcoded text colors — access-denied page, settings, reports */
+html.dark-theme .premium-glass [style*="color: '#1a2e22'"],
+html:not(.light-theme) .premium-glass [style*="color: '#1a2e22'"] {
+  color: var(--fg-strong) !important;
+}
+html.dark-theme .premium-glass [style*="color: '#4a5d52'"],
+html:not(.light-theme) .premium-glass [style*="color: '#4a5d52'"] {
+  color: var(--fg-soft) !important;
+}
+html.dark-theme .premium-glass [style*="color: '#7a8a80'"],
+html:not(.light-theme) .premium-glass [style*="color: '#7a8a80'"] {
+  color: var(--fg-muted) !important;
+}
+html.dark-theme .premium-glass h1,
+html.dark-theme .premium-glass h2,
+html.dark-theme .premium-glass h3,
+html.dark-theme .premium-glass h4,
+html:not(.light-theme) .premium-glass h1,
+html:not(.light-theme) .premium-glass h2,
+html:not(.light-theme) .premium-glass h3,
+html:not(.light-theme) .premium-glass h4 {
+  color: var(--fg-strong) !important;
+}
+html.dark-theme .premium-glass p,
+html:not(.light-theme) .premium-glass p {
+  color: var(--fg-soft) !important;
+}
+html.dark-theme .premium-glass label,
+html:not(.light-theme) .premium-glass label {
+  color: var(--fg-soft) !important;
+}
+html.dark-theme .premium-glass .text-sm.text-fg-muted,
+html:not(.light-theme) .premium-glass .text-sm.text-fg-muted {
+  color: var(--fg-muted) !important;
+}
+
+/* Generic catch-all: any element with hardcoded cream-text colors ANYWHERE in the app
+   (AddEditView container divs, image gallery editors, video links editors, etc.) */
+html.dark-theme [style*="color: '#1a2e22'"],
+html:not(.light-theme) [style*="color: '#1a2e22'"] {
+  color: var(--fg-strong) !important;
+}
+html.dark-theme [style*="color: '#4a5d52'"],
+html:not(.light-theme) [style*="color: '#4a5d52'"] {
+  color: var(--fg-soft) !important;
+}
+html.dark-theme [style*="color: '#7a8a80'"],
+html:not(.light-theme) [style*="color: '#7a8a80'"] {
+  color: var(--fg-muted) !important;
+}
+
+/* Generic catch-all: any input/textarea/select with hardcoded light bg `rgba(255,255,255,0.85)`
+   (used by AddEditView URL inputs, image/video gallery editors, etc.) */
+html.dark-theme input[style*="rgba(255, 255, 255, 0.85)"],
+html.dark-theme input[style*="rgba(255,255,255,0.85)"],
+html:not(.light-theme) input[style*="rgba(255, 255, 255, 0.85)"],
+html:not(.light-theme) input[style*="rgba(255,255,255,0.85)"] {
+  background: var(--input-bg) !important;
+  border: 1px solid var(--input-border) !important;
+  color: var(--input-fg) !important;
+}
+html.dark-theme input[style*="rgba(255, 255, 255, 0.85)"]:focus,
+html.dark-theme input[style*="rgba(255,255,255,0.85)"]:focus,
+html:not(.light-theme) input[style*="rgba(255, 255, 255, 0.85)"]:focus,
+html:not(.light-theme) input[style*="rgba(255,255,255,0.85)"]:focus {
+  background: var(--input-bg-focus) !important;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px var(--accent-bg-soft) !important;
+}
+html.dark-theme input[style*="rgba(255, 255, 255, 0.85)"]::placeholder,
+html.dark-theme input[style*="rgba(255,255,255,0.85)"]::placeholder,
+html:not(.light-theme) input[style*="rgba(255, 255, 255, 0.85)"]::placeholder,
+html:not(.light-theme) input[style*="rgba(255,255,255,0.85)"]::placeholder {
+  color: var(--input-placeholder) !important;
+}
+
+/* Disabled-state inputs (e.g. MAX_IMAGES reached) — use darker disabled bg */
+html.dark-theme input[style*="rgba(0,0,0,0.05)"],
+html:not(.light-theme) input[style*="rgba(0,0,0,0.05)"] {
+  background: rgba(255, 255, 255, 0.03) !important;
+  color: var(--fg-dim) !important;
+}
+
+/* Light-green tinted surfaces (AddEditView auto-fetch container, image gallery bg) */
+html.dark-theme [style*="background: rgba(2,144,72,0.06)"],
+html.dark-theme [style*="background: rgba(2, 144, 72, 0.06)"],
+html:not(.light-theme) [style*="background: rgba(2,144,72,0.06)"],
+html:not(.light-theme) [style*="background: rgba(2, 144, 72, 0.06)"] {
+  background: rgba(34, 197, 94, 0.05) !important;
+}
+html.dark-theme [style*="background: rgba(2,144,72,0.08)"],
+html.dark-theme [style*="background: rgba(2, 144, 72, 0.08)"],
+html:not(.light-theme) [style*="background: rgba(2,144,72,0.08)"],
+html:not(.light-theme) [style*="background: rgba(2, 144, 72, 0.08)"] {
+  background: rgba(34, 197, 94, 0.06) !important;
+}
+
+/* Option dropdowns (when select opens) */
+html.dark-theme option,
+html:not(.light-theme) option {
+  background: #1E2228 !important;
+  color: #FFFFFF !important;
+}
 
 /* === Tables === */
 .table-head {
@@ -817,25 +952,13 @@ html:not(.light-theme) .top-app-bar .bar-toggle {
 /* === Stat card text in light mode === */
 html.light-theme .stat-title { color: #1a2e22 !important; }
 
-/* === Generic muted text in light mode (replaces the cream-text hardcodes) === */
-html.light-theme .text-fg-strong { color: #0d2418 !important; }
-html.light-theme .text-fg-soft { color: #1a2e22 !important; }
-html.light-theme .text-fg-muted { color: #4a5d52 !important; }
-html.light-theme .text-fg-dim { color: #7a8a80 !important; }
-html.light-theme .text-accent { color: #029048 !important; }
-html.light-theme .text-accent-dark { color: #016035 !important; }
-html.dark-theme .text-fg-strong,
-html:not(.light-theme) .text-fg-strong { color: #f4fff8 !important; }
-html.dark-theme .text-fg-soft,
-html:not(.light-theme) .text-fg-soft { color: rgba(244, 255, 248, 0.88) !important; }
-html.dark-theme .text-fg-muted,
-html:not(.light-theme) .text-fg-muted { color: rgba(168, 230, 193, 0.7) !important; }
-html.dark-theme .text-fg-dim,
-html:not(.light-theme) .text-fg-dim { color: rgba(168, 230, 193, 0.45) !important; }
-html.dark-theme .text-accent,
-html:not(.light-theme) .text-accent { color: #4ade80 !important; }
-html.dark-theme .text-accent-dark,
-html:not(.light-theme) .text-accent-dark { color: #4ade80 !important; }
+/* === Generic muted text — text-fg-* hooks === */
+.text-fg-strong { color: var(--fg-strong) !important; }
+.text-fg-soft { color: var(--fg-soft) !important; }
+.text-fg-muted { color: var(--fg-muted) !important; }
+.text-fg-dim { color: var(--fg-dim) !important; }
+.text-accent { color: var(--accent-text) !important; }
+.text-accent-dark { color: var(--accent-press) !important; }
 
 /* === Buttons — consistent sizing & subtle press animation === */
 .btn-base {
@@ -843,7 +966,7 @@ html:not(.light-theme) .text-accent-dark { color: #4ade80 !important; }
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border-radius: 12px;
+  border-radius: 10px;
   font-weight: 600;
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.25s ease, background 0.25s ease, color 0.25s ease, border-color 0.25s ease, opacity 0.2s ease;
@@ -876,217 +999,350 @@ html:not(.light-theme) .text-accent-dark { color: #4ade80 !important; }
   filter: drop-shadow(0 4px 16px var(--accent-glow));
 }
 
-/* Legacy: keep .light-theme .app-content and .premium-glass overrides for
-   backward-compat with any inline class usage. */
-html.light-theme .app-content {
-  background: linear-gradient(180deg, #ffffff 0%, #f1f6f3 100%);
-}
-html.light-theme body {
-  background: #ffffff;
-}
-html.light-theme .premium-glass {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
-}
-html.light-theme .premium-glass::before {
-  background: var(--glass-shine);
-}
-
 /* ============================================
-   LIGHT THEME OVERRIDES — override ALL hardcoded colors
+   DARK THEME OVERRIDES — neutralize ALL hardcoded inline colors
+   (drawer dark-green #042817, mobile-nav cream, top-app-bar dark green,
+    modal "white" surfaces, etc.). Done via class hooks.
    ============================================ */
-html.light-theme .app-content,
-html.light-theme main {
-  background: linear-gradient(180deg, #ffffff 0%, #f1f6f3 100%) !important;
-  color: #1a2e22 !important;
+
+/* App-content background already dark via CSS var. */
+html.dark-theme body,
+html:not(.light-theme) body {
+  background: var(--bg-deep) !important;
+  color: var(--fg-soft) !important;
 }
 
-/* All text colors */
-html.light-theme * { color: inherit; }
-html.light-theme h1, html.light-theme h2, html.light-theme h3, html.light-theme h4 {
-  color: #0d2418 !important;
-}
-html.light-theme p, html.light-theme span, html.light-theme div, html.light-theme td {
-  color: #1a2e22;
-}
-html.light-theme .text-sm { color: #4a5d52; }
-
-/* Premium glass cards → white in light mode */
-html.light-theme .premium-glass {
-  background: rgba(255, 255, 255, 0.95) !important;
-  border: 1.5px solid rgba(2, 144, 72, 0.25) !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+/* Override the inline `background: linear-gradient(180deg, rgba(4, 40, 23, 0.98) 0%, rgba(2, 80, 45, 0.96) 100%)`
+   used by TopAppBar with a dark slim bar via the `.top-app-bar` class hook. */
+html.dark-theme .top-app-bar,
+html:not(.light-theme) .top-app-bar {
+  background: linear-gradient(180deg, var(--bar-bg-1) 0%, var(--bar-bg-2) 100%) !important;
+  border-bottom: 1px solid var(--bar-border) !important;
+  box-shadow: var(--bar-shadow) !important;
 }
 
-html.light-theme .premium-glass::before {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, transparent 100%) !important;
+/* Drawer aside — override the inline `background: linear-gradient(180deg, #042817 0%, #035932 40%, ...)`.
+   The drawer uses `.drawer-aside` class so this `!important` rule wins. */
+html.dark-theme .drawer-aside,
+html:not(.light-theme) .drawer-aside {
+  background: linear-gradient(180deg, var(--drawer-bg-1) 0%, var(--drawer-bg-2) 40%, var(--drawer-bg-3) 70%, var(--drawer-bg-1) 100%) !important;
+  border-left: 1px solid var(--drawer-border) !important;
+  box-shadow: var(--drawer-shadow) !important;
 }
 
-/* Modal backgrounds */
-html.light-theme .modal-content {
-  background: rgba(255, 255, 255, 0.98) !important;
-  border: 1px solid rgba(2, 144, 72, 0.2) !important;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.15) !important;
+/* === Modal backdrop & content — dark === */
+html.dark-theme .modal-backdrop,
+html:not(.light-theme) .modal-backdrop {
+  background: var(--overlay-strong) !important;
+}
+html.dark-theme .modal-content,
+html:not(.light-theme) .modal-content {
+  background: var(--modal-bg) !important;
+  border: 1px solid var(--modal-border) !important;
+  box-shadow: var(--modal-shadow) !important;
+  color: var(--fg-soft) !important;
 }
 
-html.light-theme .modal-backdrop {
-  background: rgba(0, 0, 0, 0.35) !important;
-  backdrop-filter: blur(4px) !important;
+/* === Premium glass — dark === */
+html.dark-theme .premium-glass,
+html:not(.light-theme) .premium-glass {
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--glass-shadow) !important;
+  color: var(--fg-soft) !important;
+}
+html.dark-theme .premium-glass::before,
+html:not(.light-theme) .premium-glass::before {
+  background: var(--glass-shine) !important;
 }
 
-/* Inputs */
-html.light-theme input,
-html.light-theme textarea,
-html.light-theme select {
-  background: rgba(255, 255, 255, 0.95) !important;
-  color: #1a2e22 !important;
-  border-color: rgba(2, 144, 72, 0.35) !important;
+/* === Program cards: dark card with dark image area ===
+   `.premium-show-card` has inline `background: linear-gradient(135deg, ${thumb.accent}...)`.
+   The `!important` rule below wins, giving the dark professional look. */
+html.dark-theme .premium-show-card,
+html:not(.light-theme) .premium-show-card {
+  background: var(--card-bg) !important;
+  border: 1px solid var(--card-border) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
 }
-html.light-theme input::placeholder,
-html.light-theme textarea::placeholder {
-  color: #7a8a80 !important;
-}
-
-/* Buttons — green stays green in both themes */
-html.light-theme .btn-enter-premium,
-html.light-theme .btn-enter-white {
-  /* keep green gradient */
+html.dark-theme .premium-show-card:hover,
+html:not(.light-theme) .premium-show-card:hover {
+  border-color: var(--card-border-hover) !important;
+  box-shadow: 0 8px 32px rgba(250, 204, 21, 0.18), 0 4px 16px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
 }
 
-/* Top app bar — white in light mode */
-html.light-theme .top-app-bar,
-html.light-theme header[class*="fixed"] {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(241, 246, 243, 0.95) 100%) !important;
-  border-bottom: 1px solid rgba(2, 144, 72, 0.2) !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06) !important;
+/* The image area inside the card — keep its gradient/image as-is (the thumbnail itself),
+   but the rest of the card body needs dark text colors.
+   Card body is the `<div class="p-4">` after the thumbnail div. */
+html.dark-theme .premium-show-card > div + div,
+html:not(.light-theme) .premium-show-card > div + div {
+  color: var(--fg-soft);
+}
+html.dark-theme .premium-show-card h3,
+html:not(.light-theme) .premium-show-card h3 {
+  color: var(--fg-strong) !important;
+  text-shadow: none !important;
+}
+html.dark-theme .premium-show-card p,
+html:not(.light-theme) .premium-show-card p {
+  color: var(--fg-muted) !important;
+}
+html.dark-theme .premium-show-card .text-white,
+html:not(.light-theme) .premium-show-card .text-white {
+  color: var(--fg-strong) !important;
 }
 
-html.light-theme header[class*="fixed"] span,
-html.light-theme header[class*="fixed"] div {
-  color: #0d2418 !important;
+/* Tags inside program cards — switch from white-on-color to subtle dark-mode badges */
+html.dark-theme .premium-show-card span[style*="rgba(255,255,255,0.25)"],
+html:not(.light-theme) .premium-show-card span[style*="rgba(255,255,255,0.25)"] {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: var(--fg-soft) !important;
+  border-color: var(--card-border) !important;
+}
+html.dark-theme .premium-show-card span[style*="rgba(255,255,255,0.2)"],
+html:not(.light-theme) .premium-show-card span[style*="rgba(255,255,255,0.2)"] {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: var(--fg-soft) !important;
+  border-color: var(--card-border) !important;
+}
+html.dark-theme .premium-show-card span[style*="rgba(255,255,255,0.22)"],
+html:not(.light-theme) .premium-show-card span[style*="rgba(255,255,255,0.22)"] {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: var(--fg-soft) !important;
+  border-color: var(--card-border) !important;
 }
 
-/* Drawer — lighter in light mode */
-html.light-theme aside[class*="fixed"][class*="right-0"] {
-  background: rgba(248, 250, 249, 0.85) !important;
-  backdrop-filter: blur(40px) saturate(180%) !important;
-  border-left: 1px solid rgba(2, 144, 72, 0.2) !important;
+/* The category / number text at card bottom */
+html.dark-theme .premium-show-card div[style*="rgba(255,255,255,0.7)"],
+html:not(.light-theme) .premium-show-card div[style*="rgba(255,255,255,0.7)"] {
+  color: var(--fg-muted) !important;
 }
 
-html.light-theme aside[class*="fixed"][class*="right-0"] * {
-  color: #1a2e22 !important;
+/* ShowImageGallery main image container — light gray bg + border */
+html.dark-theme .modal-content div[style*="background: #f0f4f1"],
+html:not(.light-theme) .modal-content div[style*="background: #f0f4f1"] {
+  background: #0F1115 !important;
+  border-color: #2A2E35 !important;
+}
+html.dark-theme .modal-content div[style*="border: 1px solid #e0e8e4"],
+html:not(.light-theme) .modal-content div[style*="border: 1px solid #e0e8e4"] {
+  border-color: #2A2E35 !important;
 }
 
-/* Genre cards — keep colorful but adjust text */
-html.light-theme .premium-card {
-  /* keep the green gradient background */
+/* DetailField component — label + value text */
+html.dark-theme .modal-content .text-xs.font-bold,
+html:not(.light-theme) .modal-content .text-xs.font-bold {
+  color: var(--fg-muted) !important;
 }
 
-html.light-theme .premium-card h3,
-html.light-theme .premium-card p,
-html.light-theme .premium-card div,
-html.light-theme .premium-card span {
-  color: rgba(255, 255, 255, 0.95) !important;
+/* Generic — any element with hardcoded cream-text colors inside the modal */
+html.dark-theme .modal-content [style*="color: '#1a2e22'"],
+html:not(.light-theme) .modal-content [style*="color: '#1a2e22'"] {
+  color: var(--fg-strong) !important;
+}
+html.dark-theme .modal-content [style*="color: '#4a5d52'"],
+html:not(.light-theme) .modal-content [style*="color: '#4a5d52'"] {
+  color: var(--fg-soft) !important;
+}
+html.dark-theme .modal-content [style*="color: '#7a8a80'"],
+html:not(.light-theme) .modal-content [style*="color: '#7a8a80'"] {
+  color: var(--fg-muted) !important;
 }
 
-/* Stat cards */
-html.light-theme .premium-glass p,
-html.light-theme .premium-glass div {
-  color: #1a2e22 !important;
+/* Modal text-color overrides — replace hardcoded #1a2e22 / #4a5d52 / #7a8a80 */
+html.dark-theme .modal-content h4,
+html:not(.light-theme) .modal-content h4 {
+  color: var(--fg-strong) !important;
+}
+html.dark-theme .modal-content p,
+html:not(.light-theme) .modal-content p {
+  color: var(--fg-soft) !important;
+}
+html.dark-theme .modal-content div[style*="color: #1a2e22"],
+html:not(.light-theme) .modal-content div[style*="color: #1a2e22"] {
+  color: var(--fg-strong) !important;
+}
+html.dark-theme .modal-content div[style*="color: #4a5d52"],
+html:not(.light-theme) .modal-content div[style*="color: #4a5d52"] {
+  color: var(--fg-soft) !important;
+}
+html.dark-theme .modal-content div[style*="color: #7a8a80"],
+html:not(.light-theme) .modal-content div[style*="color: #7a8a80"],
+html.dark-theme .modal-content span[style*="color: #7a8a80"],
+html:not(.light-theme) .modal-content span[style*="color: #7a8a80"] {
+  color: var(--fg-muted) !important;
+}
+html.dark-theme .modal-content strong[style*="color: #1a2e22"],
+html:not(.light-theme) .modal-content strong[style*="color: #1a2e22"] {
+  color: var(--fg-strong) !important;
 }
 
-/* Login screen stays dark (it's always cinematic) */
-html.light-theme .login-screen {
-  background: radial-gradient(ellipse 90% 70% at 70% 25%, rgba(2, 144, 72, 0.45) 0%, transparent 55%),
-              radial-gradient(ellipse 70% 60% at 25% 85%, rgba(54, 179, 126, 0.3) 0%, transparent 55%),
-              linear-gradient(135deg, #010a05 0%, #02150c 50%, #010a05 100%) !important;
+/* ShowDetailsModal action buttons — re-tint with dark-mode friendly backgrounds */
+html.dark-theme .modal-content a[style*="rgba(220, 38, 38, 0.15)"],
+html:not(.light-theme) .modal-content a[style*="rgba(220, 38, 38, 0.15)"] {
+  background: rgba(239, 68, 68, 0.12) !important;
+  color: #FCA5A5 !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
+}
+html.dark-theme .modal-content a[style*="rgba(245, 158, 11, 0.15)"],
+html:not(.light-theme) .modal-content a[style*="rgba(245, 158, 11, 0.15)"] {
+  background: rgba(250, 204, 21, 0.1) !important;
+  color: #FACC15 !important;
+  border-color: rgba(250, 204, 21, 0.35) !important;
+}
+html.dark-theme .modal-content a[style*="rgba(37, 99, 235, 0.15)"],
+html:not(.light-theme) .modal-content a[style*="rgba(37, 99, 235, 0.15)"] {
+  background: rgba(96, 165, 250, 0.12) !important;
+  color: #93C5FD !important;
+  border-color: rgba(96, 165, 250, 0.35) !important;
+}
+html.dark-theme .modal-content button[style*="rgba(220, 38, 38, 0.15)"],
+html:not(.light-theme) .modal-content button[style*="rgba(220, 38, 38, 0.15)"] {
+  background: rgba(239, 68, 68, 0.12) !important;
+  color: #FCA5A5 !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
+}
+html.dark-theme .modal-content button[style*="rgba(2, 144, 72, 0.15)"],
+html:not(.light-theme) .modal-content button[style*="rgba(2, 144, 72, 0.15)"] {
+  background: rgba(34, 197, 94, 0.12) !important;
+  color: #22C55E !important;
+  border-color: rgba(34, 197, 94, 0.35) !important;
+}
+html.dark-theme .modal-content button[style*="rgba(245, 158, 11, 0.12)"],
+html:not(.light-theme) .modal-content button[style*="rgba(245, 158, 11, 0.12)"] {
+  background: rgba(250, 204, 21, 0.1) !important;
+  color: #FACC15 !important;
+  border-color: rgba(250, 204, 21, 0.35) !important;
+}
+html.dark-theme .modal-content button[style*="rgba(245, 158, 11, 0.25)"],
+html:not(.light-theme) .modal-content button[style*="rgba(245, 158, 11, 0.25)"] {
+  background: rgba(250, 204, 21, 0.18) !important;
+  color: #FACC15 !important;
+  border-color: rgba(250, 204, 21, 0.5) !important;
+}
+html.dark-theme .modal-content button[style*="rgba(220, 38, 38, 0.12)"],
+html:not(.light-theme) .modal-content button[style*="rgba(220, 38, 38, 0.12)"] {
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #FCA5A5 !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+html.dark-theme .modal-content button[style*="linear-gradient(135deg, #dc2626"],
+html:not(.light-theme) .modal-content button[style*="linear-gradient(135deg, #dc2626"] {
+  background: linear-gradient(135deg, #EF4444 0%, #B91C1C 100%) !important;
+  color: white !important;
+}
+html.dark-theme .modal-content button[style*="linear-gradient(135deg, #7c3aed"],
+html:not(.light-theme) .modal-content button[style*="linear-gradient(135deg, #7c3aed"] {
+  background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%) !important;
   color: white !important;
 }
 
-html.light-theme .login-screen * {
-  color: white !important;
+/* ProgramsView action buttons (toolbar) — dark-mode friendly */
+html.dark-theme button[style*="rgba(220, 38, 38, 0.15)"],
+html:not(.light-theme) button[style*="rgba(220, 38, 38, 0.15)"] {
+  background: rgba(239, 68, 68, 0.12) !important;
+  color: #FCA5A5 !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
+}
+html.dark-theme button[style*="rgba(2, 144, 72, 0.15)"],
+html:not(.light-theme) button[style*="rgba(2, 144, 72, 0.15)"] {
+  background: rgba(34, 197, 94, 0.12) !important;
+  color: #22C55E !important;
+  border-color: rgba(34, 197, 94, 0.35) !important;
+}
+html.dark-theme button[style*="rgba(124, 58, 237, 0.15)"],
+html:not(.light-theme) button[style*="rgba(124, 58, 237, 0.15)"] {
+  background: rgba(139, 92, 246, 0.12) !important;
+  color: #C4B5FD !important;
+  border-color: rgba(139, 92, 246, 0.35) !important;
+}
+html.dark-theme button[style*="rgba(122, 138, 128, 0.15)"],
+html:not(.light-theme) button[style*="rgba(122, 138, 128, 0.15)"] {
+  background: rgba(156, 163, 175, 0.1) !important;
+  color: var(--fg-muted) !important;
+  border-color: var(--card-border) !important;
 }
 
-/* Program cards with green gradient — text stays white */
-html.light-theme .premium-show-card * {
-  color: rgba(255, 255, 255, 0.95) !important;
+/* Login screen inputs — keep the white inputs (already dark-green theme, looks cinematic) */
+
+/* === Mobile bottom nav — dark translucent === */
+html.dark-theme nav[class*="fixed"][class*="bottom-0"] > div,
+html:not(.light-theme) nav[class*="fixed"][class*="bottom-0"] > div {
+  background: rgba(15, 17, 21, 0.75) !important;
+  backdrop-filter: blur(28px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(160%) !important;
+  border: 1px solid #2A2E35 !important;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+}
+/* Mobile bottom nav labels — dark-mode friendly */
+html.dark-theme nav[class*="fixed"][class*="bottom-0"] svg,
+html:not(.light-theme) nav[class*="fixed"][class*="bottom-0"] svg {
+  stroke: #9CA3AF !important;
+}
+html.dark-theme nav[class*="fixed"][class*="bottom-0"] button[style*="active"],
+html:not(.light-theme) nav[class*="fixed"][class*="bottom-0"] button[style*="active"] {
+  /* active state — handled via inline style */
 }
 
-/* Badge/pill colors — keep as is (they're colorful) */
-
-/* Scrollbar */
-html.light-theme ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
+/* Mobile genre bottom sheet — dark */
+html.dark-theme div[class*="animate-slide-up-nav"],
+html:not(.light-theme) div[class*="animate-slide-up-nav"] {
+  background: rgba(15, 17, 21, 0.95) !important;
+  backdrop-filter: blur(28px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(160%) !important;
+  border-top: 1px solid #2A2E35 !important;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
 }
-html.light-theme ::-webkit-scrollbar-thumb {
-  background: rgba(2, 144, 72, 0.3);
+html.dark-theme div[class*="animate-slide-up-nav"] h3,
+html:not(.light-theme) div[class*="animate-slide-up-nav"] h3 {
+  color: var(--fg-strong) !important;
+}
+html.dark-theme div[class*="animate-slide-up-nav"] button,
+html:not(.light-theme) div[class*="animate-slide-up-nav"] button {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: var(--card-border) !important;
 }
 
+/* Pagination buttons */
+html.dark-theme button[style*="linear-gradient(135deg, #029048 0%, #016035 100%)"],
+html:not(.light-theme) button[style*="linear-gradient(135deg, #029048 0%, #016035 100%)"] {
+  background: linear-gradient(135deg, #22C55E 0%, #10B981 100%) !important;
+  color: #0F1115 !important;
+  border-color: #22C55E !important;
+}
 
 /* ============================================
    LIGHT THEME — clean, simple overrides
    ============================================ */
-html.light-theme {
-  --bg-deep: #f8faf9;
-  --bg-mid: #f1f6f3;
-  --bg-soft: #e6efe9;
-  --bg-page-1: #ffffff;
-  --bg-page-2: #f1f6f3;
-  --fg-strong: #0d2418;
-  --fg-soft: #1a2e22;
-  --fg-muted: #4a5d52;
-  --fg-dim: #7a8a80;
-  --glass-bg: rgba(255, 255, 255, 0.95);
-  --glass-border: rgba(2, 144, 72, 0.2);
-  --modal-bg: rgba(255, 255, 255, 0.98);
-  --modal-border: rgba(2, 144, 72, 0.15);
-  --bar-bg-1: rgba(255, 255, 255, 0.98);
-  --bar-bg-2: rgba(241, 246, 243, 0.95);
-  --bar-border: rgba(2, 144, 72, 0.15);
-  --bar-fg: #0d2418;
-  --drawer-bg-1: rgba(248, 250, 249, 0.9);
-  --drawer-bg-2: rgba(241, 246, 243, 0.85);
-  --drawer-fg: #1a2e22;
-  --input-bg: rgba(255, 255, 255, 0.95);
-  --input-border: rgba(2, 144, 72, 0.3);
-  --input-fg: #1a2e22;
-}
-
+html.light-theme body { background: #ffffff !important; color: #1a2e22 !important; }
 html.light-theme .app-content,
 html.light-theme main {
   background: linear-gradient(180deg, #ffffff 0%, #f1f6f3 100%) !important;
   color: #1a2e22 !important;
 }
-
 html.light-theme h1, html.light-theme h2, html.light-theme h3, html.light-theme h4 {
   color: #0d2418 !important;
 }
-
 html.light-theme p, html.light-theme span, html.light-theme label, html.light-theme td, html.light-theme th {
   color: #1a2e22;
 }
-
 html.light-theme .premium-glass {
   background: rgba(255, 255, 255, 0.95) !important;
   border: 1.5px solid rgba(2, 144, 72, 0.2) !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08) !important;
 }
-
 html.light-theme .premium-glass::before {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, transparent 100%) !important;
 }
-
 html.light-theme .modal-content {
   background: rgba(255, 255, 255, 0.98) !important;
   border: 1px solid rgba(2, 144, 72, 0.15) !important;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.12) !important;
+  color: #1a2e22 !important;
 }
-
 html.light-theme .modal-backdrop {
   background: rgba(0, 0, 0, 0.3) !important;
 }
-
 html.light-theme input,
 html.light-theme textarea,
 html.light-theme select {
@@ -1094,48 +1350,35 @@ html.light-theme select {
   color: #1a2e22 !important;
   border-color: rgba(2, 144, 72, 0.35) !important;
 }
-
 html.light-theme input::placeholder,
 html.light-theme textarea::placeholder {
   color: #7a8a80 !important;
 }
-
-html.light-theme header[class*="fixed"] {
+html.light-theme .top-app-bar {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(241, 246, 243, 0.95) 100%) !important;
   border-bottom: 1px solid rgba(2, 144, 72, 0.15) !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05) !important;
 }
-
-html.light-theme header[class*="fixed"] span,
-html.light-theme header[class*="fixed"] div {
+html.light-theme .top-app-bar .bar-title,
+html.light-theme .top-app-bar .bar-title-sub {
   color: #0d2418 !important;
 }
-
-html.light-theme aside[class*="fixed"][class*="right-0"],
-html.light-theme aside[class*="animate-drawer"] {
+html.light-theme .drawer-aside {
   background: rgba(248, 250, 249, 0.92) !important;
-  backdrop-filter: blur(40px) saturate(180%) !important;
   border-left: 1px solid rgba(2, 144, 72, 0.2) !important;
 }
-
-html.light-theme aside[class*="fixed"][class*="right-0"] button,
-html.light-theme aside[class*="animate-drawer"] button {
-  color: #1a2e22 !important;
+html.light-theme .premium-show-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(2, 144, 72, 0.2) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06) !important;
 }
-
-/* Keep genre cards and show cards colorful in both themes */
-html.light-theme .premium-card *,
-html.light-theme .premium-show-card * {
-  color: rgba(255, 255, 255, 0.95) !important;
-}
-
-/* Login screen always dark */
 html.light-theme .login-screen {
   background: radial-gradient(ellipse 90% 70% at 70% 25%, rgba(2, 144, 72, 0.45) 0%, transparent 55%),
               linear-gradient(135deg, #010a05 0%, #02150c 50%, #010a05 100%) !important;
   color: white !important;
 }
-
 html.light-theme .login-screen * {
   color: white !important;
 }
+html.light-theme ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.05); }
+html.light-theme ::-webkit-scrollbar-thumb { background: rgba(2, 144, 72, 0.3); }
