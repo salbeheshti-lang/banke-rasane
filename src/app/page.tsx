@@ -75,7 +75,7 @@ const DEFAULT_GENRE_TAGS: TagSpec[] = [TAG_LIBRARY.style, TAG_LIBRARY.size, TAG_
 const GENRES: Genre[] = [
   {
     id: 'decor', key: 'decor', nameFa: 'دکور برنامه‌ها', name: 'Decor Analysis',
-    color: '#029048', description: 'همهٔ ۵۶۰ برنامه با تحلیل دکور و صحنه', filterFn: () => true,
+    color: '#06b6d4', description: 'همهٔ ۵۶۰ برنامه با تحلیل دکور و صحنه', filterFn: () => true,
     tags: DEFAULT_GENRE_TAGS,
     presetTags: ['مدرن', 'مینیمال', 'چوب', 'تکنولوژی', 'گرم', 'لوکس', 'تاریک', 'روشن'],
     searchFields: ['name', 'summary', 'materials', 'colors'],
@@ -409,8 +409,8 @@ function getShowThumbnail(show: TalkShow): { gradient: string; pattern: string; 
 function generateThumbnailColors(show: TalkShow): { gradient: string; pattern: string; accent: string } {
   // Extract colors from show's color field
   const colorStr = show.colors || '';
-  let primary = '#029048';
-  let secondary = '#016035';
+  let primary = '#06b6d4';
+  let secondary = '#0891b2';
 
   if (colorStr.includes('red') || colorStr.includes('قرمز')) primary = '#dc2626';
   else if (colorStr.includes('blue') || colorStr.includes('آبی')) primary = '#2563eb';
@@ -418,7 +418,7 @@ function generateThumbnailColors(show: TalkShow): { gradient: string; pattern: s
   else if (colorStr.includes('pink') || colorStr.includes('صورتی')) primary = '#db2777';
   else if (colorStr.includes('orange') || colorStr.includes('نارنجی')) primary = '#ea580c';
   else if (colorStr.includes('yellow') || colorStr.includes('زرد')) primary = '#f59e0b';
-  else if (colorStr.includes('green') || colorStr.includes('سبز')) primary = '#029048';
+  else if (colorStr.includes('green') || colorStr.includes('سبز')) primary = '#06b6d4';
   else if (colorStr.includes('gold') || colorStr.includes('طلایی')) primary = '#b45309';
   else if (colorStr.includes('white') || colorStr.includes('سفید')) primary = '#4a5d52';
 
@@ -529,7 +529,7 @@ function ShowImageGallery({ images, showName }: { images: string[]; showName: st
               style={{
                 width: '64px',
                 height: '48px',
-                border: idx === activeIdx ? '3px solid #029048' : '2px solid #e0e8e4',
+                border: idx === activeIdx ? '3px solid #06b6d4' : '2px solid #e0e8e4',
                 opacity: idx === activeIdx ? 1 : 0.6,
               }}
             >
@@ -1793,7 +1793,7 @@ export default function Home() {
   const [compareList, setCompareList] = useState<number[]>([]);
   const [showCompareModal, setShowCompareModal] = useState(false);
 
-  // Theme disabled — always dark green
+  // 🌗 Theme — dark (deep navy/teal) by default; light theme also supported.
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const THEME_KEY = 'bankresaneh_theme_v1';
 
@@ -1827,7 +1827,7 @@ export default function Home() {
       const savedBookmarks = JSON.parse(window.localStorage.getItem(BOOKMARKS_KEY) || '[]');
       if (Array.isArray(savedBookmarks)) setBookmarks(savedBookmarks);
     } catch {}
-    // Theme disabled.
+    // Theme — restore saved preference (dark by default).
     const savedTheme = window.localStorage.getItem(THEME_KEY);
     if (savedTheme === 'light' || savedTheme === 'dark') setTheme(savedTheme);
     // Restore language.
@@ -2022,6 +2022,15 @@ export default function Home() {
     });
   };
 
+  // 🌗 Toggle theme (dark ↔ light), persist to localStorage.
+  const handleToggleTheme = () => {
+    setTheme(prev => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      try { window.localStorage.setItem(THEME_KEY, next); } catch {}
+      return next;
+    });
+  };
+
   const handleLogout = async () => {
     try { await api.logout(); } catch {}
     setCurrentUser(null);
@@ -2056,8 +2065,8 @@ export default function Home() {
           <div className="login-ambient-light green-2"></div>
           <div className="login-ambient-light green-3"></div>
           <div className="relative z-20 flex flex-col items-center" style={{ gap: '16px' }}>
-            <div className="w-10 h-10 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(255,255,255,0.25)', borderTopColor: '#4ade80' }}></div>
-            <span style={{ color: 'rgba(168, 230, 193, 0.85)', fontSize: '14px' }}>{STRINGS[lang].loading}</span>
+            <div className="w-10 h-10 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(255,255,255,0.25)', borderTopColor: '#22d3ee' }}></div>
+            <span style={{ color: 'rgba(165, 243, 252, 0.85)', fontSize: '14px' }}>{STRINGS[lang].loading}</span>
           </div>
         </div>
       </LangProvider>
@@ -2081,8 +2090,8 @@ export default function Home() {
         currentView={currentView}
         onBack={goBack}
         canGoBack={canGoBack}
-        
-        
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
         onToggleLang={handleToggleLang}
       />
 
@@ -2230,11 +2239,11 @@ export default function Home() {
             bottom: '32px',
             left: '50%',
             transform: 'translateX(-50%)',
-            background: 'rgba(2, 144, 72, 0.95)',
+            background: 'rgba(6, 182, 212, 0.95)',
             color: 'white',
             padding: '12px 24px',
             borderRadius: '12px',
-            boxShadow: '0 8px 32px rgba(2, 144, 72, 0.4)',
+            boxShadow: '0 8px 32px rgba(6, 182, 212, 0.4)',
             zIndex: 100,
             fontSize: '14px',
             fontWeight: 600,
@@ -2320,7 +2329,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
         <form onSubmit={handleSubmit} className="w-full" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* Username */}
           <div>
-            <label htmlFor="login-username" className="block text-sm font-bold mb-2" style={{ color: 'rgba(168, 230, 193, 0.9)' }}>
+            <label htmlFor="login-username" className="block text-sm font-bold mb-2" style={{ color: 'rgba(165, 243, 252, 0.9)' }}>
               {t('username')}
             </label>
             <input
@@ -2336,7 +2345,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
               style={{
                 width: '100%',
                 background: 'rgba(30, 34, 40, 0.9)',
-                border: '1px solid rgba(74, 222, 128, 0.4)',
+                border: '1px solid rgba(34, 211, 238, 0.4)',
                 borderRadius: '14px',
                 padding: '14px 18px',
                 color: '#FFFFFF',
@@ -2347,14 +2356,14 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 direction: 'ltr',
                 transition: 'border-color 0.25s ease, box-shadow 0.25s ease',
               }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = '#4ade80'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(74,222,128,0.18)'; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(74, 222, 128, 0.4)'; e.currentTarget.style.boxShadow = 'none'; }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = '#22d3ee'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(34,211,238,0.18)'; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(34, 211, 238, 0.4)'; e.currentTarget.style.boxShadow = 'none'; }}
             />
           </div>
 
           {/* Password with show/hide */}
           <div>
-            <label htmlFor="login-password" className="block text-sm font-bold mb-2" style={{ color: 'rgba(168, 230, 193, 0.9)' }}>
+            <label htmlFor="login-password" className="block text-sm font-bold mb-2" style={{ color: 'rgba(165, 243, 252, 0.9)' }}>
               {t('password')}
             </label>
             <div className="relative">
@@ -2370,7 +2379,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 style={{
                   width: '100%',
                   background: 'rgba(30, 34, 40, 0.9)',
-                  border: '1px solid rgba(74, 222, 128, 0.4)',
+                  border: '1px solid rgba(34, 211, 238, 0.4)',
                   borderRadius: '14px',
                   padding: '14px 52px 14px 18px',
                   color: '#FFFFFF',
@@ -2381,8 +2390,8 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                   direction: 'ltr',
                   transition: 'border-color 0.25s ease, box-shadow 0.25s ease',
                 }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = '#4ade80'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(74,222,128,0.18)'; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(74, 222, 128, 0.4)'; e.currentTarget.style.boxShadow = 'none'; }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = '#22d3ee'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(34,211,238,0.18)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(34, 211, 238, 0.4)'; e.currentTarget.style.boxShadow = 'none'; }}
               />
               <button
                 type="button"
@@ -2391,8 +2400,8 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 title={showPassword ? t('hide_password') : t('show_password')}
                 disabled={loading}
                 className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-colors z-10"
-                style={{ color: showPassword ? '#4ade80' : 'rgba(168, 230, 193, 0.6)', background: 'transparent', cursor: 'pointer' }}
-                onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = 'rgba(74, 222, 128, 0.15)'; }}
+                style={{ color: showPassword ? '#22d3ee' : 'rgba(165, 243, 252, 0.6)', background: 'transparent', cursor: 'pointer' }}
+                onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = 'rgba(34, 211, 238, 0.15)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
                 {showPassword ? (
@@ -2455,10 +2464,10 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
         </form>
 
         <div className="mt-10 text-center">
-          <p style={{ color: 'rgba(168, 230, 193, 0.6)' }} className="text-xs tracking-wider">
+          <p style={{ color: 'rgba(165, 243, 252, 0.6)' }} className="text-xs tracking-wider">
             {t('version')} • {t('app_subtitle')}
           </p>
-          <p style={{ color: 'rgba(168, 230, 193, 0.45)' }} className="text-xs mt-2">
+          <p style={{ color: 'rgba(165, 243, 252, 0.45)' }} className="text-xs mt-2">
             {t('default_user_hint')}
             <span dir="ltr">admin</span> / {lang === 'en' ? 'pass: ' : 'رمز: '}
             <span dir="ltr">admin</span>
@@ -2474,12 +2483,14 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
 // logo + title in the center, visible on BOTH desktop and mobile.
 // Theme-aware via the `.top-app-bar` className (CSS variables in globals.css).
 // ============================================
-function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, onToggleLang }: {
+function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, theme, onToggleTheme, onToggleLang }: {
   onMenuClick: () => void;
   isMobile: boolean;
   currentView: string;
   onBack: () => void;
   canGoBack: boolean;
+  theme: 'dark' | 'light';
+  onToggleTheme: () => void;
 
   onToggleLang?: () => void;
 }) {
@@ -2522,9 +2533,9 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, onTo
             minHeight: '44px',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(34, 197, 94, 0.15)';
-            e.currentTarget.style.borderColor = 'rgba(34, 197, 94, 0.45)';
-            e.currentTarget.style.color = '#22C55E';
+            e.currentTarget.style.background = 'rgba(34, 211, 238, 0.15)';
+            e.currentTarget.style.borderColor = 'rgba(34, 211, 238, 0.45)';
+            e.currentTarget.style.color = '#22d3ee';
             e.currentTarget.style.transform = 'translateY(-1px)';
           }}
           onMouseLeave={(e) => {
@@ -2551,7 +2562,7 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, onTo
             height={isMobile ? 26 : 36}
             priority
             style={{
-              filter: 'drop-shadow(0 2px 10px rgba(34, 197, 94, 0.5))',
+              filter: 'drop-shadow(0 2px 10px rgba(34, 211, 238, 0.5))',
               flexShrink: 0,
             }}
           />
@@ -2572,6 +2583,23 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, onTo
 
         {/* Left cluster: theme + language toggles + back button (when there is history) */}
         <div className="flex items-center gap-2" style={{ minWidth: '44px', justifyContent: 'flex-end' }}>
+
+          {/* 🌗 Theme toggle (dark ↔ light) */}
+          {onToggleTheme && (
+            <button
+              onClick={onToggleTheme}
+              aria-label={theme === 'dark' ? t('switch_to_light') : t('switch_to_dark')}
+              title={theme === 'dark' ? t('switch_to_light') : t('switch_to_dark')}
+              className="btn-base bar-toggle flex items-center justify-center rounded-xl"
+              style={{
+                width: '44px',
+                height: '44px',
+                fontSize: '18px',
+              }}
+            >
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
+          )}
 
           {/* 🌐 Language toggle (fa ↔ en) */}
           {onToggleLang && (
@@ -2597,17 +2625,17 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, onTo
               title={t('back')}
               className="btn-base flex items-center gap-2 rounded-xl"
               style={{
-                background: 'rgba(34, 197, 94, 0.15)',
-                border: '1px solid rgba(34, 197, 94, 0.45)',
-                color: '#22C55E',
+                background: 'rgba(34, 211, 238, 0.15)',
+                border: '1px solid rgba(34, 211, 238, 0.45)',
+                color: '#22d3ee',
                 padding: isMobile ? '9px 12px' : '9px 16px',
                 minWidth: '44px',
                 minHeight: '44px',
                 fontWeight: 700,
                 fontSize: '14px',
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(34, 197, 94, 0.25)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(34, 197, 94, 0.15)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(34, 211, 238, 0.25)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(34, 211, 238, 0.15)'; e.currentTarget.style.transform = 'translateY(0)'; }}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -2618,9 +2646,9 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, onTo
             <span
               className="px-2.5 py-1 rounded-full text-xs font-bold bar-title"
               style={{
-                background: 'rgba(34, 197, 94, 0.15)',
-                color: '#22C55E',
-                border: '1px solid rgba(34, 197, 94, 0.35)',
+                background: 'rgba(34, 211, 238, 0.15)',
+                color: '#22d3ee',
+                border: '1px solid rgba(34, 211, 238, 0.35)',
               }}
             >
               {t('banke_rasane')}
@@ -2629,15 +2657,15 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, onTo
             <div
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl bar-title"
               style={{
-                background: 'rgba(34, 197, 94, 0.1)',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
+                background: 'rgba(34, 211, 238, 0.1)',
+                border: '1px solid rgba(34, 211, 238, 0.3)',
               }}
             >
               <span
                 className="w-2 h-2 rounded-full"
                 style={{
-                  backgroundColor: '#22C55E',
-                  boxShadow: '0 0 8px #22C55E',
+                  backgroundColor: '#22d3ee',
+                  boxShadow: '0 0 8px #22d3ee',
                   animation: 'pulse 2s ease-in-out infinite',
                 }}
               ></span>
@@ -2731,7 +2759,7 @@ function DrawerMenu({
             width={140}
             height={36}
             priority
-            style={{ filter: 'drop-shadow(0 2px 10px rgba(34, 197, 94, 0.5))' }}
+            style={{ filter: 'drop-shadow(0 2px 10px rgba(34, 211, 238, 0.5))' }}
           />
           <button
             onClick={onClose}
@@ -2761,9 +2789,9 @@ function DrawerMenu({
                   onClick={() => onNavigate(item.key as any)}
                   className="btn-base drawer-fg flex items-center gap-3 px-3 py-2.5 rounded-xl w-full text-right"
                   style={isActive ? {
-                    background: 'rgba(34, 197, 94, 0.18)',
-                    border: '1px solid rgba(34, 197, 94, 0.45)',
-                    color: '#22C55E',
+                    background: 'rgba(34, 211, 238, 0.18)',
+                    border: '1px solid rgba(34, 211, 238, 0.45)',
+                    color: '#22d3ee',
                   } : {
                     border: '1px solid transparent',
                     color: 'var(--drawer-fg)',
@@ -2860,9 +2888,9 @@ function DrawerMenu({
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
                   style={{
-                    background: 'rgba(34, 197, 94, 0.18)',
-                    color: '#22C55E',
-                    border: '1px solid rgba(34, 197, 94, 0.45)',
+                    background: 'rgba(34, 211, 238, 0.18)',
+                    color: '#22d3ee',
+                    border: '1px solid rgba(34, 211, 238, 0.45)',
                     fontWeight: 700,
                     fontSize: '14px',
                   }}
@@ -2870,15 +2898,15 @@ function DrawerMenu({
                   {(currentUser.name || currentUser.username).charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm drawer-fg-active" style={{ color: '#22C55E' }} title={currentUser.username}>
+                  <div className="font-bold text-sm drawer-fg-active" style={{ color: '#22d3ee' }} title={currentUser.username}>
                     {currentUser.name || currentUser.username}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span
                       className="text-xs px-1.5 py-0.5 rounded-md font-bold"
                       style={{
-                        background: currentUser.role === 'admin' ? 'rgba(239, 68, 68, 0.18)' : currentUser.role === 'editor' ? 'rgba(250, 204, 21, 0.18)' : 'rgba(34, 197, 94, 0.18)',
-                        color: currentUser.role === 'admin' ? '#FCA5A5' : currentUser.role === 'editor' ? '#FACC15' : '#22C55E',
+                        background: currentUser.role === 'admin' ? 'rgba(239, 68, 68, 0.18)' : currentUser.role === 'editor' ? 'rgba(250, 204, 21, 0.18)' : 'rgba(34, 211, 238, 0.18)',
+                        color: currentUser.role === 'admin' ? '#FCA5A5' : currentUser.role === 'editor' ? '#FACC15' : '#22d3ee',
                       }}
                     >
                       {roleLabel[currentUser.role] || currentUser.role}
@@ -2898,8 +2926,8 @@ function DrawerMenu({
               onClick={onOpenSettings}
               className="btn-base drawer-fg flex items-center gap-3 px-3 py-2.5 rounded-lg w-full mb-1"
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(34, 197, 94, 0.15)';
-                e.currentTarget.style.color = '#22C55E';
+                e.currentTarget.style.background = 'rgba(34, 211, 238, 0.15)';
+                e.currentTarget.style.color = '#22d3ee';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'transparent';
@@ -3089,17 +3117,17 @@ function MobileNavBtn({ label, icon, active, onClick, highlight }: {
       onClick={onClick}
       className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all"
       style={{
-        background: active ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
-        border: active ? '1px solid rgba(34, 197, 94, 0.35)' : '1px solid transparent',
+        background: active ? 'rgba(34, 211, 238, 0.15)' : 'transparent',
+        border: active ? '1px solid rgba(34, 211, 238, 0.35)' : '1px solid transparent',
         minWidth: '56px',
       }}
     >
       <svg
         className="w-6 h-6"
         fill="none"
-        stroke={active ? '#22C55E' : highlight ? '#22C55E' : '#9CA3AF'}
+        stroke={active ? '#22d3ee' : highlight ? '#22d3ee' : '#9CA3AF'}
         viewBox="0 0 24 24"
-        style={{ filter: active ? 'drop-shadow(0 0 6px rgba(34, 197, 94, 0.45))' : 'none' }}
+        style={{ filter: active ? 'drop-shadow(0 0 6px rgba(34, 211, 238, 0.45))' : 'none' }}
       >
         {icon === 'home' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />}
         {icon === 'grid' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />}
@@ -3108,7 +3136,7 @@ function MobileNavBtn({ label, icon, active, onClick, highlight }: {
         {icon === 'exit' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />}
         {icon === 'menu' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />}
       </svg>
-      <span className="text-xs font-medium" style={{ color: active ? '#22C55E' : highlight ? '#22C55E' : '#9CA3AF' }}>
+      <span className="text-xs font-medium" style={{ color: active ? '#22d3ee' : highlight ? '#22d3ee' : '#9CA3AF' }}>
         {label}
       </span>
     </button>
@@ -3131,7 +3159,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
   const [showAddGenre, setShowAddGenre] = useState(false);
   const { t, lang } = useLang();
   const stats = [
-    { label: t('total_programs'), value: talkShows.length, color: '#029048', icon: 'film' },
+    { label: t('total_programs'), value: talkShows.length, color: '#06b6d4', icon: 'film' },
     { label: t('genre'), value: genres.length, color: '#2563eb', icon: 'tag' },
     { label: t('uploaded'), value: uploadedCount, color: '#7c3aed', icon: 'cloud' },
     { label: t('with_image'), value: talkShows.filter(s => s.images && s.images.length > 0).length, color: '#db2777', icon: 'image' },
@@ -3441,7 +3469,7 @@ function ProgramsView({
     setSelectionMode(false);
   };
 
-  const gc = genre?.color || '#029048';
+  const gc = genre?.color || '#06b6d4';
 
   return (
     <>
@@ -3709,7 +3737,7 @@ function ProgramsView({
                   onClick={() => setFilterSize(f.key)}
                   className="btn-base px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
                   style={filterSize === f.key ? {
-                    background: 'linear-gradient(135deg, #22C55E 0%, #10B981 100%)',
+                    background: 'linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%)',
                     color: 'white',
                   } : {
                     background: 'var(--input-bg)',
@@ -3734,7 +3762,7 @@ function ProgramsView({
                   onClick={() => setFilterStyle(f.key)}
                   className="btn-base px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
                   style={filterStyle === f.key ? {
-                    background: 'linear-gradient(135deg, #22C55E 0%, #10B981 100%)',
+                    background: 'linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%)',
                     color: 'white',
                   } : {
                     background: 'var(--input-bg)',
@@ -3773,7 +3801,7 @@ function ProgramsView({
             <button
               onClick={handleExcel}
               className="btn-base px-3 py-1.5 rounded-lg text-sm font-medium"
-              style={{ background: 'rgba(2, 144, 72, 0.15)', color: '#016035', border: '1px solid rgba(2, 144, 72, 0.3)' }}
+              style={{ background: 'rgba(6, 182, 212, 0.15)', color: '#0891b2', border: '1px solid rgba(6, 182, 212, 0.3)' }}
             >
               📊 {t('excel_report')}
             </button>
@@ -3922,10 +3950,10 @@ function ProgramsView({
                     onClick={() => setPage(p)}
                     className="btn-base min-w-[40px] px-3 py-2 rounded-lg text-sm font-bold"
                     style={p === currentPage ? {
-                      background: 'linear-gradient(135deg, #22C55E 0%, #10B981 100%)',
+                      background: 'linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%)',
                       color: 'white',
-                      border: '1px solid #029048',
-                      boxShadow: '0 4px 12px rgba(2, 144, 72, 0.3)',
+                      border: '1px solid #06b6d4',
+                      boxShadow: '0 4px 12px rgba(6, 182, 212, 0.3)',
                     } : {
                       background: 'var(--glass-bg-solid)',
                       color: 'var(--fg-muted)',
@@ -3995,11 +4023,11 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
       className={`premium-show-card${selected ? ' is-selected' : ''}`}
       style={{
         background: 'var(--card-bg)',
-        border: compareSelected ? '2px solid #FACC15' : selected ? '2px solid #22C55E' : '1px solid var(--card-border)',
+        border: compareSelected ? '2px solid #FACC15' : selected ? '2px solid #22d3ee' : '1px solid var(--card-border)',
         boxShadow: compareSelected
           ? '0 0 0 2px rgba(250, 204, 21, 0.5), 0 8px 32px rgba(250, 204, 21, 0.18), 0 4px 16px rgba(0,0,0,0.5)'
           : selected
-          ? '0 0 0 2px rgba(34, 197, 94, 0.5), 0 8px 32px rgba(34, 197, 94, 0.25), 0 4px 16px rgba(0,0,0,0.5)'
+          ? '0 0 0 2px rgba(34, 211, 238, 0.5), 0 8px 32px rgba(34, 211, 238, 0.25), 0 4px 16px rgba(0,0,0,0.5)'
           : '0 4px 16px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04)',
       }}
       onMouseEnter={(e) => {
@@ -4700,7 +4728,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
               <button
                 onClick={() => onEdit(show)}
                 className="px-4 py-2 rounded-xl text-sm font-medium"
-                style={{ background: 'rgba(2, 144, 72, 0.15)', color: '#016035', border: '1px solid rgba(2, 144, 72, 0.3)' }}
+                style={{ background: 'rgba(6, 182, 212, 0.15)', color: '#0891b2', border: '1px solid rgba(6, 182, 212, 0.3)' }}
               >
                 ✏ {t('edit')}
               </button>
@@ -4715,7 +4743,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
             <button
               onClick={() => onExport(show, 'excel')}
               className="px-4 py-2 rounded-xl text-sm font-medium"
-              style={{ background: 'rgba(2, 144, 72, 0.15)', color: '#016035', border: '1px solid rgba(2, 144, 72, 0.3)' }}
+              style={{ background: 'rgba(6, 182, 212, 0.15)', color: '#0891b2', border: '1px solid rgba(6, 182, 212, 0.3)' }}
             >
               📊 {t('excel_report')}
             </button>
@@ -5016,7 +5044,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
 
       <div className="premium-glass p-6 space-y-4">
         {/* Auto-fetch from IMDb/Wikipedia */}
-        <div className="p-4 rounded-xl" style={{ background: 'rgba(34,197,94,0.06)', border: '1px solid #2A2E35' }}>
+        <div className="p-4 rounded-xl" style={{ background: 'rgba(34,211,238,0.06)', border: '1px solid #2A2E35' }}>
           <h4 className="font-bold mb-2" style={{ color: 'var(--fg-strong)' }}>{t('auto_fetch_info')}</h4>
           <p className="text-xs mb-3" style={{ color: 'var(--fg-muted)' }}>
             {t('auto_fetch_desc')}
@@ -5121,7 +5149,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
               width: '100%',
               padding: '12px 16px',
               borderRadius: '12px',
-              border: '1px solid rgba(2, 144, 72, 0.15)',
+              border: '1px solid rgba(6, 182, 212, 0.15)',
               background: 'rgba(30, 34, 40, 0.75)',
               color: '#FFFFFF',
               fontFamily: 'inherit',
@@ -5142,7 +5170,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
               width: '100%',
               padding: '12px 16px',
               borderRadius: '12px',
-              border: '1px solid rgba(2, 144, 72, 0.15)',
+              border: '1px solid rgba(6, 182, 212, 0.15)',
               background: 'rgba(30, 34, 40, 0.75)',
               color: '#FFFFFF',
               fontFamily: 'inherit',
@@ -5373,7 +5401,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
   };
 
   return (
-    <div className="p-4 rounded-xl" style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.15)' }}>
+    <div className="p-4 rounded-xl" style={{ background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.15)' }}>
       <div className="flex items-center justify-between mb-3">
         <h4 className="font-bold" style={{ color: '#FFFFFF' }}>
           🖼 {t('program_images')}
@@ -5382,7 +5410,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
           </span>
         </h4>
         {images.length > 0 && (
-          <span className="text-xs" style={{ color: '#016035' }}>{t('first_image_cover')}</span>
+          <span className="text-xs" style={{ color: '#0891b2' }}>{t('first_image_cover')}</span>
         )}
       </div>
 
@@ -5404,7 +5432,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
             flex: 1,
             padding: '10px 16px',
             borderRadius: '12px',
-            border: '1px solid rgba(2,144,72,0.15)',
+            border: '1px solid rgba(6,182,212,0.15)',
             background: images.length >= MAX_IMAGES ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.85)',
             color: '#FFFFFF',
             fontFamily: 'inherit',
@@ -5419,9 +5447,9 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
           disabled={images.length >= MAX_IMAGES || !urlInput.trim()}
           className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
           style={{
-            background: images.length >= MAX_IMAGES || !urlInput.trim() ? 'rgba(0,0,0,0.05)' : 'linear-gradient(135deg, #22C55E 0%, #10B981 100%)',
+            background: images.length >= MAX_IMAGES || !urlInput.trim() ? 'rgba(0,0,0,0.05)' : 'linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%)',
             color: images.length >= MAX_IMAGES || !urlInput.trim() ? '#999' : 'white',
-            border: '1px solid rgba(2,144,72,0.3)',
+            border: '1px solid rgba(6,182,212,0.3)',
             whiteSpace: 'nowrap',
           }}
         >
@@ -5432,9 +5460,9 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
           disabled={images.length >= MAX_IMAGES || compressing}
           className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
           style={{
-            background: images.length >= MAX_IMAGES || compressing ? 'rgba(0,0,0,0.05)' : 'rgba(2,144,72,0.1)',
-            color: images.length >= MAX_IMAGES || compressing ? '#999' : '#016035',
-            border: '1px solid rgba(2,144,72,0.3)',
+            background: images.length >= MAX_IMAGES || compressing ? 'rgba(0,0,0,0.05)' : 'rgba(6,182,212,0.1)',
+            color: images.length >= MAX_IMAGES || compressing ? '#999' : '#0891b2',
+            border: '1px solid rgba(6,182,212,0.3)',
             whiteSpace: 'nowrap',
           }}
         >
@@ -5454,7 +5482,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
       {images.length === 0 ? (
         <div
           className="text-center py-8 rounded-xl"
-          style={{ background: 'rgba(255,255,255,0.5)', border: '2px dashed rgba(2,144,72,0.2)' }}
+          style={{ background: 'rgba(255,255,255,0.5)', border: '2px dashed rgba(6,182,212,0.2)' }}
         >
           <div className="text-3xl mb-2 opacity-40">🖼</div>
           <p className="text-xs" style={{ color: '#6B7280' }}>
@@ -5469,7 +5497,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
               className="relative group rounded-xl overflow-hidden"
               style={{
                 aspectRatio: '4/3',
-                border: idx === 0 ? '3px solid #029048' : '1px solid #e0e8e4',
+                border: idx === 0 ? '3px solid #06b6d4' : '1px solid #e0e8e4',
                 background: '#f0f4f1',
               }}
             >
@@ -5485,7 +5513,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
               {idx === 0 && (
                 <span
                   className="absolute top-1 right-1 text-xs px-2 py-0.5 rounded-md font-bold"
-                  style={{ background: '#029048', color: 'white' }}
+                  style={{ background: '#06b6d4', color: 'white' }}
                 >
                   {t('cover_badge')}
                 </span>
@@ -5508,7 +5536,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
                   className="p-1.5 rounded-lg transition-colors"
                   style={{
                     background: idx === 0 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.9)',
-                    color: idx === 0 ? 'rgba(255,255,255,0.5)' : '#1a2e22',
+                    color: idx === 0 ? 'rgba(255,255,255,0.5)' : '#0f1419',
                     cursor: idx === 0 ? 'not-allowed' : 'pointer',
                   }}
                   title={t('move_left')}
@@ -5533,7 +5561,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
                   className="p-1.5 rounded-lg transition-colors"
                   style={{
                     background: idx === images.length - 1 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.9)',
-                    color: idx === images.length - 1 ? 'rgba(255,255,255,0.5)' : '#1a2e22',
+                    color: idx === images.length - 1 ? 'rgba(255,255,255,0.5)' : '#0f1419',
                     cursor: idx === images.length - 1 ? 'not-allowed' : 'pointer',
                   }}
                   title={t('move_right')}
@@ -5552,9 +5580,9 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
               className="rounded-xl flex flex-col items-center justify-center transition-all"
               style={{
                 aspectRatio: '4/3',
-                border: '2px dashed rgba(2,144,72,0.3)',
-                background: 'rgba(2,144,72,0.04)',
-                color: '#016035',
+                border: '2px dashed rgba(6,182,212,0.3)',
+                background: 'rgba(6,182,212,0.04)',
+                color: '#0891b2',
                 cursor: 'pointer',
               }}
             >
@@ -5653,7 +5681,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
   };
 
   return (
-    <div className="p-4 rounded-xl" style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.15)' }}>
+    <div className="p-4 rounded-xl" style={{ background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.15)' }}>
       <h4 className="font-bold mb-3" style={{ color: '#FFFFFF' }}>
         🎬 {t('program_videos')}
         <span className="text-xs font-normal mr-2" style={{ color: '#6B7280' }}>
@@ -5693,9 +5721,9 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
         <div
           className="mb-3 p-3 rounded-xl text-xs font-medium"
           style={{
-            background: uploadWarning.startsWith('✓') ? 'rgba(2,144,72,0.1)' : 'rgba(220,38,38,0.1)',
-            color: uploadWarning.startsWith('✓') ? '#016035' : '#dc2626',
-            border: uploadWarning.startsWith('✓') ? '1px solid rgba(2,144,72,0.3)' : '1px solid rgba(220,38,38,0.3)',
+            background: uploadWarning.startsWith('✓') ? 'rgba(6,182,212,0.1)' : 'rgba(220,38,38,0.1)',
+            color: uploadWarning.startsWith('✓') ? '#0891b2' : '#dc2626',
+            border: uploadWarning.startsWith('✓') ? '1px solid rgba(6,182,212,0.3)' : '1px solid rgba(220,38,38,0.3)',
           }}
         >
           {uploadWarning}
@@ -5714,7 +5742,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
             width: '100%',
             padding: '8px 12px',
             borderRadius: '10px',
-            border: '1px solid rgba(2,144,72,0.15)',
+            border: '1px solid rgba(6,182,212,0.15)',
             background: 'rgba(255,255,255,0.85)',
             color: '#FFFFFF',
             fontFamily: 'inherit',
@@ -5738,7 +5766,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
             flex: 1,
             padding: '10px 16px',
             borderRadius: '12px',
-            border: '1px solid rgba(2,144,72,0.15)',
+            border: '1px solid rgba(6,182,212,0.15)',
             background: 'rgba(255,255,255,0.85)',
             color: '#FFFFFF',
             fontFamily: 'inherit',
@@ -5753,9 +5781,9 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
           disabled={!urlInput.trim()}
           className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
           style={{
-            background: !urlInput.trim() ? 'rgba(0,0,0,0.05)' : 'linear-gradient(135deg, #22C55E 0%, #10B981 100%)',
+            background: !urlInput.trim() ? 'rgba(0,0,0,0.05)' : 'linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%)',
             color: !urlInput.trim() ? '#999' : 'white',
-            border: '1px solid rgba(2,144,72,0.3)',
+            border: '1px solid rgba(6,182,212,0.3)',
             whiteSpace: 'nowrap',
           }}
         >
@@ -5773,7 +5801,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
               <div
                 key={idx}
                 className="flex items-center gap-3 p-2 rounded-xl"
-                style={{ background: 'rgba(255,255,255,0.85)', border: '1px solid rgba(2,144,72,0.1)' }}
+                style={{ background: 'rgba(255,255,255,0.85)', border: '1px solid rgba(6,182,212,0.1)' }}
               >
                 {/* Thumbnail or icon */}
                 <div
@@ -5808,7 +5836,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-2 rounded-lg flex-shrink-0"
-                  style={{ background: 'rgba(2,144,72,0.1)', color: '#016035' }}
+                  style={{ background: 'rgba(6,182,212,0.1)', color: '#0891b2' }}
                   title={t('open_btn')}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -6036,7 +6064,7 @@ function TagsEditor({ tags, onChange, presetTags }: {
 // ADD GENRE MODAL — admin creates a new Genre (name + description + color)
 // ============================================
 const GENRE_COLOR_PRESETS = [
-  '#029048', '#0891b2', '#7c3aed', '#db2777', '#dc2626', '#ea580c', '#16a34a', '#0e7490',
+  '#06b6d4', '#0891b2', '#7c3aed', '#db2777', '#dc2626', '#ea580c', '#16a34a', '#0e7490',
 ];
 
 function AddGenreModal({ onClose, onSave }: {
@@ -6072,7 +6100,7 @@ function AddGenreModal({ onClose, onSave }: {
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content" style={{ maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.1)' }}>
+        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(6,182,212,0.1)' }}>
           <h2 className="text-xl font-bold" style={{ color: '#FFFFFF' }}>{t('add_genre_new')}</h2>
           <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#6B7280' }}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -6093,7 +6121,7 @@ function AddGenreModal({ onClose, onSave }: {
                 width: '100%',
                 padding: '10px 16px',
                 borderRadius: '12px',
-                border: '1px solid rgba(2, 144, 72, 0.15)',
+                border: '1px solid rgba(6, 182, 212, 0.15)',
                 background: 'rgba(255,255,255,0.85)',
                 color: '#FFFFFF',
                 fontFamily: 'inherit',
@@ -6113,7 +6141,7 @@ function AddGenreModal({ onClose, onSave }: {
                 width: '100%',
                 padding: '10px 16px',
                 borderRadius: '12px',
-                border: '1px solid rgba(2, 144, 72, 0.15)',
+                border: '1px solid rgba(6, 182, 212, 0.15)',
                 background: 'rgba(255,255,255,0.85)',
                 color: '#FFFFFF',
                 fontFamily: 'inherit',
@@ -6133,7 +6161,7 @@ function AddGenreModal({ onClose, onSave }: {
                   className="w-9 h-9 rounded-full transition-all"
                   style={{
                     background: c,
-                    border: color === c ? '3px solid #1a2e22' : '3px solid transparent',
+                    border: color === c ? '3px solid #06b6d4' : '3px solid transparent',
                     boxShadow: color === c ? `0 0 0 3px ${c}40` : 'none',
                     cursor: 'pointer',
                   }}
@@ -6190,7 +6218,7 @@ const SOCIAL_PLATFORMS = [
   { id: 'bale', name: 'بله', color: '#ffaa00', icon: '💬' },
   { id: 'ita', name: 'ایفا', color: '#3b82f6', icon: '📧' },
   { id: 'soroush', name: 'سروش', color: '#f97316', icon: '📱' },
-  { id: 'gap', name: 'گپ', color: '#22c55e', icon: '💬' },
+  { id: 'gap', name: 'گپ', color: '#22d3ee', icon: '💬' },
   { id: 'instagram', name: 'اینستاگرام', color: '#e1306c', icon: '📷' },
 ];
 
@@ -6263,14 +6291,14 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
 
     // Background gradient
     const grad = ctx.createLinearGradient(0, 0, 1080, 1080);
-    grad.addColorStop(0, '#029048');
-    grad.addColorStop(0.6, '#016035');
+    grad.addColorStop(0, '#06b6d4');
+    grad.addColorStop(0.6, '#0891b2');
     grad.addColorStop(1, '#014824');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 1080, 1080);
 
     // Decorative circles
-    ctx.fillStyle = 'rgba(74, 222, 128, 0.15)';
+    ctx.fillStyle = 'rgba(34, 211, 238, 0.15)';
     ctx.beginPath();
     ctx.arc(900, 200, 300, 0, Math.PI * 2);
     ctx.fill();
@@ -6377,7 +6405,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content" style={{ maxWidth: '700px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.1)' }}>
+        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(6,182,212,0.1)' }}>
           <h2 className="text-xl font-bold" style={{ color: '#FFFFFF' }}>{t('publish_social_title')}</h2>
           <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#6B7280' }}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -6422,7 +6450,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
                 className="relative overflow-hidden"
                 style={{
                   aspectRatio: '1/1',
-                  background: 'linear-gradient(135deg, #22C55E 0%, #10B981 60%, #059669 100%)',
+                  background: 'linear-gradient(135deg, #22d3ee 0%, #06b6d4 60%, #0891b2 100%)',
                   maxHeight: '400px',
                 }}
               >
@@ -6489,7 +6517,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
             {directSendSupported && (
               <div
                 className="p-3 rounded-xl"
-                style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.18)' }}
+                style={{ background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.18)' }}
               >
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div className="flex-1 min-w-0">
@@ -6503,7 +6531,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
                   <button
                     onClick={onOpenBotConfig}
                     className="px-3 py-1.5 rounded-lg text-xs font-medium flex-shrink-0"
-                    style={{ background: 'rgba(2,144,72,0.12)', color: '#016035', border: '1px solid rgba(2,144,72,0.3)' }}
+                    style={{ background: 'rgba(6,182,212,0.12)', color: '#0891b2', border: '1px solid rgba(6,182,212,0.3)' }}
                   >
                     {botConfig ? t('bot_settings') : t('configure_bot')}
                   </button>
@@ -6520,8 +6548,8 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
                   <div
                     className="mt-2 text-xs font-medium px-3 py-2 rounded-lg"
                     style={{
-                      background: sendResult.ok ? 'rgba(2,144,72,0.12)' : 'rgba(220,38,38,0.1)',
-                      color: sendResult.ok ? '#016035' : '#dc2626',
+                      background: sendResult.ok ? 'rgba(6,182,212,0.12)' : 'rgba(220,38,38,0.1)',
+                      color: sendResult.ok ? '#0891b2' : '#dc2626',
                     }}
                   >
                     {sendResult.msg}
@@ -6604,7 +6632,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content" style={{ maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.1)' }}>
+        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(6,182,212,0.1)' }}>
           <h2 className="text-xl font-bold" style={{ color: '#FFFFFF' }}>{t('bot_config_title')}</h2>
           <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#6B7280' }}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -6615,7 +6643,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
 
         <div className="p-6 space-y-5">
           {/* Intro help */}
-          <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.15)', color: '#9CA3AF' }}>
+          <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.15)', color: '#9CA3AF' }}>
             {t('bot_config_help_intro')}
             <ul className="mt-2 space-y-1 text-xs" style={{ color: '#6B7280' }}>
               <li>{t('bot_config_help_tg')}</li>
@@ -6661,7 +6689,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
                   flex: 1,
                   padding: '10px 14px',
                   borderRadius: '12px',
-                  border: '1px solid rgba(2,144,72,0.15)',
+                  border: '1px solid rgba(6,182,212,0.15)',
                   background: 'rgba(255,255,255,0.9)',
                   color: '#FFFFFF',
                   fontFamily: 'monospace',
@@ -6692,7 +6720,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
                 width: '100%',
                 padding: '10px 14px',
                 borderRadius: '12px',
-                border: '1px solid rgba(2,144,72,0.15)',
+                border: '1px solid rgba(6,182,212,0.15)',
                 background: 'rgba(255,255,255,0.9)',
                 color: '#FFFFFF',
                 fontFamily: 'monospace',
@@ -6711,9 +6739,9 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
             disabled={testing || !token}
             className="px-4 py-2 rounded-xl text-sm font-medium w-full"
             style={{
-              background: testing || !token ? 'rgba(122,138,128,0.15)' : 'rgba(2,144,72,0.12)',
-              color: testing || !token ? '#7a8a80' : '#016035',
-              border: '1px solid ' + (testing || !token ? 'rgba(122,138,128,0.3)' : 'rgba(2,144,72,0.3)'),
+              background: testing || !token ? 'rgba(122,138,128,0.15)' : 'rgba(6,182,212,0.12)',
+              color: testing || !token ? '#64748b' : '#0891b2',
+              border: '1px solid ' + (testing || !token ? 'rgba(122,138,128,0.3)' : 'rgba(6,182,212,0.3)'),
               cursor: testing || !token ? 'not-allowed' : 'pointer',
             }}
           >
@@ -6723,8 +6751,8 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
             <div
               className="text-sm font-medium px-3 py-2 rounded-lg"
               style={{
-                background: testResult.ok ? 'rgba(2,144,72,0.12)' : 'rgba(220,38,38,0.1)',
-                color: testResult.ok ? '#016035' : '#dc2626',
+                background: testResult.ok ? 'rgba(6,182,212,0.12)' : 'rgba(220,38,38,0.1)',
+                color: testResult.ok ? '#0891b2' : '#dc2626',
               }}
             >
               {testResult.msg}
@@ -6806,7 +6834,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
           .replace(/</g, '&lt;')
           .replace(/>/g, '&gt;')
           .replace(/"/g, '&quot;');
-        const headerRow = `<tr>${headers.map(h => `<th style="background:#029048;color:white;padding:8px;border:1px solid #ccc;text-align:center;font-family:Tahoma;">${escapeHtml(h)}</th>`).join('')}</tr>`;
+        const headerRow = `<tr>${headers.map(h => `<th style="background:#06b6d4;color:white;padding:8px;border:1px solid #ccc;text-align:center;font-family:Tahoma;">${escapeHtml(h)}</th>`).join('')}</tr>`;
         const bodyRows = shows.map((s, i) => {
           const cells = [
             i + 1,
@@ -6841,7 +6869,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content" style={{ maxWidth: '800px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.1)' }}>
+        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(6,182,212,0.1)' }}>
           <h2 className="text-xl font-bold" style={{ color: '#FFFFFF' }}>
             {format === 'pdf' ? t('pdf_preview_title') : t('excel_preview_title')}
           </h2>
@@ -6854,15 +6882,15 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
 
         <div className="p-6">
           {/* Summary */}
-          <div className="mb-4 p-4 rounded-xl" style={{ background: 'rgba(2,144,72,0.08)', border: '1px solid rgba(2,144,72,0.2)' }}>
+          <div className="mb-4 p-4 rounded-xl" style={{ background: 'rgba(6,182,212,0.08)', border: '1px solid rgba(6,182,212,0.2)' }}>
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm" style={{ color: '#9CA3AF' }}>{t('program_count_label')}</div>
-                <div className="text-2xl font-bold" style={{ color: '#016035' }}>{shows.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
+                <div className="text-2xl font-bold" style={{ color: '#0891b2' }}>{shows.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
               </div>
               <div>
                 <div className="text-sm" style={{ color: '#9CA3AF' }}>{t('format_label')}</div>
-                <div className="text-2xl font-bold" style={{ color: format === 'pdf' ? '#dc2626' : '#016035' }}>{format.toUpperCase()}</div>
+                <div className="text-2xl font-bold" style={{ color: format === 'pdf' ? '#dc2626' : '#0891b2' }}>{format.toUpperCase()}</div>
               </div>
               <div>
                 <div className="text-sm" style={{ color: '#9CA3AF' }}>{t('date')}</div>
@@ -6873,29 +6901,29 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
 
           {/* PDF report preview — multi-section professional template */}
           {format === 'pdf' && (
-            <div className="mb-4 rounded-2xl overflow-hidden" style={{ border: '2px solid #029048', boxShadow: '0 8px 24px rgba(2, 144, 72, 0.15)' }}>
+            <div className="mb-4 rounded-2xl overflow-hidden" style={{ border: '2px solid #06b6d4', boxShadow: '0 8px 24px rgba(6, 182, 212, 0.15)' }}>
               {/* Cover preview */}
               <div
                 className="p-6 text-center relative overflow-hidden"
                 style={{
-                  background: 'radial-gradient(ellipse 80% 60% at 70% 20%, rgba(54, 179, 126, 0.35) 0%, transparent 60%), radial-gradient(ellipse 70% 50% at 25% 80%, rgba(2, 144, 72, 0.4) 0%, transparent 60%), linear-gradient(160deg, #010a05 0%, #02150c 50%, #010a05 100%)',
+                  background: 'radial-gradient(ellipse 80% 60% at 70% 20%, rgba(6, 182, 212, 0.35) 0%, transparent 60%), radial-gradient(ellipse 70% 50% at 25% 80%, rgba(6, 182, 212, 0.4) 0%, transparent 60%), linear-gradient(160deg, #010a05 0%, #02150c 50%, #010a05 100%)',
                   color: 'white',
                 }}
               >
-                <div style={{ color: 'rgba(168, 230, 193, 0.6)', fontSize: '11px', letterSpacing: '4px', marginBottom: '12px' }}>{t('banke_rasane_brand')}</div>
-                <div style={{ color: '#4ade80', marginBottom: '10px', filter: 'drop-shadow(0 0 16px rgba(74, 222, 128, 0.5))' }}>
+                <div style={{ color: 'rgba(165, 243, 252, 0.6)', fontSize: '11px', letterSpacing: '4px', marginBottom: '12px' }}>{t('banke_rasane_brand')}</div>
+                <div style={{ color: '#22d3ee', marginBottom: '10px', filter: 'drop-shadow(0 0 16px rgba(34, 211, 238, 0.5))' }}>
                   <svg viewBox="0 0 64 64" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="2" style={{ display: 'inline-block' }}>
                     <rect x="6" y="14" width="52" height="36" rx="4" />
                     <path d="M6 22h52M14 14v-4M50 14v-4M20 32l10 6-10 6z" />
                   </svg>
                 </div>
                 <h3 className="text-xl font-black mb-2" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.4)' }}>{t('report_title_full')}</h3>
-                <p className="text-xs" style={{ color: 'rgba(168, 230, 193, 0.8)' }}>{t('banke_rasane_archive')}</p>
+                <p className="text-xs" style={{ color: 'rgba(165, 243, 252, 0.8)' }}>{t('banke_rasane_archive')}</p>
                 <div
                   className="flex justify-center gap-4 mt-4 mx-auto"
                   style={{
-                    background: 'rgba(2, 144, 72, 0.1)',
-                    border: '1px solid rgba(74, 222, 128, 0.25)',
+                    background: 'rgba(6, 182, 212, 0.1)',
+                    border: '1px solid rgba(34, 211, 238, 0.25)',
                     borderRadius: '12px',
                     padding: '12px 16px',
                     maxWidth: '380px',
@@ -6903,25 +6931,25 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
                   }}
                 >
                   <div>
-                    <div className="text-xl font-black" style={{ color: '#4ade80' }}>{shows.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
-                    <div className="text-xs" style={{ color: 'rgba(168, 230, 193, 0.7)' }}>{t('programs_unit')}</div>
+                    <div className="text-xl font-black" style={{ color: '#22d3ee' }}>{shows.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
+                    <div className="text-xs" style={{ color: 'rgba(165, 243, 252, 0.7)' }}>{t('programs_unit')}</div>
                   </div>
-                  <div style={{ width: '1px', background: 'rgba(74, 222, 128, 0.3)' }}></div>
+                  <div style={{ width: '1px', background: 'rgba(34, 211, 238, 0.3)' }}></div>
                   <div>
-                    <div className="text-xl font-black" style={{ color: '#4ade80' }}>{new Set(shows.map(s => s.category)).size.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
-                    <div className="text-xs" style={{ color: 'rgba(168, 230, 193, 0.7)' }}>{t('genre_category_unit')}</div>
+                    <div className="text-xl font-black" style={{ color: '#22d3ee' }}>{new Set(shows.map(s => s.category)).size.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
+                    <div className="text-xs" style={{ color: 'rgba(165, 243, 252, 0.7)' }}>{t('genre_category_unit')}</div>
                   </div>
-                  <div style={{ width: '1px', background: 'rgba(74, 222, 128, 0.3)' }}></div>
+                  <div style={{ width: '1px', background: 'rgba(34, 211, 238, 0.3)' }}></div>
                   <div>
-                    <div className="text-xl font-black" style={{ color: '#4ade80' }}>{new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
-                    <div className="text-xs" style={{ color: 'rgba(168, 230, 193, 0.7)' }}>{t('date')}</div>
+                    <div className="text-xl font-black" style={{ color: '#22d3ee' }}>{new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
+                    <div className="text-xs" style={{ color: 'rgba(165, 243, 252, 0.7)' }}>{t('date')}</div>
                   </div>
                 </div>
               </div>
 
               {/* Sections list — shows the report structure with descriptions */}
               <div className="p-4" style={{ background: '#f8faf9' }}>
-                <div className="text-xs font-bold mb-3" style={{ color: '#016035', paddingRight: '8px', borderRight: '3px solid #029048' }}>
+                <div className="text-xs font-bold mb-3" style={{ color: '#0891b2', paddingRight: '8px', borderRight: '3px solid #06b6d4' }}>
                   {t('report_structure')}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -6942,7 +6970,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
                     >
                       <span
                         className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0"
-                        style={{ background: 'linear-gradient(135deg, #22C55E 0%, #10B981 100%)', color: 'white', boxShadow: '0 2px 6px rgba(2, 144, 72, 0.3)' }}
+                        style={{ background: 'linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%)', color: 'white', boxShadow: '0 2px 6px rgba(6, 182, 212, 0.3)' }}
                       >
                         {s.n.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}
                       </span>
@@ -6962,7 +6990,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
 
               {/* Sample program card preview */}
               <div className="p-4" style={{ background: '#1E2228', borderTop: '1px solid #e0e8e4' }}>
-                <div className="text-xs font-bold mb-2" style={{ color: '#016035' }}>{t('sample_program_card')}</div>
+                <div className="text-xs font-bold mb-2" style={{ color: '#0891b2' }}>{t('sample_program_card')}</div>
                 <div
                   className="rounded-lg overflow-hidden"
                   style={{ border: '1px solid #e0e8e4', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}
@@ -6973,7 +7001,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
                   >
                     <span
                       className="w-5 h-5 rounded flex items-center justify-center text-xs font-bold flex-shrink-0"
-                      style={{ background: '#029048', color: 'white' }}
+                      style={{ background: '#06b6d4', color: 'white' }}
                     >{lang === 'en' ? '1' : '۱'}</span>
                     <span className="text-xs font-bold flex-1" style={{ color: '#FFFFFF', direction: 'ltr', textAlign: 'right' }}>
                       {shows[0]?.name || t('sample_program')}
@@ -6983,14 +7011,14 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
                   <div className="p-2 flex gap-2">
                     <div
                       className="w-12 h-9 rounded flex-shrink-0"
-                      style={{ background: 'linear-gradient(135deg, #22C55E 0%, #10B981 100%)' }}
+                      style={{ background: 'linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%)' }}
                     ></div>
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap gap-1 mb-1">
-                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(2,144,72,0.08)', color: '#016035', fontSize: '9px' }}>
+                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(6,182,212,0.08)', color: '#0891b2', fontSize: '9px' }}>
                           {shows[0]?.style || t('modern')}
                         </span>
-                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(2,144,72,0.08)', color: '#016035', fontSize: '9px' }}>
+                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(6,182,212,0.08)', color: '#0891b2', fontSize: '9px' }}>
                           {shows[0]?.size || t('medium_std')}
                         </span>
                       </div>
@@ -7013,7 +7041,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
           {/* Excel preview */}
           {format === 'excel' && (
             <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(0,0,0,0.1)' }}>
-              <div className="p-3 text-center" style={{ background: 'linear-gradient(135deg, #22C55E 0%, #10B981 100%)', color: 'white' }}>
+              <div className="p-3 text-center" style={{ background: 'linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%)', color: 'white' }}>
                 <div className="text-lg font-bold">{t('excel_banke_rasane')}</div>
                 <div className="text-xs opacity-80">{shows.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')} {t('programs_unit')}</div>
               </div>
@@ -7103,7 +7131,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 animate-view-enter">
         <div className="premium-glass p-5">
-          <div className="text-3xl font-black mb-1" style={{ color: '#029048' }}>{stats.total.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
+          <div className="text-3xl font-black mb-1" style={{ color: '#06b6d4' }}>{stats.total.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
           <div className="text-sm text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('total_programs')}</div>
         </div>
         <div className="premium-glass p-5">
@@ -7111,7 +7139,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
           <div className="text-sm text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('uploaded')}</div>
         </div>
         <div className="premium-glass p-5">
-          <div className="text-3xl font-black mb-1" style={{ color: '#016035' }}>{GENRES.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
+          <div className="text-3xl font-black mb-1" style={{ color: '#0891b2' }}>{GENRES.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
           <div className="text-sm text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('genre')}</div>
         </div>
         <div className="premium-glass p-5">
@@ -7151,7 +7179,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                     className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium"
                     style={r.type === 'pdf'
                       ? { background: 'rgba(220, 38, 38, 0.15)', color: '#dc2626' }
-                      : { background: 'rgba(2, 144, 72, 0.15)', color: '#016035' }
+                      : { background: 'rgba(6, 182, 212, 0.15)', color: '#0891b2' }
                     }
                   >
                     {r.type === 'pdf' ? t('pdf') : t('excel')}
@@ -7223,7 +7251,7 @@ function SettingsModal({
           maxHeight: '90vh',
           background: 'linear-gradient(180deg, #f8fbf8 0%, #eef5ef 100%)',
           borderRadius: '20px',
-          border: '1px solid rgba(2, 144, 72, 0.25)',
+          border: '1px solid rgba(6, 182, 212, 0.25)',
           boxShadow: '0 30px 80px rgba(0, 0, 0, 0.35)',
           overflow: 'hidden',
         }}
@@ -7234,7 +7262,7 @@ function SettingsModal({
           className="flex items-center justify-between p-4 flex-shrink-0"
           style={{
             background: 'linear-gradient(180deg, rgba(4, 40, 23, 0.98) 0%, rgba(2, 80, 45, 0.96) 100%)',
-            borderBottom: '1px solid rgba(74, 222, 128, 0.4)',
+            borderBottom: '1px solid rgba(34, 211, 238, 0.4)',
           }}
         >
           <h2 className="text-lg font-bold" style={{ color: 'white' }}>{t('system_settings_title')}</h2>
@@ -7255,7 +7283,7 @@ function SettingsModal({
         {/* Tabs */}
         <div
           className="flex items-center gap-1 p-2 flex-shrink-0"
-          style={{ background: 'rgba(2, 144, 72, 0.05)', borderBottom: '1px solid rgba(2, 144, 72, 0.12)' }}
+          style={{ background: 'rgba(6, 182, 212, 0.05)', borderBottom: '1px solid rgba(6, 182, 212, 0.12)' }}
         >
           {tabs.map((tabItem) => {
             const active = tab === tabItem.key;
@@ -7265,9 +7293,9 @@ function SettingsModal({
                 onClick={() => setTab(tabItem.key)}
                 className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition-all"
                 style={active ? {
-                  background: 'linear-gradient(135deg, #22C55E 0%, #10B981 100%)',
+                  background: 'linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%)',
                   color: 'white',
-                  boxShadow: '0 4px 12px rgba(2, 144, 72, 0.3), inset 0 1px 0 rgba(74, 222, 128, 0.4)',
+                  boxShadow: '0 4px 12px rgba(6, 182, 212, 0.3), inset 0 1px 0 rgba(34, 211, 238, 0.4)',
                 } : {
                   color: '#9CA3AF',
                   border: '1px solid transparent',
@@ -7332,7 +7360,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
       <div>
         <h3 className="text-base font-bold mb-1" style={{ color: '#FFFFFF' }}>{t('api_server_url')}</h3>
         <p className="text-sm mb-3" style={{ color: '#6B7280' }}>
-          {t('api_server_desc')} <code dir="ltr" style={{ background: 'rgba(2,144,72,0.1)', padding: '2px 6px', borderRadius: '6px', color: '#016035' }}>http://localhost:3002</code>
+          {t('api_server_desc')} <code dir="ltr" style={{ background: 'rgba(6,182,212,0.1)', padding: '2px 6px', borderRadius: '6px', color: '#0891b2' }}>http://localhost:3002</code>
         </p>
         <input
           type="text"
@@ -7343,7 +7371,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
           style={{
             width: '100%',
             background: 'rgba(30, 34, 40, 0.9)',
-            border: '1px solid rgba(2, 144, 72, 0.25)',
+            border: '1px solid rgba(6, 182, 212, 0.25)',
             borderRadius: '12px',
             padding: '12px 16px',
             color: '#FFFFFF',
@@ -7361,7 +7389,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
           className="p-3 rounded-xl text-sm font-medium"
           style={
             testResult.ok
-              ? { background: 'rgba(2, 144, 72, 0.12)', color: '#016035', border: '1px solid rgba(2, 144, 72, 0.3)' }
+              ? { background: 'rgba(6, 182, 212, 0.12)', color: '#0891b2', border: '1px solid rgba(6, 182, 212, 0.3)' }
               : { background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }
           }
         >
@@ -7375,9 +7403,9 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
           disabled={testing || !url}
           className="px-4 py-2 rounded-xl text-sm font-bold transition-all"
           style={{
-            background: testing ? 'rgba(122, 138, 128, 0.5)' : 'rgba(2, 144, 72, 0.15)',
-            color: testing ? '#7a8a80' : '#016035',
-            border: '1px solid rgba(2, 144, 72, 0.3)',
+            background: testing ? 'rgba(122, 138, 128, 0.5)' : 'rgba(6, 182, 212, 0.15)',
+            color: testing ? '#64748b' : '#0891b2',
+            border: '1px solid rgba(6, 182, 212, 0.3)',
             opacity: testing || !url ? 0.6 : 1,
             cursor: testing || !url ? 'not-allowed' : 'pointer',
           }}
@@ -7388,9 +7416,9 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
           onClick={handleSave}
           className="px-4 py-2 rounded-xl text-sm font-bold transition-all flex-1"
           style={{
-            background: 'linear-gradient(135deg, #22C55E 0%, #10B981 100%)',
+            background: 'linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%)',
             color: 'white',
-            boxShadow: '0 4px 12px rgba(2, 144, 72, 0.3)',
+            boxShadow: '0 4px 12px rgba(6, 182, 212, 0.3)',
           }}
         >
           {t('save_address')}
@@ -7399,7 +7427,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
 
       <div
         className="p-3 rounded-xl text-xs"
-        style={{ background: 'rgba(2, 144, 72, 0.05)', border: '1px solid rgba(2, 144, 72, 0.15)', color: '#9CA3AF', lineHeight: 1.7 }}
+        style={{ background: 'rgba(6, 182, 212, 0.05)', border: '1px solid rgba(6, 182, 212, 0.15)', color: '#9CA3AF', lineHeight: 1.7 }}
       >
         {t('server_help')}
       </div>
@@ -7502,7 +7530,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
       {/* Add new user form */}
       <div
         className="p-4 rounded-xl"
-        style={{ background: 'rgba(2, 144, 72, 0.05)', border: '1px solid rgba(2, 144, 72, 0.15)' }}
+        style={{ background: 'rgba(6, 182, 212, 0.05)', border: '1px solid rgba(6, 182, 212, 0.15)' }}
       >
         <h4 className="font-bold text-sm mb-3" style={{ color: '#FFFFFF' }}>{t('add_new_user')}</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
@@ -7514,7 +7542,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
             onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
             style={{
               background: '#1E2228',
-              border: '1px solid rgba(2, 144, 72, 0.2)',
+              border: '1px solid rgba(6, 182, 212, 0.2)',
               borderRadius: '10px',
               padding: '10px 14px',
               fontSize: '14px',
@@ -7531,7 +7559,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
             onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
             style={{
               background: '#1E2228',
-              border: '1px solid rgba(2, 144, 72, 0.2)',
+              border: '1px solid rgba(6, 182, 212, 0.2)',
               borderRadius: '10px',
               padding: '10px 14px',
               fontSize: '14px',
@@ -7547,7 +7575,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
             onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
             style={{
               background: '#1E2228',
-              border: '1px solid rgba(2, 144, 72, 0.2)',
+              border: '1px solid rgba(6, 182, 212, 0.2)',
               borderRadius: '10px',
               padding: '10px 14px',
               fontSize: '14px',
@@ -7562,7 +7590,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
             onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
             style={{
               background: '#1E2228',
-              border: '1px solid rgba(2, 144, 72, 0.2)',
+              border: '1px solid rgba(6, 182, 212, 0.2)',
               borderRadius: '10px',
               padding: '10px 14px',
               fontSize: '14px',
@@ -7581,9 +7609,9 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
           disabled={creating}
           className="px-4 py-2 rounded-xl text-sm font-bold transition-all"
           style={{
-            background: creating ? 'rgba(122, 138, 128, 0.5)' : 'linear-gradient(135deg, #22C55E 0%, #10B981 100%)',
+            background: creating ? 'rgba(122, 138, 128, 0.5)' : 'linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%)',
             color: 'white',
-            boxShadow: '0 4px 12px rgba(2, 144, 72, 0.3)',
+            boxShadow: '0 4px 12px rgba(6, 182, 212, 0.3)',
             opacity: creating ? 0.6 : 1,
             cursor: creating ? 'not-allowed' : 'pointer',
           }}
@@ -7611,14 +7639,14 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
               <div
                 key={u.id}
                 className="p-3 rounded-xl flex items-center gap-3"
-                style={{ background: '#1E2228', border: '1px solid rgba(2, 144, 72, 0.15)' }}
+                style={{ background: '#1E2228', border: '1px solid rgba(6, 182, 212, 0.15)' }}
               >
                 <div
                   className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm"
                   style={{
-                    background: u.role === 'admin' ? 'rgba(220, 38, 38, 0.15)' : u.role === 'editor' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(2, 144, 72, 0.15)',
-                    color: u.role === 'admin' ? '#dc2626' : u.role === 'editor' ? '#d97706' : '#016035',
-                    border: `1px solid ${u.role === 'admin' ? 'rgba(220, 38, 38, 0.35)' : u.role === 'editor' ? 'rgba(245, 158, 11, 0.35)' : 'rgba(2, 144, 72, 0.35)'}`,
+                    background: u.role === 'admin' ? 'rgba(220, 38, 38, 0.15)' : u.role === 'editor' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(6, 182, 212, 0.15)',
+                    color: u.role === 'admin' ? '#dc2626' : u.role === 'editor' ? '#d97706' : '#0891b2',
+                    border: `1px solid ${u.role === 'admin' ? 'rgba(220, 38, 38, 0.35)' : u.role === 'editor' ? 'rgba(245, 158, 11, 0.35)' : 'rgba(6, 182, 212, 0.35)'}`,
                   }}
                 >
                   {(u.name || u.username).charAt(0).toUpperCase()}
@@ -7637,8 +7665,8 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
                   onChange={(e) => handleChangeRole(u, e.target.value)}
                   disabled={u.id === currentUser.id}
                   style={{
-                    background: 'rgba(2, 144, 72, 0.05)',
-                    border: '1px solid rgba(2, 144, 72, 0.2)',
+                    background: 'rgba(6, 182, 212, 0.05)',
+                    border: '1px solid rgba(6, 182, 212, 0.2)',
                     borderRadius: '8px',
                     padding: '6px 10px',
                     fontSize: '13px',
@@ -7731,7 +7759,7 @@ function SettingsPasswordTab({
   const inputStyle: React.CSSProperties = {
     width: '100%',
     background: 'rgba(30, 34, 40, 0.9)',
-    border: '1px solid rgba(2, 144, 72, 0.25)',
+    border: '1px solid rgba(6, 182, 212, 0.25)',
     borderRadius: '12px',
     padding: '12px 48px 12px 16px',
     color: '#FFFFFF',
@@ -7753,7 +7781,7 @@ function SettingsPasswordTab({
 
       <div
         className="p-3 rounded-xl text-sm flex items-center gap-2"
-        style={{ background: 'rgba(2, 144, 72, 0.08)', border: '1px solid rgba(2, 144, 72, 0.2)', color: '#016035' }}
+        style={{ background: 'rgba(6, 182, 212, 0.08)', border: '1px solid rgba(6, 182, 212, 0.2)', color: '#0891b2' }}
       >
         <span>{t('current_account')}</span>
         <strong>{currentUser.name || currentUser.username}</strong>
@@ -7812,9 +7840,9 @@ function SettingsPasswordTab({
         disabled={saving}
         className="px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
         style={{
-          background: saving ? 'rgba(122, 138, 128, 0.5)' : 'linear-gradient(135deg, #22C55E 0%, #10B981 100%)',
+          background: saving ? 'rgba(122, 138, 128, 0.5)' : 'linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%)',
           color: 'white',
-          boxShadow: '0 4px 12px rgba(2, 144, 72, 0.3)',
+          boxShadow: '0 4px 12px rgba(6, 182, 212, 0.3)',
           opacity: saving ? 0.6 : 1,
           cursor: saving ? 'not-allowed' : 'pointer',
         }}
@@ -8056,7 +8084,7 @@ function SettingsAuditTab() {
   };
 
   const actionColor: Record<string, string> = {
-    create: '#016035',
+    create: '#0891b2',
     update: '#b45309',
     delete: '#dc2626',
   };
@@ -8076,9 +8104,9 @@ function SettingsAuditTab() {
           onClick={load}
           className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
           style={{
-            background: 'rgba(2, 144, 72, 0.12)',
-            color: '#016035',
-            border: '1px solid rgba(2, 144, 72, 0.3)',
+            background: 'rgba(6, 182, 212, 0.12)',
+            color: '#0891b2',
+            border: '1px solid rgba(6, 182, 212, 0.3)',
             cursor: 'pointer',
           }}
         >
@@ -8094,13 +8122,13 @@ function SettingsAuditTab() {
             onClick={() => setFilter(k)}
             className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
             style={filter === k ? {
-              background: 'linear-gradient(135deg, #22C55E 0%, #10B981 100%)',
+              background: 'linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%)',
               color: 'white',
-              border: '1px solid #029048',
+              border: '1px solid #06b6d4',
             } : {
               background: '#1E2228',
               color: '#9CA3AF',
-              border: '1px solid rgba(2, 144, 72, 0.15)',
+              border: '1px solid rgba(6, 182, 212, 0.15)',
             }}
           >
             {k === 'all' ? t('all') : actionLabel[k]}
@@ -8129,7 +8157,7 @@ function SettingsAuditTab() {
               <div
                 key={c.id}
                 className="p-3 rounded-xl flex items-start gap-3"
-                style={{ background: '#1E2228', border: '1px solid rgba(2, 144, 72, 0.15)' }}
+                style={{ background: '#1E2228', border: '1px solid rgba(6, 182, 212, 0.15)' }}
               >
                 <span
                   className="text-xs px-2 py-0.5 rounded-md font-bold flex-shrink-0"
@@ -8158,7 +8186,7 @@ function SettingsAuditTab() {
                           «{c.old_value.length > 60 ? c.old_value.substring(0, 60) + '…' : c.old_value}»
                         </span>
                       )}
-                      <span style={{ color: '#016035', marginRight: '6px' }}>
+                      <span style={{ color: '#0891b2', marginRight: '6px' }}>
                         ← «{c.new_value.length > 60 ? c.new_value.substring(0, 60) + '…' : c.new_value}»
                       </span>
                     </div>
