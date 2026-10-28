@@ -529,3 +529,27 @@ html, body {
   overflow-y: auto;
   animation: slide-up 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* ============================================
+   LIGHT THEME — overrides .app-content + text colors when <html> has .light-theme.
+   The "dark" theme is the default green cinematic look. Light theme switches the
+   app background to white while keeping green accents for brand identity.
+   ============================================ */
+html.light-theme .app-content {
+  background: linear-gradient(180deg, #ffffff 0%, #f5f8f6 100%);
+}
+html.light-theme body {
+  background: #ffffff;
+}
+/* Make premium-glass look brighter in light mode */
+html.light-theme .premium-glass {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(2, 144, 72, 0.12);
+  box-shadow:
+    0 8px 32px rgba(2, 144, 72, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+html.light-theme .premium-glass::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, transparent 100%);
+}

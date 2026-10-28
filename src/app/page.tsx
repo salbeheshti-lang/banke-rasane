@@ -583,7 +583,7 @@ function applyOverrides(base: TalkShow[], o: Overrides): TalkShow[] {
 }
 
 export default function Home() {
-  const [currentView, setCurrentView] = useState<'dashboard' | 'programs' | 'genre' | 'reports' | 'add'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'programs' | 'genre' | 'reports' | 'add' | 'bookmarks'>('dashboard');
   const [selectedGenre, setSelectedGenre] = useState<Genre | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
@@ -614,6 +614,22 @@ export default function Home() {
   // When AddEditView opens with a preset genre, its preset tags are offered as quick-adds.
   const [presetGenre, setPresetGenre] = useState<Genre | null>(null);
 
+  // ★ Bookmarks — stored in localStorage as an array of show nums.
+  const [bookmarks, setBookmarks] = useState<number[]>([]);
+  const BOOKMARKS_KEY = 'bankresaneh_bookmarks_v1';
+
+  // ⚖ Compare — list of show nums queued for side-by-side comparison (max 2).
+  const [compareList, setCompareList] = useState<number[]>([]);
+  const [showCompareModal, setShowCompareModal] = useState(false);
+
+  // 🌗 Theme — 'dark' (current green theme) or 'light' (white bg, green accents).
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const THEME_KEY = 'bankresaneh_theme_v1';
+
+  // 🌐 Language — 'fa' (Persian, default) or 'en' (English UI strings).
+  const [lang, setLang] = useState<'fa' | 'en'>('fa');
+  const LANG_KEY = 'bankresaneh_lang_v1';
+
   // The full list of genres = default GENRES + user customGenres.
   const genres: Genre[] = useMemo(() => [...GENRES, ...customGenres], [customGenres]);
 
@@ -635,6 +651,17 @@ export default function Home() {
     setOverrides(saved);
     // Restore custom genres saved in a previous session.
     setCustomGenres(loadCustomGenres());
+    // Restore bookmarks saved in a previous session.
+    try {
+      const savedBookmarks = JSON.parse(window.localStorage.getItem(BOOKMARKS_KEY) || '[]');
+      if (Array.isArray(savedBookmarks)) setBookmarks(savedBookmarks);
+    } catch {}
+    // Restore theme.
+    const savedTheme = window.localStorage.getItem(THEME_KEY);
+    if (savedTheme === 'light' || savedTheme === 'dark') setTheme(savedTheme);
+    // Restore language.
+    const savedLang = window.localStorage.getItem(LANG_KEY);
+    if (savedLang === 'fa' || savedLang === 'en') setLang(savedLang);
     fetch('/talk-shows-data.json')
       .then(r => r.json())
       .then((data: TalkShow[]) => {
@@ -643,6 +670,26 @@ export default function Home() {
       })
       .catch(e => console.error('Failed to load data:', e));
   }, []);
+
+  // Apply theme + language to the root element.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const root = document.documentElement;
+    if (theme === 'light') {
+      root.classList.add('light-theme');
+      root.classList.remove('dark-theme');
+    } else {
+      root.classList.add('dark-theme');
+      root.classList.remove('light-theme');
+    }
+  }, [theme]);
+
+  // Apply document direction based on language.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === 'en' ? 'ltr' : 'rtl';
+  }, [lang]);
 
   // On mount: check if a token exists in localStorage, validate via /api/auth/me.
   // If valid → set currentUser (skip login). If invalid → clear token, show login.
@@ -704,7 +751,7 @@ export default function Home() {
   };
 
   // Push the current view onto the history stack, then go to `to`.
-  const navigate = (to: typeof currentView, genre: Genre | null = null) => {
+  const navigate = (to: 'dashboard' | 'programs' | 'genre' | 'reports' | 'add' | 'bookmarks', genre: Genre | null = null) => {
     setViewStack(prev => [...prev, { view: currentView, genre: selectedGenre }]);
     setCurrentView(to);
     setSelectedGenre(genre);
@@ -727,7 +774,7 @@ export default function Home() {
 
   const canGoBack = viewStack.length > 0;
 
-  const handleNavigate = (v: 'dashboard' | 'programs' | 'reports' | 'add') => {
+  const handleNavigate = (v: 'dashboard' | 'programs' | 'reports' | 'add' | 'bookmarks') => {
     navigate(v, null);
   };
 
@@ -754,6 +801,54 @@ export default function Home() {
     setCustomGenres(next);
     saveCustomGenres(next);
     showToast(`ژانر «${g.nameFa}» اضافه شد`);
+  };
+
+  // ★ Toggle a show's bookmark status (added to / removed from bookmarks list).
+  const handleToggleBookmark = (num: number) => {
+    setBookmarks(prev => {
+      const next = prev.includes(num) ? prev.filter(n => n !== num) : [...prev, num];
+      try { window.localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
+  // ⚖ Toggle a show in the compare queue (max 2 items).
+  const handleToggleCompare = (num: number) => {
+    setCompareList(prev => {
+      if (prev.includes(num)) return prev.filter(n => n !== num);
+      if (prev.length >= 2) {
+        // Replace oldest entry to keep only the latest two.
+        return [prev[1], num];
+      }
+      return [...prev, num];
+    });
+  };
+
+  // ⚖ Open the compare modal (only meaningful when 2 shows are queued).
+  const handleCompare = () => {
+    if (compareList.length !== 2) {
+      showToast('برای مقایسه، دو برنامه را انتخاب کنید');
+      return;
+    }
+    setShowCompareModal(true);
+  };
+
+  // 🌗 Toggle theme (dark ↔ light), persist to localStorage.
+  const handleToggleTheme = () => {
+    setTheme(prev => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      try { window.localStorage.setItem(THEME_KEY, next); } catch {}
+      return next;
+    });
+  };
+
+  // 🌐 Toggle language (fa ↔ en), persist to localStorage.
+  const handleToggleLang = () => {
+    setLang(prev => {
+      const next = prev === 'fa' ? 'en' : 'fa';
+      try { window.localStorage.setItem(LANG_KEY, next); } catch {}
+      return next;
+    });
   };
 
   const handleLogout = async () => {
@@ -808,6 +903,10 @@ export default function Home() {
         currentView={currentView}
         onBack={goBack}
         canGoBack={canGoBack}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+        lang={lang}
+        onToggleLang={handleToggleLang}
       />
 
       <DrawerMenu
@@ -822,12 +921,33 @@ export default function Home() {
         isAdmin={isAdmin}
         talkShows={talkShows}
         genres={genres}
+        bookmarks={bookmarks}
+        onOpenBookmarks={() => navigate('bookmarks', null)}
       />
 
       <main className={isMobile ? 'p-4 pt-20 pb-28' : 'p-8 pt-24'}>
         {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} />}
-        {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} />}
-        {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} />}
+        {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} bookmarks={bookmarks} onToggleBookmark={handleToggleBookmark} compareList={compareList} onToggleCompare={handleToggleCompare} onCompare={handleCompare} />}
+        {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} bookmarks={bookmarks} onToggleBookmark={handleToggleBookmark} compareList={compareList} onToggleCompare={handleToggleCompare} onCompare={handleCompare} />}
+        {currentView === 'bookmarks' && (
+          <ProgramsView
+            talkShows={talkShows.filter(s => bookmarks.includes(s.num))}
+            uploadedShows={uploadedShows}
+            setUploadedShows={setUploadedShows}
+            onShowClick={setSelectedShow}
+            onEdit={setEditingShow}
+            showToast={showToast}
+            onPublish={setPublishShows}
+            onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })}
+            canEdit={canEdit}
+            bookmarks={bookmarks}
+            onToggleBookmark={handleToggleBookmark}
+            compareList={compareList}
+            onToggleCompare={handleToggleCompare}
+            onCompare={handleCompare}
+            overrideTitle="برنامه‌های نشان‌شده"
+          />
+        )}
         {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} onExport={(shows, format) => setExportPreview({ shows, format })} />}
         {currentView === 'add' && canEdit && <AddEditView talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setPresetCategory(undefined); setPresetGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} presetCategory={presetCategory} presetGenre={presetGenre} genres={genres} />}
         {currentView === 'add' && !canEdit && (
@@ -863,6 +983,21 @@ export default function Home() {
           isUploaded={uploadedShows.includes(selectedShow.num)}
           canEdit={canEdit}
           onSwapShow={(s) => setSelectedShow(s)}
+          isBookmarked={bookmarks.includes(selectedShow.num)}
+          onToggleBookmark={() => handleToggleBookmark(selectedShow.num)}
+          onAddToCompare={() => {
+            handleToggleCompare(selectedShow.num);
+            showToast(`برنامه به فهرست مقایسه اضافه شد (${Math.min(compareList.length + 1, 2)} از ۲)`);
+          }}
+        />
+      )}
+
+      {/* Compare two programs modal */}
+      {showCompareModal && compareList.length === 2 && (
+        <CompareModal
+          shows={compareList.map(n => talkShows.find(s => s.num === n)).filter(Boolean) as TalkShow[]}
+          onClose={() => setShowCompareModal(false)}
+          onClear={() => { setCompareList([]); setShowCompareModal(false); showToast('فهرست مقایسه پاک شد'); }}
         />
       )}
 
@@ -1143,12 +1278,16 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
 // TOP APP BAR — fixed at top, hamburger (3-line) on the right,
 // logo + title in the center, visible on BOTH desktop and mobile
 // ============================================
-function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack }: {
+function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, theme, onToggleTheme, lang, onToggleLang }: {
   onMenuClick: () => void;
   isMobile: boolean;
   currentView: string;
   onBack: () => void;
   canGoBack: boolean;
+  theme?: 'dark' | 'light';
+  onToggleTheme?: () => void;
+  lang?: 'fa' | 'en';
+  onToggleLang?: () => void;
 }) {
   const viewTitles: Record<string, string> = {
     dashboard: 'آرشیو تخصصی برنامه‌های تلویزیونی',
@@ -1156,6 +1295,7 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack }: {
     genre: 'برنامه‌های ژانر',
     reports: 'گزارش‌ها',
     add: 'افزودن / ویرایش برنامه',
+    bookmarks: 'برنامه‌های نشان‌شده',
   };
 
   return (
@@ -1235,8 +1375,53 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack }: {
           )}
         </div>
 
-        {/* Left placeholder: back button (when there is history), else status badge */}
-        <div style={{ minWidth: '44px', display: 'flex', justifyContent: 'flex-end' }}>
+        {/* Left cluster: theme + language toggles + back button (when there is history) */}
+        <div className="flex items-center gap-2" style={{ minWidth: '44px', justifyContent: 'flex-end' }}>
+          {/* 🌗 Theme toggle (dark ↔ light) */}
+          {onToggleTheme && (
+            <button
+              onClick={onToggleTheme}
+              aria-label={theme === 'dark' ? 'تغییر به حالت روشن' : 'تغییر به حالت تیره'}
+              title={theme === 'dark' ? 'تغییر به حالت روشن' : 'تغییر به حالت تیره'}
+              className="flex items-center justify-center rounded-xl transition-all"
+              style={{
+                background: theme === 'dark'
+                  ? 'rgba(255, 255, 255, 0.15)'
+                  : 'rgba(2, 144, 72, 0.18)',
+                border: '1px solid rgba(74, 222, 128, 0.45)',
+                color: theme === 'dark' ? '#fde68a' : '#016035',
+                width: '44px',
+                height: '44px',
+                fontSize: '18px',
+                cursor: 'pointer',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15)',
+              }}
+            >
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
+          )}
+          {/* 🌐 Language toggle (fa ↔ en) */}
+          {onToggleLang && (
+            <button
+              onClick={onToggleLang}
+              aria-label={lang === 'fa' ? 'Switch to English' : 'تغییر به فارسی'}
+              title={lang === 'fa' ? 'Switch to English' : 'تغییر به فارسی'}
+              className="flex items-center justify-center rounded-xl transition-all font-bold"
+              style={{
+                background: 'rgba(255, 255, 255, 0.15)',
+                border: '1px solid rgba(74, 222, 128, 0.45)',
+                color: 'white',
+                width: '44px',
+                height: '44px',
+                fontSize: '13px',
+                cursor: 'pointer',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15)',
+                direction: 'ltr',
+              }}
+            >
+              {lang === 'fa' ? 'EN' : 'فا'}
+            </button>
+          )}
           {canGoBack ? (
             <button
               onClick={onBack}
@@ -1317,11 +1502,13 @@ function DrawerMenu({
   isAdmin,
   talkShows,
   genres = GENRES,
+  bookmarks = [],
+  onOpenBookmarks,
 }: {
   open: boolean;
   onClose: () => void;
   currentView: string;
-  onNavigate: (v: 'dashboard' | 'programs' | 'reports' | 'add') => void;
+  onNavigate: (v: 'dashboard' | 'programs' | 'reports' | 'add' | 'bookmarks') => void;
   onGenreSelect: (g: Genre) => void;
   onLogout: () => void;
   onOpenSettings: () => void;
@@ -1329,12 +1516,15 @@ function DrawerMenu({
   isAdmin: boolean;
   talkShows: TalkShow[];
   genres?: Genre[];
+  bookmarks?: number[];
+  onOpenBookmarks?: () => void;
 }) {
   const [genresExpanded, setGenresExpanded] = useState(true);
 
   const navItems = [
     { key: 'dashboard', label: 'آرشیو', icon: 'home', desc: 'صفحهٔ اصلی و ژانرها' },
     { key: 'programs', label: 'همهٔ برنامه‌ها', icon: 'grid', desc: 'لیست کامل ۵۶۰ برنامه' },
+    { key: 'bookmarks', label: 'برنامه‌های نشان‌شده', icon: 'bookmark', desc: 'برنامه‌هایی که نشان کرده‌اید' },
     { key: 'add', label: 'افزودن برنامه', icon: 'plus', desc: 'افزودن یا ویرایش برنامه' },
     { key: 'reports', label: 'گزارش‌ها', icon: 'reports', desc: 'آمار و خروجی' },
   ] as const;
@@ -1596,6 +1786,7 @@ function NavIcon({ name }: { name: string }) {
     plus: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />,
     reports: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />,
     exit: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />,
+    bookmark: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />,
   };
   return (
     <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1971,6 +2162,12 @@ function ProgramsView({
   onExport,
   canEdit,
   onAdd,
+  bookmarks,
+  onToggleBookmark,
+  compareList,
+  onToggleCompare,
+  onCompare,
+  overrideTitle,
 }: {
   genre?: Genre;
   talkShows: TalkShow[];
@@ -1983,6 +2180,12 @@ function ProgramsView({
   onExport: (shows: TalkShow[], format: 'pdf' | 'excel') => void;
   canEdit: boolean;
   onAdd?: () => void;
+  bookmarks?: number[];
+  onToggleBookmark?: (num: number) => void;
+  compareList?: number[];
+  onToggleCompare?: (num: number) => void;
+  onCompare?: () => void;
+  overrideTitle?: string;
 }) {
   const [search, setSearch] = useState('');
   const [view, setView] = useState<'grid' | 'list'>('grid');
@@ -1992,14 +2195,29 @@ function ProgramsView({
   const [filterViewers, setFilterViewers] = useState('all');
   const [filterStyle, setFilterStyle] = useState('all');
   const [islamicOnly, setIslamicOnly] = useState(false);
+  const [hasImageOnly, setHasImageOnly] = useState(false);
+  const [hasVideoOnly, setHasVideoOnly] = useState(false);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 24;
+
+  // Decor-specific size & style filters ONLY apply in the "decor" view (no genre) or
+  // when explicitly inside the decor genre. Other genres hide these filter rows so
+  // the toolbar does not display irrelevant decor dimensions.
+  const decorFiltersVisible = !genre || genre.id === 'decor';
 
   const filteredShows = useMemo(() => {
     let shows = [...talkShows];
     if (genre) shows = shows.filter(genre.filterFn);
-    if (filterSize !== 'all') shows = shows.filter(s => s.size === filterSize);
+    // Size & style filters are decor-specific — only apply them when they are visible
+    // so other genre views don't accidentally restrict results.
+    if (decorFiltersVisible) {
+      if (filterSize !== 'all') shows = shows.filter(s => s.size === filterSize);
+      if (filterStyle !== 'all') shows = shows.filter(s => s.style === filterStyle);
+    }
     if (filterViewers !== 'all') shows = shows.filter(s => s.viewers === filterViewers);
-    if (filterStyle !== 'all') shows = shows.filter(s => s.style === filterStyle);
     if (islamicOnly) shows = shows.filter(s => detectCountries(s).length > 0);
+    if (hasImageOnly) shows = shows.filter(s => Array.isArray(s.images) && s.images.length > 0);
+    if (hasVideoOnly) shows = shows.filter(s => Array.isArray(s.videos) && s.videos.length > 0);
     if (search) {
       const q = search.toLowerCase();
       // Section-specific search: use genre.searchFields if defined, else default to name+summary+category.
@@ -2017,7 +2235,15 @@ function ProgramsView({
       });
     }
     return shows;
-  }, [talkShows, genre, search, filterSize, filterViewers, filterStyle, islamicOnly]);
+  }, [talkShows, genre, search, filterSize, filterViewers, filterStyle, islamicOnly, hasImageOnly, hasVideoOnly, decorFiltersVisible]);
+
+  // Reset to first page whenever filters change (so user doesn't see an empty page).
+  useEffect(() => { setPage(1); }, [search, filterSize, filterStyle, filterViewers, islamicOnly, hasImageOnly, hasVideoOnly, genre]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredShows.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * PAGE_SIZE;
+  const pageShows = filteredShows.slice(pageStart, pageStart + PAGE_SIZE);
 
   const handleUploadSelected = () => {
     const selectedShows = filteredShows.filter(s => selectedIds.includes(s.num));
@@ -2046,7 +2272,7 @@ function ProgramsView({
     <>
       <header className="mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold mb-1" style={{ color: '#1a2e22' }}>
-          {genre ? genre.nameFa : 'همهٔ برنامه‌ها'}
+          {overrideTitle || (genre ? genre.nameFa : 'همهٔ برنامه‌ها')}
         </h1>
         <p style={{ color: '#7a8a80' }}>
           {filteredShows.length.toLocaleString('fa-IR')} برنامه
@@ -2175,6 +2401,59 @@ function ProgramsView({
             🌍 اسلامی
           </button>
 
+          {/* 🖼 Has-image filter — only shows with at least one image attached */}
+          <button
+            onClick={() => setHasImageOnly(!hasImageOnly)}
+            className="px-3 py-2 rounded-xl text-sm font-medium transition-all flex-shrink-0"
+            title="فقط برنامه‌های دارای تصویر"
+            style={hasImageOnly ? {
+              background: 'linear-gradient(135deg, #db2777 0%, #9d174d 100%)',
+              color: 'white',
+              border: '1px solid rgba(219, 39, 119, 0.5)',
+            } : {
+              background: 'rgba(255, 255, 255, 0.9)',
+              color: '#4a5d52',
+              border: '1px solid rgba(2, 144, 72, 0.15)',
+            }}
+          >
+            🖼 با تصویر
+          </button>
+
+          {/* 🎬 Has-video filter — only shows with at least one video link */}
+          <button
+            onClick={() => setHasVideoOnly(!hasVideoOnly)}
+            className="px-3 py-2 rounded-xl text-sm font-medium transition-all flex-shrink-0"
+            title="فقط برنامه‌های دارای ویدیو"
+            style={hasVideoOnly ? {
+              background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
+              color: 'white',
+              border: '1px solid rgba(220, 38, 38, 0.5)',
+            } : {
+              background: 'rgba(255, 255, 255, 0.9)',
+              color: '#4a5d52',
+              border: '1px solid rgba(2, 144, 72, 0.15)',
+            }}
+          >
+            🎬 با ویدیو
+          </button>
+
+          {/* ⚖ Compare button — appears when 2 programs are queued for comparison */}
+          {onCompare && Array.isArray(compareList) && compareList.length === 2 && (
+            <button
+              onClick={onCompare}
+              className="px-4 py-2 rounded-xl text-sm font-bold transition-all flex-shrink-0 animate-fade-in"
+              style={{
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                color: 'white',
+                border: '1px solid rgba(245, 158, 11, 0.5)',
+                boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4)',
+              }}
+              title="مقایسهٔ دو برنامهٔ انتخاب‌شده"
+            >
+              ⚖ مقایسه ({compareList.length.toLocaleString('fa-IR')})
+            </button>
+          )}
+
           {canEdit && (
             <button
               onClick={() => setSelectionMode(!selectionMode)}
@@ -2207,58 +2486,61 @@ function ProgramsView({
           )}
         </div>
 
-        {/* Filters — two horizontally scrollable rows (no chaotic wrapping on mobile) */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-            <span className="text-sm flex-shrink-0" style={{ color: '#7a8a80' }}>اندازه:</span>
-            {[
-              { key: 'all', label: 'همه' },
-              { key: 'بزرگ/لوکس', label: 'بزرگ/لوکس' },
-              { key: 'متوسط/استاندارد', label: 'متوسط' },
-              { key: 'کوچک/اقتصادی', label: 'کوچک' },
-            ].map(f => (
-              <button
-                key={f.key}
-                onClick={() => setFilterSize(f.key)}
-                className="px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
-                style={filterSize === f.key ? {
-                  background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
-                  color: 'white',
-                } : {
-                  background: 'rgba(255, 255, 255, 0.9)',
-                  color: '#4a5d52',
-                }}
-              >
-                {f.label}
-              </button>
-            ))}
+        {/* Filters — decor size & style chips ONLY render in the decor (all-programs) view.
+            Other genres hide these because they are decor-specific dimensions. */}
+        {decorFiltersVisible && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+              <span className="text-sm flex-shrink-0" style={{ color: '#7a8a80' }}>اندازه:</span>
+              {[
+                { key: 'all', label: 'همه' },
+                { key: 'بزرگ/لوکس', label: 'بزرگ/لوکس' },
+                { key: 'متوسط/استاندارد', label: 'متوسط' },
+                { key: 'کوچک/اقتصادی', label: 'کوچک' },
+              ].map(f => (
+                <button
+                  key={f.key}
+                  onClick={() => setFilterSize(f.key)}
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
+                  style={filterSize === f.key ? {
+                    background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
+                    color: 'white',
+                  } : {
+                    background: 'rgba(255, 255, 255, 0.9)',
+                    color: '#4a5d52',
+                  }}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+              <span className="text-sm flex-shrink-0" style={{ color: '#7a8a80' }}>سبک:</span>
+              {[
+                { key: 'all', label: 'همه' },
+                { key: 'مدرن', label: 'مدرن' },
+                { key: 'ترکیبی', label: 'ترکیبی' },
+                { key: 'مینیمال', label: 'مینیمال' },
+                { key: 'کلاسیک/سنتی', label: 'کلاسیک' },
+              ].map(f => (
+                <button
+                  key={f.key}
+                  onClick={() => setFilterStyle(f.key)}
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
+                  style={filterStyle === f.key ? {
+                    background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
+                    color: 'white',
+                  } : {
+                    background: 'rgba(255, 255, 255, 0.9)',
+                    color: '#4a5d52',
+                  }}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-            <span className="text-sm flex-shrink-0" style={{ color: '#7a8a80' }}>سبک:</span>
-            {[
-              { key: 'all', label: 'همه' },
-              { key: 'مدرن', label: 'مدرن' },
-              { key: 'ترکیبی', label: 'ترکیبی' },
-              { key: 'مینیمال', label: 'مینیمال' },
-              { key: 'کلاسیک/سنتی', label: 'کلاسیک' },
-            ].map(f => (
-              <button
-                key={f.key}
-                onClick={() => setFilterStyle(f.key)}
-                className="px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
-                style={filterStyle === f.key ? {
-                  background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
-                  color: 'white',
-                } : {
-                  background: 'rgba(255, 255, 255, 0.9)',
-                  color: '#4a5d52',
-                }}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        )}
 
         {selectionMode && selectedIds.length > 0 && (
           <div
@@ -2306,7 +2588,7 @@ function ProgramsView({
         </div>
       ) : view === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredShows.slice(0, 60).map(s => (
+          {pageShows.map(s => (
             <ProgramCard
               key={s.num}
               show={s}
@@ -2314,17 +2596,22 @@ function ProgramsView({
               selectionMode={selectionMode}
               selected={selectedIds.includes(s.num)}
               isUploaded={uploadedShows.includes(s.num)}
+              isBookmarked={bookmarks?.includes(s.num)}
+              compareActive={Array.isArray(compareList)}
+              compareSelected={compareList?.includes(s.num) || false}
               onToggle={() => {
                 if (selectedIds.includes(s.num)) setSelectedIds(selectedIds.filter(x => x !== s.num));
                 else setSelectedIds([...selectedIds, s.num]);
               }}
               onClick={() => !selectionMode && onShowClick(s)}
+              onToggleBookmark={onToggleBookmark ? () => onToggleBookmark(s.num) : undefined}
+              onToggleCompare={onToggleCompare ? () => onToggleCompare(s.num) : undefined}
             />
           ))}
         </div>
       ) : (
         <div className="space-y-2">
-          {filteredShows.slice(0, 60).map(s => (
+          {pageShows.map(s => (
             <ProgramListRow
               key={s.num}
               show={s}
@@ -2332,20 +2619,97 @@ function ProgramsView({
               selectionMode={selectionMode}
               selected={selectedIds.includes(s.num)}
               isUploaded={uploadedShows.includes(s.num)}
+              isBookmarked={bookmarks?.includes(s.num)}
+              compareActive={Array.isArray(compareList)}
+              compareSelected={compareList?.includes(s.num) || false}
               onToggle={() => {
                 if (selectedIds.includes(s.num)) setSelectedIds(selectedIds.filter(x => x !== s.num));
                 else setSelectedIds([...selectedIds, s.num]);
               }}
               onClick={() => !selectionMode && onShowClick(s)}
+              onToggleBookmark={onToggleBookmark ? () => onToggleBookmark(s.num) : undefined}
+              onToggleCompare={onToggleCompare ? () => onToggleCompare(s.num) : undefined}
             />
           ))}
         </div>
       )}
 
-      {filteredShows.length > 60 && (
-        <div className="text-center mt-8" style={{ color: '#7a8a80' }}>
+      {/* Real pagination — 24 programs per page with numbered page buttons */}
+      {totalPages > 1 && (
+        <div
+          className="flex items-center justify-center gap-2 mt-8 flex-wrap"
+          style={{ direction: 'ltr' }}
+        >
+          <button
+            onClick={() => setPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-2 rounded-lg text-sm font-medium transition-all"
+            style={{
+              background: currentPage === 1 ? 'rgba(0,0,0,0.04)' : 'rgba(2, 144, 72, 0.1)',
+              color: currentPage === 1 ? '#bbb' : '#016035',
+              border: '1px solid rgba(2, 144, 72, 0.25)',
+              cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+              opacity: currentPage === 1 ? 0.6 : 1,
+            }}
+            aria-label="صفحهٔ قبل"
+          >
+            › قبلی
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1)
+            .filter(p => {
+              // Show first/last page, current page ±2 window, and pages near current.
+              if (p === 1 || p === totalPages) return true;
+              if (Math.abs(p - currentPage) <= 2) return true;
+              return false;
+            })
+            .map((p, idx, arr) => {
+              const prev = arr[idx - 1];
+              const showEllipsisBefore = prev && p - prev > 1;
+              return (
+                <span key={p} className="flex items-center gap-1">
+                  {showEllipsisBefore && <span style={{ color: '#7a8a80', padding: '0 4px' }}>…</span>}
+                  <button
+                    onClick={() => setPage(p)}
+                    className="min-w-[40px] px-3 py-2 rounded-lg text-sm font-bold transition-all"
+                    style={p === currentPage ? {
+                      background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
+                      color: 'white',
+                      border: '1px solid #029048',
+                      boxShadow: '0 4px 12px rgba(2, 144, 72, 0.3)',
+                    } : {
+                      background: 'white',
+                      color: '#4a5d52',
+                      border: '1px solid rgba(2, 144, 72, 0.15)',
+                    }}
+                  >
+                    {p.toLocaleString('fa-IR')}
+                  </button>
+                </span>
+              );
+            })}
+          <button
+            onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-2 rounded-lg text-sm font-medium transition-all"
+            style={{
+              background: currentPage === totalPages ? 'rgba(0,0,0,0.04)' : 'rgba(2, 144, 72, 0.1)',
+              color: currentPage === totalPages ? '#bbb' : '#016035',
+              border: '1px solid rgba(2, 144, 72, 0.25)',
+              cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+              opacity: currentPage === totalPages ? 0.6 : 1,
+            }}
+            aria-label="صفحهٔ بعد"
+          >
+            بعدی ‹
+          </button>
+        </div>
+      )}
+
+      {filteredShows.length > 0 && (
+        <div className="text-center mt-4" style={{ color: '#7a8a80' }}>
           <p className="text-sm">
-            نمایش ۶۰ برنامه از {filteredShows.length.toLocaleString('fa-IR')} • برای مشاهده همه، جستجو را فیلتر کنید
+            صفحهٔ {currentPage.toLocaleString('fa-IR')} از {totalPages.toLocaleString('fa-IR')} •
+            نمایش {(pageStart + 1).toLocaleString('fa-IR')}–{Math.min(pageStart + PAGE_SIZE, filteredShows.length).toLocaleString('fa-IR')} از {filteredShows.length.toLocaleString('fa-IR')} برنامه
           </p>
         </div>
       )}
@@ -2353,7 +2717,7 @@ function ProgramsView({
   );
 }
 
-function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onClick, genre }: {
+function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onClick, genre, isBookmarked, onToggleBookmark, compareActive, compareSelected, onToggleCompare }: {
   show: TalkShow;
   selectionMode: boolean;
   selected: boolean;
@@ -2361,6 +2725,11 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
   onToggle: () => void;
   onClick: () => void;
   genre?: Genre | null;
+  isBookmarked?: boolean;
+  onToggleBookmark?: () => void;
+  compareActive?: boolean;
+  compareSelected?: boolean;
+  onToggleCompare?: () => void;
 }) {
   const thumb = getShowThumbnail(show);
   const dark = adjustColor(thumb.accent, -40);
@@ -2375,9 +2744,11 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
       className="premium-show-card"
       style={{
         background: `linear-gradient(135deg, ${thumb.accent} 0%, ${dark} 60%, ${darker} 100%)`,
-        border: selected ? `3px solid white` : `1px solid ${adjustColor(thumb.accent, 30)}`,
+        border: selected ? `3px solid white` : compareSelected ? `3px solid #f59e0b` : `1px solid ${adjustColor(thumb.accent, 30)}`,
         boxShadow: selected
           ? `0 0 0 3px ${thumb.accent}, 0 16px 56px ${thumb.accent}60`
+          : compareSelected
+          ? `0 0 0 3px #f59e0b, 0 16px 56px ${thumb.accent}60`
           : `0 12px 40px ${thumb.accent}45, 0 4px 12px ${thumb.accent}30, inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.2)`,
       }}
       onMouseEnter={(e) => {
@@ -2444,11 +2815,76 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
           </>
         )}
 
+        {/* ★ Bookmark button — top-right of thumbnail */}
+        {onToggleBookmark && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleBookmark(); }}
+            aria-label={isBookmarked ? 'حذف از نشان‌شده‌ها' : 'افزودن به نشان‌شده‌ها'}
+            title={isBookmarked ? 'حذف از نشان‌شده‌ها' : 'افزودن به نشان‌شده‌ها'}
+            className="absolute p-1.5 rounded-full"
+            style={{
+              top: '8px',
+              right: '8px',
+              background: isBookmarked ? 'rgba(245, 158, 11, 0.95)' : 'rgba(0, 0, 0, 0.55)',
+              color: isBookmarked ? 'white' : '#fde68a',
+              border: '1px solid rgba(255,255,255,0.3)',
+              backdropFilter: 'blur(6px)',
+              WebkitBackdropFilter: 'blur(6px)',
+              zIndex: 15,
+              cursor: 'pointer',
+              fontSize: '14px',
+              lineHeight: 1,
+              minWidth: '32px',
+              minHeight: '32px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: isBookmarked ? '0 2px 8px rgba(245,158,11,0.6)' : 'none',
+            }}
+          >
+            {isBookmarked ? '★' : '☆'}
+          </button>
+        )}
+
+        {/* ⚖ Compare toggle — bottom-right of thumbnail (only shown when compare is active) */}
+        {onToggleCompare && compareActive && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleCompare(); }}
+            aria-label={compareSelected ? 'حذف از مقایسه' : 'افزودن به مقایسه'}
+            title={compareSelected ? 'حذف از مقایسه' : 'افزودن به مقایسه'}
+            className="absolute p-1.5 rounded-full"
+            style={{
+              bottom: '8px',
+              left: '8px',
+              background: compareSelected ? 'rgba(245, 158, 11, 0.95)' : 'rgba(0, 0, 0, 0.55)',
+              color: compareSelected ? 'white' : '#fde68a',
+              border: '1px solid rgba(255,255,255,0.3)',
+              backdropFilter: 'blur(6px)',
+              WebkitBackdropFilter: 'blur(6px)',
+              zIndex: 15,
+              cursor: 'pointer',
+              fontSize: '13px',
+              lineHeight: 1,
+              minWidth: '32px',
+              minHeight: '32px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            ⚖
+          </button>
+        )}
+
         {/* Multi-image badge — shows count when more than 1 image */}
         {show.images && show.images.length > 1 && (
           <span
-            className="absolute top-2 right-2 text-xs px-2 py-0.5 rounded-md backdrop-blur font-bold flex items-center gap-1"
-            style={{ background: 'rgba(0, 0, 0, 0.75)', color: 'white' }}
+            className="absolute text-xs px-2 py-0.5 rounded-md backdrop-blur font-bold flex items-center gap-1"
+            style={{
+              background: 'rgba(0, 0, 0, 0.75)', color: 'white',
+              top: onToggleBookmark ? '44px' : '8px',
+              right: '8px',
+            }}
           >
             🖼 {show.images.length.toLocaleString('fa-IR')}
           </span>
@@ -2461,7 +2897,7 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
             style={{
               background: 'rgba(220, 38, 38, 0.85)',
               color: 'white',
-              top: show.images && show.images.length > 1 ? '36px' : '8px',
+              top: show.images && show.images.length > 1 ? (onToggleBookmark ? '80px' : '44px') : (onToggleBookmark ? '44px' : '8px'),
               right: '8px',
             }}
           >
@@ -2570,7 +3006,7 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
   );
 }
 
-function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, onClick, genre }: {
+function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, onClick, genre, isBookmarked, onToggleBookmark, compareActive, compareSelected, onToggleCompare }: {
   show: TalkShow;
   selectionMode: boolean;
   selected: boolean;
@@ -2578,6 +3014,11 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
   onToggle: () => void;
   onClick: () => void;
   genre?: Genre | null;
+  isBookmarked?: boolean;
+  onToggleBookmark?: () => void;
+  compareActive?: boolean;
+  compareSelected?: boolean;
+  onToggleCompare?: () => void;
 }) {
   const thumb = getShowThumbnail(show);
   const dark = adjustColor(thumb.accent, -40);
@@ -2590,9 +3031,11 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
       className="premium-show-card"
       style={{
         background: `linear-gradient(135deg, ${thumb.accent} 0%, ${dark} 60%, ${darker} 100%)`,
-        border: selected ? `3px solid white` : `1px solid ${adjustColor(thumb.accent, 30)}`,
+        border: selected ? `3px solid white` : compareSelected ? `3px solid #f59e0b` : `1px solid ${adjustColor(thumb.accent, 30)}`,
         boxShadow: selected
           ? `0 0 0 3px ${thumb.accent}, 0 12px 40px ${thumb.accent}50`
+          : compareSelected
+          ? `0 0 0 3px #f59e0b, 0 12px 40px ${thumb.accent}50`
           : `0 10px 32px ${thumb.accent}40, 0 3px 10px ${thumb.accent}25, inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.2)`,
         padding: '16px',
         display: 'flex',
@@ -2692,6 +3135,56 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
       </div>
 
       <div className="text-center flex-shrink-0">
+        {/* ★ Bookmark button — top-right of row */}
+        {onToggleBookmark && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleBookmark(); }}
+            aria-label={isBookmarked ? 'حذف از نشان‌شده‌ها' : 'افزودن به نشان‌شده‌ها'}
+            title={isBookmarked ? 'حذف از نشان‌شده‌ها' : 'افزودن به نشان‌شده‌ها'}
+            className="block mb-2 mx-auto"
+            style={{
+              background: isBookmarked ? 'rgba(245, 158, 11, 0.95)' : 'rgba(255,255,255,0.2)',
+              color: isBookmarked ? 'white' : '#fde68a',
+              border: '1px solid rgba(255,255,255,0.3)',
+              borderRadius: '999px',
+              width: '32px',
+              height: '32px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              lineHeight: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {isBookmarked ? '★' : '☆'}
+          </button>
+        )}
+        {/* ⚖ Compare toggle (only when compare mode is active) */}
+        {onToggleCompare && compareActive && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleCompare(); }}
+            aria-label={compareSelected ? 'حذف از مقایسه' : 'افزودن به مقایسه'}
+            title={compareSelected ? 'حذف از مقایسه' : 'افزودن به مقایسه'}
+            className="block mb-2 mx-auto"
+            style={{
+              background: compareSelected ? 'rgba(245, 158, 11, 0.95)' : 'rgba(255,255,255,0.2)',
+              color: compareSelected ? 'white' : '#fde68a',
+              border: '1px solid rgba(255,255,255,0.3)',
+              borderRadius: '999px',
+              width: '32px',
+              height: '32px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              lineHeight: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            ⚖
+          </button>
+        )}
         <div className="text-xs" style={{ color: 'rgba(255,255,255,0.6)' }}>شماره</div>
         <div className="font-bold text-sm text-white">#{show.num.toLocaleString('fa-IR')}</div>
       </div>
@@ -2702,7 +3195,7 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
 // ============================================
 // SHOW DETAILS MODAL — with Persian description, links, publish, export
 // ============================================
-function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport, isUploaded, canEdit, allShows = [], onSwapShow }: {
+function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport, isUploaded, canEdit, allShows = [], onSwapShow, isBookmarked, onToggleBookmark, onAddToCompare }: {
   show: TalkShow;
   onClose: () => void;
   onEdit: (s: TalkShow) => void;
@@ -2713,6 +3206,9 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
   canEdit: boolean;
   allShows?: TalkShow[];
   onSwapShow?: (s: TalkShow) => void;
+  isBookmarked?: boolean;
+  onToggleBookmark?: () => void;
+  onAddToCompare?: () => void;
 }) {
   const thumb = getShowThumbnail(show);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -2752,12 +3248,25 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
           )}
           {!thumb.image && <div className="absolute inset-0" style={{ background: thumb.pattern }}></div>}
           <button
-            onClick={onClose}
-            className="absolute top-4 left-4 p-2 rounded-lg z-10"
-            style={{ background: 'rgba(0,0,0,0.4)', color: 'white', backdropFilter: 'blur(8px)' }}
+            onClick={(e) => { e.stopPropagation(); onClose(); }}
+            aria-label="بستن"
+            className="absolute p-2.5 rounded-lg"
+            style={{
+              top: '16px',
+              left: '16px',
+              background: 'rgba(0,0,0,0.55)',
+              color: 'white',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              zIndex: 20,
+              pointerEvents: 'auto',
+              cursor: 'pointer',
+              border: '1px solid rgba(255,255,255,0.25)',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.35)',
+            }}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
           <div className="relative z-10 text-white">
@@ -2909,6 +3418,29 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
             >
               📱 انتشار در شبکه‌های اجتماعی
             </button>
+            {onToggleBookmark && (
+              <button
+                onClick={onToggleBookmark}
+                className="px-4 py-2 rounded-xl text-sm font-medium"
+                style={isBookmarked
+                  ? { background: 'rgba(245, 158, 11, 0.25)', color: '#b45309', border: '1px solid rgba(245, 158, 11, 0.55)' }
+                  : { background: 'rgba(245, 158, 11, 0.12)', color: '#b45309', border: '1px solid rgba(245, 158, 11, 0.3)' }
+                }
+                title={isBookmarked ? 'حذف از نشان‌شده‌ها' : 'افزودن به نشان‌شده‌ها'}
+              >
+                {isBookmarked ? '★ نشان‌شده' : '☆ نشان کردن'}
+              </button>
+            )}
+            {onAddToCompare && (
+              <button
+                onClick={onAddToCompare}
+                className="px-4 py-2 rounded-xl text-sm font-medium"
+                style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#b45309', border: '1px solid rgba(245, 158, 11, 0.3)' }}
+                title="افزودن به فهرست مقایسه"
+              >
+                ⚖ افزودن به مقایسه
+              </button>
+            )}
             {canEdit && (
               <button
                 onClick={() => onEdit(show)}
@@ -3479,11 +4011,60 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
   showToast: (msg: string) => void;
 }) {
   const [urlInput, setUrlInput] = useState('');
+  const [compressing, setCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Keep a ref to the latest images array so async FileReader callbacks always see current state
   const imagesRef = useRef<string[]>(images);
   imagesRef.current = images;
   const MAX_IMAGES = 8;
+  const MAX_WIDTH = 1280;
+  const JPEG_QUALITY = 0.8;
+
+  // Compress a single image file via Canvas API:
+  // - If wider than MAX_WIDTH (1280px), downscale to MAX_WIDTH preserving aspect ratio.
+  // - Always re-encode as JPEG at JPEG_QUALITY (0.8) regardless of the source format.
+  // This keeps localStorage usage small and avoids storing multi-MB base64 strings.
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error(`خواندن فایل ناموفق بود: ${file.name}`));
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        const img = new window.Image();
+        img.onerror = () => reject(new Error(`تصویر نامعتبر است: ${file.name}`));
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > MAX_WIDTH) {
+            height = Math.round((height * MAX_WIDTH) / width);
+            width = MAX_WIDTH;
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            // Canvas unavailable — fall back to original data URL.
+            resolve(dataUrl);
+            return;
+          }
+          // White background so transparent PNGs do not turn black when JPEG-encoded.
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
+          // Re-encode as JPEG at quality 0.8.
+          try {
+            const compressed = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
+            resolve(compressed);
+          } catch (e) {
+            // Some browsers refuse to export large canvases — fall back to original.
+            resolve(dataUrl);
+          }
+        };
+        img.src = dataUrl;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
 
   const addUrl = () => {
     if (!urlInput.trim()) return;
@@ -3499,7 +4080,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
     setUrlInput('');
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     const fileArr = Array.from(files);
@@ -3508,23 +4089,24 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
     if (toAdd.length < fileArr.length) {
       showToast(`فقط ${toAdd.length.toLocaleString('fa-IR')} تصویر اضافه شد (حداکثر ${MAX_IMAGES.toLocaleString('fa-IR')})`);
     }
-    // Read files sequentially to preserve order
-    toAdd.forEach((file, i) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        const current = imagesRef.current;
-        if (current.length < MAX_IMAGES && !current.includes(result)) {
-          onChange([...current, result]);
+    setCompressing(true);
+    try {
+      for (const file of toAdd) {
+        try {
+          const compressed = await compressImage(file);
+          const current = imagesRef.current;
+          if (current.length < MAX_IMAGES && !current.includes(compressed)) {
+            onChange([...current, compressed]);
+          }
+        } catch (err: any) {
+          showToast(err?.message || `خطا در فشرده‌سازی: ${file.name}`);
         }
-      };
-      reader.onerror = () => {
-        showToast(`خطا در خواندن فایل: ${file.name}`);
-      };
-      reader.readAsDataURL(file);
-    });
-    // Reset file input so same file can be re-selected later
-    if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    } finally {
+      setCompressing(false);
+      // Reset file input so same file can be re-selected later
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const removeImage = (idx: number) => {
@@ -3551,6 +4133,11 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
         {images.length > 0 && (
           <span className="text-xs" style={{ color: '#016035' }}>تصویر اول = کاور</span>
         )}
+      </div>
+
+      {/* Compression notice */}
+      <div className="text-xs mb-3" style={{ color: '#7a8a80' }}>
+        📐 تصاویر آپلودی به‌صورت خودکار به حداکثر عرض ۱۲۸۰ پیکسل تغییر اندازه و با کیفیت JPEG ۸۰٪ فشرده می‌شوند.
       </div>
 
       {/* URL input + file upload */}
@@ -3591,16 +4178,16 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
         </button>
         <button
           onClick={() => fileInputRef.current?.click()}
-          disabled={images.length >= MAX_IMAGES}
+          disabled={images.length >= MAX_IMAGES || compressing}
           className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
           style={{
-            background: images.length >= MAX_IMAGES ? 'rgba(0,0,0,0.05)' : 'rgba(2,144,72,0.1)',
-            color: images.length >= MAX_IMAGES ? '#999' : '#016035',
+            background: images.length >= MAX_IMAGES || compressing ? 'rgba(0,0,0,0.05)' : 'rgba(2,144,72,0.1)',
+            color: images.length >= MAX_IMAGES || compressing ? '#999' : '#016035',
             border: '1px solid rgba(2,144,72,0.3)',
             whiteSpace: 'nowrap',
           }}
         >
-          📁 آپلود فایل
+          {compressing ? '⏳ در حال فشرده‌سازی...' : '📁 آپلود فایل'}
         </button>
         <input
           ref={fileInputRef}
@@ -3742,6 +4329,8 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
   onYoutubeChange: (url: string) => void;
 }) {
   const [urlInput, setUrlInput] = useState('');
+  const [uploadWarning, setUploadWarning] = useState<string | null>(null);
+  const videoFileRef = useRef<HTMLInputElement>(null);
 
   const addVideo = () => {
     if (!urlInput.trim()) return;
@@ -3754,6 +4343,56 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
     onVideosChange(videos.filter((_, i) => i !== idx));
   };
 
+  // Validate a video file:
+  // - Max file size: 5 MB
+  // - Max duration: 30 seconds (checked by loading it into a <video> element)
+  // The video file is NOT stored locally (too large for localStorage); we just
+  // surface warnings and let the user know the file is too big / too long.
+  const MAX_VIDEO_BYTES = 5 * 1024 * 1024;
+  const MAX_VIDEO_DURATION = 30;
+
+  const formatBytes = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  };
+
+  const handleVideoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadWarning(null);
+    // Size check
+    if (file.size > MAX_VIDEO_BYTES) {
+      setUploadWarning(
+        `⚠ حجم فایل ${formatBytes(file.size)} است — بیش از حد مجاز (${formatBytes(MAX_VIDEO_BYTES)}). لطفاً فایل کوچک‌تری انتخاب کنید.`
+      );
+      if (videoFileRef.current) videoFileRef.current.value = '';
+      return;
+    }
+    // Duration check via a temporary <video> element.
+    const url = URL.createObjectURL(file);
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    v.onloadedmetadata = () => {
+      URL.revokeObjectURL(url);
+      const duration = v.duration;
+      if (duration > MAX_VIDEO_DURATION) {
+        setUploadWarning(
+          `⚠ مدت ویدیو ${duration.toFixed(1)} ثانیه است — بیش از حد مجاز (${MAX_VIDEO_DURATION} ثانیه). لطفاً ویدیوی کوتاه‌تری انتخاب کنید.`
+        );
+      } else {
+        setUploadWarning(`✓ فایل «${file.name}» قابل قبول است (${formatBytes(file.size)}، ${duration.toFixed(1)} ثانیه) — اما ویدیوها در نسخهٔ فعلی به‌صورت بومی ذخیره نمی‌شوند. لطفاً آن را در سرویس اشتراک‌گذاری ویدیو (یوتیوب، آپارات و...) آپلود کنید و لینک را اضافه کنید.`);
+      }
+      if (videoFileRef.current) videoFileRef.current.value = '';
+    };
+    v.onerror = () => {
+      URL.revokeObjectURL(url);
+      setUploadWarning('⚠ فایل ویدیو نامعتبر است یا قابل خواندن نیست.');
+      if (videoFileRef.current) videoFileRef.current.value = '';
+    };
+    v.src = url;
+  };
+
   return (
     <div className="p-4 rounded-xl" style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.15)' }}>
       <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>
@@ -3762,6 +4401,47 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
           ({videos.length.toLocaleString('fa-IR')} ویدیو)
         </span>
       </h4>
+
+      {/* Constraints reminder */}
+      <div className="text-xs mb-3" style={{ color: '#7a8a80' }}>
+        🎞 ویدیوهای مستقیم: حداکثر ۳۰ ثانیه و ۵ مگابایت. ویدیوهای بلندتر را روی یوتیوب/آپارات بارگذاری کرده و لینک اضافه کنید.
+      </div>
+
+      {/* Video file upload (with size + duration validation) */}
+      <div className="mb-3 flex gap-2">
+        <button
+          onClick={() => videoFileRef.current?.click()}
+          className="px-3 py-2 rounded-xl text-sm font-medium"
+          style={{
+            background: 'rgba(220, 38, 38, 0.1)',
+            color: '#dc2626',
+            border: '1px solid rgba(220, 38, 38, 0.3)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          🎞 انتخاب فایل ویدیو
+        </button>
+        <input
+          ref={videoFileRef}
+          type="file"
+          accept="video/*"
+          onChange={handleVideoFile}
+          style={{ display: 'none' }}
+        />
+      </div>
+
+      {uploadWarning && (
+        <div
+          className="mb-3 p-3 rounded-xl text-xs font-medium"
+          style={{
+            background: uploadWarning.startsWith('✓') ? 'rgba(2,144,72,0.1)' : 'rgba(220,38,38,0.1)',
+            color: uploadWarning.startsWith('✓') ? '#016035' : '#dc2626',
+            border: uploadWarning.startsWith('✓') ? '1px solid rgba(2,144,72,0.3)' : '1px solid rgba(220,38,38,0.3)',
+          }}
+        >
+          {uploadWarning}
+        </div>
+      )}
 
       {/* Main YouTube search link field (auto-generated) */}
       <div className="mb-3">
@@ -4846,24 +5526,34 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
           }
         }
       } else {
-        // Excel: generate CSV
-        const headers = ['شماره', 'نام برنامه', 'دسته‌بندی', 'منبع', 'اندازه', 'تماشاگر', 'سبک', 'توضیحات'];
-        const rows = shows.map((s, i) => [
-          i + 1,
-          s.name,
-          (s.category || '').replace(/^\d+\.\s*/, ''),
-          s.source || '',
-          s.size || '',
-          s.viewers || '',
-          s.style || '',
-          (s.descriptionFa || s.summary || '').substring(0, 200),
-        ]);
-        const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-        const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+        // Excel: generate a proper .xls file (HTML table that Excel opens natively).
+        // Persian text is preserved by emitting UTF-8 + BOM and the meta charset.
+        const headers = ['شماره', 'نام برنامه', 'دسته‌بندی', 'اندازه', 'سبک', 'خلاصه', 'توضیحات'];
+        const escapeHtml = (s: unknown) => String(s ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+        const headerRow = `<tr>${headers.map(h => `<th style="background:#029048;color:white;padding:8px;border:1px solid #ccc;text-align:center;font-family:Tahoma;">${escapeHtml(h)}</th>`).join('')}</tr>`;
+        const bodyRows = shows.map((s, i) => {
+          const cells = [
+            i + 1,
+            s.name || '',
+            (s.category || '').replace(/^\d+\.\s*/, ''),
+            s.size || '',
+            s.style || '',
+            (s.summary || '').substring(0, 200),
+            (s.descriptionFa || s.summary || '').substring(0, 500),
+          ];
+          return `<tr>${cells.map((c, idx) => `<td style="padding:6px 8px;border:1px solid #ddd;font-family:Tahoma;font-size:12px;${idx === 0 ? 'text-align:center;' : 'text-align:right;'}">${escapeHtml(c)}</td>`).join('')}</tr>`;
+        }).join('');
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>بانک رسانه — خروجی Excel</title></head><body><table style="border-collapse:collapse;width:100%;">${headerRow}${bodyRows}</table></body></html>`;
+        // Prepend UTF-8 BOM so Excel detects Persian correctly.
+        const blob = new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `banke-rasane-${Date.now()}.csv`;
+        a.download = `banke-rasane-${Date.now()}.xls`;
         a.click();
         URL.revokeObjectURL(url);
       }
@@ -5236,12 +5926,13 @@ function SettingsModal({
   showToast: (msg: string) => void;
   onLogout: () => void;
 }) {
-  const [tab, setTab] = useState<'server' | 'users' | 'password'>('server');
+  const [tab, setTab] = useState<'server' | 'users' | 'password' | 'audit'>('server');
 
   const tabs = [
     { key: 'server' as const,   label: 'سرور',     icon: '🖥' },
     { key: 'users' as const,    label: 'کاربران',  icon: '👥' },
     { key: 'password' as const, label: 'رمز عبور', icon: '🔑' },
+    { key: 'audit' as const,    label: 'تاریخچه',  icon: '📜' },
   ];
 
   return (
@@ -5319,6 +6010,7 @@ function SettingsModal({
           {tab === 'server' && <SettingsServerTab showToast={showToast} />}
           {tab === 'users' && <SettingsUsersTab currentUser={currentUser} showToast={showToast} />}
           {tab === 'password' && <SettingsPasswordTab currentUser={currentUser} showToast={showToast} onLogout={onLogout} />}
+          {tab === 'audit' && <SettingsAuditTab />}
         </div>
       </div>
     </div>
@@ -5844,6 +6536,364 @@ function SettingsPasswordTab({
       >
         {saving ? '⏳ در حال تغییر...' : '✓ تغییر رمز عبور'}
       </button>
+    </div>
+  );
+}
+
+// ============================================
+// COMPARE MODAL — side-by-side comparison of two programs with diff highlighting
+// ============================================
+function CompareModal({ shows, onClose, onClear }: {
+  shows: TalkShow[];
+  onClose: () => void;
+  onClear: () => void;
+}) {
+  if (shows.length !== 2) return null;
+  const [a, b] = shows;
+  // Compare a single field — returns true if the two values differ.
+  const diff = (x: unknown, y: unknown): boolean => {
+    if (x == null && y == null) return false;
+    if (typeof x === 'string' && typeof y === 'string') return x.trim() !== y.trim();
+    return String(x ?? '') !== String(y ?? '');
+  };
+  const fields: { key: keyof TalkShow; label: string }[] = [
+    { key: 'num', label: 'شماره' },
+    { key: 'name', label: 'نام برنامه' },
+    { key: 'category', label: 'دسته‌بندی' },
+    { key: 'country', label: 'کشور' },
+    { key: 'size', label: 'اندازهٔ استودیو' },
+    { key: 'style', label: 'سبک دکور' },
+    { key: 'viewers', label: 'تماشاگر' },
+    { key: 'layout', label: 'چیدمان' },
+    { key: 'effects', label: 'جلوه‌ها' },
+    { key: 'lighting', label: 'نورپردازی' },
+    { key: 'elements', label: 'عناصر دکور' },
+    { key: 'materials', label: 'مواد' },
+    { key: 'colors', label: 'رنگ‌آمیزی' },
+    { key: 'summary', label: 'خلاصه' },
+    { key: 'descriptionFa', label: 'توضیحات فارسی' },
+    { key: 'youtube', label: 'یوتیوب' },
+    { key: 'imdb', label: 'IMDb' },
+    { key: 'wikipedia', label: 'ویکی‌پدیا' },
+  ];
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-content" style={{ maxWidth: '1100px' }} onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.1)' }}>
+          <h2 className="text-xl font-bold" style={{ color: '#1a2e22' }}>⚖ مقایسهٔ دو برنامه</h2>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onClear}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium"
+              style={{ background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}
+              title="پاک کردن فهرست مقایسه"
+            >
+              🗑 پاک کردن
+            </button>
+            <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#7a8a80' }} aria-label="بستن">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div className="p-4 sm:p-6">
+          {/* Two-column header with each program's name + thumbnail */}
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            {[a, b].map((s, idx) => {
+              const thumb = getShowThumbnail(s);
+              return (
+                <div
+                  key={s.num}
+                  className="rounded-xl overflow-hidden p-3"
+                  style={{
+                    background: `linear-gradient(135deg, ${thumb.accent}22 0%, ${thumb.accent}08 100%)`,
+                    border: `1px solid ${thumb.accent}55`,
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-12 h-12 rounded-lg flex-shrink-0 overflow-hidden relative"
+                      style={{ background: thumb.gradient }}
+                    >
+                      {thumb.image ? (
+                        <img src={thumb.image} alt={s.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center text-white font-black text-lg" style={{ background: thumb.gradient }}>
+                          {s.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs" style={{ color: '#7a8a80' }}>برنامهٔ {idx === 0 ? 'اول' : 'دوم'}</div>
+                      <div className="font-bold text-sm truncate" style={{ color: '#1a2e22', direction: 'ltr', textAlign: 'right' }}>{s.name}</div>
+                      <div className="text-xs" style={{ color: '#4a5d52' }}>#{s.num.toLocaleString('fa-IR')} • {s.style}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Comparison table */}
+          <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #e0e8e4' }}>
+            <table className="w-full" style={{ fontSize: '13px' }}>
+              <thead style={{ background: '#f5efe0' }}>
+                <tr>
+                  <th className="text-right p-2.5 font-bold" style={{ color: '#4a5d52', width: '20%' }}>فیلد</th>
+                  <th className="text-right p-2.5 font-bold" style={{ color: '#1a2e22' }}>برنامهٔ اول</th>
+                  <th className="text-right p-2.5 font-bold" style={{ color: '#1a2e22' }}>برنامهٔ دوم</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fields.map((f, idx) => {
+                  const va = a[f.key];
+                  const vb = b[f.key];
+                  const isDiff = diff(va, vb);
+                  return (
+                    <tr
+                      key={f.key}
+                      style={{
+                        background: idx % 2 === 0 ? 'white' : '#fafbfa',
+                        borderBottom: '1px solid rgba(0,0,0,0.04)',
+                      }}
+                    >
+                      <td className="p-2.5 font-bold" style={{ color: '#7a8a80', fontSize: '11.5px' }}>
+                        {f.label}
+                        {isDiff && (
+                          <span
+                            className="mr-1 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold"
+                            style={{ background: 'rgba(245, 158, 11, 0.18)', color: '#b45309' }}
+                            title="مقدار در دو برنامه متفاوت است"
+                          >
+                            تفاوت
+                          </span>
+                        )}
+                      </td>
+                      <td
+                        className="p-2.5"
+                        style={{
+                          color: '#1a2e22',
+                          background: isDiff ? 'rgba(245, 158, 11, 0.07)' : 'transparent',
+                          direction: ['name', 'youtube', 'imdb', 'wikipedia'].includes(f.key as string) ? 'ltr' : 'rtl',
+                          textAlign: ['name', 'youtube', 'imdb', 'wikipedia'].includes(f.key as string) ? 'left' : 'right',
+                          fontSize: '12px',
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        {String(va ?? '—') || '—'}
+                      </td>
+                      <td
+                        className="p-2.5"
+                        style={{
+                          color: '#1a2e22',
+                          background: isDiff ? 'rgba(245, 158, 11, 0.07)' : 'transparent',
+                          direction: ['name', 'youtube', 'imdb', 'wikipedia'].includes(f.key as string) ? 'ltr' : 'rtl',
+                          textAlign: ['name', 'youtube', 'imdb', 'wikipedia'].includes(f.key as string) ? 'left' : 'right',
+                          fontSize: '12px',
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        {String(vb ?? '—') || '—'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Diff summary */}
+          <div
+            className="mt-4 p-3 rounded-xl text-xs"
+            style={{ background: 'rgba(245, 158, 11, 0.06)', border: '1px solid rgba(245, 158, 11, 0.2)', color: '#4a5d52' }}
+          >
+            <strong style={{ color: '#b45309' }}>راهنما:</strong> ردیف‌هایی که با نشانگر «تفاوت» خروجی‌دار شده‌اند، در دو برنامه متفاوت هستند. مقادیر مشابه بدون تغییر باقی می‌مانند.
+          </div>
+
+          <div className="mt-5 flex justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="px-6 py-3 rounded-xl text-sm font-medium"
+              style={{ background: 'rgba(122,138,128,0.15)', color: '#4a5d52', border: '1px solid rgba(122,138,128,0.3)' }}
+            >
+              بستن
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Tab 4: Audit log (تاریخچه تغییرات) ---
+function SettingsAuditTab() {
+  const [changes, setChanges] = useState<Array<{
+    id: number;
+    show_num: number | null;
+    user_id: number | null;
+    username: string;
+    action: 'create' | 'update' | 'delete';
+    field: string;
+    old_value: string;
+    new_value: string;
+    created_at: number;
+  }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'all' | 'create' | 'update' | 'delete'>('all');
+
+  const load = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const list = await api.getChanges(200);
+      setChanges(list);
+    } catch (e: any) {
+      setError(e?.message || 'خطا در بارگذاری تاریخچه');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const actionLabel: Record<string, string> = {
+    create: 'افزودن',
+    update: 'ویرایش',
+    delete: 'حذف',
+  };
+
+  const actionColor: Record<string, string> = {
+    create: '#016035',
+    update: '#b45309',
+    delete: '#dc2626',
+  };
+
+  const filtered = filter === 'all' ? changes : changes.filter(c => c.action === filter);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div className="flex items-start justify-between gap-2 flex-wrap">
+        <div>
+          <h3 className="text-base font-bold mb-1" style={{ color: '#1a2e22' }}>📜 تاریخچه تغییرات</h3>
+          <p className="text-sm" style={{ color: '#7a8a80' }}>
+            گزارش اخیر افزودن، ویرایش و حذف برنامه‌ها به همراه کاربر انجام‌دهنده و زمان دقیق.
+          </p>
+        </div>
+        <button
+          onClick={load}
+          className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
+          style={{
+            background: 'rgba(2, 144, 72, 0.12)',
+            color: '#016035',
+            border: '1px solid rgba(2, 144, 72, 0.3)',
+            cursor: 'pointer',
+          }}
+        >
+          ↻ بازخوانی
+        </button>
+      </div>
+
+      {/* Action filter chips */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {(['all', 'create', 'update', 'delete'] as const).map(k => (
+          <button
+            key={k}
+            onClick={() => setFilter(k)}
+            className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+            style={filter === k ? {
+              background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
+              color: 'white',
+              border: '1px solid #029048',
+            } : {
+              background: 'white',
+              color: '#4a5d52',
+              border: '1px solid rgba(2, 144, 72, 0.15)',
+            }}
+          >
+            {k === 'all' ? 'همه' : actionLabel[k]}
+          </button>
+        ))}
+      </div>
+
+      {loading && (
+        <div className="p-4 text-center text-sm" style={{ color: '#7a8a80' }}>در حال بارگذاری...</div>
+      )}
+      {error && (
+        <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}>
+          ⚠ {error}
+        </div>
+      )}
+      {!loading && !error && filtered.length === 0 && (
+        <div className="p-6 text-center text-sm" style={{ color: '#7a8a80' }}>
+          هیچ تغییری ثبت نشده است.
+        </div>
+      )}
+      {!loading && !error && filtered.length > 0 && (
+        <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+          {filtered.map(c => {
+            const date = new Date(c.created_at * 1000);
+            return (
+              <div
+                key={c.id}
+                className="p-3 rounded-xl flex items-start gap-3"
+                style={{ background: 'white', border: '1px solid rgba(2, 144, 72, 0.15)' }}
+              >
+                <span
+                  className="text-xs px-2 py-0.5 rounded-md font-bold flex-shrink-0"
+                  style={{
+                    background: `${actionColor[c.action]}20`,
+                    color: actionColor[c.action],
+                    border: `1px solid ${actionColor[c.action]}40`,
+                  }}
+                >
+                  {actionLabel[c.action]}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-bold" style={{ color: '#1a2e22' }}>
+                    {c.username ? `@${c.username}` : '—'}
+                    {c.show_num != null && (
+                      <span className="text-xs font-normal mr-2" style={{ color: '#7a8a80' }}>
+                        برنامهٔ #{c.show_num.toLocaleString('fa-IR')}
+                      </span>
+                    )}
+                  </div>
+                  {c.action === 'update' && c.field && (
+                    <div className="text-xs mt-1" style={{ color: '#4a5d52' }}>
+                      فیلد <strong>{c.field}</strong>:
+                      {c.old_value && (
+                        <span style={{ color: '#dc2626', textDecoration: 'line-through', marginRight: '6px' }}>
+                          «{c.old_value.length > 60 ? c.old_value.substring(0, 60) + '…' : c.old_value}»
+                        </span>
+                      )}
+                      <span style={{ color: '#016035', marginRight: '6px' }}>
+                        ← «{c.new_value.length > 60 ? c.new_value.substring(0, 60) + '…' : c.new_value}»
+                      </span>
+                    </div>
+                  )}
+                  {c.action === 'create' && (
+                    <div className="text-xs mt-1" style={{ color: '#4a5d52' }}>
+                      برنامهٔ «{c.new_value || '—'}» ایجاد شد.
+                    </div>
+                  )}
+                  {c.action === 'delete' && (
+                    <div className="text-xs mt-1" style={{ color: '#4a5d52' }}>
+                      برنامهٔ «{c.old_value || '—'}» حذف شد.
+                    </div>
+                  )}
+                  <div className="text-[10px] mt-1" style={{ color: '#7a8a80' }}>
+                    {date.toLocaleDateString('fa-IR')} {date.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
