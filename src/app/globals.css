@@ -46,64 +46,67 @@
 }
 
 /* ============================================
-   THEME VARIABLES — deep green / olive / emerald
-   Dark theme is the default.
+   THEME VARIABLES — Cream / Olive (LIGHT = default)
+   Dark theme is the toggle option.
    ============================================ */
 :root {
-  /* Accent emerald scale */
-  --accent: #10b981;
-  --accent-bright: #34d399;
-  --accent-dark: #059669;
+  /* Accent — dark green primary, emerald bright for dark surfaces */
+  --accent: #0d7c4a;
+  --accent-bright: #10b981;
+  --accent-hover: #0a6b40;
+  --accent-dark: #065f3a;
 
-  /* App background — deep green to olive */
-  --bg-deep: #0a1f14;
-  --bg-mid: #0d2218;
+  /* App background — warm cream with subtle olive depth */
+  --bg-deep: #f5f3ed;
+  --bg-mid: #e8e4d8;
 
-  /* Glass surfaces */
-  --glass-bg: rgba(15, 30, 22, 0.75);
-  --glass-bg-strong: rgba(15, 30, 22, 0.85);
-  --glass-bg-modal: rgba(12, 28, 20, 0.97);
-  --glass-bg-drawer: rgba(12, 28, 20, 0.92);
-  --glass-bg-topbar: rgba(10, 25, 18, 0.92);
+  /* Glass surfaces (light) */
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-bg-strong: rgba(255, 255, 255, 0.9);
+  --glass-bg-modal: rgba(255, 255, 255, 0.95);
+  --glass-bg-drawer: rgba(240, 238, 230, 0.85);
+  --glass-bg-topbar: rgba(245, 243, 237, 0.85);
+  --glass-border: rgba(13, 124, 74, 0.12);
+  --glass-border-strong: rgba(13, 124, 74, 0.25);
+  --glass-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, transparent 50%);
+
+  /* Text — dark green primary, olive secondary, warm gray muted */
+  --text-primary: #1a2e1a;
+  --text-secondary: #5a6b4a;
+  --text-muted: #8a8a7a;
+
+  /* Inputs — white glass */
+  --input-bg: rgba(255, 255, 255, 0.8);
+  --input-border: rgba(13, 124, 74, 0.2);
+
+  /* Misc */
+  --background: #f5f3ed;
+  --foreground: #1a2e1a;
+
+  /* Card-accent — used by stat cards (set inline per card) */
+  --card-accent-color: #0d7c4a;
+  /* Genre-color — used by genre cards (dark base + tint overlay) */
+  --genre-color: #10b981;
+}
+
+/* Dark theme override — applied via .theme-dark on <html> */
+.theme-dark {
+  --bg-deep: #0d1f17;
+  --bg-mid: #0a1a12;
+  --glass-bg: rgba(20, 35, 25, 0.8);
+  --glass-bg-strong: rgba(20, 35, 25, 0.85);
+  --glass-bg-modal: rgba(15, 28, 20, 0.95);
+  --glass-bg-drawer: rgba(15, 28, 20, 0.9);
+  --glass-bg-topbar: rgba(13, 25, 18, 0.85);
   --glass-border: rgba(16, 185, 129, 0.15);
   --glass-border-strong: rgba(16, 185, 129, 0.4);
-  --glass-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, transparent 50%);
-
-  /* Text */
   --text-primary: #f0fdf4;
   --text-secondary: #86efac;
   --text-muted: #6b8f7a;
-
-  /* Inputs */
   --input-bg: rgba(255, 255, 255, 0.05);
   --input-border: rgba(16, 185, 129, 0.2);
-
-  /* Misc */
-  --background: #0a1f14;
+  --background: linear-gradient(135deg, color-mix(in srgb, var(--genre-color, #10b981) 35%, #0d1f17) 0%, color-mix(in srgb, var(--genre-color, #10b981) 15%, #0a1a12) 50%, #06120a 100%);
   --foreground: #f0fdf4;
-
-  /* Card-accent — set inline per genre/program card (CSS variable) */
-  --card-accent-color: #10b981;
-}
-
-/* Light theme override (kept for parity, applied via .theme-light on <html>) */
-.theme-light {
-  --bg-deep: #f0fdf4;
-  --bg-mid: #dcfce7;
-  --glass-bg: rgba(255, 255, 255, 0.9);
-  --glass-bg-strong: rgba(255, 255, 255, 0.92);
-  --glass-bg-modal: rgba(255, 255, 255, 0.97);
-  --glass-bg-drawer: rgba(255, 255, 255, 0.92);
-  --glass-bg-topbar: rgba(240, 253, 244, 0.92);
-  --glass-border: rgba(16, 185, 129, 0.2);
-  --glass-border-strong: rgba(16, 185, 129, 0.45);
-  --text-primary: #064e3b;
-  --text-secondary: #047857;
-  --text-muted: #6b8f7a;
-  --input-bg: rgba(255, 255, 255, 0.85);
-  --input-border: rgba(16, 185, 129, 0.25);
-  --background: #f0fdf4;
-  --foreground: #064e3b;
 }
 
 * { box-sizing: border-box; }
@@ -121,14 +124,15 @@ html, body {
 }
 
 /* ============================================
-   LOGIN SCREEN — deep green with emerald ambient lights
+   LOGIN SCREEN — dark green hero with emerald ambient lights
+   (stays dark in both themes — it's a hero/login screen)
    ============================================ */
 .login-screen {
   background:
     radial-gradient(ellipse 90% 70% at 70% 25%, rgba(16, 185, 129, 0.45) 0%, transparent 55%),
     radial-gradient(ellipse 70% 60% at 25% 85%, rgba(52, 211, 153, 0.3) 0%, transparent 55%),
     radial-gradient(ellipse 60% 50% at 50% 50%, rgba(5, 150, 105, 0.18) 0%, transparent 65%),
-    linear-gradient(135deg, #0a1f14 0%, #0d2218 50%, #0a1f14 100%);
+    linear-gradient(135deg, #0a1f14 0%, #0d2820 50%, #0a1f14 100%);
   color: white;
   min-height: 100vh;
   position: relative;
@@ -145,14 +149,22 @@ html, body {
 }
 
 /* ============================================
-   APP CONTENT — deep green to olive gradient
+   APP CONTENT — warm cream with subtle olive depth
    ============================================ */
 .app-content {
   background:
-    radial-gradient(ellipse at top, #0d2218 0%, #0a1f14 60%),
-    linear-gradient(180deg, #0a1f14 0%, #0d2218 100%);
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(13, 124, 74, 0.06) 0%, transparent 50%),
+    linear-gradient(180deg, #f5f3ed 0%, #e8e4d8 50%, #f5f3ed 100%);
   color: var(--text-primary);
   min-height: 100vh;
+}
+
+/* Dark theme app-content */
+.theme-dark .app-content {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+    linear-gradient(180deg, #0d1f17 0%, #0a1a12 100%);
+  color: var(--text-primary);
 }
 
 /* ============================================
@@ -161,17 +173,22 @@ html, body {
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(16, 185, 129, 0.25);
+  background: rgba(13, 124, 74, 0.25);
   border-radius: 8px;
 }
 ::-webkit-scrollbar-thumb:hover {
+  background: rgba(13, 124, 74, 0.45);
+}
+
+.theme-dark ::-webkit-scrollbar-thumb {
+  background: rgba(16, 185, 129, 0.25);
+}
+.theme-dark ::-webkit-scrollbar-thumb:hover {
   background: rgba(16, 185, 129, 0.45);
 }
 
 /* ============================================
    LOGO MOTION — gradient light sweep ONLY on logo pixels
-   Uses mask-image so the light beam only appears on the
-   actual logo + "بانک رسانه" text, nowhere else.
    ============================================ */
 .logo-shimmer {
   position: relative;
@@ -179,7 +196,6 @@ html, body {
   isolation: isolate;
 }
 
-/* The moving light beam, masked to the logo shape only */
 .logo-shimmer::after {
   content: '';
   position: absolute;
@@ -195,7 +211,6 @@ html, body {
   animation: logo-shimmer-sweep 3.5s ease-in-out infinite;
   pointer-events: none;
   z-index: 2;
-  /* Mask to the logo's own pixels using the logo image as alpha mask */
   -webkit-mask-image: var(--logo-mask);
   mask-image: var(--logo-mask);
   -webkit-mask-size: 100% 100%;
@@ -216,7 +231,7 @@ html, body {
 }
 
 /* ============================================
-   ENTER BUTTON — premium emerald gradient
+   ENTER BUTTON — premium dark-green gradient
    ============================================ */
 .btn-enter-premium {
   position: relative;
@@ -227,11 +242,11 @@ html, body {
   color: white;
   cursor: pointer;
   overflow: hidden;
-  background: linear-gradient(135deg, #10b981 0%, #059669 60%, #047857 100%);
-  border: 1px solid rgba(52, 211, 153, 0.45);
+  background: linear-gradient(135deg, #0d7c4a 0%, #0a6b40 60%, #065f3a 100%);
+  border: 1px solid rgba(16, 185, 129, 0.45);
   box-shadow:
-    0 10px 36px rgba(16, 185, 129, 0.5),
-    0 4px 12px rgba(16, 185, 129, 0.3),
+    0 10px 36px rgba(13, 124, 74, 0.4),
+    0 4px 12px rgba(13, 124, 74, 0.25),
     inset 0 1px 0 rgba(255, 255, 255, 0.3),
     inset 0 -1px 0 rgba(0, 0, 0, 0.2);
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
@@ -242,106 +257,108 @@ html, body {
 .btn-enter-premium:hover {
   transform: translateY(-2px) scale(1.02);
   box-shadow:
-    0 16px 52px rgba(16, 185, 129, 0.65),
-    0 6px 20px rgba(16, 185, 129, 0.4),
+    0 16px 52px rgba(13, 124, 74, 0.55),
+    0 6px 20px rgba(13, 124, 74, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.4),
     inset 0 -1px 0 rgba(0, 0, 0, 0.2);
-  background: linear-gradient(135deg, #34d399 0%, #10b981 60%, #059669 100%);
+  background: linear-gradient(135deg, #10b981 0%, #0d7c4a 60%, #0a6b40 100%);
 }
 
 .btn-enter-premium:active {
   transform: translateY(0) scale(1);
 }
 
-/* Liquid-glass matte emerald — used for the login button.
-   Translucent emerald body with a frosted specular highlight on top,
-   a soft outer glow to separate it from the deep green hero,
-   and white text for strong contrast. */
+.theme-dark .btn-enter-premium {
+  background: linear-gradient(135deg, #10b981 0%, #059669 60%, #047857 100%);
+  border-color: rgba(52, 211, 153, 0.45);
+  box-shadow:
+    0 10px 36px rgba(16, 185, 129, 0.5),
+    0 4px 12px rgba(16, 185, 129, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.theme-dark .btn-enter-premium:hover {
+  background: linear-gradient(135deg, #34d399 0%, #10b981 60%, #059669 100%);
+}
+
+/* ============================================
+   ENTER BUTTON (white) — liquid-glass emerald for login
+   ============================================ */
 .btn-enter-white {
   position: relative;
   padding: 16px 52px;
   border-radius: 18px;
   font-size: 18px;
   font-weight: 800;
-  color: #ffffff;
+  color: #0d7c4a;
   cursor: pointer;
   overflow: hidden;
-  /* Frosted glass: translucent emerald base + backdrop blur (visual approximation) */
+  /* Frosted glass: white base + emerald specular highlight */
   background:
-    /* top specular highlight — the "glass" sheen */
-    linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.08) 42%, rgba(255, 255, 255, 0) 58%),
-    /* soft inner glow */
-    radial-gradient(120% 80% at 50% 0%, rgba(52, 211, 153, 0.35) 0%, rgba(52, 211, 153, 0) 60%),
-    /* main matte emerald body */
-    linear-gradient(135deg, #10b981 0%, #059669 48%, #047857 100%);
-  border: 1px solid rgba(134, 239, 172, 0.55);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.85) 42%, rgba(245, 252, 247, 0.9) 100%),
+    radial-gradient(120% 80% at 50% 0%, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0) 60%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   box-shadow:
-    /* outer glow — separates the button from the dark hero */
-    0 14px 44px rgba(16, 185, 129, 0.55),
-    0 6px 18px rgba(52, 211, 153, 0.35),
-    /* matte top inner highlight (frosted, not glossy) */
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    /* matte bottom inner shadow (grounds the button) */
-    inset 0 -2px 6px rgba(4, 120, 87, 0.5),
-    /* subtle frosted grain via inner ring */
-    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+    0 14px 44px rgba(16, 185, 129, 0.4),
+    0 6px 18px rgba(52, 211, 153, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -2px 6px rgba(13, 124, 74, 0.1),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.4);
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   letter-spacing: 0.5px;
-  text-shadow: 0 1px 2px rgba(4, 120, 87, 0.5);
-  /* slight frosted feel */
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.4);
   backdrop-filter: blur(2px) saturate(115%);
   -webkit-backdrop-filter: blur(2px) saturate(115%);
 }
 .btn-enter-white:hover {
   transform: translateY(-2px) scale(1.02);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.1) 42%, rgba(255, 255, 255, 0) 58%),
-    radial-gradient(120% 80% at 50% 0%, rgba(134, 239, 172, 0.45) 0%, rgba(134, 239, 172, 0) 60%),
-    linear-gradient(135deg, #34d399 0%, #10b981 48%, #059669 100%);
+    linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.95) 42%, rgba(245, 252, 247, 1) 100%),
+    radial-gradient(120% 80% at 50% 0%, rgba(16, 185, 129, 0.25) 0%, rgba(16, 185, 129, 0) 60%);
   box-shadow:
-    0 20px 60px rgba(16, 185, 129, 0.65),
-    0 8px 24px rgba(52, 211, 153, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 -2px 6px rgba(4, 120, 87, 0.5),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    0 20px 60px rgba(16, 185, 129, 0.5),
+    0 8px 24px rgba(52, 211, 153, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    inset 0 -2px 6px rgba(13, 124, 74, 0.15),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6);
 }
 .btn-enter-white:active {
   transform: translateY(0) scale(1);
   box-shadow:
-    0 8px 24px rgba(16, 185, 129, 0.45),
-    0 3px 10px rgba(52, 211, 153, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    inset 0 2px 8px rgba(4, 120, 87, 0.6);
+    0 8px 24px rgba(16, 185, 129, 0.35),
+    0 3px 10px rgba(52, 211, 153, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 2px 8px rgba(13, 124, 74, 0.2);
 }
 
-/* Hide scrollbar utility — used for horizontal filter chip rows on mobile */
+/* Hide scrollbar utility */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
 /* ============================================
-   PREMIUM GENRE CARD — glassmorphism with colored accent bar
-   Each card uses the same dark glass; the genre color
-   appears as a 4px bar at the TOP + subtle gradient overlay.
-   Pass --card-accent-color inline for the per-card color.
+   PREMIUM STAT CARD — white glass with subtle accent
+   Used for: dashboard stat cards, genre hero card, programs-view hero.
+   Stat cards keep the colored accent bar (icon + top-bar) via --card-accent-color.
    ============================================ */
 .premium-card {
   position: relative;
-  border-radius: 20px;
+  border-radius: 16px;
   padding: 22px;
-  padding-top: 26px; /* leaves room for the 4px accent bar */
+  padding-top: 26px;
   cursor: pointer;
   overflow: hidden;
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   color: var(--text-primary);
-  /* Dark glass body */
-  background: rgba(15, 30, 22, 0.75);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
-  border: 1px solid rgba(16, 185, 129, 0.15);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  /* Light glass body */
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  border: 1px solid rgba(13, 124, 74, 0.12);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
 }
 
-/* 4px colored accent bar at the TOP, glowing with the genre's color */
+/* 4px colored accent bar at the TOP — uses --card-accent-color (set per card inline) */
 .premium-card::before {
   content: '';
   position: absolute;
@@ -349,14 +366,14 @@ html, body {
   left: 0;
   right: 0;
   height: 4px;
-  background: var(--card-accent-color, #10b981);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--card-accent-color, #10b981) 50%, transparent);
+  background: var(--card-accent-color, #0d7c4a);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--card-accent-color, #0d7c4a) 50%, transparent);
   pointer-events: none;
   z-index: 3;
-  border-radius: 20px 20px 0 0;
+  border-radius: 16px 16px 0 0;
 }
 
-/* Subtle gradient overlay from the genre color (opacity 0.12) — fading top→transparent */
+/* Subtle gradient overlay from the accent color (12%) — fading top→transparent */
 .premium-card::after {
   content: '';
   position: absolute;
@@ -364,18 +381,16 @@ html, body {
   left: 0;
   right: 0;
   height: 60%;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--card-accent-color, #10b981) 12%, transparent) 0%, transparent 100%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--card-accent-color, #0d7c4a) 8%, transparent) 0%, transparent 100%);
   pointer-events: none;
   z-index: 0;
-  border-radius: 20px 20px 0 0;
+  border-radius: 16px 16px 0 0;
 }
 
 .premium-card:hover {
-  transform: translateY(-4px) scale(1.03);
-  border-color: rgba(16, 185, 129, 0.4);
-  box-shadow:
-    0 0 24px rgba(16, 185, 129, 0.15),
-    0 16px 48px rgba(0, 0, 0, 0.55);
+  transform: translateY(-2px);
+  border-color: rgba(13, 124, 74, 0.25);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
 }
 
 .premium-card > * {
@@ -383,8 +398,83 @@ html, body {
   z-index: 2;
 }
 
+/* Dark theme variant for premium-card */
+.theme-dark .premium-card {
+  background: rgba(20, 35, 25, 0.8);
+  border-color: rgba(16, 185, 129, 0.15);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.theme-dark .premium-card:hover {
+  border-color: rgba(16, 185, 129, 0.4);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+}
+
 /* ============================================
-   PREMIUM SHOW CARD — dark glass for program cards
+   PREMIUM GENRE CARD — DARK with genre color tint + glow
+   Base color: #0d1f17 (dark green-black)
+   Overlay: linear-gradient with var(--genre-color) at low opacity
+   ============================================ */
+.premium-genre-card {
+  position: relative;
+  border-radius: 20px;
+  padding: 22px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #ffffff;
+  /* Dark base background */
+  background: linear-gradient(135deg, color-mix(in srgb, var(--genre-color, #10b981) 35%, #0d1f17) 0%, color-mix(in srgb, var(--genre-color, #10b981) 15%, #0a1a12) 50%, #06120a 100%);
+  border: 1px solid color-mix(in srgb, var(--genre-color, #10b981) 40%, transparent);
+  box-shadow:
+    0 8px 32px color-mix(in srgb, var(--genre-color, #10b981) 30%, transparent),
+    0 4px 12px color-mix(in srgb, var(--genre-color, #10b981) 15%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--genre-color, #10b981) 12%, transparent);
+}
+
+/* Genre-color overlay (top → transparent) */
+.premium-genre-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--genre-color, #10b981) 18%, transparent) 0%, color-mix(in srgb, var(--genre-color, #10b981) 6%, transparent) 60%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 20px;
+}
+
+/* Subtle inner glow line at the top */
+.premium-genre-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--genre-color, #10b981) 50%, transparent 100%);
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0.6;
+}
+
+.premium-genre-card:hover {
+  transform: translateY(-4px) scale(1.03);
+  border-color: color-mix(in srgb, var(--genre-color, #10b981) 50%, transparent);
+  box-shadow:
+    0 12px 40px color-mix(in srgb, var(--genre-color, #10b981) 28%, transparent),
+    0 4px 16px color-mix(in srgb, var(--genre-color, #10b981) 18%, transparent),
+    0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.premium-genre-card > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* ============================================
+   PREMIUM SHOW CARD — white glass for program cards
    ============================================ */
 .premium-show-card {
   position: relative;
@@ -392,11 +482,11 @@ html, body {
   cursor: pointer;
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  background: rgba(15, 30, 22, 0.85);
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(12px) saturate(140%);
   -webkit-backdrop-filter: blur(12px) saturate(140%);
-  border: 1px solid rgba(16, 185, 129, 0.15);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(13, 124, 74, 0.12);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
 }
 
 /* Glass shine — subtle top highlight */
@@ -407,10 +497,16 @@ html, body {
   left: 0;
   right: 0;
   height: 50%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, transparent 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, transparent 100%);
   pointer-events: none;
   z-index: 1;
   border-radius: 16px 16px 0 0;
+}
+
+.premium-show-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(13, 124, 74, 0.25);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
 }
 
 .premium-show-card > * {
@@ -418,18 +514,32 @@ html, body {
   z-index: 2;
 }
 
+/* Dark theme variant */
+.theme-dark .premium-show-card {
+  background: rgba(20, 35, 25, 0.85);
+  border-color: rgba(16, 185, 129, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+.theme-dark .premium-show-card::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, transparent 100%);
+}
+.theme-dark .premium-show-card:hover {
+  border-color: rgba(16, 185, 129, 0.4);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
 /* ============================================
-   PREMIUM GLASS — for toolbar, reports, settings, modals, etc.
+   PREMIUM GLASS — for toolbars, reports, settings, etc.
    ============================================ */
 .premium-glass {
-  background: rgba(15, 30, 22, 0.75);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
-  border: 1px solid rgba(16, 185, 129, 0.15);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  border: 1px solid rgba(13, 124, 74, 0.12);
   box-shadow:
-    0 12px 40px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  border-radius: 20px;
+    0 4px 24px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
   position: relative;
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -440,12 +550,29 @@ html, body {
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 50%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, transparent 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, transparent 100%);
   pointer-events: none;
-  border-radius: 20px 20px 0 0;
+  border-radius: 16px 16px 0 0;
 }
 
 .premium-glass:hover {
+  border-color: rgba(13, 124, 74, 0.2);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.theme-dark .premium-glass {
+  background: rgba(20, 35, 25, 0.8);
+  border-color: rgba(16, 185, 129, 0.15);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.theme-dark .premium-glass::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, transparent 100%);
+}
+.theme-dark .premium-glass:hover {
   border-color: rgba(16, 185, 129, 0.3);
   box-shadow:
     0 16px 48px rgba(0, 0, 0, 0.55),
@@ -529,8 +656,6 @@ html, body {
   animation: fade-in-up 0.4s ease-out forwards;
 }
 
-/* === New animations per task spec === */
-
 /* 1. Card entrance — used for genre cards (staggered via animationDelay) */
 @keyframes card-enter {
   from { opacity: 0; transform: translateY(20px); }
@@ -561,10 +686,14 @@ html, body {
 
 /* 4. Skeleton loading */
 .skeleton-card {
-  background: rgba(15, 30, 22, 0.5);
+  background: rgba(232, 228, 216, 0.5);
   border-radius: 16px;
-  border: 1px solid rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(13, 124, 74, 0.08);
   animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+.theme-dark .skeleton-card {
+  background: rgba(15, 30, 22, 0.5);
+  border-color: rgba(16, 185, 129, 0.08);
 }
 @keyframes skeleton-pulse {
   0%, 100% { opacity: 0.5; }
@@ -574,7 +703,7 @@ html, body {
 .spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid rgba(16, 185, 129, 0.2);
+  border: 3px solid rgba(13, 124, 74, 0.2);
   border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -619,11 +748,11 @@ html, body {
   animation: drawer-slide-in 0.32s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-/* Modal — dark glass with emerald border + blur */
+/* Modal — light glass with green border + blur */
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   z-index: 50;
@@ -635,18 +764,26 @@ html, body {
 }
 
 .modal-content {
-  background: rgba(12, 28, 20, 0.97);
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  border: 1px solid rgba(16, 185, 129, 0.15);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(13, 124, 74, 0.15);
   border-radius: 24px;
   box-shadow:
-    0 24px 80px rgba(0, 0, 0, 0.6),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    0 24px 80px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
   max-width: 900px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
   color: var(--text-primary);
   animation: modal-enter 0.2s ease-out forwards;
+}
+
+.theme-dark .modal-content {
+  background: rgba(15, 28, 20, 0.95);
+  border-color: rgba(16, 185, 129, 0.15);
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }

@@ -180,7 +180,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'radio', key: 'radio', nameFa: 'تاک‌شوی رادیویی / صوتی', name: 'Radio/Audio',
-    color: '#86efac', description: '۶ برنامه', filterFn: s => s.category.includes('رادیویی'),
+    color: '#5a6b4a', description: '۶ برنامه', filterFn: s => s.category.includes('رادیویی'),
     tags: [TAG_LIBRARY.layout, TAG_LIBRARY.effects],
     presetTags: ['رادیویی', 'صوتی', 'گفتگو', 'مدرن', 'استودیویی'],
     searchFields: ['name', 'summary', 'layout', 'effects'],
@@ -370,7 +370,7 @@ function generateThumbnailColors(show: TalkShow): { gradient: string; pattern: s
   // Extract colors from show's color field
   const colorStr = show.colors || '';
   let primary = '#10b981';
-  let secondary = '#059669';
+  let secondary = '#0d7c4a';
 
   if (colorStr.includes('red') || colorStr.includes('قرمز')) primary = '#dc2626';
   else if (colorStr.includes('blue') || colorStr.includes('آبی')) primary = '#2563eb';
@@ -380,10 +380,10 @@ function generateThumbnailColors(show: TalkShow): { gradient: string; pattern: s
   else if (colorStr.includes('yellow') || colorStr.includes('زرد')) primary = '#f59e0b';
   else if (colorStr.includes('green') || colorStr.includes('سبز')) primary = '#10b981';
   else if (colorStr.includes('gold') || colorStr.includes('طلایی')) primary = '#b45309';
-  else if (colorStr.includes('white') || colorStr.includes('سفید')) primary = '#86efac';
+  else if (colorStr.includes('white') || colorStr.includes('سفید')) primary = '#5a6b4a';
 
   if (colorStr.includes('wood') || colorStr.includes('چوب')) secondary = '#92400e';
-  else if (colorStr.includes('dark') || colorStr.includes('تاریک')) secondary = '#f0fdf4';
+  else if (colorStr.includes('dark') || colorStr.includes('تاریک')) secondary = '#1a2e1a';
   else if (colorStr.includes('black') || colorStr.includes('مشکی')) secondary = '#0a0a0a';
   else secondary = primary + '88';
 
@@ -417,7 +417,7 @@ function getVideoPlatformInfo(url: string): { name: string; icon: string; color:
   if (url.includes('dailymotion.com')) return { name: 'Dailymotion', icon: '📺', color: '#0066dc' };
   if (url.includes('t.me') || url.includes('telegram')) return { name: 'تلگرام', icon: '✈', color: '#0088cc' };
   if (url.includes('instagram.com')) return { name: 'اینستاگرام', icon: '📷', color: '#e1306c' };
-  return { name: 'ویدیو', icon: '🎬', color: '#6b8f7a' };
+  return { name: 'ویدیو', icon: '🎬', color: '#8a8a7a' };
 }
 
 // ============================================
@@ -429,9 +429,9 @@ function ShowImageGallery({ images, showName }: { images: string[]; showName: st
 
   return (
     <div className="mb-6">
-      <h4 className="font-bold mb-3" style={{ color: '#f0fdf4' }}>
+      <h4 className="font-bold mb-3" style={{ color: '#1a2e1a' }}>
         🖼 تصاویر برنامه
-        <span className="text-xs font-normal mr-2" style={{ color: '#6b8f7a' }}>
+        <span className="text-xs font-normal mr-2" style={{ color: '#8a8a7a' }}>
           ({images.length.toLocaleString('fa-IR')} تصویر)
         </span>
       </h4>
@@ -439,7 +439,7 @@ function ShowImageGallery({ images, showName }: { images: string[]; showName: st
       {/* Main image */}
       <div
         className="rounded-xl overflow-hidden mb-3 relative cursor-pointer"
-        style={{ aspectRatio: '16/9', background: 'rgba(15, 30, 22, 0.5)', border: '1px solid rgba(16, 185, 129, 0.3)' }}
+        style={{ aspectRatio: '16/9', background: 'rgba(232, 228, 216, 0.5)', border: '1px solid rgba(13, 124, 74, 0.3)' }}
         onClick={() => images[activeIdx] && setLightbox(images[activeIdx])}
       >
         <img
@@ -489,7 +489,7 @@ function ShowImageGallery({ images, showName }: { images: string[]; showName: st
               style={{
                 width: '64px',
                 height: '48px',
-                border: idx === activeIdx ? '3px solid #10b981' : '2px solid rgba(16, 185, 129, 0.3)',
+                border: idx === activeIdx ? '3px solid #10b981' : '2px solid rgba(13, 124, 74, 0.3)',
                 opacity: idx === activeIdx ? 1 : 0.6,
               }}
             >
@@ -833,7 +833,7 @@ export default function Home() {
         {currentView === 'add' && !canEdit && (
           <div className="premium-glass p-8 text-center">
             <h2 className="text-2xl font-bold mb-2" style={{ color: '#dc2626' }}>دسترسی غیرمجاز</h2>
-            <p style={{ color: '#86efac' }}>شما اجازهٔ افزودن یا ویرایش برنامه‌ها را ندارید. برای دسترسی کامل با حساب مدیر یا ویراستار وارد شوید.</p>
+            <p style={{ color: '#5a6b4a' }}>شما اجازهٔ افزودن یا ویرایش برنامه‌ها را ندارید. برای دسترسی کامل با حساب مدیر یا ویراستار وارد شوید.</p>
           </div>
         )}
       </main>
@@ -918,11 +918,11 @@ export default function Home() {
             bottom: '32px',
             left: '50%',
             transform: 'translateX(-50%)',
-            background: 'rgba(16, 185, 129, 0.95)',
+            background: 'rgba(13, 124, 74, 0.95)',
             color: 'white',
             padding: '12px 24px',
             borderRadius: '12px',
-            boxShadow: '0 8px 32px rgba(16, 185, 129, 0.4)',
+            boxShadow: '0 8px 32px rgba(13, 124, 74, 0.4)',
             zIndex: 100,
             fontSize: '14px',
             fontWeight: 600,
@@ -1014,7 +1014,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
               disabled={loading}
               style={{
                 width: '100%',
-                background: 'rgba(255, 255, 255, 0.05)',
+                background: 'rgba(255, 255, 255, 0.08)',
                 border: '1px solid rgba(52, 211, 153, 0.4)',
                 borderRadius: '12px',
                 padding: '12px 16px',
@@ -1045,7 +1045,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 disabled={loading}
                 style={{
                   width: '100%',
-                  background: 'rgba(255, 255, 255, 0.05)',
+                  background: 'rgba(255, 255, 255, 0.08)',
                   border: '1px solid rgba(52, 211, 153, 0.4)',
                   borderRadius: '12px',
                   padding: '12px 48px 12px 16px',
@@ -1064,7 +1064,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 disabled={loading}
                 className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-colors"
                 style={{ color: '#86efac', background: 'transparent' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(13, 124, 74, 0.1)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
                 {showPassword ? (
@@ -1162,11 +1162,11 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack }: {
     <header
       className="fixed top-0 left-0 right-0 z-40"
       style={{
-        background: 'linear-gradient(180deg, rgba(10, 25, 18, 0.98) 0%, rgba(15, 30, 22, 0.96) 100%)',
-        backdropFilter: 'blur(24px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-        borderBottom: '1px solid rgba(52, 211, 153, 0.4)',
-        boxShadow: '0 8px 32px rgba(16, 185, 129, 0.25), inset 0 1px 0 rgba(52, 211, 153, 0.2)',
+        background: 'rgba(245, 243, 237, 0.85)',
+        backdropFilter: 'blur(20px) saturate(160%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(160%)',
+        borderBottom: '1px solid rgba(13, 124, 74, 0.1)',
+        boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)',
       }}
     >
       <div
@@ -1183,19 +1183,19 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack }: {
           aria-label="باز کردن منو"
           className="flex flex-col justify-center items-center p-2.5 rounded-xl transition-all"
           style={{
-            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.4) 0%, rgba(16, 185, 129, 0.15) 100%)',
-            border: '1px solid rgba(52, 211, 153, 0.4)',
-            color: 'white',
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15), 0 4px 14px rgba(16, 185, 129, 0.3)',
+            background: 'rgba(13, 124, 74, 0.08)',
+            border: '1px solid rgba(13, 124, 74, 0.2)',
+            color: '#0d7c4a',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 8px rgba(13, 124, 74, 0.08)',
             minWidth: '44px',
             minHeight: '44px',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.6) 0%, rgba(16, 185, 129, 0.3) 100%)';
+            e.currentTarget.style.background = 'rgba(13, 124, 74, 0.15)';
             e.currentTarget.style.transform = 'translateY(-1px)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.4) 0%, rgba(16, 185, 129, 0.15) 100%)';
+            e.currentTarget.style.background = 'rgba(13, 124, 74, 0.08)';
             e.currentTarget.style.transform = 'translateY(0)';
           }}
         >
@@ -1216,19 +1216,19 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack }: {
             height={isMobile ? 24 : 34}
             priority
             style={{
-              filter: 'drop-shadow(0 2px 10px rgba(16, 185, 129, 0.5))',
+              filter: 'drop-shadow(0 2px 8px rgba(13, 124, 74, 0.25))',
               flexShrink: 0,
             }}
           />
           {!isMobile && (
             <div
               className="flex flex-col"
-              style={{ borderRight: '1px solid rgba(52, 211, 153, 0.3)', paddingRight: '12px' }}
+              style={{ borderRight: '1px solid rgba(13, 124, 74, 0.15)', paddingRight: '12px' }}
             >
-              <span style={{ color: 'white', fontWeight: 700, fontSize: '15px', lineHeight: 1.2 }}>
+              <span style={{ color: '#1a2e1a', fontWeight: 700, fontSize: '15px', lineHeight: 1.2 }}>
                 {viewTitles[currentView] || 'بانک رسانه'}
               </span>
-              <span style={{ color: 'rgba(134, 239, 172, 0.6)', fontSize: '11px', marginTop: '2px' }}>
+              <span style={{ color: '#8a8a7a', fontSize: '11px', marginTop: '2px' }}>
                 نسخه ۲.۰.۰
               </span>
             </div>
@@ -1244,18 +1244,18 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack }: {
               title="بازگشت به صفحهٔ قبل"
               className="flex items-center gap-2 rounded-xl transition-all"
               style={{
-                background: 'rgba(255, 255, 255, 0.06)',
-                border: '1px solid rgba(52, 211, 153, 0.55)',
-                color: '#059669',
+                background: 'rgba(255, 255, 255, 0.8)',
+                border: '1px solid rgba(13, 124, 74, 0.25)',
+                color: '#0d7c4a',
                 padding: isMobile ? '9px 12px' : '9px 16px',
-                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.32), inset 0 1px 0 rgba(255,255,255,0.7)',
+                boxShadow: '0 2px 8px rgba(13, 124, 74, 0.1), inset 0 1px 0 rgba(255,255,255,0.7)',
                 minWidth: '44px',
                 minHeight: '44px',
                 fontWeight: 700,
                 fontSize: '14px',
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.8)'; e.currentTarget.style.transform = 'translateY(0)'; }}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -1266,9 +1266,9 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack }: {
             <span
               className="px-2.5 py-1 rounded-full text-xs font-bold"
               style={{
-                background: 'rgba(16, 185, 129, 0.35)',
-                color: '#34d399',
-                border: '1px solid rgba(52, 211, 153, 0.35)',
+                background: 'rgba(13, 124, 74, 0.1)',
+                color: '#0d7c4a',
+                border: '1px solid rgba(13, 124, 74, 0.2)',
               }}
             >
               بانک رسانه
@@ -1277,19 +1277,19 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack }: {
             <div
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl"
               style={{
-                background: 'rgba(16, 185, 129, 0.18)',
-                border: '1px solid rgba(16, 185, 129, 0.35)',
+                background: 'rgba(13, 124, 74, 0.08)',
+                border: '1px solid rgba(13, 124, 74, 0.15)',
               }}
             >
               <span
                 className="w-2 h-2 rounded-full"
                 style={{
-                  backgroundColor: '#34d399',
-                  boxShadow: '0 0 8px #34d399',
+                  backgroundColor: '#10b981',
+                  boxShadow: '0 0 8px #10b981',
                   animation: 'pulse 2s ease-in-out infinite',
                 }}
               ></span>
-              <span style={{ color: 'rgba(134, 239, 172, 0.85)', fontSize: '12px' }}>متصل</span>
+              <span style={{ color: '#5a6b4a', fontSize: '12px' }}>متصل</span>
             </div>
           )}
         </div>
@@ -1358,16 +1358,18 @@ function DrawerMenu({
         className="fixed top-0 right-0 bottom-0 animate-drawer-slide-in flex flex-col"
         style={{
           width: 'min(340px, 88vw)',
-          background: 'linear-gradient(180deg, #0d2218 0%, #059669 40%, #0a1f14 70%, #0d2218 100%)',
-          borderLeft: '1px solid rgba(52, 211, 153, 0.45)',
-          boxShadow: '-16px 0 56px rgba(16, 185, 129, 0.4), inset 1px 0 0 rgba(52, 211, 153, 0.15)',
+          background: 'rgba(240, 238, 230, 0.85)',
+          backdropFilter: 'blur(30px) saturate(140%)',
+          WebkitBackdropFilter: 'blur(30px) saturate(140%)',
+          borderLeft: '1px solid rgba(13, 124, 74, 0.15)',
+          boxShadow: '-16px 0 56px rgba(0, 0, 0, 0.1), inset 1px 0 0 rgba(255, 255, 255, 0.4)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drawer header — logo + close */}
         <div
           className="p-4 flex items-center justify-between flex-shrink-0"
-          style={{ borderBottom: '1px solid rgba(52, 211, 153, 0.3)' }}
+          style={{ borderBottom: '1px solid rgba(13, 124, 74, 0.1)' }}
         >
           <Image
             src="/banke-rasane-logo.png"
@@ -1375,14 +1377,14 @@ function DrawerMenu({
             width={130}
             height={34}
             priority
-            style={{ filter: 'drop-shadow(0 2px 10px rgba(16, 185, 129, 0.5))' }}
+            style={{ filter: 'drop-shadow(0 2px 8px rgba(13, 124, 74, 0.25))' }}
           />
           <button
             onClick={onClose}
             className="p-2 rounded-lg transition-colors"
-            style={{ color: 'rgba(255, 255, 255, 0.6)' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(220, 38, 38, 0.2)'; e.currentTarget.style.color = '#fca5a5'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)'; }}
+            style={{ color: '#8a8a7a' }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(220, 38, 38, 0.1)'; e.currentTarget.style.color = '#dc2626'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#8a8a7a'; }}
             title="بستن منو"
             aria-label="بستن منو"
           >
@@ -1406,31 +1408,31 @@ function DrawerMenu({
                   onClick={() => onNavigate(item.key as any)}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all w-full text-right"
                   style={isActive ? {
-                    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.55) 0%, rgba(16, 185, 129, 0.25) 100%)',
-                    border: '1px solid rgba(16, 185, 129, 0.65)',
-                    color: '#34d399',
-                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.35), inset 0 1px 0 rgba(52, 211, 153, 0.25)',
+                    background: 'rgba(13, 124, 74, 0.1)',
+                    border: '1px solid rgba(13, 124, 74, 0.25)',
+                    color: '#0d7c4a',
+                    boxShadow: '0 2px 8px rgba(13, 124, 74, 0.08), inset 0 1px 0 rgba(255,255,255,0.5)',
                   } : {
                     border: '1px solid transparent',
-                    color: 'rgba(240, 253, 244, 0.95)',
+                    color: '#1a2e1a',
                   }}
                   onMouseEnter={(e) => {
                     if (!isActive) {
-                      e.currentTarget.style.background = 'rgba(52, 211, 153, 0.12)';
-                      e.currentTarget.style.color = 'white';
+                      e.currentTarget.style.background = 'rgba(13, 124, 74, 0.06)';
+                      e.currentTarget.style.color = '#0d7c4a';
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!isActive) {
                       e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.color = '#f0fdf4';
+                      e.currentTarget.style.color = '#1a2e1a';
                     }
                   }}
                 >
                   <NavIcon name={item.icon} />
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm">{item.label}</div>
-                    <div className="text-xs" style={{ color: 'rgba(134, 239, 172, 0.75)', marginTop: '2px' }}>{item.desc}</div>
+                    <div className="text-xs" style={{ color: '#8a8a7a', marginTop: '2px' }}>{item.desc}</div>
                   </div>
                 </button>
               );
@@ -1442,7 +1444,7 @@ function DrawerMenu({
             <button
               onClick={() => setGenresExpanded(!genresExpanded)}
               className="flex items-center justify-between w-full px-3 mb-2 text-xs font-bold uppercase tracking-wider"
-              style={{ color: 'rgba(255, 255, 255, 0.5)' }}
+              style={{ color: 'rgba(138, 138, 122, 0.85)' }}
             >
               <span>ژانرها ({genres.length})</span>
               <svg
@@ -1463,14 +1465,14 @@ function DrawerMenu({
                       key={g.id}
                       onClick={() => onGenreSelect(g)}
                       className="flex items-center gap-3 px-3 py-2 rounded-lg transition-all group w-full"
-                      style={{ color: 'rgba(240, 253, 244, 0.85)' }}
+                      style={{ color: '#1a2e1a' }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = `${g.color}30`;
-                        e.currentTarget.style.color = 'white';
+                        e.currentTarget.style.background = `${g.color}25`;
+                        e.currentTarget.style.color = g.color;
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.background = 'transparent';
-                        e.currentTarget.style.color = '#f0fdf4';
+                        e.currentTarget.style.color = '#1a2e1a';
                       }}
                     >
                       <div
@@ -1498,23 +1500,23 @@ function DrawerMenu({
         {/* User info + settings + logout footer */}
         <div
           className="p-3 flex-shrink-0"
-          style={{ borderTop: '1px solid rgba(52, 211, 153, 0.3)' }}
+          style={{ borderTop: '1px solid rgba(13, 124, 74, 0.1)' }}
         >
           {currentUser && (
             <div
               className="mb-2 p-3 rounded-xl"
               style={{
-                background: 'rgba(255, 255, 255, 0.06)',
-                border: '1px solid rgba(52, 211, 153, 0.2)',
+                background: 'rgba(255, 255, 255, 0.7)',
+                border: '1px solid rgba(13, 124, 74, 0.12)',
               }}
             >
               <div className="flex items-center gap-3">
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
                   style={{
-                    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.7) 0%, rgba(16, 185, 129, 0.4) 100%)',
-                    color: '#34d399',
-                    border: '1px solid rgba(52, 211, 153, 0.5)',
+                    background: 'linear-gradient(135deg, rgba(13, 124, 74, 0.15) 0%, rgba(13, 124, 74, 0.05) 100%)',
+                    color: '#0d7c4a',
+                    border: '1px solid rgba(13, 124, 74, 0.3)',
                     fontWeight: 700,
                     fontSize: '14px',
                   }}
@@ -1522,20 +1524,20 @@ function DrawerMenu({
                   {(currentUser.name || currentUser.username).charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm" style={{ color: '#34d399' }} title={currentUser.username}>
+                  <div className="font-bold text-sm" style={{ color: '#0d7c4a' }} title={currentUser.username}>
                     {currentUser.name || currentUser.username}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span
                       className="text-xs px-1.5 py-0.5 rounded-md font-bold"
                       style={{
-                        background: currentUser.role === 'admin' ? 'rgba(220, 38, 38, 0.25)' : currentUser.role === 'editor' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(16, 185, 129, 0.25)',
-                        color: currentUser.role === 'admin' ? '#fca5a5' : currentUser.role === 'editor' ? '#fcd34d' : '#34d399',
+                        background: currentUser.role === 'admin' ? 'rgba(220, 38, 38, 0.25)' : currentUser.role === 'editor' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(13, 124, 74, 0.25)',
+                        color: currentUser.role === 'admin' ? '#fca5a5' : currentUser.role === 'editor' ? '#fcd34d' : '#0d7c4a',
                       }}
                     >
                       {roleLabel[currentUser.role] || currentUser.role}
                     </span>
-                    <span className="text-xs" style={{ color: 'rgba(134, 239, 172, 0.6)' }} dir="ltr">
+                    <span className="text-xs" style={{ color: '#8a8a7a' }} dir="ltr">
                       @{currentUser.username}
                     </span>
                   </div>
@@ -1549,14 +1551,14 @@ function DrawerMenu({
             <button
               onClick={onOpenSettings}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all w-full mb-1"
-              style={{ color: 'rgba(240, 253, 244, 0.85)' }}
+              style={{ color: '#1a2e1a' }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(16, 185, 129, 0.25)';
-                e.currentTarget.style.color = '#34d399';
+                e.currentTarget.style.background = 'rgba(13, 124, 74, 0.08)';
+                e.currentTarget.style.color = '#0d7c4a';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'transparent';
-                e.currentTarget.style.color = '#f0fdf4';
+                e.currentTarget.style.color = '#1a2e1a';
               }}
             >
               <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -1570,14 +1572,14 @@ function DrawerMenu({
           <button
             onClick={onLogout}
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all w-full"
-            style={{ color: 'rgba(240, 253, 244, 0.85)' }}
+            style={{ color: '#1a2e1a' }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(220, 38, 38, 0.2)';
-              e.currentTarget.style.color = '#fca5a5';
+              e.currentTarget.style.background = 'rgba(220, 38, 38, 0.1)';
+              e.currentTarget.style.color = '#dc2626';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+              e.currentTarget.style.color = '#1a2e1a';
             }}
           >
             <NavIcon name="exit" />
@@ -1639,12 +1641,12 @@ function MobileBottomNav({
           <div
             className="fixed bottom-0 left-0 right-0 p-4 animate-slide-up-nav"
             style={{
-              background: 'rgba(12, 28, 20, 0.92)',
+              background: 'rgba(245, 243, 237, 0.85)',
               backdropFilter: 'blur(26px) saturate(160%)',
               WebkitBackdropFilter: 'blur(26px) saturate(160%)',
-              borderTop: '1px solid rgba(16, 185, 129, 0.15)',
+              borderTop: '1px solid rgba(13, 124, 74, 0.15)',
               borderRadius: '24px 24px 0 0',
-              boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06)',
+              boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.5)',
               paddingBottom: '32px',
               maxHeight: '70vh',
               overflowY: 'auto',
@@ -1652,11 +1654,11 @@ function MobileBottomNav({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg" style={{ color: '#f0fdf4' }}>ژانرها ({genres.length})</h3>
+              <h3 className="font-bold text-lg" style={{ color: '#1a2e1a' }}>ژانرها ({genres.length})</h3>
               <button
                 onClick={() => setShowGenres(false)}
                 className="p-2 rounded-lg"
-                style={{ color: '#6b8f7a', background: 'rgba(255, 255, 255, 0.03)' }}
+                style={{ color: '#8a8a7a', background: 'rgba(255, 255, 255, 0.6)' }}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1690,7 +1692,7 @@ function MobileBottomNav({
                         </svg>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-bold truncate" style={{ color: '#f0fdf4' }}>{g.nameFa}</div>
+                        <div className="text-sm font-bold truncate" style={{ color: '#1a2e1a' }}>{g.nameFa}</div>
                         <div className="text-xs font-bold" style={{ color: g.color }}>
                           {count.toLocaleString('fa-IR')} برنامه
                         </div>
@@ -1708,12 +1710,12 @@ function MobileBottomNav({
         <div
           className="flex items-center justify-around no-scrollbar"
           style={{
-            background: 'rgba(12, 28, 20, 0.92)',
+            background: 'rgba(245, 243, 237, 0.85)',
             backdropFilter: 'blur(24px) saturate(160%)',
             WebkitBackdropFilter: 'blur(24px) saturate(160%)',
-            border: '1px solid rgba(16, 185, 129, 0.15)',
+            border: '1px solid rgba(13, 124, 74, 0.15)',
             borderRadius: '22px',
-            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06)',
+            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.5)',
             padding: '8px',
           }}
         >
@@ -1741,17 +1743,17 @@ function MobileNavBtn({ label, icon, active, onClick, highlight }: {
       onClick={onClick}
       className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all"
       style={{
-        background: active ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(16, 185, 129, 0.08) 100%)' : 'transparent',
-        border: active ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid transparent',
+        background: active ? 'linear-gradient(135deg, rgba(13, 124, 74, 0.18) 0%, rgba(13, 124, 74, 0.08) 100%)' : 'transparent',
+        border: active ? '1px solid rgba(13, 124, 74, 0.35)' : '1px solid transparent',
         minWidth: '56px',
       }}
     >
       <svg
         className="w-6 h-6"
         fill="none"
-        stroke={active ? '#10b981' : highlight ? '#059669' : '#6b8f7a'}
+        stroke={active ? '#0d7c4a' : highlight ? '#0d7c4a' : '#8a8a7a'}
         viewBox="0 0 24 24"
-        style={{ filter: active ? 'drop-shadow(0 0 6px rgba(16, 185, 129, 0.4))' : 'none' }}
+        style={{ filter: active ? 'drop-shadow(0 0 6px rgba(13, 124, 74, 0.4))' : 'none' }}
       >
         {icon === 'home' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />}
         {icon === 'grid' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />}
@@ -1760,7 +1762,7 @@ function MobileNavBtn({ label, icon, active, onClick, highlight }: {
         {icon === 'exit' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />}
         {icon === 'menu' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />}
       </svg>
-      <span className="text-xs font-medium" style={{ color: active ? '#10b981' : highlight ? '#059669' : '#6b8f7a' }}>
+      <span className="text-xs font-medium" style={{ color: active ? '#10b981' : highlight ? '#0d7c4a' : '#8a8a7a' }}>
         {label}
       </span>
     </button>
@@ -1792,15 +1794,15 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
     <>
       <header className="mb-8 animate-fade-in">
         <div className="flex items-center gap-3 mb-2 flex-wrap">
-          <h1 className="text-3xl font-bold" style={{ color: '#f0fdf4' }}>آرشیو تخصصی برنامه‌های تلویزیونی</h1>
+          <h1 className="text-3xl font-bold" style={{ color: '#1a2e1a' }}>آرشیو تخصصی برنامه‌های تلویزیونی</h1>
           <span
             className="text-sm px-3 py-1 rounded-full"
-            style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#059669' }}
+            style={{ background: 'rgba(13, 124, 74, 0.1)', color: '#0d7c4a' }}
           >
             بانک رسانه
           </span>
         </div>
-        <p style={{ color: '#6b8f7a' }}>
+        <p style={{ color: '#8a8a7a' }}>
           بانک اطلاعاتی {talkShows.length.toLocaleString('fa-IR')} برنامهٔ تلویزیونی در {genres.length} ژانر
         </p>
       </header>
@@ -1828,9 +1830,9 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                 >
                   <StatIcon name={s.icon} />
                 </div>
-                <span className="text-sm font-medium" style={{ color: 'rgba(240, 253, 244, 0.85)' }}>{s.label}</span>
+                <span className="text-sm font-medium" style={{ color: '#5a6b4a' }}>{s.label}</span>
               </div>
-              <div className="text-3xl font-black" style={{ color: '#f0fdf4' }}>
+              <div className="text-3xl font-black" style={{ color: '#1a2e1a' }}>
                 {s.value.toLocaleString('fa-IR')}
               </div>
             </div>
@@ -1839,16 +1841,16 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
       </div>
 
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <h2 className="text-xl font-bold" style={{ color: '#f0fdf4' }}>ژانرها</h2>
+        <h2 className="text-xl font-bold" style={{ color: '#1a2e1a' }}>ژانرها</h2>
         <div className="flex items-center gap-2 flex-wrap">
           {isAdmin && onAddGenre && (
             <button
               onClick={() => setShowAddGenre(true)}
               className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
               style={{
-                background: 'rgba(16, 185, 129, 0.12)',
-                color: '#34d399',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
+                background: 'rgba(13, 124, 74, 0.12)',
+                color: '#0d7c4a',
+                border: '1px solid rgba(13, 124, 74, 0.3)',
               }}
             >
               + افزودن ژانر
@@ -1873,21 +1875,21 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
             <button
               key={g.id}
               onClick={() => onGenreClick(g)}
-              className="premium-card animate-card-enter text-right"
+              className="premium-genre-card animate-card-enter text-right"
               style={{
                 animationDelay: `${idx * 50}ms`,
-                ['--card-accent-color' as string]: g.color,
+                ['--genre-color' as string]: g.color,
               }}
             >
               <div className="flex items-start justify-between mb-4">
                 <div
                   className="w-14 h-14 rounded-2xl flex items-center justify-center"
                   style={{
-                    backgroundColor: `${g.color}22`,
+                    backgroundColor: `${g.color}30`,
                     color: g.color,
-                    border: `1px solid ${g.color}55`,
+                    border: `1px solid ${g.color}80`,
                     backdropFilter: 'blur(8px)',
-                    boxShadow: `0 0 16px ${g.color}40`,
+                    boxShadow: `0 0 20px ${g.color}60`,
                   }}
                 >
                   <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -1895,15 +1897,15 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                   </svg>
                 </div>
                 <div className="text-left">
-                  <div className="text-4xl font-black" style={{ color: '#f0fdf4' }}>
+                  <div className="text-4xl font-black" style={{ color: '#ffffff' }}>
                     {count.toLocaleString('fa-IR')}
                   </div>
-                  <div className="text-xs" style={{ color: 'rgba(134, 239, 172, 0.7)' }}>برنامه</div>
+                  <div className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>برنامه</div>
                 </div>
               </div>
-              <h3 className="font-bold text-lg mb-1" style={{ color: '#f0fdf4' }}>{g.nameFa}</h3>
-              <p className="text-sm mt-3" style={{ color: '#86efac' }}>{g.description}</p>
-              <div className="mt-4 flex items-center text-sm font-bold" style={{ color: '#34d399' }}>
+              <h3 className="font-bold text-lg mb-1" style={{ color: '#ffffff' }}>{g.nameFa}</h3>
+              <p className="text-sm mt-3" style={{ color: 'rgba(255, 255, 255, 0.75)' }}>{g.description}</p>
+              <div className="mt-4 flex items-center text-sm font-bold" style={{ color: g.color }}>
                 مشاهده و جستجو
                 <svg className="w-4 h-4 mr-1 rtl-flip" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -2027,10 +2029,10 @@ function ProgramsView({
   return (
     <>
       <header className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-1" style={{ color: '#f0fdf4' }}>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-1" style={{ color: '#1a2e1a' }}>
           {genre ? genre.nameFa : 'همهٔ برنامه‌ها'}
         </h1>
-        <p style={{ color: '#6b8f7a' }}>
+        <p style={{ color: '#8a8a7a' }}>
           {filteredShows.length.toLocaleString('fa-IR')} برنامه
           {genre && ` • ${genre.description}`}
         </p>
@@ -2059,7 +2061,7 @@ function ProgramsView({
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-3 flex-wrap">
-                <h2 className="text-xl sm:text-2xl font-bold mb-1" style={{ color: '#f0fdf4' }}>{genre.nameFa}</h2>
+                <h2 className="text-xl sm:text-2xl font-bold mb-1" style={{ color: '#1a2e1a' }}>{genre.nameFa}</h2>
                 {canEdit && onAdd && (
                   <button
                     onClick={onAdd}
@@ -2070,7 +2072,7 @@ function ProgramsView({
                   </button>
                 )}
               </div>
-              <p style={{ color: '#86efac' }} className="text-sm mt-1">{genre.description}</p>
+              <p style={{ color: '#5a6b4a' }} className="text-sm mt-1">{genre.description}</p>
             </div>
           </div>
         </div>
@@ -2082,7 +2084,7 @@ function ProgramsView({
         <div className="relative">
           <svg
             className="w-5 h-5 absolute right-3 top-1/2 -translate-y-1/2"
-            style={{ color: '#6b8f7a' }}
+            style={{ color: '#8a8a7a' }}
             fill="none" stroke="currentColor" viewBox="0 0 24 24"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -2093,13 +2095,13 @@ function ProgramsView({
             onChange={(e) => setSearch(e.target.value)}
             placeholder={`جستجو در ${genre ? genre.nameFa : 'همهٔ برنامه‌ها'}...`}
             style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(16, 185, 129, 0.15)',
+              background: 'rgba(255, 255, 255, 0.8)',
+              border: '1px solid rgba(13, 124, 74, 0.15)',
               borderRadius: '12px',
               padding: '11px 36px 11px 16px',
               width: '100%',
               fontFamily: 'inherit',
-              color: '#f0fdf4',
+              color: '#1a2e1a',
               outline: 'none',
               fontSize: '15px',
             }}
@@ -2111,14 +2113,14 @@ function ProgramsView({
           <div
             className="flex items-center gap-1 rounded-xl p-1 flex-shrink-0"
             style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(16, 185, 129, 0.15)',
+              background: 'rgba(255, 255, 255, 0.8)',
+              border: '1px solid rgba(13, 124, 74, 0.15)',
             }}
           >
             <button
               onClick={() => setView('grid')}
               className="p-2 rounded-lg transition-colors"
-              style={view === 'grid' ? { background: '#10b981', color: 'white' } : { color: '#86efac' }}
+              style={view === 'grid' ? { background: '#10b981', color: 'white' } : { color: '#5a6b4a' }}
               aria-label="نمایش شبکه‌ای"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2128,7 +2130,7 @@ function ProgramsView({
             <button
               onClick={() => setView('list')}
               className="p-2 rounded-lg transition-colors"
-              style={view === 'list' ? { background: '#10b981', color: 'white' } : { color: '#86efac' }}
+              style={view === 'list' ? { background: '#10b981', color: 'white' } : { color: '#5a6b4a' }}
               aria-label="نمایش لیستی"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2143,13 +2145,13 @@ function ProgramsView({
             className="px-3 py-2 rounded-xl text-sm font-medium transition-all flex-shrink-0"
             title="فقط برنامه‌های مرتبط با کشورهای اسلامی"
             style={islamicOnly ? {
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              background: 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)',
               color: 'white',
-              border: '1px solid rgba(16, 185, 129, 0.5)',
+              border: '1px solid rgba(13, 124, 74, 0.5)',
             } : {
-              background: 'rgba(255, 255, 255, 0.05)',
-              color: '#86efac',
-              border: '1px solid rgba(16, 185, 129, 0.15)',
+              background: 'rgba(255, 255, 255, 0.8)',
+              color: '#5a6b4a',
+              border: '1px solid rgba(13, 124, 74, 0.15)',
             }}
           >
             🌍 اسلامی
@@ -2160,13 +2162,13 @@ function ProgramsView({
               onClick={() => setSelectionMode(!selectionMode)}
               className="px-4 py-2 rounded-xl text-sm font-medium transition-all flex-1"
               style={selectionMode ? {
-                background: 'rgba(16, 185, 129, 0.15)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
-                color: '#059669',
+                background: 'rgba(13, 124, 74, 0.15)',
+                border: '1px solid rgba(13, 124, 74, 0.3)',
+                color: '#0d7c4a',
               } : {
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(16, 185, 129, 0.15)',
-                color: '#86efac',
+                background: 'rgba(255, 255, 255, 0.8)',
+                border: '1px solid rgba(13, 124, 74, 0.15)',
+                color: '#5a6b4a',
               }}
             >
               {selectionMode ? `✓ انتخاب (${selectedIds.length.toLocaleString('fa-IR')})` : 'انتخاب چندتایی'}
@@ -2177,7 +2179,7 @@ function ProgramsView({
               className="px-4 py-2 rounded-xl text-sm font-medium flex-1 text-center"
               style={{
                 background: 'rgba(107, 143, 122, 0.08)',
-                color: '#6b8f7a',
+                color: '#8a8a7a',
                 border: '1px solid rgba(107, 143, 122, 0.2)',
               }}
               title="برای افزودن یا ویرایش برنامه‌ها با حساب مدیر یا ویراستار وارد شوید"
@@ -2190,7 +2192,7 @@ function ProgramsView({
         {/* Filters — two horizontally scrollable rows (no chaotic wrapping on mobile) */}
         <div className="space-y-2">
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-            <span className="text-sm flex-shrink-0" style={{ color: '#6b8f7a' }}>اندازه:</span>
+            <span className="text-sm flex-shrink-0" style={{ color: '#8a8a7a' }}>اندازه:</span>
             {[
               { key: 'all', label: 'همه' },
               { key: 'بزرگ/لوکس', label: 'بزرگ/لوکس' },
@@ -2202,11 +2204,11 @@ function ProgramsView({
                 onClick={() => setFilterSize(f.key)}
                 className="px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
                 style={filterSize === f.key ? {
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  background: 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)',
                   color: 'white',
                 } : {
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  color: '#86efac',
+                  background: 'rgba(255, 255, 255, 0.8)',
+                  color: '#5a6b4a',
                 }}
               >
                 {f.label}
@@ -2214,7 +2216,7 @@ function ProgramsView({
             ))}
           </div>
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-            <span className="text-sm flex-shrink-0" style={{ color: '#6b8f7a' }}>سبک:</span>
+            <span className="text-sm flex-shrink-0" style={{ color: '#8a8a7a' }}>سبک:</span>
             {[
               { key: 'all', label: 'همه' },
               { key: 'مدرن', label: 'مدرن' },
@@ -2227,11 +2229,11 @@ function ProgramsView({
                 onClick={() => setFilterStyle(f.key)}
                 className="px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
                 style={filterStyle === f.key ? {
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  background: 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)',
                   color: 'white',
                 } : {
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  color: '#86efac',
+                  background: 'rgba(255, 255, 255, 0.8)',
+                  color: '#5a6b4a',
                 }}
               >
                 {f.label}
@@ -2243,9 +2245,9 @@ function ProgramsView({
         {selectionMode && selectedIds.length > 0 && (
           <div
             className="flex flex-wrap items-center gap-3 pt-3"
-            style={{ borderTop: '1px solid rgba(16, 185, 129, 0.1)' }}
+            style={{ borderTop: '1px solid rgba(13, 124, 74, 0.1)' }}
           >
-            <span style={{ color: '#059669' }} className="font-medium text-sm">
+            <span style={{ color: '#0d7c4a' }} className="font-medium text-sm">
               {selectedIds.length.toLocaleString('fa-IR')} برنامه انتخاب شده
             </span>
             <button
@@ -2265,14 +2267,14 @@ function ProgramsView({
             <button
               onClick={handleExcel}
               className="px-3 py-1.5 rounded-lg text-sm font-medium"
-              style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#059669', border: '1px solid rgba(16, 185, 129, 0.3)' }}
+              style={{ background: 'rgba(13, 124, 74, 0.15)', color: '#0d7c4a', border: '1px solid rgba(13, 124, 74, 0.3)' }}
             >
               📊 گزارش Excel
             </button>
             <button
               onClick={() => { setSelectedIds([]); setSelectionMode(false); }}
               className="px-3 py-1.5 rounded-lg text-sm font-medium"
-              style={{ background: 'rgba(107, 143, 122, 0.15)', color: '#86efac', border: '1px solid rgba(107, 143, 122, 0.3)' }}
+              style={{ background: 'rgba(107, 143, 122, 0.15)', color: '#5a6b4a', border: '1px solid rgba(107, 143, 122, 0.3)' }}
             >
               لغو
             </button>
@@ -2281,7 +2283,7 @@ function ProgramsView({
       </div>
 
       {filteredShows.length === 0 ? (
-        <div className="text-center py-20" style={{ color: '#6b8f7a' }}>
+        <div className="text-center py-20" style={{ color: '#8a8a7a' }}>
           <p>برنامه‌ای یافت نشد</p>
         </div>
       ) : view === 'grid' ? (
@@ -2323,7 +2325,7 @@ function ProgramsView({
       )}
 
       {filteredShows.length > 60 && (
-        <div className="text-center mt-8" style={{ color: '#6b8f7a' }}>
+        <div className="text-center mt-8" style={{ color: '#8a8a7a' }}>
           <p className="text-sm">
             نمایش ۶۰ برنامه از {filteredShows.length.toLocaleString('fa-IR')} • برای مشاهده همه، جستجو را فیلتر کنید
           </p>
@@ -2353,7 +2355,7 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
       className="premium-show-card"
       style={selected ? {
         border: '2px solid #10b981',
-        boxShadow: '0 0 0 3px rgba(16, 185, 129, 0.3), 0 12px 40px rgba(0, 0, 0, 0.5)',
+        boxShadow: '0 0 0 3px rgba(13, 124, 74, 0.3), 0 12px 40px rgba(0, 0, 0, 0.5)',
       } : undefined}
     >
       {/* Thumbnail — real image from PDF if available, otherwise gradient */}
@@ -2447,7 +2449,7 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
               background: thumb.accent,
               borderColor: thumb.accent,
             } : {
-              background: 'rgba(255, 255, 255, 0.05)',
+              background: 'rgba(255, 255, 255, 0.8)',
               borderColor: `${thumb.accent}90`,
             }}
           >
@@ -2471,22 +2473,22 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
         <div className="flex items-center gap-2 mb-2 flex-wrap">
           <span
             className="text-xs px-2 py-0.5 rounded-full font-medium"
-            style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }}
+            style={{ backgroundColor: 'rgba(13, 124, 74, 0.15)', color: '#0d7c4a', border: '1px solid rgba(13, 124, 74, 0.3)' }}
           >
             {show.style}
           </span>
           {show.viewers === 'با تماشاگر' && (
-            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'rgba(13, 124, 74, 0.15)', color: '#0d7c4a', border: '1px solid rgba(13, 124, 74, 0.3)' }}>
               👥 تماشاگر
             </span>
           )}
         </div>
 
-        <h3 className="font-bold text-sm leading-snug mb-2 line-clamp-2" style={{ direction: 'ltr', textAlign: 'right', color: '#f0fdf4' }}>
+        <h3 className="font-bold text-sm leading-snug mb-2 line-clamp-2" style={{ direction: 'ltr', textAlign: 'right', color: '#1a2e1a' }}>
           {show.name}
         </h3>
 
-        <p className="text-xs line-clamp-2 mb-3" style={{ color: '#86efac' }}>
+        <p className="text-xs line-clamp-2 mb-3" style={{ color: '#5a6b4a' }}>
           {show.summary && show.summary !== '—' ? show.summary : show.category}
         </p>
 
@@ -2497,7 +2499,7 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
               <span
                 key={t.id}
                 className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
-                style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }}
+                style={{ backgroundColor: 'rgba(13, 124, 74, 0.15)', color: '#0d7c4a', border: '1px solid rgba(13, 124, 74, 0.3)' }}
               >
                 {t.label}
               </span>
@@ -2520,11 +2522,11 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
           </div>
         )}
 
-        <div className="flex items-center justify-between text-xs" style={{ color: '#6b8f7a' }}>
+        <div className="flex items-center justify-between text-xs" style={{ color: '#8a8a7a' }}>
           <span className="truncate" title={show.category}>
             {show.category.replace(/^\d+\.\s*/, '').substring(0, 18)}
           </span>
-          <span className="font-bold" style={{ color: '#34d399' }}>#{show.num.toLocaleString('fa-IR')}</span>
+          <span className="font-bold" style={{ color: '#0d7c4a' }}>#{show.num.toLocaleString('fa-IR')}</span>
         </div>
       </div>
     </div>
@@ -2554,7 +2556,7 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
         gap: '16px',
         ...(selected ? {
           border: '2px solid #10b981',
-          boxShadow: '0 0 0 3px rgba(16, 185, 129, 0.3), 0 8px 32px rgba(0, 0, 0, 0.4)',
+          boxShadow: '0 0 0 3px rgba(13, 124, 74, 0.3), 0 8px 32px rgba(0, 0, 0, 0.4)',
         } : {}),
       }}
     >
@@ -2565,7 +2567,7 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
             background: '#10b981',
             borderColor: '#10b981',
           } : {
-            borderColor: 'rgba(16, 185, 129, 0.5)',
+            borderColor: 'rgba(13, 124, 74, 0.5)',
             background: 'rgba(255,255,255,0.05)',
           }}
         >
@@ -2593,15 +2595,15 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
         <div className="flex items-center gap-2 mb-1 flex-wrap">
           <span
             className="text-xs px-2 py-0.5 rounded-full font-medium"
-            style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }}
+            style={{ backgroundColor: 'rgba(13, 124, 74, 0.15)', color: '#0d7c4a', border: '1px solid rgba(13, 124, 74, 0.3)' }}
           >
             {show.style}
           </span>
-          <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
+          <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(13, 124, 74, 0.1)', color: '#0d7c4a', border: '1px solid rgba(13, 124, 74, 0.25)' }}>
             {show.size}
           </span>
           {show.viewers === 'با تماشاگر' && (
-            <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#34d399' }}>
+            <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(13, 124, 74, 0.1)', color: '#0d7c4a' }}>
               👥
             </span>
           )}
@@ -2611,15 +2613,15 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
             </span>
           )}
         </div>
-        <h3 className="font-bold text-sm mb-1 truncate" style={{ direction: 'ltr', textAlign: 'right', color: '#f0fdf4' }}>{show.name}</h3>
-        <p className="text-xs truncate" style={{ color: '#86efac' }}>{show.summary && show.summary !== '—' ? show.summary : show.category}</p>
+        <h3 className="font-bold text-sm mb-1 truncate" style={{ direction: 'ltr', textAlign: 'right', color: '#1a2e1a' }}>{show.name}</h3>
+        <p className="text-xs truncate" style={{ color: '#5a6b4a' }}>{show.summary && show.summary !== '—' ? show.summary : show.category}</p>
         {(genreTags.length > 0 || userTags.length > 0) && (
           <div className="flex items-center gap-1 flex-wrap mt-1.5">
             {genreTags.map(t => (
               <span
                 key={t.id}
                 className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
-                style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }}
+                style={{ backgroundColor: 'rgba(13, 124, 74, 0.15)', color: '#0d7c4a', border: '1px solid rgba(13, 124, 74, 0.3)' }}
               >
                 {t.label}
               </span>
@@ -2638,8 +2640,8 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
       </div>
 
       <div className="text-center flex-shrink-0">
-        <div className="text-xs" style={{ color: '#6b8f7a' }}>شماره</div>
-        <div className="font-bold text-sm" style={{ color: '#34d399' }}>#{show.num.toLocaleString('fa-IR')}</div>
+        <div className="text-xs" style={{ color: '#8a8a7a' }}>شماره</div>
+        <div className="font-bold text-sm" style={{ color: '#0d7c4a' }}>#{show.num.toLocaleString('fa-IR')}</div>
       </div>
     </div>
   );
@@ -2742,16 +2744,16 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
 
           {/* Persian description */}
           <div className="mb-6 p-4 rounded-xl" style={{ background: `${thumb.accent}10`, border: `1px solid ${thumb.accent}25` }}>
-            <h4 className="font-bold mb-2" style={{ color: '#f0fdf4' }}>دربارهٔ برنامه</h4>
-            <p style={{ color: '#86efac', lineHeight: 1.8 }}>{show.descriptionFa}</p>
+            <h4 className="font-bold mb-2" style={{ color: '#1a2e1a' }}>دربارهٔ برنامه</h4>
+            <p style={{ color: '#5a6b4a', lineHeight: 1.8 }}>{show.descriptionFa}</p>
           </div>
 
           {/* Video links gallery */}
           {show.videos && show.videos.length > 0 && (
             <div className="mb-6">
-              <h4 className="font-bold mb-3" style={{ color: '#f0fdf4' }}>
+              <h4 className="font-bold mb-3" style={{ color: '#1a2e1a' }}>
                 🎬 ویدیوهای برنامه
-                <span className="text-xs font-normal mr-2" style={{ color: '#6b8f7a' }}>
+                <span className="text-xs font-normal mr-2" style={{ color: '#8a8a7a' }}>
                   ({show.videos.length.toLocaleString('fa-IR')} ویدیو)
                 </span>
               </h4>
@@ -2767,7 +2769,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                       rel="noopener noreferrer"
                       className="flex items-center gap-3 p-3 rounded-xl transition-all"
                       style={{
-                        background: 'rgba(255, 255, 255, 0.05)',
+                        background: 'rgba(255, 255, 255, 0.8)',
                         border: `1px solid ${platform.color}30`,
                         textDecoration: 'none',
                       }}
@@ -2799,7 +2801,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                         </span>
                         <div
                           className="text-xs truncate"
-                          style={{ color: '#86efac', direction: 'ltr', textAlign: 'left' }}
+                          style={{ color: '#5a6b4a', direction: 'ltr', textAlign: 'left' }}
                           title={url}
                         >
                           {url}
@@ -2814,7 +2816,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
 
           {/* Access links */}
           <div className="mb-6">
-            <h4 className="font-bold mb-3" style={{ color: '#f0fdf4' }}>دسترسی مستقیم</h4>
+            <h4 className="font-bold mb-3" style={{ color: '#1a2e1a' }}>دسترسی مستقیم</h4>
             <div className="flex flex-wrap gap-2">
               <a
                 href={show.youtube}
@@ -2859,7 +2861,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
               <button
                 onClick={() => onEdit(show)}
                 className="px-4 py-2 rounded-xl text-sm font-medium"
-                style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#059669', border: '1px solid rgba(16, 185, 129, 0.3)' }}
+                style={{ background: 'rgba(13, 124, 74, 0.15)', color: '#0d7c4a', border: '1px solid rgba(13, 124, 74, 0.3)' }}
               >
                 ✏ ویرایش
               </button>
@@ -2874,7 +2876,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
             <button
               onClick={() => onExport(show, 'excel')}
               className="px-4 py-2 rounded-xl text-sm font-medium"
-              style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#059669', border: '1px solid rgba(16, 185, 129, 0.3)' }}
+              style={{ background: 'rgba(13, 124, 74, 0.15)', color: '#0d7c4a', border: '1px solid rgba(13, 124, 74, 0.3)' }}
             >
               📊 گزارش Excel
             </button>
@@ -2902,7 +2904,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                 <button
                   onClick={() => setConfirmDelete(false)}
                   className="px-3 py-1.5 rounded-lg text-sm font-medium"
-                  style={{ background: 'rgba(107, 143, 122, 0.15)', color: '#86efac', border: '1px solid rgba(107, 143, 122, 0.3)' }}
+                  style={{ background: 'rgba(107, 143, 122, 0.15)', color: '#5a6b4a', border: '1px solid rgba(107, 143, 122, 0.3)' }}
                 >
                   انصراف
                 </button>
@@ -2919,7 +2921,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
 
           {/* Decor details */}
           <div>
-            <h4 className="font-bold mb-3" style={{ color: '#f0fdf4' }}>مشخصات دکور و صحنه</h4>
+            <h4 className="font-bold mb-3" style={{ color: '#1a2e1a' }}>مشخصات دکور و صحنه</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <DetailField label="دسته‌بندی" value={show.category} />
               <DetailField label="منبع داده" value={show.source} />
@@ -2940,15 +2942,15 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
           {/* Decor summary */}
           {show.summary && show.summary !== '—' && (
             <div className="mt-6 p-4 rounded-xl" style={{ background: `${thumb.accent}10`, border: `1px solid ${thumb.accent}25` }}>
-              <h4 className="font-bold mb-2" style={{ color: '#f0fdf4' }}>خلاصهٔ دکور</h4>
-              <p style={{ color: '#86efac', lineHeight: 1.7 }}>{show.summary}</p>
+              <h4 className="font-bold mb-2" style={{ color: '#1a2e1a' }}>خلاصهٔ دکور</h4>
+              <p style={{ color: '#5a6b4a', lineHeight: 1.7 }}>{show.summary}</p>
             </div>
           )}
 
           {/* Tags section — user-defined tags + detected Islamic countries */}
           {((show.tags && show.tags.length > 0) || countries.length > 0 || show.country) && (
             <div className="mt-6 p-4 rounded-xl" style={{ background: 'rgba(124, 58, 237, 0.06)', border: '1px solid rgba(124, 58, 237, 0.2)' }}>
-              <h4 className="font-bold mb-3" style={{ color: '#f0fdf4' }}>🏷 برچسب‌ها</h4>
+              <h4 className="font-bold mb-3" style={{ color: '#1a2e1a' }}>🏷 برچسب‌ها</h4>
               {show.tags && show.tags.length > 0 && (
                 <div className="flex items-center gap-2 flex-wrap mb-2">
                   {show.tags.map((t, i) => (
@@ -2964,12 +2966,12 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
               )}
               {countries.length > 0 && (
                 <div className="flex items-center gap-2 flex-wrap mb-2">
-                  <span className="text-xs font-bold" style={{ color: '#6b8f7a' }}>🌍 کشورهای شناسایی‌شده:</span>
+                  <span className="text-xs font-bold" style={{ color: '#8a8a7a' }}>🌍 کشورهای شناسایی‌شده:</span>
                   {countries.map((c, i) => (
                     <span
                       key={i}
                       className="text-xs px-2 py-1 rounded-md font-medium"
-                      style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#059669', border: '1px solid rgba(16, 185, 129, 0.3)' }}
+                      style={{ background: 'rgba(13, 124, 74, 0.15)', color: '#0d7c4a', border: '1px solid rgba(13, 124, 74, 0.3)' }}
                     >
                       {c}
                     </span>
@@ -2977,8 +2979,8 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                 </div>
               )}
               {show.country && (
-                <div className="text-xs" style={{ color: '#6b8f7a' }}>
-                  کشور مبدا (وارد شده): <strong style={{ color: '#f0fdf4' }}>{show.country}</strong>
+                <div className="text-xs" style={{ color: '#8a8a7a' }}>
+                  کشور مبدا (وارد شده): <strong style={{ color: '#1a2e1a' }}>{show.country}</strong>
                 </div>
               )}
             </div>
@@ -2987,7 +2989,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
           {/* 🔗 Related programs — computed from allShows via findRelated */}
           {related.length > 0 && (
             <div className="mt-6">
-              <h4 className="font-bold mb-3" style={{ color: '#f0fdf4' }}>🔗 برنامه‌های مرتبط</h4>
+              <h4 className="font-bold mb-3" style={{ color: '#1a2e1a' }}>🔗 برنامه‌های مرتبط</h4>
               <div className="flex items-center gap-3 overflow-x-auto pb-3 no-scrollbar">
                 {related.map(r => {
                   const rThumb = getShowThumbnail(r);
@@ -3032,8 +3034,8 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
 function DetailField({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-xs font-bold mb-1" style={{ color: '#6b8f7a' }}>{label}</div>
-      <div className="text-sm" style={{ color: '#f0fdf4' }}>{value || '—'}</div>
+      <div className="text-xs font-bold mb-1" style={{ color: '#8a8a7a' }}>{label}</div>
+      <div className="text-sm" style={{ color: '#1a2e1a' }}>{value || '—'}</div>
     </div>
   );
 }
@@ -3164,19 +3166,19 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
   return (
     <>
       <header className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-1" style={{ color: '#f0fdf4' }}>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-1" style={{ color: '#1a2e1a' }}>
           {editingShow ? 'ویرایش برنامه' : 'افزودن برنامهٔ جدید'}
         </h1>
-        <p style={{ color: '#6b8f7a' }}>
+        <p style={{ color: '#8a8a7a' }}>
           {editingShow ? `ویرایش برنامهٔ شمارهٔ ${editingShow.num.toLocaleString('fa-IR')}` : 'فرم زیر را پر کنید'}
         </p>
       </header>
 
       <div className="premium-glass p-6 space-y-4">
         {/* Auto-fetch from IMDb/Wikipedia */}
-        <div className="p-4 rounded-xl" style={{ background: 'rgba(16, 185, 129,0.06)', border: '1px solid rgba(16, 185, 129,0.15)' }}>
-          <h4 className="font-bold mb-2" style={{ color: '#f0fdf4' }}>⚡ دریافت خودکار اطلاعات</h4>
-          <p className="text-xs mb-3" style={{ color: '#6b8f7a' }}>
+        <div className="p-4 rounded-xl" style={{ background: 'rgba(13, 124, 74,0.06)', border: '1px solid rgba(13, 124, 74,0.15)' }}>
+          <h4 className="font-bold mb-2" style={{ color: '#1a2e1a' }}>⚡ دریافت خودکار اطلاعات</h4>
+          <p className="text-xs mb-3" style={{ color: '#8a8a7a' }}>
             لینک IMDb یا ویکی‌پدیا برنامه را وارد کنید تا نام، توضیحات، تصویر و سایر اطلاعات خودکار دریافت شود.
           </p>
           <div className="flex gap-2">
@@ -3189,9 +3191,9 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
                 flex: 1,
                 padding: '10px 16px',
                 borderRadius: '12px',
-                border: '1px solid rgba(16, 185, 129,0.15)',
-                background: 'rgba(255, 255, 255, 0.05)',
-                color: '#f0fdf4',
+                border: '1px solid rgba(13, 124, 74,0.15)',
+                background: 'rgba(255, 255, 255, 0.8)',
+                color: '#1a2e1a',
                 fontFamily: 'inherit',
                 outline: 'none',
                 direction: 'ltr',
@@ -3281,7 +3283,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
 
         {/* Persian description */}
         <div>
-          <label className="text-sm font-bold mb-2 block" style={{ color: '#f0fdf4' }}>دربارهٔ برنامه (فارسی)</label>
+          <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e1a' }}>دربارهٔ برنامه (فارسی)</label>
           <textarea
             value={form.descriptionFa || ''}
             onChange={(e) => setForm({ ...form, descriptionFa: e.target.value })}
@@ -3291,9 +3293,9 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
               width: '100%',
               padding: '12px 16px',
               borderRadius: '12px',
-              border: '1px solid rgba(16, 185, 129, 0.15)',
-              background: 'rgba(255, 255, 255, 0.05)',
-              color: '#f0fdf4',
+              border: '1px solid rgba(13, 124, 74, 0.15)',
+              background: 'rgba(255, 255, 255, 0.8)',
+              color: '#1a2e1a',
               fontFamily: 'inherit',
               outline: 'none',
               resize: 'vertical',
@@ -3302,7 +3304,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
         </div>
 
         <div>
-          <label className="text-sm font-bold mb-2 block" style={{ color: '#f0fdf4' }}>خلاصهٔ دکور</label>
+          <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e1a' }}>خلاصهٔ دکور</label>
           <textarea
             value={form.summary || ''}
             onChange={(e) => setForm({ ...form, summary: e.target.value })}
@@ -3312,9 +3314,9 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
               width: '100%',
               padding: '12px 16px',
               borderRadius: '12px',
-              border: '1px solid rgba(16, 185, 129, 0.15)',
-              background: 'rgba(255, 255, 255, 0.05)',
-              color: '#f0fdf4',
+              border: '1px solid rgba(13, 124, 74, 0.15)',
+              background: 'rgba(255, 255, 255, 0.8)',
+              color: '#1a2e1a',
               fontFamily: 'inherit',
               outline: 'none',
               resize: 'vertical',
@@ -3355,7 +3357,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
           <button
             onClick={() => { setEditingShow(null); onDone(); }}
             className="px-6 py-3 rounded-xl text-sm font-medium"
-            style={{ background: 'rgba(107, 143, 122, 0.15)', color: '#86efac', border: '1px solid rgba(107, 143, 122, 0.3)' }}
+            style={{ background: 'rgba(107, 143, 122, 0.15)', color: '#5a6b4a', border: '1px solid rgba(107, 143, 122, 0.3)' }}
           >
             انصراف
           </button>
@@ -3373,7 +3375,7 @@ function FormField({ label, value, onChange, placeholder }: {
 }) {
   return (
     <div>
-      <label className="text-sm font-bold mb-2 block" style={{ color: '#f0fdf4' }}>{label}</label>
+      <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e1a' }}>{label}</label>
       <input
         type="text"
         value={value}
@@ -3383,9 +3385,9 @@ function FormField({ label, value, onChange, placeholder }: {
           width: '100%',
           padding: '10px 16px',
           borderRadius: '12px',
-          border: '1px solid rgba(16, 185, 129, 0.15)',
-          background: 'rgba(255, 255, 255, 0.05)',
-          color: '#f0fdf4',
+          border: '1px solid rgba(13, 124, 74, 0.15)',
+          background: 'rgba(255, 255, 255, 0.8)',
+          color: '#1a2e1a',
           fontFamily: 'inherit',
           outline: 'none',
         }}
@@ -3402,7 +3404,7 @@ function FormSelect({ label, value, onChange, options }: {
 }) {
   return (
     <div>
-      <label className="text-sm font-bold mb-2 block" style={{ color: '#f0fdf4' }}>{label}</label>
+      <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e1a' }}>{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -3410,9 +3412,9 @@ function FormSelect({ label, value, onChange, options }: {
           width: '100%',
           padding: '10px 16px',
           borderRadius: '12px',
-          border: '1px solid rgba(16, 185, 129, 0.15)',
-          background: 'rgba(255, 255, 255, 0.05)',
-          color: '#f0fdf4',
+          border: '1px solid rgba(13, 124, 74, 0.15)',
+          background: 'rgba(255, 255, 255, 0.8)',
+          color: '#1a2e1a',
           fontFamily: 'inherit',
           outline: 'none',
         }}
@@ -3496,16 +3498,16 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
   };
 
   return (
-    <div className="p-4 rounded-xl" style={{ background: 'rgba(16, 185, 129,0.06)', border: '1px solid rgba(16, 185, 129,0.15)' }}>
+    <div className="p-4 rounded-xl" style={{ background: 'rgba(13, 124, 74,0.06)', border: '1px solid rgba(13, 124, 74,0.15)' }}>
       <div className="flex items-center justify-between mb-3">
-        <h4 className="font-bold" style={{ color: '#f0fdf4' }}>
+        <h4 className="font-bold" style={{ color: '#1a2e1a' }}>
           🖼 تصاویر برنامه
-          <span className="text-xs font-normal mr-2" style={{ color: '#6b8f7a' }}>
+          <span className="text-xs font-normal mr-2" style={{ color: '#8a8a7a' }}>
             ({images.length.toLocaleString('fa-IR')} از {MAX_IMAGES.toLocaleString('fa-IR')})
           </span>
         </h4>
         {images.length > 0 && (
-          <span className="text-xs" style={{ color: '#059669' }}>تصویر اول = کاور</span>
+          <span className="text-xs" style={{ color: '#0d7c4a' }}>تصویر اول = کاور</span>
         )}
       </div>
 
@@ -3522,9 +3524,9 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
             flex: 1,
             padding: '10px 16px',
             borderRadius: '12px',
-            border: '1px solid rgba(16, 185, 129,0.15)',
-            background: images.length >= MAX_IMAGES ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.05)',
-            color: '#f0fdf4',
+            border: '1px solid rgba(13, 124, 74,0.15)',
+            background: images.length >= MAX_IMAGES ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.8)',
+            color: '#1a2e1a',
             fontFamily: 'inherit',
             outline: 'none',
             direction: 'ltr',
@@ -3537,9 +3539,9 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
           disabled={images.length >= MAX_IMAGES || !urlInput.trim()}
           className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
           style={{
-            background: images.length >= MAX_IMAGES || !urlInput.trim() ? 'rgba(255, 255, 255, 0.03)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            background: images.length >= MAX_IMAGES || !urlInput.trim() ? 'rgba(255, 255, 255, 0.6)' : 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)',
             color: images.length >= MAX_IMAGES || !urlInput.trim() ? '#999' : 'white',
-            border: '1px solid rgba(16, 185, 129,0.3)',
+            border: '1px solid rgba(13, 124, 74,0.3)',
             whiteSpace: 'nowrap',
           }}
         >
@@ -3550,9 +3552,9 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
           disabled={images.length >= MAX_IMAGES}
           className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
           style={{
-            background: images.length >= MAX_IMAGES ? 'rgba(255, 255, 255, 0.03)' : 'rgba(16, 185, 129,0.1)',
-            color: images.length >= MAX_IMAGES ? '#999' : '#059669',
-            border: '1px solid rgba(16, 185, 129,0.3)',
+            background: images.length >= MAX_IMAGES ? 'rgba(255, 255, 255, 0.6)' : 'rgba(13, 124, 74,0.1)',
+            color: images.length >= MAX_IMAGES ? '#999' : '#0d7c4a',
+            border: '1px solid rgba(13, 124, 74,0.3)',
             whiteSpace: 'nowrap',
           }}
         >
@@ -3572,10 +3574,10 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
       {images.length === 0 ? (
         <div
           className="text-center py-8 rounded-xl"
-          style={{ background: 'rgba(255,255,255,0.5)', border: '2px dashed rgba(16, 185, 129,0.2)' }}
+          style={{ background: 'rgba(255,255,255,0.5)', border: '2px dashed rgba(13, 124, 74,0.2)' }}
         >
           <div className="text-3xl mb-2 opacity-40">🖼</div>
-          <p className="text-xs" style={{ color: '#6b8f7a' }}>
+          <p className="text-xs" style={{ color: '#8a8a7a' }}>
             هنوز تصویری اضافه نشده. می‌تونید لینک بچسبانید یا فایل آپلود کنید.
           </p>
         </div>
@@ -3587,8 +3589,8 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
               className="relative group rounded-xl overflow-hidden"
               style={{
                 aspectRatio: '4/3',
-                border: idx === 0 ? '3px solid #10b981' : '1px solid rgba(16, 185, 129, 0.3)',
-                background: 'rgba(15, 30, 22, 0.5)',
+                border: idx === 0 ? '3px solid #10b981' : '1px solid rgba(13, 124, 74, 0.3)',
+                background: 'rgba(232, 228, 216, 0.5)',
               }}
             >
               <img
@@ -3625,8 +3627,8 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
                   disabled={idx === 0}
                   className="p-1.5 rounded-lg transition-colors"
                   style={{
-                    background: idx === 0 ? 'rgba(255,255,255,0.2)' : 'rgba(255, 255, 255, 0.05)',
-                    color: idx === 0 ? 'rgba(255,255,255,0.5)' : '#f0fdf4',
+                    background: idx === 0 ? 'rgba(255,255,255,0.2)' : 'rgba(255, 255, 255, 0.8)',
+                    color: idx === 0 ? 'rgba(255,255,255,0.5)' : '#1a2e1a',
                     cursor: idx === 0 ? 'not-allowed' : 'pointer',
                   }}
                   title="به چپ"
@@ -3650,8 +3652,8 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
                   disabled={idx === images.length - 1}
                   className="p-1.5 rounded-lg transition-colors"
                   style={{
-                    background: idx === images.length - 1 ? 'rgba(255,255,255,0.2)' : 'rgba(255, 255, 255, 0.05)',
-                    color: idx === images.length - 1 ? 'rgba(255,255,255,0.5)' : '#f0fdf4',
+                    background: idx === images.length - 1 ? 'rgba(255,255,255,0.2)' : 'rgba(255, 255, 255, 0.8)',
+                    color: idx === images.length - 1 ? 'rgba(255,255,255,0.5)' : '#1a2e1a',
                     cursor: idx === images.length - 1 ? 'not-allowed' : 'pointer',
                   }}
                   title="به راست"
@@ -3670,9 +3672,9 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
               className="rounded-xl flex flex-col items-center justify-center transition-all"
               style={{
                 aspectRatio: '4/3',
-                border: '2px dashed rgba(16, 185, 129,0.3)',
-                background: 'rgba(16, 185, 129,0.04)',
-                color: '#059669',
+                border: '2px dashed rgba(13, 124, 74,0.3)',
+                background: 'rgba(13, 124, 74,0.04)',
+                color: '#0d7c4a',
                 cursor: 'pointer',
               }}
             >
@@ -3711,17 +3713,17 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
   };
 
   return (
-    <div className="p-4 rounded-xl" style={{ background: 'rgba(16, 185, 129,0.06)', border: '1px solid rgba(16, 185, 129,0.15)' }}>
-      <h4 className="font-bold mb-3" style={{ color: '#f0fdf4' }}>
+    <div className="p-4 rounded-xl" style={{ background: 'rgba(13, 124, 74,0.06)', border: '1px solid rgba(13, 124, 74,0.15)' }}>
+      <h4 className="font-bold mb-3" style={{ color: '#1a2e1a' }}>
         🎬 ویدیوهای برنامه
-        <span className="text-xs font-normal mr-2" style={{ color: '#6b8f7a' }}>
+        <span className="text-xs font-normal mr-2" style={{ color: '#8a8a7a' }}>
           ({videos.length.toLocaleString('fa-IR')} ویدیو)
         </span>
       </h4>
 
       {/* Main YouTube search link field (auto-generated) */}
       <div className="mb-3">
-        <label className="text-xs font-bold mb-1 block" style={{ color: '#86efac' }}>لینک جستجوی یوتیوب (خودکار)</label>
+        <label className="text-xs font-bold mb-1 block" style={{ color: '#5a6b4a' }}>لینک جستجوی یوتیوب (خودکار)</label>
         <input
           type="text"
           value={youtube}
@@ -3731,9 +3733,9 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
             width: '100%',
             padding: '8px 12px',
             borderRadius: '10px',
-            border: '1px solid rgba(16, 185, 129,0.15)',
-            background: 'rgba(255, 255, 255, 0.05)',
-            color: '#f0fdf4',
+            border: '1px solid rgba(13, 124, 74,0.15)',
+            background: 'rgba(255, 255, 255, 0.8)',
+            color: '#1a2e1a',
             fontFamily: 'inherit',
             outline: 'none',
             direction: 'ltr',
@@ -3755,9 +3757,9 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
             flex: 1,
             padding: '10px 16px',
             borderRadius: '12px',
-            border: '1px solid rgba(16, 185, 129,0.15)',
-            background: 'rgba(255, 255, 255, 0.05)',
-            color: '#f0fdf4',
+            border: '1px solid rgba(13, 124, 74,0.15)',
+            background: 'rgba(255, 255, 255, 0.8)',
+            color: '#1a2e1a',
             fontFamily: 'inherit',
             outline: 'none',
             direction: 'ltr',
@@ -3770,9 +3772,9 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
           disabled={!urlInput.trim()}
           className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
           style={{
-            background: !urlInput.trim() ? 'rgba(255, 255, 255, 0.03)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            background: !urlInput.trim() ? 'rgba(255, 255, 255, 0.6)' : 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)',
             color: !urlInput.trim() ? '#999' : 'white',
-            border: '1px solid rgba(16, 185, 129,0.3)',
+            border: '1px solid rgba(13, 124, 74,0.3)',
             whiteSpace: 'nowrap',
           }}
         >
@@ -3790,7 +3792,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
               <div
                 key={idx}
                 className="flex items-center gap-3 p-2 rounded-xl"
-                style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(16, 185, 129,0.1)' }}
+                style={{ background: 'rgba(255, 255, 255, 0.8)', border: '1px solid rgba(13, 124, 74,0.1)' }}
               >
                 {/* Thumbnail or icon */}
                 <div
@@ -3813,7 +3815,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
                   </span>
                   <div
                     className="text-xs truncate"
-                    style={{ color: '#86efac', direction: 'ltr', textAlign: 'left' }}
+                    style={{ color: '#5a6b4a', direction: 'ltr', textAlign: 'left' }}
                     title={url}
                   >
                     {url}
@@ -3825,7 +3827,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-2 rounded-lg flex-shrink-0"
-                  style={{ background: 'rgba(16, 185, 129,0.1)', color: '#059669' }}
+                  style={{ background: 'rgba(13, 124, 74,0.1)', color: '#0d7c4a' }}
                   title="باز کردن"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -3939,13 +3941,13 @@ function TagsEditor({ tags, onChange, presetTags }: {
 
   return (
     <div className="p-4 rounded-xl" style={{ background: 'rgba(124, 58, 237, 0.06)', border: '1px solid rgba(124, 58, 237, 0.2)' }}>
-      <h4 className="font-bold mb-2" style={{ color: '#f0fdf4' }}>
+      <h4 className="font-bold mb-2" style={{ color: '#1a2e1a' }}>
         🏷 برچسب‌ها
-        <span className="text-xs font-normal mr-2" style={{ color: '#6b8f7a' }}>
+        <span className="text-xs font-normal mr-2" style={{ color: '#8a8a7a' }}>
           ({tags.length.toLocaleString('fa-IR')} برچسب)
         </span>
       </h4>
-      <p className="text-xs mb-3" style={{ color: '#6b8f7a' }}>
+      <p className="text-xs mb-3" style={{ color: '#8a8a7a' }}>
         برچسب‌ها را با کاما (، یا ,) جدا کنید — مثلاً: مدرن، گرم، چوبی
       </p>
 
@@ -3962,8 +3964,8 @@ function TagsEditor({ tags, onChange, presetTags }: {
             padding: '10px 16px',
             borderRadius: '12px',
             border: '1px solid rgba(124, 58, 237, 0.2)',
-            background: 'rgba(255, 255, 255, 0.05)',
-            color: '#f0fdf4',
+            background: 'rgba(255, 255, 255, 0.8)',
+            color: '#1a2e1a',
             fontFamily: 'inherit',
             outline: 'none',
           }}
@@ -3973,7 +3975,7 @@ function TagsEditor({ tags, onChange, presetTags }: {
           disabled={!input.trim()}
           className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
           style={{
-            background: !input.trim() ? 'rgba(255, 255, 255, 0.03)' : 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)',
+            background: !input.trim() ? 'rgba(255, 255, 255, 0.6)' : 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)',
             color: !input.trim() ? '#999' : 'white',
             border: '1px solid rgba(124, 58, 237, 0.3)',
             whiteSpace: 'nowrap',
@@ -4018,7 +4020,7 @@ function TagsEditor({ tags, onChange, presetTags }: {
       {/* Preset quick-add buttons (from the genre's presetTags) */}
       {presetTags && presetTags.length > 0 && (
         <div>
-          <div className="text-xs font-bold mb-2" style={{ color: '#86efac' }}>برچسب‌های پیشنهادی این ژانر:</div>
+          <div className="text-xs font-bold mb-2" style={{ color: '#5a6b4a' }}>برچسب‌های پیشنهادی این ژانر:</div>
           <div className="flex items-center gap-2 flex-wrap">
             {presetTags.map(t => {
               const selected = tags.some(x => x.toLowerCase() === t.toLowerCase());
@@ -4052,7 +4054,7 @@ function TagsEditor({ tags, onChange, presetTags }: {
 // ADD GENRE MODAL — admin creates a new Genre (name + description + color)
 // ============================================
 const GENRE_COLOR_PRESETS = [
-  '#10b981', '#10b981', '#7c3aed', '#db2777', '#dc2626', '#ea580c', '#16a34a', '#059669',
+  '#10b981', '#10b981', '#7c3aed', '#db2777', '#dc2626', '#ea580c', '#16a34a', '#0d7c4a',
 ];
 
 function AddGenreModal({ onClose, onSave }: {
@@ -4087,9 +4089,9 @@ function AddGenreModal({ onClose, onSave }: {
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content animate-modal-enter" style={{ maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(16, 185, 129,0.1)' }}>
-          <h2 className="text-xl font-bold" style={{ color: '#f0fdf4' }}>+ افزودن ژانر جدید</h2>
-          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#6b8f7a' }}>
+        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(13, 124, 74,0.1)' }}>
+          <h2 className="text-xl font-bold" style={{ color: '#1a2e1a' }}>+ افزودن ژانر جدید</h2>
+          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#8a8a7a' }}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -4098,7 +4100,7 @@ function AddGenreModal({ onClose, onSave }: {
 
         <div className="p-6 space-y-4">
           <div>
-            <label className="text-sm font-bold mb-2 block" style={{ color: '#f0fdf4' }}>نام ژانر *</label>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e1a' }}>نام ژانر *</label>
             <input
               type="text"
               value={name}
@@ -4108,9 +4110,9 @@ function AddGenreModal({ onClose, onSave }: {
                 width: '100%',
                 padding: '10px 16px',
                 borderRadius: '12px',
-                border: '1px solid rgba(16, 185, 129, 0.15)',
-                background: 'rgba(255, 255, 255, 0.05)',
-                color: '#f0fdf4',
+                border: '1px solid rgba(13, 124, 74, 0.15)',
+                background: 'rgba(255, 255, 255, 0.8)',
+                color: '#1a2e1a',
                 fontFamily: 'inherit',
                 outline: 'none',
               }}
@@ -4118,7 +4120,7 @@ function AddGenreModal({ onClose, onSave }: {
           </div>
 
           <div>
-            <label className="text-sm font-bold mb-2 block" style={{ color: '#f0fdf4' }}>توضیحات</label>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e1a' }}>توضیحات</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -4128,9 +4130,9 @@ function AddGenreModal({ onClose, onSave }: {
                 width: '100%',
                 padding: '10px 16px',
                 borderRadius: '12px',
-                border: '1px solid rgba(16, 185, 129, 0.15)',
-                background: 'rgba(255, 255, 255, 0.05)',
-                color: '#f0fdf4',
+                border: '1px solid rgba(13, 124, 74, 0.15)',
+                background: 'rgba(255, 255, 255, 0.8)',
+                color: '#1a2e1a',
                 fontFamily: 'inherit',
                 outline: 'none',
                 resize: 'vertical',
@@ -4139,7 +4141,7 @@ function AddGenreModal({ onClose, onSave }: {
           </div>
 
           <div>
-            <label className="text-sm font-bold mb-2 block" style={{ color: '#f0fdf4' }}>رنگ ژانر</label>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e1a' }}>رنگ ژانر</label>
             <div className="flex items-center gap-2 flex-wrap">
               {GENRE_COLOR_PRESETS.map(c => (
                 <button
@@ -4148,7 +4150,7 @@ function AddGenreModal({ onClose, onSave }: {
                   className="w-9 h-9 rounded-full transition-all"
                   style={{
                     background: c,
-                    border: color === c ? '3px solid #f0fdf4' : '3px solid transparent',
+                    border: color === c ? '3px solid #1a2e1a' : '3px solid transparent',
                     boxShadow: color === c ? `0 0 0 3px ${c}40` : 'none',
                     cursor: 'pointer',
                   }}
@@ -4166,15 +4168,15 @@ function AddGenreModal({ onClose, onSave }: {
               border: `1px solid ${color}50`,
             }}
           >
-            <div className="text-xs font-bold mb-1" style={{ color: '#6b8f7a' }}>پیش‌نمایش:</div>
+            <div className="text-xs font-bold mb-1" style={{ color: '#8a8a7a' }}>پیش‌نمایش:</div>
             <div className="flex items-center gap-2">
               <span
                 className="w-3 h-3 rounded-full"
                 style={{ background: color, boxShadow: `0 0 10px ${color}` }}
               ></span>
-              <strong style={{ color: '#f0fdf4' }}>{name || '—'}</strong>
+              <strong style={{ color: '#1a2e1a' }}>{name || '—'}</strong>
             </div>
-            <p className="text-xs mt-1" style={{ color: '#86efac' }}>{description || 'توضیحات...'}</p>
+            <p className="text-xs mt-1" style={{ color: '#5a6b4a' }}>{description || 'توضیحات...'}</p>
           </div>
 
           <div className="flex gap-3 pt-2">
@@ -4189,7 +4191,7 @@ function AddGenreModal({ onClose, onSave }: {
             <button
               onClick={onClose}
               className="px-6 py-3 rounded-xl text-sm font-medium"
-              style={{ background: 'rgba(107, 143, 122,0.15)', color: '#86efac', border: '1px solid rgba(107, 143, 122,0.3)' }}
+              style={{ background: 'rgba(107, 143, 122,0.15)', color: '#5a6b4a', border: '1px solid rgba(107, 143, 122,0.3)' }}
             >
               انصراف
             </button>
@@ -4278,13 +4280,13 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
     // Background gradient
     const grad = ctx.createLinearGradient(0, 0, 1080, 1080);
     grad.addColorStop(0, '#10b981');
-    grad.addColorStop(0.6, '#059669');
+    grad.addColorStop(0.6, '#0d7c4a');
     grad.addColorStop(1, '#0a1f14');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 1080, 1080);
 
     // Decorative circles
-    ctx.fillStyle = 'rgba(52, 211, 153, 0.15)';
+    ctx.fillStyle = 'rgba(13, 124, 74, 0.15)';
     ctx.beginPath();
     ctx.arc(900, 200, 300, 0, Math.PI * 2);
     ctx.fill();
@@ -4310,7 +4312,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
 
     // Description
     ctx.font = '36px Vazirmatn, sans-serif';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
     if (shows.length === 1) {
       const desc = shows[0].descriptionFa;
       const lines = desc.match(/.{1,40}/g) || [];
@@ -4391,9 +4393,9 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content animate-modal-enter" style={{ maxWidth: '700px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(16, 185, 129,0.1)' }}>
-          <h2 className="text-xl font-bold" style={{ color: '#f0fdf4' }}>📱 انتشار در شبکه‌های اجتماعی</h2>
-          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#6b8f7a' }}>
+        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(13, 124, 74,0.1)' }}>
+          <h2 className="text-xl font-bold" style={{ color: '#1a2e1a' }}>📱 انتشار در شبکه‌های اجتماعی</h2>
+          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#8a8a7a' }}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -4403,7 +4405,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
         <div className="p-6 space-y-5">
           {/* Platform selection */}
           <div>
-            <h4 className="font-bold mb-3" style={{ color: '#f0fdf4' }}>انتخاب پلتفرم</h4>
+            <h4 className="font-bold mb-3" style={{ color: '#1a2e1a' }}>انتخاب پلتفرم</h4>
             <div className="grid grid-cols-3 gap-2">
               {SOCIAL_PLATFORMS.map(p => (
                 <button
@@ -4429,7 +4431,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
 
           {/* Post preview — with image + description */}
           <div>
-            <h4 className="font-bold mb-3" style={{ color: '#f0fdf4' }}>پیش‌نمایش پست</h4>
+            <h4 className="font-bold mb-3" style={{ color: '#1a2e1a' }}>پیش‌نمایش پست</h4>
             <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(0,0,0,0.1)' }}>
               {/* Card image preview — real program image or 1080x1080 social card */}
               <div
@@ -4488,7 +4490,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
                   padding: '12px 16px',
                   border: 'none',
                   background: 'white',
-                  color: '#f0fdf4',
+                  color: '#1a2e1a',
                   fontFamily: 'inherit',
                   outline: 'none',
                   resize: 'vertical',
@@ -4503,12 +4505,12 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
             {directSendSupported && (
               <div
                 className="p-3 rounded-xl"
-                style={{ background: 'rgba(16, 185, 129,0.06)', border: '1px solid rgba(16, 185, 129,0.18)' }}
+                style={{ background: 'rgba(13, 124, 74,0.06)', border: '1px solid rgba(13, 124, 74,0.18)' }}
               >
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-bold" style={{ color: '#f0fdf4' }}>📡 ارسال مستقیم به {selectedPlatform}</div>
-                    <div className="text-xs" style={{ color: '#6b8f7a' }}>
+                    <div className="text-sm font-bold" style={{ color: '#1a2e1a' }}>📡 ارسال مستقیم به {selectedPlatform}</div>
+                    <div className="text-xs" style={{ color: '#8a8a7a' }}>
                       {botConfig
                         ? `ربات ${botConfig.platform === 'telegram' ? 'تلگرام' : 'بله'} پیکربندی شده — مقصد: ${botConfig.chatId}`
                         : 'برای ارسال مستقیم، ابتدا توکن ربات و شناسهٔ کانال را وارد کنید'}
@@ -4517,7 +4519,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
                   <button
                     onClick={onOpenBotConfig}
                     className="px-3 py-1.5 rounded-lg text-xs font-medium flex-shrink-0"
-                    style={{ background: 'rgba(16, 185, 129,0.12)', color: '#059669', border: '1px solid rgba(16, 185, 129,0.3)' }}
+                    style={{ background: 'rgba(13, 124, 74,0.12)', color: '#0d7c4a', border: '1px solid rgba(13, 124, 74,0.3)' }}
                   >
                     {botConfig ? '⚙ تنظیمات ربات' : '＋ پیکربندی ربات'}
                   </button>
@@ -4534,8 +4536,8 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
                   <div
                     className="mt-2 text-xs font-medium px-3 py-2 rounded-lg"
                     style={{
-                      background: sendResult.ok ? 'rgba(16, 185, 129,0.12)' : 'rgba(220,38,38,0.1)',
-                      color: sendResult.ok ? '#059669' : '#dc2626',
+                      background: sendResult.ok ? 'rgba(13, 124, 74,0.12)' : 'rgba(220,38,38,0.1)',
+                      color: sendResult.ok ? '#0d7c4a' : '#dc2626',
                     }}
                   >
                     {sendResult.msg}
@@ -4557,7 +4559,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
               <button
                 onClick={onClose}
                 className="px-6 py-3 rounded-xl text-sm font-medium"
-                style={{ background: 'rgba(107, 143, 122,0.15)', color: '#86efac', border: '1px solid rgba(107, 143, 122,0.3)' }}
+                style={{ background: 'rgba(107, 143, 122,0.15)', color: '#5a6b4a', border: '1px solid rgba(107, 143, 122,0.3)' }}
               >
                 انصراف
               </button>
@@ -4617,9 +4619,9 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content animate-modal-enter" style={{ maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(16, 185, 129,0.1)' }}>
-          <h2 className="text-xl font-bold" style={{ color: '#f0fdf4' }}>⚙ تنظیمات ربات انتشار</h2>
-          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#6b8f7a' }}>
+        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(13, 124, 74,0.1)' }}>
+          <h2 className="text-xl font-bold" style={{ color: '#1a2e1a' }}>⚙ تنظیمات ربات انتشار</h2>
+          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#8a8a7a' }}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -4628,9 +4630,9 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
 
         <div className="p-6 space-y-5">
           {/* Intro help */}
-          <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(16, 185, 129,0.06)', border: '1px solid rgba(16, 185, 129,0.15)', color: '#86efac' }}>
+          <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(13, 124, 74,0.06)', border: '1px solid rgba(13, 124, 74,0.15)', color: '#5a6b4a' }}>
             برای ارسال مستقیم پست‌ها به کانال یا گروه، یک ربات بسازید و آن را ادمین مقصد کنید:
-            <ul className="mt-2 space-y-1 text-xs" style={{ color: '#6b8f7a' }}>
+            <ul className="mt-2 space-y-1 text-xs" style={{ color: '#8a8a7a' }}>
               <li>• تلگرام: ربات <code style={{ direction: 'ltr' }}>@BotFather</code> → /newbot</li>
               <li>• بله: ربات <code style={{ direction: 'ltr' }}>@BotFather@</code> → ساخت ربات جدید</li>
               <li>• سپس ربات را به کانال/گروه ادمین کنید</li>
@@ -4639,7 +4641,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
 
           {/* Platform picker */}
           <div>
-            <label className="text-sm font-bold mb-2 block" style={{ color: '#f0fdf4' }}>پلتفرم</label>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e1a' }}>پلتفرم</label>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => setPlatform('telegram')}
@@ -4662,7 +4664,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
 
           {/* Bot token */}
           <div>
-            <label className="text-sm font-bold mb-2 block" style={{ color: '#f0fdf4' }}>توکن ربات (Bot Token)</label>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e1a' }}>توکن ربات (Bot Token)</label>
             <div className="flex gap-2">
               <input
                 type={showToken ? 'text' : 'password'}
@@ -4674,9 +4676,9 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
                   flex: 1,
                   padding: '10px 14px',
                   borderRadius: '12px',
-                  border: '1px solid rgba(16, 185, 129,0.15)',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  color: '#f0fdf4',
+                  border: '1px solid rgba(13, 124, 74,0.15)',
+                  background: 'rgba(255, 255, 255, 0.8)',
+                  color: '#1a2e1a',
                   fontFamily: 'monospace',
                   outline: 'none',
                   textAlign: 'left',
@@ -4685,7 +4687,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
               <button
                 onClick={() => setShowToken(!showToken)}
                 className="px-3 rounded-xl text-sm font-medium"
-                style={{ background: 'rgba(107, 143, 122,0.15)', color: '#86efac', border: '1px solid rgba(107, 143, 122,0.3)' }}
+                style={{ background: 'rgba(107, 143, 122,0.15)', color: '#5a6b4a', border: '1px solid rgba(107, 143, 122,0.3)' }}
               >
                 {showToken ? '🙈 پنهان' : '👁 نمایش'}
               </button>
@@ -4694,7 +4696,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
 
           {/* Chat ID */}
           <div>
-            <label className="text-sm font-bold mb-2 block" style={{ color: '#f0fdf4' }}>شناسهٔ مقصد (Chat ID)</label>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e1a' }}>شناسهٔ مقصد (Chat ID)</label>
             <input
               type="text"
               value={chatId}
@@ -4705,15 +4707,15 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
                 width: '100%',
                 padding: '10px 14px',
                 borderRadius: '12px',
-                border: '1px solid rgba(16, 185, 129,0.15)',
-                background: 'rgba(255, 255, 255, 0.05)',
-                color: '#f0fdf4',
+                border: '1px solid rgba(13, 124, 74,0.15)',
+                background: 'rgba(255, 255, 255, 0.8)',
+                color: '#1a2e1a',
                 fontFamily: 'monospace',
                 outline: 'none',
                 textAlign: 'left',
               }}
             />
-            <p className="text-xs mt-1" style={{ color: '#6b8f7a' }}>
+            <p className="text-xs mt-1" style={{ color: '#8a8a7a' }}>
               برای کانال: نام کاربری کانال (مثل @mychannel) یا Chat ID عددی. برای چت خصوصی: Chat ID عددی شما.
             </p>
           </div>
@@ -4724,9 +4726,9 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
             disabled={testing || !token}
             className="px-4 py-2 rounded-xl text-sm font-medium w-full"
             style={{
-              background: testing || !token ? 'rgba(107, 143, 122,0.15)' : 'rgba(16, 185, 129,0.12)',
-              color: testing || !token ? '#6b8f7a' : '#059669',
-              border: '1px solid ' + (testing || !token ? 'rgba(107, 143, 122,0.3)' : 'rgba(16, 185, 129,0.3)'),
+              background: testing || !token ? 'rgba(107, 143, 122,0.15)' : 'rgba(13, 124, 74,0.12)',
+              color: testing || !token ? '#8a8a7a' : '#0d7c4a',
+              border: '1px solid ' + (testing || !token ? 'rgba(107, 143, 122,0.3)' : 'rgba(13, 124, 74,0.3)'),
               cursor: testing || !token ? 'not-allowed' : 'pointer',
             }}
           >
@@ -4736,8 +4738,8 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
             <div
               className="text-sm font-medium px-3 py-2 rounded-lg"
               style={{
-                background: testResult.ok ? 'rgba(16, 185, 129,0.12)' : 'rgba(220,38,38,0.1)',
-                color: testResult.ok ? '#059669' : '#dc2626',
+                background: testResult.ok ? 'rgba(13, 124, 74,0.12)' : 'rgba(220,38,38,0.1)',
+                color: testResult.ok ? '#0d7c4a' : '#dc2626',
               }}
             >
               {testResult.msg}
@@ -4835,11 +4837,11 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content animate-modal-enter" style={{ maxWidth: '800px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(16, 185, 129,0.1)' }}>
-          <h2 className="text-xl font-bold" style={{ color: '#f0fdf4' }}>
+        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(13, 124, 74,0.1)' }}>
+          <h2 className="text-xl font-bold" style={{ color: '#1a2e1a' }}>
             {format === 'pdf' ? '📄 پیش‌نمایش گزارش PDF' : '📊 پیش‌نمایش گزارش Excel'}
           </h2>
-          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#6b8f7a' }}>
+          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#8a8a7a' }}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -4848,36 +4850,36 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
 
         <div className="p-6">
           {/* Summary */}
-          <div className="mb-4 p-4 rounded-xl" style={{ background: 'rgba(16, 185, 129,0.08)', border: '1px solid rgba(16, 185, 129,0.2)' }}>
+          <div className="mb-4 p-4 rounded-xl" style={{ background: 'rgba(13, 124, 74,0.08)', border: '1px solid rgba(13, 124, 74,0.2)' }}>
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm" style={{ color: '#86efac' }}>تعداد برنامه‌ها</div>
-                <div className="text-2xl font-bold" style={{ color: '#059669' }}>{shows.length.toLocaleString('fa-IR')}</div>
+                <div className="text-sm" style={{ color: '#5a6b4a' }}>تعداد برنامه‌ها</div>
+                <div className="text-2xl font-bold" style={{ color: '#0d7c4a' }}>{shows.length.toLocaleString('fa-IR')}</div>
               </div>
               <div>
-                <div className="text-sm" style={{ color: '#86efac' }}>فرمت</div>
-                <div className="text-2xl font-bold" style={{ color: format === 'pdf' ? '#dc2626' : '#059669' }}>{format.toUpperCase()}</div>
+                <div className="text-sm" style={{ color: '#5a6b4a' }}>فرمت</div>
+                <div className="text-2xl font-bold" style={{ color: format === 'pdf' ? '#dc2626' : '#0d7c4a' }}>{format.toUpperCase()}</div>
               </div>
               <div>
-                <div className="text-sm" style={{ color: '#86efac' }}>تاریخ</div>
-                <div className="text-2xl font-bold" style={{ color: '#f0fdf4' }}>{new Date().toLocaleDateString('fa-IR')}</div>
+                <div className="text-sm" style={{ color: '#5a6b4a' }}>تاریخ</div>
+                <div className="text-2xl font-bold" style={{ color: '#1a2e1a' }}>{new Date().toLocaleDateString('fa-IR')}</div>
               </div>
             </div>
           </div>
 
           {/* PDF report preview — multi-section professional template */}
           {format === 'pdf' && (
-            <div className="mb-4 rounded-2xl overflow-hidden" style={{ border: '2px solid #10b981', boxShadow: '0 8px 24px rgba(16, 185, 129, 0.15)' }}>
+            <div className="mb-4 rounded-2xl overflow-hidden" style={{ border: '2px solid #0d7c4a', boxShadow: '0 8px 24px rgba(13, 124, 74, 0.15)' }}>
               {/* Cover preview */}
               <div
                 className="p-6 text-center relative overflow-hidden"
                 style={{
-                  background: 'radial-gradient(ellipse 80% 60% at 70% 20%, rgba(54, 179, 126, 0.35) 0%, transparent 60%), radial-gradient(ellipse 70% 50% at 25% 80%, rgba(16, 185, 129, 0.4) 0%, transparent 60%), linear-gradient(160deg, #0a1f14 0%, #0d2218 50%, #0a1f14 100%)',
+                  background: 'radial-gradient(ellipse 80% 60% at 70% 20%, rgba(54, 179, 126, 0.35) 0%, transparent 60%), radial-gradient(ellipse 70% 50% at 25% 80%, rgba(13, 124, 74, 0.4) 0%, transparent 60%), linear-gradient(160deg, #0a1f14 0%, #0d2218 50%, #0a1f14 100%)',
                   color: 'white',
                 }}
               >
                 <div style={{ color: 'rgba(134, 239, 172, 0.6)', fontSize: '11px', letterSpacing: '4px', marginBottom: '12px' }}>بانک رسانه</div>
-                <div style={{ color: '#34d399', marginBottom: '10px', filter: 'drop-shadow(0 0 16px rgba(52, 211, 153, 0.5))' }}>
+                <div style={{ color: '#10b981', marginBottom: '10px', filter: 'drop-shadow(0 0 16px rgba(16, 185, 129, 0.5))' }}>
                   <svg viewBox="0 0 64 64" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="2" style={{ display: 'inline-block' }}>
                     <rect x="6" y="14" width="52" height="36" rx="4" />
                     <path d="M6 22h52M14 14v-4M50 14v-4M20 32l10 6-10 6z" />
@@ -4888,8 +4890,8 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
                 <div
                   className="flex justify-center gap-4 mt-4 mx-auto"
                   style={{
-                    background: 'rgba(16, 185, 129, 0.1)',
-                    border: '1px solid rgba(52, 211, 153, 0.25)',
+                    background: 'rgba(13, 124, 74, 0.1)',
+                    border: '1px solid rgba(13, 124, 74, 0.25)',
                     borderRadius: '12px',
                     padding: '12px 16px',
                     maxWidth: '380px',
@@ -4897,17 +4899,17 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
                   }}
                 >
                   <div>
-                    <div className="text-xl font-black" style={{ color: '#34d399' }}>{shows.length.toLocaleString('fa-IR')}</div>
+                    <div className="text-xl font-black" style={{ color: '#10b981' }}>{shows.length.toLocaleString('fa-IR')}</div>
                     <div className="text-xs" style={{ color: 'rgba(134, 239, 172, 0.7)' }}>برنامه</div>
                   </div>
-                  <div style={{ width: '1px', background: 'rgba(52, 211, 153, 0.3)' }}></div>
+                  <div style={{ width: '1px', background: 'rgba(16, 185, 129, 0.3)' }}></div>
                   <div>
-                    <div className="text-xl font-black" style={{ color: '#34d399' }}>{new Set(shows.map(s => s.category)).size.toLocaleString('fa-IR')}</div>
+                    <div className="text-xl font-black" style={{ color: '#10b981' }}>{new Set(shows.map(s => s.category)).size.toLocaleString('fa-IR')}</div>
                     <div className="text-xs" style={{ color: 'rgba(134, 239, 172, 0.7)' }}>دستهٔ ژانری</div>
                   </div>
-                  <div style={{ width: '1px', background: 'rgba(52, 211, 153, 0.3)' }}></div>
+                  <div style={{ width: '1px', background: 'rgba(16, 185, 129, 0.3)' }}></div>
                   <div>
-                    <div className="text-xl font-black" style={{ color: '#34d399' }}>{new Date().toLocaleDateString('fa-IR')}</div>
+                    <div className="text-xl font-black" style={{ color: '#10b981' }}>{new Date().toLocaleDateString('fa-IR')}</div>
                     <div className="text-xs" style={{ color: 'rgba(134, 239, 172, 0.7)' }}>تاریخ</div>
                   </div>
                 </div>
@@ -4915,7 +4917,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
 
               {/* Sections list — shows the report structure with descriptions */}
               <div className="p-4" style={{ background: '#f8faf9' }}>
-                <div className="text-xs font-bold mb-3" style={{ color: '#059669', paddingRight: '8px', borderRight: '3px solid #10b981' }}>
+                <div className="text-xs font-bold mb-3" style={{ color: '#0d7c4a', paddingRight: '8px', borderRight: '3px solid #0d7c4a' }}>
                   ساختار گزارش (۸ بخش) — هر بخش شامل توضیحات کامل
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -4932,20 +4934,20 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
                     <div
                       key={s.n}
                       className="p-3 rounded-lg flex gap-2.5"
-                      style={{ background: 'white', border: '1px solid rgba(16, 185, 129, 0.3)' }}
+                      style={{ background: 'white', border: '1px solid rgba(13, 124, 74, 0.3)' }}
                     >
                       <span
                         className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0"
-                        style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: 'white', boxShadow: '0 2px 6px rgba(16, 185, 129, 0.3)' }}
+                        style={{ background: 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)', color: 'white', boxShadow: '0 2px 6px rgba(13, 124, 74, 0.3)' }}
                       >
                         {s.n.toLocaleString('fa-IR')}
                       </span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 mb-1">
                           <span className="text-sm">{s.icon}</span>
-                          <span className="text-xs font-bold" style={{ color: '#f0fdf4' }}>{s.t}</span>
+                          <span className="text-xs font-bold" style={{ color: '#1a2e1a' }}>{s.t}</span>
                         </div>
-                        <p className="text-xs leading-relaxed" style={{ color: '#86efac', fontSize: '10.5px' }}>
+                        <p className="text-xs leading-relaxed" style={{ color: '#5a6b4a', fontSize: '10.5px' }}>
                           {s.desc}
                         </p>
                       </div>
@@ -4955,11 +4957,11 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
               </div>
 
               {/* Sample program card preview */}
-              <div className="p-4" style={{ background: 'white', borderTop: '1px solid rgba(16, 185, 129, 0.3)' }}>
-                <div className="text-xs font-bold mb-2" style={{ color: '#059669' }}>نمونه کارت برنامه (از بخش ۶)</div>
+              <div className="p-4" style={{ background: 'white', borderTop: '1px solid rgba(13, 124, 74, 0.3)' }}>
+                <div className="text-xs font-bold mb-2" style={{ color: '#0d7c4a' }}>نمونه کارت برنامه (از بخش ۶)</div>
                 <div
                   className="rounded-lg overflow-hidden"
-                  style={{ border: '1px solid rgba(16, 185, 129, 0.3)', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}
+                  style={{ border: '1px solid rgba(13, 124, 74, 0.3)', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}
                 >
                   <div
                     className="p-2 flex items-center gap-2"
@@ -4967,24 +4969,24 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
                   >
                     <span
                       className="w-5 h-5 rounded flex items-center justify-center text-xs font-bold flex-shrink-0"
-                      style={{ background: '#10b981', color: 'white' }}
+                      style={{ background: '#0d7c4a', color: 'white' }}
                     >۱</span>
-                    <span className="text-xs font-bold flex-1" style={{ color: '#f0fdf4', direction: 'ltr', textAlign: 'right' }}>
+                    <span className="text-xs font-bold flex-1" style={{ color: '#1a2e1a', direction: 'ltr', textAlign: 'right' }}>
                       {shows[0]?.name || 'نمونه برنامه'}
                     </span>
-                    <span className="text-xs" style={{ color: '#6b8f7a' }}>شناسه: ۱</span>
+                    <span className="text-xs" style={{ color: '#8a8a7a' }}>شناسه: ۱</span>
                   </div>
                   <div className="p-2 flex gap-2">
                     <div
                       className="w-12 h-9 rounded flex-shrink-0"
-                      style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
+                      style={{ background: 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)' }}
                     ></div>
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap gap-1 mb-1">
-                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(16, 185, 129,0.08)', color: '#059669', fontSize: '9px' }}>
+                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(13, 124, 74,0.08)', color: '#0d7c4a', fontSize: '9px' }}>
                           {shows[0]?.style || 'مدرن'}
                         </span>
-                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(16, 185, 129,0.08)', color: '#059669', fontSize: '9px' }}>
+                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(13, 124, 74,0.08)', color: '#0d7c4a', fontSize: '9px' }}>
                           {shows[0]?.size || 'متوسط'}
                         </span>
                       </div>
@@ -4997,7 +4999,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
               </div>
 
               {shows.length > 80 && (
-                <div className="p-2 text-center text-xs" style={{ background: '#fef9e7', color: '#6b8f7a' }}>
+                <div className="p-2 text-center text-xs" style={{ background: '#fef9e7', color: '#8a8a7a' }}>
                   در گزارش کامل، ۸۰ برنامهٔ نخست به‌صورت تفصیلی و همهٔ {shows.length.toLocaleString('fa-IR')} برنامه در نمایهٔ الفبایی
                 </div>
               )}
@@ -5007,7 +5009,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
           {/* Excel preview */}
           {format === 'excel' && (
             <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(0,0,0,0.1)' }}>
-              <div className="p-3 text-center" style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: 'white' }}>
+              <div className="p-3 text-center" style={{ background: 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)', color: 'white' }}>
                 <div className="text-lg font-bold">بانک رسانه — خروجی Excel</div>
                 <div className="text-xs opacity-80">{shows.length.toLocaleString('fa-IR')} برنامه</div>
               </div>
@@ -5015,21 +5017,21 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
                 <table className="w-full" style={{ fontSize: '12px' }}>
                   <thead style={{ position: 'sticky', top: 0, background: '#f5efe0', zIndex: 1 }}>
                     <tr>
-                      <th className="text-right p-2 font-bold" style={{ color: '#86efac' }}>#</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#86efac' }}>نام</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#86efac' }}>دسته</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#86efac' }}>سبک</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#86efac' }}>اندازه</th>
+                      <th className="text-right p-2 font-bold" style={{ color: '#5a6b4a' }}>#</th>
+                      <th className="text-right p-2 font-bold" style={{ color: '#5a6b4a' }}>نام</th>
+                      <th className="text-right p-2 font-bold" style={{ color: '#5a6b4a' }}>دسته</th>
+                      <th className="text-right p-2 font-bold" style={{ color: '#5a6b4a' }}>سبک</th>
+                      <th className="text-right p-2 font-bold" style={{ color: '#5a6b4a' }}>اندازه</th>
                     </tr>
                   </thead>
                   <tbody>
                     {shows.slice(0, 50).map((s, i) => (
-                      <tr key={s.num} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.03)' }}>
-                        <td className="p-2" style={{ color: '#6b8f7a' }}>{(i + 1).toLocaleString('fa-IR')}</td>
-                        <td className="p-2 font-medium" style={{ color: '#f0fdf4', direction: 'ltr', textAlign: 'right' }}>{s.name}</td>
-                        <td className="p-2" style={{ color: '#86efac' }}>{s.category.replace(/^\d+\.\s*/, '').substring(0, 20)}</td>
-                        <td className="p-2" style={{ color: '#86efac' }}>{s.style}</td>
-                        <td className="p-2" style={{ color: '#86efac' }}>{s.size}</td>
+                      <tr key={s.num} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.6)' }}>
+                        <td className="p-2" style={{ color: '#8a8a7a' }}>{(i + 1).toLocaleString('fa-IR')}</td>
+                        <td className="p-2 font-medium" style={{ color: '#1a2e1a', direction: 'ltr', textAlign: 'right' }}>{s.name}</td>
+                        <td className="p-2" style={{ color: '#5a6b4a' }}>{s.category.replace(/^\d+\.\s*/, '').substring(0, 20)}</td>
+                        <td className="p-2" style={{ color: '#5a6b4a' }}>{s.style}</td>
+                        <td className="p-2" style={{ color: '#5a6b4a' }}>{s.size}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -5050,13 +5052,13 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
             <button
               onClick={onClose}
               className="px-6 py-3 rounded-xl text-sm font-medium"
-              style={{ background: 'rgba(107, 143, 122,0.15)', color: '#86efac', border: '1px solid rgba(107, 143, 122,0.3)' }}
+              style={{ background: 'rgba(107, 143, 122,0.15)', color: '#5a6b4a', border: '1px solid rgba(107, 143, 122,0.3)' }}
             >
               انصراف
             </button>
           </div>
           {format === 'pdf' && (
-            <p className="mt-3 text-xs text-center" style={{ color: '#6b8f7a', lineHeight: 1.7 }}>
+            <p className="mt-3 text-xs text-center" style={{ color: '#8a8a7a', lineHeight: 1.7 }}>
               گزارش شامل ۸ بخش است: صفحهٔ عنوان، فهرست مطالب، خلاصهٔ اجرایی، روش تحقیق، نمای آماری، تحلیل ژانرها، تحلیل دکور، و معرفی تفصیلی برنامه‌ها.<br />
               پس از کلیک روی دانلود، پنجره چاپ باز می‌شود — مقاس «A4» و «Save as PDF» را انتخاب کنید.
             </p>
@@ -5094,67 +5096,67 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
   return (
     <>
       <header className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-2" style={{ color: '#f0fdf4' }}>گزارش‌ها</h1>
-        <p style={{ color: '#6b8f7a' }}>آمار و گزارش‌های بانک رسانه</p>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2" style={{ color: '#1a2e1a' }}>گزارش‌ها</h1>
+        <p style={{ color: '#8a8a7a' }}>آمار و گزارش‌های بانک رسانه</p>
       </header>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="premium-glass p-5">
           <div className="text-3xl font-black mb-1" style={{ color: '#10b981' }}>{stats.total.toLocaleString('fa-IR')}</div>
-          <div style={{ color: '#86efac' }} className="text-sm">کل برنامه‌ها</div>
+          <div style={{ color: '#5a6b4a' }} className="text-sm">کل برنامه‌ها</div>
         </div>
         <div className="premium-glass p-5">
           <div className="text-3xl font-black mb-1" style={{ color: '#7c3aed' }}>{stats.uploaded.toLocaleString('fa-IR')}</div>
-          <div style={{ color: '#86efac' }} className="text-sm">آپلود شده</div>
+          <div style={{ color: '#5a6b4a' }} className="text-sm">آپلود شده</div>
         </div>
         <div className="premium-glass p-5">
           <div className="text-3xl font-black mb-1" style={{ color: '#dc2626' }}>{stats.pdf.toLocaleString('fa-IR')}</div>
-          <div style={{ color: '#86efac' }} className="text-sm">با تصویر PDF</div>
+          <div style={{ color: '#5a6b4a' }} className="text-sm">با تصویر PDF</div>
         </div>
         <div className="premium-glass p-5">
           <div className="text-3xl font-black mb-1" style={{ color: '#2563eb' }}>{stats.web.toLocaleString('fa-IR')}</div>
-          <div style={{ color: '#86efac' }} className="text-sm">با تصویر وب</div>
+          <div style={{ color: '#5a6b4a' }} className="text-sm">با تصویر وب</div>
         </div>
       </div>
 
       <div className="premium-glass overflow-hidden">
-        <div className="p-5" style={{ borderBottom: '1px solid rgba(16, 185, 129, 0.1)' }}>
-          <h3 className="font-bold" style={{ color: '#f0fdf4' }}>گزارش‌های موجود</h3>
+        <div className="p-5" style={{ borderBottom: '1px solid rgba(13, 124, 74, 0.1)' }}>
+          <h3 className="font-bold" style={{ color: '#1a2e1a' }}>گزارش‌های موجود</h3>
         </div>
         <table className="w-full">
           <thead>
-            <tr style={{ background: 'rgba(16, 185, 129, 0.08)', borderBottom: '1px solid rgba(16, 185, 129, 0.2)' }}>
-              <th className="text-right p-4 text-xs font-bold" style={{ color: '#86efac' }}>#</th>
-              <th className="text-right p-4 text-xs font-bold" style={{ color: '#86efac' }}>عنوان</th>
-              <th className="text-right p-4 text-xs font-bold hidden sm:table-cell" style={{ color: '#86efac' }}>نوع</th>
-              <th className="text-right p-4 text-xs font-bold" style={{ color: '#86efac' }}>تعداد</th>
-              <th className="text-right p-4 text-xs font-bold hidden sm:table-cell" style={{ color: '#86efac' }}>تاریخ</th>
-              <th className="text-right p-4 text-xs font-bold" style={{ color: '#86efac' }}>عملیات</th>
+            <tr style={{ background: 'rgba(13, 124, 74, 0.08)', borderBottom: '1px solid rgba(13, 124, 74, 0.2)' }}>
+              <th className="text-right p-4 text-xs font-bold" style={{ color: '#5a6b4a' }}>#</th>
+              <th className="text-right p-4 text-xs font-bold" style={{ color: '#5a6b4a' }}>عنوان</th>
+              <th className="text-right p-4 text-xs font-bold hidden sm:table-cell" style={{ color: '#5a6b4a' }}>نوع</th>
+              <th className="text-right p-4 text-xs font-bold" style={{ color: '#5a6b4a' }}>تعداد</th>
+              <th className="text-right p-4 text-xs font-bold hidden sm:table-cell" style={{ color: '#5a6b4a' }}>تاریخ</th>
+              <th className="text-right p-4 text-xs font-bold" style={{ color: '#5a6b4a' }}>عملیات</th>
             </tr>
           </thead>
           <tbody>
             {reports.map((r, idx) => (
               <tr
                 key={r.id}
-                style={{ borderBottom: '1px solid rgba(16, 185, 129, 0.08)' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.55)'; }}
+                style={{ borderBottom: '1px solid rgba(13, 124, 74, 0.08)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(13, 124, 74, 0.04)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
-                <td className="p-4 text-sm" style={{ color: '#6b8f7a' }}>{(idx + 1).toLocaleString('fa-IR')}</td>
-                <td className="p-4 text-sm font-medium" style={{ color: '#f0fdf4' }}>{r.title}</td>
+                <td className="p-4 text-sm" style={{ color: '#8a8a7a' }}>{(idx + 1).toLocaleString('fa-IR')}</td>
+                <td className="p-4 text-sm font-medium" style={{ color: '#1a2e1a' }}>{r.title}</td>
                 <td className="p-4 hidden sm:table-cell">
                   <span
                     className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium"
                     style={r.type === 'pdf'
                       ? { background: 'rgba(220, 38, 38, 0.15)', color: '#dc2626' }
-                      : { background: 'rgba(16, 185, 129, 0.15)', color: '#059669' }
+                      : { background: 'rgba(13, 124, 74, 0.15)', color: '#0d7c4a' }
                     }
                   >
                     {r.type === 'pdf' ? 'PDF' : 'Excel'}
                   </span>
                 </td>
-                <td className="p-4 text-sm" style={{ color: '#86efac' }}>{r.count.toLocaleString('fa-IR')}</td>
-                <td className="p-4 text-sm hidden sm:table-cell" style={{ color: '#6b8f7a' }}>{r.date}</td>
+                <td className="p-4 text-sm" style={{ color: '#5a6b4a' }}>{r.count.toLocaleString('fa-IR')}</td>
+                <td className="p-4 text-sm hidden sm:table-cell" style={{ color: '#8a8a7a' }}>{r.date}</td>
                 <td className="p-4">
                   <button
                     className="text-sm hover:underline"
@@ -5217,10 +5219,12 @@ function SettingsModal({
         style={{
           width: 'min(720px, 96vw)',
           maxHeight: '90vh',
-          background: 'linear-gradient(180deg, #f8fbf8 0%, #eef5ef 100%)',
-          borderRadius: '20px',
-          border: '1px solid rgba(16, 185, 129, 0.25)',
-          boxShadow: '0 30px 80px rgba(0, 0, 0, 0.35)',
+          background: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(20px) saturate(160%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(160%)',
+          borderRadius: '24px',
+          border: '1px solid rgba(13, 124, 74, 0.15)',
+          boxShadow: '0 24px 80px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.6)',
           overflow: 'hidden',
         }}
         onClick={(e) => e.stopPropagation()}
@@ -5229,18 +5233,18 @@ function SettingsModal({
         <div
           className="flex items-center justify-between p-4 flex-shrink-0"
           style={{
-            background: 'linear-gradient(180deg, rgba(10, 25, 18, 0.98) 0%, rgba(15, 30, 22, 0.96) 100%)',
-            borderBottom: '1px solid rgba(52, 211, 153, 0.4)',
+            background: 'rgba(245, 243, 237, 0.85)',
+            borderBottom: '1px solid rgba(13, 124, 74, 0.12)',
           }}
         >
-          <h2 className="text-lg font-bold" style={{ color: 'white' }}>⚙ تنظیمات سیستم</h2>
+          <h2 className="text-lg font-bold" style={{ color: '#1a2e1a' }}>⚙ تنظیمات سیستم</h2>
           <button
             onClick={onClose}
             aria-label="بستن تنظیمات"
             className="p-2 rounded-lg transition-colors"
-            style={{ color: 'rgba(255, 255, 255, 0.7)' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(220, 38, 38, 0.25)'; e.currentTarget.style.color = '#fca5a5'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'; }}
+            style={{ color: '#8a8a7a' }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(220, 38, 38, 0.1)'; e.currentTarget.style.color = '#dc2626'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#8a8a7a'; }}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -5251,7 +5255,7 @@ function SettingsModal({
         {/* Tabs */}
         <div
           className="flex items-center gap-1 p-2 flex-shrink-0"
-          style={{ background: 'rgba(16, 185, 129, 0.05)', borderBottom: '1px solid rgba(16, 185, 129, 0.12)' }}
+          style={{ background: 'rgba(13, 124, 74, 0.05)', borderBottom: '1px solid rgba(13, 124, 74, 0.12)' }}
         >
           {tabs.map((t) => {
             const active = tab === t.key;
@@ -5261,11 +5265,11 @@ function SettingsModal({
                 onClick={() => setTab(t.key)}
                 className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition-all"
                 style={active ? {
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  background: 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)',
                   color: 'white',
-                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(52, 211, 153, 0.4)',
+                  boxShadow: '0 4px 12px rgba(13, 124, 74, 0.3), inset 0 1px 0 rgba(13, 124, 74, 0.4)',
                 } : {
-                  color: '#86efac',
+                  color: '#5a6b4a',
                   border: '1px solid transparent',
                 }}
               >
@@ -5324,9 +5328,9 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div>
-        <h3 className="text-base font-bold mb-1" style={{ color: '#f0fdf4' }}>🖥 آدرس سرور API</h3>
-        <p className="text-sm mb-3" style={{ color: '#6b8f7a' }}>
-          آدرس سرویس API که این برنامه به آن متصل می‌شود. پیش‌فرض: <code dir="ltr" style={{ background: 'rgba(16, 185, 129,0.1)', padding: '2px 6px', borderRadius: '6px', color: '#059669' }}>http://localhost:3002</code>
+        <h3 className="text-base font-bold mb-1" style={{ color: '#1a2e1a' }}>🖥 آدرس سرور API</h3>
+        <p className="text-sm mb-3" style={{ color: '#8a8a7a' }}>
+          آدرس سرویس API که این برنامه به آن متصل می‌شود. پیش‌فرض: <code dir="ltr" style={{ background: 'rgba(13, 124, 74,0.1)', padding: '2px 6px', borderRadius: '6px', color: '#0d7c4a' }}>http://localhost:3002</code>
         </p>
         <input
           type="text"
@@ -5336,11 +5340,11 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
           placeholder="http://localhost:3002"
           style={{
             width: '100%',
-            background: 'rgba(255, 255, 255, 0.05)',
-            border: '1px solid rgba(16, 185, 129, 0.25)',
+            background: 'rgba(255, 255, 255, 0.8)',
+            border: '1px solid rgba(13, 124, 74, 0.25)',
             borderRadius: '12px',
             padding: '12px 16px',
-            color: '#f0fdf4',
+            color: '#1a2e1a',
             fontSize: '14px',
             fontFamily: 'inherit',
             outline: 'none',
@@ -5355,7 +5359,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
           className="p-3 rounded-xl text-sm font-medium"
           style={
             testResult.ok
-              ? { background: 'rgba(16, 185, 129, 0.12)', color: '#059669', border: '1px solid rgba(16, 185, 129, 0.3)' }
+              ? { background: 'rgba(13, 124, 74, 0.12)', color: '#0d7c4a', border: '1px solid rgba(13, 124, 74, 0.3)' }
               : { background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }
           }
         >
@@ -5369,9 +5373,9 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
           disabled={testing || !url}
           className="px-4 py-2 rounded-xl text-sm font-bold transition-all"
           style={{
-            background: testing ? 'rgba(107, 143, 122, 0.5)' : 'rgba(16, 185, 129, 0.15)',
-            color: testing ? '#6b8f7a' : '#059669',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
+            background: testing ? 'rgba(107, 143, 122, 0.5)' : 'rgba(13, 124, 74, 0.15)',
+            color: testing ? '#8a8a7a' : '#0d7c4a',
+            border: '1px solid rgba(13, 124, 74, 0.3)',
             opacity: testing || !url ? 0.6 : 1,
             cursor: testing || !url ? 'not-allowed' : 'pointer',
           }}
@@ -5382,9 +5386,9 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
           onClick={handleSave}
           className="px-4 py-2 rounded-xl text-sm font-bold transition-all flex-1"
           style={{
-            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            background: 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)',
             color: 'white',
-            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+            boxShadow: '0 4px 12px rgba(13, 124, 74, 0.3)',
           }}
         >
           ✓ ذخیره آدرس
@@ -5393,7 +5397,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
 
       <div
         className="p-3 rounded-xl text-xs"
-        style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.15)', color: '#86efac', lineHeight: 1.7 }}
+        style={{ background: 'rgba(13, 124, 74, 0.05)', border: '1px solid rgba(13, 124, 74, 0.15)', color: '#5a6b4a', lineHeight: 1.7 }}
       >
         <strong>راهنما:</strong> آدرس وارد شده باید ریشهٔ سرویس API باشد (بدون مسیرهای <code dir="ltr">/api/...</code>).
         اگر از گیتوی Caddy استفاده می‌کنید، می‌توانید آدرس نسبی وارد کنید. پس از ذخیره، توکن فعلی شما معتبر می‌ماند.
@@ -5479,8 +5483,8 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div>
-        <h3 className="text-base font-bold mb-1" style={{ color: '#f0fdf4' }}>👥 مدیریت کاربران</h3>
-        <p className="text-sm" style={{ color: '#6b8f7a' }}>
+        <h3 className="text-base font-bold mb-1" style={{ color: '#1a2e1a' }}>👥 مدیریت کاربران</h3>
+        <p className="text-sm" style={{ color: '#8a8a7a' }}>
           افزودن، حذف یا تغییر نقش کاربران سیستم. نقش‌ها: مدیر (دسترسی کامل)، ویراستار (افزودن/ویرایش برنامه‌ها)، بیننده (فقط مشاهده).
         </p>
       </div>
@@ -5488,9 +5492,9 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
       {/* Add new user form */}
       <div
         className="p-4 rounded-xl"
-        style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.15)' }}
+        style={{ background: 'rgba(13, 124, 74, 0.05)', border: '1px solid rgba(13, 124, 74, 0.15)' }}
       >
-        <h4 className="font-bold text-sm mb-3" style={{ color: '#f0fdf4' }}>＋ افزودن کاربر جدید</h4>
+        <h4 className="font-bold text-sm mb-3" style={{ color: '#1a2e1a' }}>＋ افزودن کاربر جدید</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
           <input
             type="text"
@@ -5500,11 +5504,11 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
             onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
             style={{
               background: 'white',
-              border: '1px solid rgba(16, 185, 129, 0.2)',
+              border: '1px solid rgba(13, 124, 74, 0.2)',
               borderRadius: '10px',
               padding: '10px 14px',
               fontSize: '14px',
-              color: '#f0fdf4',
+              color: '#1a2e1a',
               outline: 'none',
               textAlign: 'left',
               direction: 'ltr',
@@ -5517,11 +5521,11 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
             onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
             style={{
               background: 'white',
-              border: '1px solid rgba(16, 185, 129, 0.2)',
+              border: '1px solid rgba(13, 124, 74, 0.2)',
               borderRadius: '10px',
               padding: '10px 14px',
               fontSize: '14px',
-              color: '#f0fdf4',
+              color: '#1a2e1a',
               outline: 'none',
             }}
           />
@@ -5533,11 +5537,11 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
             onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
             style={{
               background: 'white',
-              border: '1px solid rgba(16, 185, 129, 0.2)',
+              border: '1px solid rgba(13, 124, 74, 0.2)',
               borderRadius: '10px',
               padding: '10px 14px',
               fontSize: '14px',
-              color: '#f0fdf4',
+              color: '#1a2e1a',
               outline: 'none',
               textAlign: 'left',
               direction: 'ltr',
@@ -5548,11 +5552,11 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
             onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
             style={{
               background: 'white',
-              border: '1px solid rgba(16, 185, 129, 0.2)',
+              border: '1px solid rgba(13, 124, 74, 0.2)',
               borderRadius: '10px',
               padding: '10px 14px',
               fontSize: '14px',
-              color: '#f0fdf4',
+              color: '#1a2e1a',
               outline: 'none',
               fontFamily: 'inherit',
             }}
@@ -5567,9 +5571,9 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
           disabled={creating}
           className="px-4 py-2 rounded-xl text-sm font-bold transition-all"
           style={{
-            background: creating ? 'rgba(107, 143, 122, 0.5)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            background: creating ? 'rgba(107, 143, 122, 0.5)' : 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)',
             color: 'white',
-            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+            boxShadow: '0 4px 12px rgba(13, 124, 74, 0.3)',
             opacity: creating ? 0.6 : 1,
             cursor: creating ? 'not-allowed' : 'pointer',
           }}
@@ -5580,11 +5584,11 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
 
       {/* Users list */}
       <div>
-        <h4 className="font-bold text-sm mb-2" style={{ color: '#f0fdf4' }}>
+        <h4 className="font-bold text-sm mb-2" style={{ color: '#1a2e1a' }}>
           کاربران فعلی ({users.length.toLocaleString('fa-IR')})
         </h4>
         {loading && (
-          <div className="p-4 text-center text-sm" style={{ color: '#6b8f7a' }}>در حال بارگذاری...</div>
+          <div className="p-4 text-center text-sm" style={{ color: '#8a8a7a' }}>در حال بارگذاری...</div>
         )}
         {error && (
           <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}>
@@ -5597,38 +5601,38 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
               <div
                 key={u.id}
                 className="p-3 rounded-xl flex items-center gap-3"
-                style={{ background: 'white', border: '1px solid rgba(16, 185, 129, 0.15)' }}
+                style={{ background: 'white', border: '1px solid rgba(13, 124, 74, 0.15)' }}
               >
                 <div
                   className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm"
                   style={{
-                    background: u.role === 'admin' ? 'rgba(220, 38, 38, 0.15)' : u.role === 'editor' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-                    color: u.role === 'admin' ? '#dc2626' : u.role === 'editor' ? '#d97706' : '#059669',
-                    border: `1px solid ${u.role === 'admin' ? 'rgba(220, 38, 38, 0.35)' : u.role === 'editor' ? 'rgba(245, 158, 11, 0.35)' : 'rgba(16, 185, 129, 0.35)'}`,
+                    background: u.role === 'admin' ? 'rgba(220, 38, 38, 0.15)' : u.role === 'editor' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(13, 124, 74, 0.15)',
+                    color: u.role === 'admin' ? '#dc2626' : u.role === 'editor' ? '#d97706' : '#0d7c4a',
+                    border: `1px solid ${u.role === 'admin' ? 'rgba(220, 38, 38, 0.35)' : u.role === 'editor' ? 'rgba(245, 158, 11, 0.35)' : 'rgba(13, 124, 74, 0.35)'}`,
                   }}
                 >
                   {(u.name || u.username).charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm" style={{ color: '#f0fdf4' }} title={u.username}>
+                  <div className="font-bold text-sm" style={{ color: '#1a2e1a' }} title={u.username}>
                     {u.name || u.username}{' '}
                     {u.id === currentUser.id && (
-                      <span className="text-xs font-normal" style={{ color: '#6b8f7a' }}>(شما)</span>
+                      <span className="text-xs font-normal" style={{ color: '#8a8a7a' }}>(شما)</span>
                     )}
                   </div>
-                  <div className="text-xs" style={{ color: '#6b8f7a' }} dir="ltr">@{u.username}</div>
+                  <div className="text-xs" style={{ color: '#8a8a7a' }} dir="ltr">@{u.username}</div>
                 </div>
                 <select
                   value={u.role}
                   onChange={(e) => handleChangeRole(u, e.target.value)}
                   disabled={u.id === currentUser.id}
                   style={{
-                    background: 'rgba(16, 185, 129, 0.05)',
-                    border: '1px solid rgba(16, 185, 129, 0.2)',
+                    background: 'rgba(13, 124, 74, 0.05)',
+                    border: '1px solid rgba(13, 124, 74, 0.2)',
                     borderRadius: '8px',
                     padding: '6px 10px',
                     fontSize: '13px',
-                    color: '#f0fdf4',
+                    color: '#1a2e1a',
                     outline: 'none',
                     fontFamily: 'inherit',
                     cursor: u.id === currentUser.id ? 'not-allowed' : 'pointer',
@@ -5715,11 +5719,11 @@ function SettingsPasswordTab({
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
-    background: 'rgba(255, 255, 255, 0.05)',
-    border: '1px solid rgba(16, 185, 129, 0.25)',
+    background: 'rgba(255, 255, 255, 0.8)',
+    border: '1px solid rgba(13, 124, 74, 0.25)',
     borderRadius: '12px',
     padding: '12px 48px 12px 16px',
-    color: '#f0fdf4',
+    color: '#1a2e1a',
     fontSize: '14px',
     fontFamily: 'inherit',
     outline: 'none',
@@ -5730,19 +5734,19 @@ function SettingsPasswordTab({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div>
-        <h3 className="text-base font-bold mb-1" style={{ color: '#f0fdf4' }}>🔑 تغییر رمز عبور</h3>
-        <p className="text-sm" style={{ color: '#6b8f7a' }}>
+        <h3 className="text-base font-bold mb-1" style={{ color: '#1a2e1a' }}>🔑 تغییر رمز عبور</h3>
+        <p className="text-sm" style={{ color: '#8a8a7a' }}>
           رمز عبور خود را تغییر دهید. پس از تغییر، تمام نشست‌های فعال شما باطل شده و باید دوباره وارد شوید.
         </p>
       </div>
 
       <div
         className="p-3 rounded-xl text-sm flex items-center gap-2"
-        style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', color: '#059669' }}
+        style={{ background: 'rgba(13, 124, 74, 0.08)', border: '1px solid rgba(13, 124, 74, 0.2)', color: '#0d7c4a' }}
       >
         <span>👤 حساب فعلی:</span>
         <strong>{currentUser.name || currentUser.username}</strong>
-        <span dir="ltr" style={{ color: '#6b8f7a' }}>@{currentUser.username}</span>
+        <span dir="ltr" style={{ color: '#8a8a7a' }}>@{currentUser.username}</span>
       </div>
 
       {[
@@ -5751,7 +5755,7 @@ function SettingsPasswordTab({
         { label: 'تکرار رمز جدید', val: confirmPw, set: setConfirmPw },
       ].map((f, i) => (
         <div key={i}>
-          <label className="block text-sm font-bold mb-2" style={{ color: '#f0fdf4' }}>{f.label}</label>
+          <label className="block text-sm font-bold mb-2" style={{ color: '#1a2e1a' }}>{f.label}</label>
           <div className="relative">
             <input
               type={showPw ? 'text' : 'password'}
@@ -5765,7 +5769,7 @@ function SettingsPasswordTab({
               type="button"
               onClick={() => setShowPw(!showPw)}
               className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-lg"
-              style={{ color: '#86efac', background: 'transparent' }}
+              style={{ color: '#5a6b4a', background: 'transparent' }}
               aria-label={showPw ? 'پنهان کردن رمز' : 'نمایش رمز'}
             >
               {showPw ? (
@@ -5797,9 +5801,9 @@ function SettingsPasswordTab({
         disabled={saving}
         className="px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
         style={{
-          background: saving ? 'rgba(107, 143, 122, 0.5)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+          background: saving ? 'rgba(107, 143, 122, 0.5)' : 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)',
           color: 'white',
-          boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+          boxShadow: '0 4px 12px rgba(13, 124, 74, 0.3)',
           opacity: saving ? 0.6 : 1,
           cursor: saving ? 'not-allowed' : 'pointer',
         }}
