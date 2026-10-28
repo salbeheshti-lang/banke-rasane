@@ -105,7 +105,7 @@
   --text-muted: #6b8f7a;
   --input-bg: rgba(255, 255, 255, 0.05);
   --input-border: rgba(16, 185, 129, 0.2);
-  --background: linear-gradient(135deg, color-mix(in srgb, var(--genre-color, #10b981) 65%, #0a1a12) 0%, color-mix(in srgb, var(--genre-color, #10b981) 35%, #06120a) 50%, color-mix(in srgb, var(--genre-color, #10b981) 15%, #03080a) 100%);
+  --background: linear-gradient(135deg, var(--genre-color, #10b981) 0%, color-mix(in srgb, var(--genre-color, #10b981) 50%, #0a1a12) 50%, color-mix(in srgb, var(--genre-color, #10b981) 20%, #06120a) 100%);
   --foreground: #f0fdf4;
 }
 
@@ -423,10 +423,10 @@ html, body {
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   color: #ffffff;
   /* Dark base background */
-  background: linear-gradient(135deg, color-mix(in srgb, var(--genre-color, #10b981) 65%, #0a1a12) 0%, color-mix(in srgb, var(--genre-color, #10b981) 35%, #06120a) 50%, color-mix(in srgb, var(--genre-color, #10b981) 15%, #03080a) 100%);
+  background: linear-gradient(135deg, var(--genre-color, #10b981) 0%, color-mix(in srgb, var(--genre-color, #10b981) 50%, #0a1a12) 50%, color-mix(in srgb, var(--genre-color, #10b981) 20%, #06120a) 100%);
   border: 1px solid color-mix(in srgb, var(--genre-color, #10b981) 40%, transparent);
   box-shadow:
-    0 12px 40px color-mix(in srgb, var(--genre-color, #10b981) 40%, transparent),
+    0 12px 40px color-mix(in srgb, var(--genre-color, #10b981) 50%, transparent),
     0 4px 12px color-mix(in srgb, var(--genre-color, #10b981) 15%, transparent),
     inset 0 1px 0 color-mix(in srgb, var(--genre-color, #10b981) 12%, transparent);
 }

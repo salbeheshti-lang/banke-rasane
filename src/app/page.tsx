@@ -1162,9 +1162,9 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack }: {
     <header
       className="fixed top-0 left-0 right-0 z-40"
       style={{
-        background: 'linear-gradient(180deg, #ffffff 0%, #f5f3ed 100%)',
-        boxShadow: '0 2px 12px rgba(0, 0, 0, 0.05)',
-        borderBottom: '2px solid rgba(13, 124, 74, 0.2)',
+        background: 'linear-gradient(180deg, #0a1f14 0%, #0d2218 100%)',
+        boxShadow: '0 2px 16px rgba(0, 0, 0, 0.3)',
+        borderBottom: '1px solid rgba(16, 185, 129, 0.3)',
         backdropFilter: 'blur(20px) saturate(160%)',
         WebkitBackdropFilter: 'blur(20px) saturate(160%)',
         borderBottom: '1px solid rgba(13, 124, 74, 0.1)',
@@ -1227,7 +1227,7 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack }: {
               className="flex flex-col"
               style={{ borderRight: '1px solid rgba(13, 124, 74, 0.15)', paddingRight: '12px' }}
             >
-              <span style={{ color: '#0d3a1a', fontWeight: 800, fontSize: '15px', textShadow: '0 1px 2px rgba(0,0,0,0.05)', lineHeight: 1.2 }}>
+              <span style={{ color: '#ffffff', fontWeight: 800, fontSize: '15px', textShadow: '0 1px 4px rgba(0,0,0,0.5)', lineHeight: 1.2 }}>
                 {viewTitles[currentView] || 'بانک رسانه'}
               </span>
               <span style={{ color: '#8a8a7a', fontSize: '11px', marginTop: '2px' }}>
@@ -1645,9 +1645,9 @@ function MobileBottomNav({
           <div
             className="fixed bottom-0 left-0 right-0 p-4 animate-slide-up-nav"
             style={{
-              background: 'linear-gradient(180deg, #ffffff 0%, #f5f3ed 100%)',
-        boxShadow: '0 2px 12px rgba(0, 0, 0, 0.05)',
-        borderBottom: '2px solid rgba(13, 124, 74, 0.2)',
+              background: 'linear-gradient(180deg, #0a1f14 0%, #0d2218 100%)',
+        boxShadow: '0 2px 16px rgba(0, 0, 0, 0.3)',
+        borderBottom: '1px solid rgba(16, 185, 129, 0.3)',
               backdropFilter: 'blur(26px) saturate(160%)',
               WebkitBackdropFilter: 'blur(26px) saturate(160%)',
               borderTop: '1px solid rgba(13, 124, 74, 0.15)',
@@ -1716,9 +1716,9 @@ function MobileBottomNav({
         <div
           className="flex items-center justify-around no-scrollbar"
           style={{
-            background: 'linear-gradient(180deg, #ffffff 0%, #f5f3ed 100%)',
-        boxShadow: '0 2px 12px rgba(0, 0, 0, 0.05)',
-        borderBottom: '2px solid rgba(13, 124, 74, 0.2)',
+            background: 'linear-gradient(180deg, #0a1f14 0%, #0d2218 100%)',
+        boxShadow: '0 2px 16px rgba(0, 0, 0, 0.3)',
+        borderBottom: '1px solid rgba(16, 185, 129, 0.3)',
             backdropFilter: 'blur(24px) saturate(160%)',
             WebkitBackdropFilter: 'blur(24px) saturate(160%)',
             border: '1px solid rgba(13, 124, 74, 0.15)',
@@ -5226,9 +5226,9 @@ function SettingsModal({
         <div
           className="flex items-center justify-between p-4 flex-shrink-0"
           style={{
-            background: 'linear-gradient(180deg, #ffffff 0%, #f5f3ed 100%)',
-        boxShadow: '0 2px 12px rgba(0, 0, 0, 0.05)',
-        borderBottom: '2px solid rgba(13, 124, 74, 0.2)',
+            background: 'linear-gradient(180deg, #0a1f14 0%, #0d2218 100%)',
+        boxShadow: '0 2px 16px rgba(0, 0, 0, 0.3)',
+        borderBottom: '1px solid rgba(16, 185, 129, 0.3)',
             borderBottom: '1px solid rgba(13, 124, 74, 0.12)',
           }}
         >
