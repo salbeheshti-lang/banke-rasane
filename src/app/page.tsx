@@ -233,6 +233,22 @@ const GENRES: Genre[] = [
     searchFields: ['name', 'summary', 'descriptionFa', 'layout'],
   },
   {
+    id: 'rural', key: 'rural', nameFa: 'برنامه‌های روستایی', name: 'Rural Programs',
+    color: '#65a30d', description: 'برنامه‌های تلویزیونی حوزه روستا و کشاورزی',
+    filterFn: s => s.category.includes('روستا') || s.category.includes('کشاورزی') || s.category.includes('دامداری') || s.category.includes('روستایی'),
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.elements],
+    presetTags: ['کشاورزی', 'دامداری', 'گردشگری', 'زنان روستا', 'صنایع دستی', 'مهاجرت', 'آب‌آوری', 'محیط زیست'],
+    searchFields: ['name', 'summary', 'descriptionFa', 'category'],
+  },
+  {
+    id: 'prison', key: 'prison', nameFa: 'برنامه‌های حوزه زندان', name: 'Prison Programs',
+    color: '#475569', description: 'برنامه‌های تلویزیونی با موضوع زندان و زندانیان',
+    filterFn: s => s.category.includes('زندان') || s.category.includes('زندانی') || s.category.includes('بازپروری'),
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting],
+    presetTags: ['مستند', 'درام', 'واقعیت‌نما', 'بازپروری', 'حقوقی', 'اجتماعی'],
+    searchFields: ['name', 'summary', 'descriptionFa', 'category'],
+  },
+  {
     id: 'ads', key: 'ads', nameFa: 'آگهی‌های تبلیغاتی', name: 'Advertisements',
     color: '#ea580c', description: 'تبلیغات و آگهی‌های تجاری',
     filterFn: s => s.category.includes('آگهی'),
@@ -2374,9 +2390,9 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 aria-label={showPassword ? t('hide_password') : t('show_password')}
                 title={showPassword ? t('hide_password') : t('show_password')}
                 disabled={loading}
-                className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-colors"
-                style={{ color: '#4a5d52', background: 'transparent' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(2, 144, 72, 0.1)'; }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-colors z-10"
+                style={{ color: showPassword ? '#4ade80' : 'rgba(168, 230, 193, 0.6)', background: 'transparent', cursor: 'pointer' }}
+                onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = 'rgba(74, 222, 128, 0.15)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
                 {showPassword ? (
@@ -3851,7 +3867,10 @@ function ProgramsView({
                 if (selectedIds.includes(s.num)) setSelectedIds(selectedIds.filter(x => x !== s.num));
                 else setSelectedIds([...selectedIds, s.num]);
               }}
-              onClick={() => !selectionMode && onShowClick(s)}
+              onClick={() => {
+                if (compareMode && onToggleCompare) { onToggleCompare(s.num); return; }
+                if (!selectionMode) onShowClick(s);
+              }}
               onToggleBookmark={onToggleBookmark ? () => onToggleBookmark(s.num) : undefined}
               onToggleCompare={onToggleCompare ? () => onToggleCompare(s.num) : undefined}
             />
@@ -3874,7 +3893,10 @@ function ProgramsView({
                 if (selectedIds.includes(s.num)) setSelectedIds(selectedIds.filter(x => x !== s.num));
                 else setSelectedIds([...selectedIds, s.num]);
               }}
-              onClick={() => !selectionMode && onShowClick(s)}
+              onClick={() => {
+                if (compareMode && onToggleCompare) { onToggleCompare(s.num); return; }
+                if (!selectionMode) onShowClick(s);
+              }}
               onToggleBookmark={onToggleBookmark ? () => onToggleBookmark(s.num) : undefined}
               onToggleCompare={onToggleCompare ? () => onToggleCompare(s.num) : undefined}
             />

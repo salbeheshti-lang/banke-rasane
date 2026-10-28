@@ -52,12 +52,12 @@
    ============================================ */
 :root,
 html.dark-theme {
-  /* Surface stack — dark green cinematic */
-  --bg-deep:   #010a05;
-  --bg-mid:    #02150c;
-  --bg-soft:   #042817;
-  --bg-page-1: #02180e;
-  --bg-page-2: #010a05;
+  /* Surface stack — dark green but not too dark */
+  --bg-deep:   #0a1f12;
+  --bg-mid:    #0d2818;
+  --bg-soft:   #103d24;
+  --bg-page-1: #0d2818;
+  --bg-page-2: #0a1f12;
 
   /* Foreground */
   --fg-strong: #f4fff8;
