@@ -1162,10 +1162,11 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack }: {
     <header
       className="fixed top-0 left-0 right-0 z-40"
       style={{
-        background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(245, 243, 237, 0.85) 100%)',
-        backdropFilter: 'blur(20px) saturate(160%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(160%)',
-        boxShadow: '0 2px 20px rgba(13, 124, 74, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
+        background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.97) 0%, rgba(248, 246, 240, 0.93) 100%)',
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+        boxShadow: '0 2px 16px rgba(13, 124, 74, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.9)',
+        borderBottom: '1px solid rgba(13, 124, 74, 0.12)',
         backdropFilter: 'blur(20px) saturate(160%)',
         WebkitBackdropFilter: 'blur(20px) saturate(160%)',
         borderBottom: '1px solid rgba(13, 124, 74, 0.1)',
@@ -1228,7 +1229,7 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack }: {
               className="flex flex-col"
               style={{ borderRight: '1px solid rgba(13, 124, 74, 0.15)', paddingRight: '12px' }}
             >
-              <span style={{ color: '#1a2e1a', fontWeight: 700, fontSize: '15px', lineHeight: 1.2 }}>
+              <span style={{ color: '#0d3a1a', fontWeight: 800, fontSize: '16px', lineHeight: 1.2 }}>
                 {viewTitles[currentView] || 'بانک رسانه'}
               </span>
               <span style={{ color: '#8a8a7a', fontSize: '11px', marginTop: '2px' }}>
@@ -1646,10 +1647,11 @@ function MobileBottomNav({
           <div
             className="fixed bottom-0 left-0 right-0 p-4 animate-slide-up-nav"
             style={{
-              background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(245, 243, 237, 0.85) 100%)',
-        backdropFilter: 'blur(20px) saturate(160%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(160%)',
-        boxShadow: '0 2px 20px rgba(13, 124, 74, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
+              background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.97) 0%, rgba(248, 246, 240, 0.93) 100%)',
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+        boxShadow: '0 2px 16px rgba(13, 124, 74, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.9)',
+        borderBottom: '1px solid rgba(13, 124, 74, 0.12)',
               backdropFilter: 'blur(26px) saturate(160%)',
               WebkitBackdropFilter: 'blur(26px) saturate(160%)',
               borderTop: '1px solid rgba(13, 124, 74, 0.15)',
@@ -1718,10 +1720,11 @@ function MobileBottomNav({
         <div
           className="flex items-center justify-around no-scrollbar"
           style={{
-            background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(245, 243, 237, 0.85) 100%)',
-        backdropFilter: 'blur(20px) saturate(160%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(160%)',
-        boxShadow: '0 2px 20px rgba(13, 124, 74, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
+            background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.97) 0%, rgba(248, 246, 240, 0.93) 100%)',
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+        boxShadow: '0 2px 16px rgba(13, 124, 74, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.9)',
+        borderBottom: '1px solid rgba(13, 124, 74, 0.12)',
             backdropFilter: 'blur(24px) saturate(160%)',
             WebkitBackdropFilter: 'blur(24px) saturate(160%)',
             border: '1px solid rgba(13, 124, 74, 0.15)',
@@ -1798,7 +1801,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
     { label: 'کل برنامه‌ها', value: talkShows.length, color: '#10b981', icon: 'film' },
     { label: 'ژانرها', value: genres.length, color: '#2563eb', icon: 'tag' },
     { label: 'آپلود شده در فضای مجازی', value: uploadedCount, color: '#7c3aed', icon: 'cloud' },
-    { label: 'با تصویر (PDF + وب)', value: 149 + 23, color: '#db2777', icon: 'image' },
+    { label: 'با تصویر', value: talkShows.filter(s => s.images && s.images.length > 0).length, color: '#db2777', icon: 'image' },
   ];
 
   return (
@@ -1879,7 +1882,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {genres.map((g, idx) => {
           const count = talkShows.filter(g.filterFn).length;
           return (
@@ -2712,8 +2715,8 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
           {!thumb.image && <div className="absolute inset-0" style={{ background: thumb.pattern }}></div>}
           <button
             onClick={onClose}
-            className="absolute top-4 left-4 p-2 rounded-lg z-10"
-            style={{ background: 'rgba(0,0,0,0.4)', color: 'white', backdropFilter: 'blur(8px)' }}
+            className="absolute top-4 left-4 p-2.5 rounded-xl z-20"
+            style={{ background: 'rgba(0,0,0,0.6)', color: 'white', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer', minWidth: '40px', minHeight: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -2935,7 +2938,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
             <h4 className="font-bold mb-3" style={{ color: '#1a2e1a' }}>مشخصات دکور و صحنه</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <DetailField label="دسته‌بندی" value={show.category} />
-              <DetailField label="منبع داده" value={show.source} />
+              <DetailField label="سبک دکور" value={show.style} />
               <DetailField label="اندازهٔ استودیو" value={show.size} />
               <DetailField label="تماشاگر" value={show.viewers} />
               <DetailField label="سبک دکور" value={show.style} />
@@ -3070,7 +3073,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       num: Math.max(0, ...talkShows.map(s => s.num)) + 1,
       name: '',
       category: presetCategory || '',
-      source: 'متن',
+      source: '',
       size: 'متوسط/استاندارد',
       viewers: 'بدون تماشاگر',
       style: 'مدرن',
@@ -3232,16 +3235,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
             options={genres.map(g => ({ value: g.nameFa, label: g.nameFa }))}
           />
           <FormField label="کشور مبدا" value={form.country || ''} onChange={v => setForm({ ...form, country: v })} placeholder="مثلاً: ایران، ترکیه" />
-          <FormSelect
-            label="منبع داده"
-            value={form.source || ''}
-            onChange={v => setForm({ ...form, source: v })}
-            options={[
-              { value: 'تصویر PDF', label: 'تصویر PDF' },
-              { value: 'تصویر وب', label: 'تصویر وب' },
-              { value: 'متن', label: 'تحلیل متنی' },
-            ]}
-          />
+
           <FormSelect
             label="اندازهٔ استودیو"
             value={form.size || ''}
@@ -4934,8 +4928,8 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {[
                     { n: 1, t: 'خلاصه اجرایی', icon: '📋', desc: 'مرور کلی آرشیو، حجم داده‌ها، یافته‌های کلیدی و نکات مهم برای تصمیم‌گیرندگان' },
-                    { n: 2, t: 'روش جمع‌آوری داده', icon: '🔬', desc: 'توضیح منابع داده (اکسل، PDF، تصاویر وب)، فرایند طبقه‌بندی ژانری و رویکرد ترکیبی' },
-                    { n: 3, t: 'نمای آماری کلی', icon: '📊', desc: '۴ کارت آماری + ۵ نمودار میله‌ای: منبع داده، اندازه استودیو، سبک دکور، تماشاگر، نورپردازی' },
+                    { n: 2, t: 'روش جمع‌آوری داده', icon: '🔬', desc: 'توضیح منابع داده، فرایند طبقه‌بندی ژانری و رویکرد ترکیبی' },
+                    { n: 3, t: 'نمای آماری کلی', icon: '📊', desc: '۴ کارت آماری + ۵ نمودار میله‌ای: اندازه استودیو، سبک دکور، تماشاگر، نورپردازی، چیدمان' },
                     { n: 4, t: 'تحلیل توزیع ژانرها', icon: '🏷', desc: 'نمودار کامل توزیع + معرفی تفصیلی هر دسته با شمارش، درصد، و برنامه‌های شاخص' },
                     { n: 5, t: 'تحلیل دکور و صحنه', icon: '🎨', desc: '۴ نمودار: عناصر پرتکرار صحنه، مصالح، طیف رنگی، نورپردازی + یافته‌های تحلیلی' },
                     { n: 6, t: 'فهرست تفصیلی برنامه‌ها', icon: '📚', desc: 'کارت کامل برای هر برنامه: تصویر، توضیحات فارسی، تگ‌ها، مشخصات دکور، خلاصه' },
@@ -5091,8 +5085,6 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
 }) {
   const stats = {
     total: talkShows.length,
-    pdf: talkShows.filter(s => s.source === 'تصویر PDF').length,
-    web: talkShows.filter(s => s.source === 'تصویر وب').length,
     text: talkShows.filter(s => s.source === 'متن').length,
     uploaded: uploadedShows.length,
   };
@@ -5100,8 +5092,6 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
   const reports = [
     { id: 1, title: 'گزارش کامل همهٔ برنامه‌ها', type: 'pdf', count: stats.total, date: '۱۴۰۴/۰۸/۲۵' },
     { id: 2, title: 'گزارش برنامه‌های آپلود شده در فضای مجازی', type: 'excel', count: stats.uploaded, date: '۱۴۰۴/۰۸/۲۵' },
-    { id: 3, title: 'گزارش برنامه‌های با تصویر PDF', type: 'pdf', count: stats.pdf, date: '۱۴۰۴/۰۷/۱۸' },
-    { id: 4, title: 'گزارش برنامه‌های با تصویر وب', type: 'excel', count: stats.web, date: '۱۴۰۴/۰۷/۱۳' },
   ];
 
   return (
@@ -5122,11 +5112,11 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
         </div>
         <div className="premium-glass p-5">
           <div className="text-3xl font-black mb-1" style={{ color: '#dc2626' }}>{stats.pdf.toLocaleString('fa-IR')}</div>
-          <div style={{ color: '#5a6b4a' }} className="text-sm">با تصویر PDF</div>
+          <div style={{ color: '#5a6b4a' }} className="text-sm">ژانرها</div>
         </div>
         <div className="premium-glass p-5">
           <div className="text-3xl font-black mb-1" style={{ color: '#2563eb' }}>{stats.web.toLocaleString('fa-IR')}</div>
-          <div style={{ color: '#5a6b4a' }} className="text-sm">با تصویر وب</div>
+          <div style={{ color: '#5a6b4a' }} className="text-sm">با تصویر</div>
         </div>
       </div>
 
@@ -5176,8 +5166,6 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                       let shows: TalkShow[] = [];
                       if (r.id === 1) shows = talkShows;
                       else if (r.id === 2) shows = talkShows.filter(s => uploadedShows.includes(s.num));
-                      else if (r.id === 3) shows = talkShows.filter(s => s.source === 'تصویر PDF');
-                      else if (r.id === 4) shows = talkShows.filter(s => s.source === 'تصویر وب');
                       if (shows.length === 0) { showToast('برنامه‌ای برای این گزارش وجود ندارد'); return; }
                       onExport(shows, r.type === 'pdf' ? 'pdf' : 'excel');
                     }}
@@ -5244,10 +5232,11 @@ function SettingsModal({
         <div
           className="flex items-center justify-between p-4 flex-shrink-0"
           style={{
-            background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(245, 243, 237, 0.85) 100%)',
-        backdropFilter: 'blur(20px) saturate(160%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(160%)',
-        boxShadow: '0 2px 20px rgba(13, 124, 74, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
+            background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.97) 0%, rgba(248, 246, 240, 0.93) 100%)',
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+        boxShadow: '0 2px 16px rgba(13, 124, 74, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.9)',
+        borderBottom: '1px solid rgba(13, 124, 74, 0.12)',
             borderBottom: '1px solid rgba(13, 124, 74, 0.12)',
           }}
         >
