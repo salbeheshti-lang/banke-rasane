@@ -709,7 +709,271 @@ type StringKey =
   | 'switch_to_light'
   | 'switch_to_dark'
   | 'switch_to_en'
-  | 'switch_to_fa';
+  | 'switch_to_fa'
+  // ----- Added keys (full i18n) -----
+  | 'enter_username_password'
+  | 'login_failed'
+  | 'default_user_hint'
+  | 'nav_dashboard_desc'
+  | 'nav_programs_desc'
+  | 'nav_bookmarks_desc'
+  | 'nav_add_desc'
+  | 'nav_reports_desc'
+  | 'dashboard_subtitle'
+  | 'view_search'
+  | 'islamic_only_desc'
+  | 'has_image_only_desc'
+  | 'has_video_only_desc'
+  | 'view_only_desc'
+  | 'selected'
+  | 'publish_social'
+  | 'pdf_report'
+  | 'excel_report'
+  | 'decor_classic_traditional'
+  | 'decor_lux_decorative'
+  | 'decor_unknown'
+  | 'decor_neutral'
+  | 'decor_warm'
+  | 'decor_cold'
+  | 'decor_dramatic'
+  | 'with_audience'
+  | 'without_audience'
+  | 'program_no_label'
+  | 'videos_of_program'
+  | 'videos_count_suffix'
+  | 'direct_access'
+  | 'watch_on_youtube'
+  | 'imdb_page'
+  | 'wikipedia_page'
+  | 'bookmarked'
+  | 'bookmark_verb'
+  | 'edit'
+  | 'delete_program'
+  | 'confirm_delete_question'
+  | 'yes_delete'
+  | 'decor_scene_specs'
+  | 'category_label'
+  | 'decor_style'
+  | 'studio_size'
+  | 'audience'
+  | 'effects'
+  | 'layout'
+  | 'lighting'
+  | 'decor_elements'
+  | 'materials'
+  | 'colors'
+  | 'decor_summary'
+  | 'tags_label'
+  | 'detected_countries'
+  | 'origin_country_entered'
+  | 'program_name_required'
+  | 'origin_country_label'
+  | 'name_placeholder'
+  | 'country_placeholder'
+  | 'about_program_fa'
+  | 'persian_description_placeholder'
+  | 'decor_summary_placeholder'
+  | 'program_images'
+  | 'image_count_of'
+  | 'first_image_cover'
+  | 'compression_notice'
+  | 'paste_image_url'
+  | 'add_link'
+  | 'upload_file'
+  | 'no_images_yet'
+  | 'cover_badge'
+  | 'add_btn'
+  | 'program_videos'
+  | 'video_constraints'
+  | 'select_video_file'
+  | 'youtube_search_link'
+  | 'paste_video_url'
+  | 'add_video'
+  | 'open_btn'
+  | 'move_left'
+  | 'move_right'
+  | 'edit_program'
+  | 'add_new_program'
+  | 'edit_program_no'
+  | 'fill_form_below'
+  | 'auto_fetch_info'
+  | 'auto_fetch_desc'
+  | 'auto_fetch_placeholder'
+  | 'fetching'
+  | 'fetch_btn'
+  | 'elements_placeholder'
+  | 'materials_placeholder'
+  | 'colors_placeholder'
+  | 'update_btn'
+  | 'add_program_btn'
+  | 'add_genre_new'
+  | 'genre_name_required'
+  | 'genre_name_placeholder'
+  | 'description_label'
+  | 'description_placeholder'
+  | 'genre_color_label'
+  | 'preview_label'
+  | 'save_genre'
+  | 'publish_social_title'
+  | 'select_platform'
+  | 'post_preview'
+  | 'direct_send_to'
+  | 'bot_configured'
+  | 'bot_config_required'
+  | 'bot_settings'
+  | 'configure_bot'
+  | 'sending'
+  | 'manual_publish_to'
+  | 'select_platform_first'
+  | 'bot_config_title'
+  | 'bot_config_help_intro'
+  | 'bot_config_help_tg'
+  | 'bot_config_help_bale'
+  | 'bot_config_help_admin'
+  | 'platform_label'
+  | 'telegram_label'
+  | 'bale_label'
+  | 'bot_token_label'
+  | 'chat_id_label'
+  | 'chat_id_help'
+  | 'test_connection'
+  | 'testing'
+  | 'save_settings'
+  | 'clear_btn'
+  | 'hide_btn'
+  | 'show_btn'
+  | 'pdf_preview_title'
+  | 'excel_preview_title'
+  | 'program_count_label'
+  | 'format_label'
+  | 'report_title_full'
+  | 'banke_rasane_archive'
+  | 'programs_unit'
+  | 'genre_category_unit'
+  | 'report_structure'
+  | 'section_exec_summary'
+  | 'section_exec_summary_desc'
+  | 'section_methodology'
+  | 'section_methodology_desc'
+  | 'section_stats_overview'
+  | 'section_stats_overview_desc'
+  | 'section_genre_analysis'
+  | 'section_genre_analysis_desc'
+  | 'section_decor_analysis'
+  | 'section_decor_analysis_desc'
+  | 'section_program_list'
+  | 'section_program_list_desc'
+  | 'section_conclusion'
+  | 'section_conclusion_desc'
+  | 'section_appendix'
+  | 'section_appendix_desc'
+  | 'sample_program_card'
+  | 'sample_program'
+  | 'identifier_label'
+  | 'excel_banke_rasane'
+  | 'name_col'
+  | 'category_col'
+  | 'generating'
+  | 'download_file'
+  | 'pdf_help_text'
+  | 'print_dialog_help'
+  | 'banke_rasane_stats_reports'
+  | 'no_programs_for_report'
+  | 'system_settings_title'
+  | 'close_settings'
+  | 'tab_server'
+  | 'tab_users'
+  | 'tab_password'
+  | 'tab_audit'
+  | 'api_server_url'
+  | 'api_server_desc'
+  | 'save_address'
+  | 'server_help'
+  | 'users_management'
+  | 'users_management_desc'
+  | 'add_new_user'
+  | 'username_placeholder'
+  | 'display_name_optional'
+  | 'password_placeholder_min'
+  | 'create_user'
+  | 'creating'
+  | 'current_users'
+  | 'change_password_title'
+  | 'change_password_desc'
+  | 'current_account'
+  | 'current_password'
+  | 'new_password'
+  | 'confirm_new_password'
+  | 'password_mismatch'
+  | 'change_password_btn'
+  | 'audit_log_title'
+  | 'audit_log_desc'
+  | 'refresh'
+  | 'action_create'
+  | 'action_update'
+  | 'action_delete'
+  | 'program_hash'
+  | 'program_created_log'
+  | 'program_deleted_log'
+  | 'field_log'
+  | 'no_changes_recorded'
+  | 'loading_users'
+  | 'loading_history'
+  | 'error_loading_users'
+  | 'error_loading_history'
+  | 'cannot_delete_self'
+  | 'cannot_change_role_self'
+  | 'help_label'
+  | 'clear_compare_list'
+  | 'values_differ'
+  | 'name_program'
+  | 'connection_ok'
+  | 'connection_invalid_response'
+  | 'connection_error'
+  | 'server_url_saved'
+  | 'user_created_toast'
+  | 'user_deleted_toast'
+  | 'user_role_changed_toast'
+  | 'role_changed_self_toast'
+  | 'fill_three_fields'
+  | 'password_min_length'
+  | 'passwords_dont_match'
+  | 'password_must_differ'
+  | 'password_changed_toast'
+  | 'error_changing_password'
+  | 'fetch_imdb_wiki_prompt'
+  | 'fetch_error_toast'
+  | 'fetch_success_toast'
+  | 'name_required_toast'
+  | 'max_images_toast'
+  | 'image_duplicate_toast'
+  | 'images_added_partial_toast'
+  | 'image_compress_error_toast'
+  | 'fetch_failed_toast'
+  | 'delete_user_confirm'
+  | 'tags_hint'
+  | 'tags_placeholder'
+  | 'preset_tags_hint'
+  | 'clear_all'
+  | 'banke_rasane_brand'
+  | 'bot_token_required'
+  | 'bot_test_ok'
+  | 'bot_test_invalid'
+  | 'bot_test_network_error'
+  | 'bot_config_required_toast'
+  | 'post_sent_to'
+  | 'post_send_failed'
+  | 'post_send_network_error'
+  | 'edit_field'
+  | 'archive_intro_subtitle'
+  | 'archive_comprehensive_report'
+  | 'report_sample_card_intro'
+  | 'full_report_detailed_first'
+  | 'social_card_brand'
+  | 'social_card_programs_count'
+  | 'social_card_more_count'
+  | 'genre_preview_default'
+  | 'genre_default_desc';
 
 const STRINGS: Record<Lang, Record<StringKey, string>> = {
   fa: {
@@ -810,6 +1074,270 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     switch_to_dark: 'تغییر به حالت تیره',
     switch_to_en: 'Switch to English',
     switch_to_fa: 'تغییر به فارسی',
+    // ----- Added fa translations -----
+    enter_username_password: 'نام کاربری و رمز عبور را وارد کنید',
+    login_failed: 'ورود ناموفق بود',
+    default_user_hint: 'نام کاربری پیش‌فرض: ',
+    nav_dashboard_desc: 'صفحهٔ اصلی و ژانرها',
+    nav_programs_desc: 'لیست کامل برنامه‌ها',
+    nav_bookmarks_desc: 'برنامه‌هایی که نشان کرده‌اید',
+    nav_add_desc: 'افزودن یا ویرایش برنامه',
+    nav_reports_desc: 'آمار و خروجی',
+    dashboard_subtitle: 'بانک اطلاعاتی {n} برنامهٔ تلویزیونی در {g} ژانر',
+    view_search: 'مشاهده و جستجو',
+    islamic_only_desc: 'فقط برنامه‌های مرتبط با کشورهای اسلامی',
+    has_image_only_desc: 'فقط برنامه‌های دارای تصویر',
+    has_video_only_desc: 'فقط برنامه‌های دارای ویدیو',
+    view_only_desc: 'فقط مشاهده — برای افزودن یا ویرایش با حساب مدیر وارد شوید',
+    selected: 'برنامه انتخاب شده',
+    publish_social: 'انتشار در شبکه‌های اجتماعی',
+    pdf_report: 'گزارش PDF',
+    excel_report: 'گزارش Excel',
+    decor_classic_traditional: 'کلاسیک/سنتی',
+    decor_lux_decorative: 'فاخر/تزئینی',
+    decor_unknown: 'نامشخص',
+    decor_neutral: 'خنثی',
+    decor_warm: 'گرم',
+    decor_cold: 'سرد',
+    decor_dramatic: 'دراماتیک',
+    with_audience: 'با تماشاگر',
+    without_audience: 'بدون تماشاگر',
+    program_no_label: 'برنامهٔ شمارهٔ',
+    videos_of_program: 'ویدیوهای برنامه',
+    videos_count_suffix: 'ویدیو',
+    direct_access: 'دسترسی مستقیم',
+    watch_on_youtube: 'تماشا در یوتیوب',
+    imdb_page: 'صفحهٔ IMDb',
+    wikipedia_page: 'ویکی‌پدیا',
+    bookmarked: 'نشان‌شده',
+    bookmark_verb: 'نشان کردن',
+    edit: 'ویرایش',
+    delete_program: 'حذف برنامه',
+    confirm_delete_question: 'این برنامه حذف شود؟ (قابل بازگشت نیست)',
+    yes_delete: 'بله، حذف کن',
+    decor_scene_specs: 'مشخصات دکور و صحنه',
+    category_label: 'دسته‌بندی',
+    decor_style: 'سبک دکور',
+    studio_size: 'اندازهٔ استودیو',
+    audience: 'تماشاگر',
+    effects: 'جلوه‌ها',
+    layout: 'چیدمان',
+    lighting: 'نورپردازی',
+    decor_elements: 'عناصر دکور',
+    materials: 'مواد',
+    colors: 'رنگ‌آمیزی',
+    decor_summary: 'خلاصهٔ دکور',
+    tags_label: 'برچسب‌ها',
+    detected_countries: 'کشورهای شناسایی‌شده:',
+    origin_country_entered: 'کشور مبدا (وارد شده):',
+    program_name_required: 'نام برنامه *',
+    origin_country_label: 'کشور مبدا',
+    name_placeholder: 'مثلاً: BBC Breakfast',
+    country_placeholder: 'مثلاً: ایران، ترکیه',
+    about_program_fa: 'دربارهٔ برنامه (فارسی)',
+    persian_description_placeholder: 'توضیحات فارسی دربارهٔ برنامه — چه برنامه‌ای است، چه محتوایی دارد...',
+    decor_summary_placeholder: 'توضیحات کامل دکور و صحنهٔ برنامه...',
+    program_images: 'تصاویر برنامه',
+    image_count_of: 'از',
+    first_image_cover: 'تصویر اول = کاور',
+    compression_notice: '📐 تصاویر آپلودی به‌صورت خودکار به حداکثر عرض ۱۲۸۰ پیکسل تغییر اندازه و با کیفیت JPEG ۸۰٪ فشرده می‌شوند.',
+    paste_image_url: 'لینک تصویر را اینجا بچسبانید...',
+    add_link: 'افزودن لینک',
+    upload_file: 'آپلود فایل',
+    no_images_yet: 'هنوز تصویری اضافه نشده. می‌تونید لینک بچسبانید یا فایل آپلود کنید.',
+    cover_badge: 'کاور',
+    add_btn: 'افزودن',
+    program_videos: 'ویدیوهای برنامه',
+    video_constraints: '🎞 ویدیوهای مستقیم: حداکثر ۳۰ ثانیه و ۵ مگابایت. ویدیوهای بلندتر را روی یوتیوب/آپارات بارگذاری کرده و لینک اضافه کنید.',
+    select_video_file: '🎞 انتخاب فایل ویدیو',
+    youtube_search_link: 'لینک جستجوی یوتیوب (خودکار)',
+    paste_video_url: 'لینک ویدیو (یوتیوب، آپارات، Vimeo، تلگرام و...) را بچسبانید',
+    add_video: 'افزودن ویدیو',
+    open_btn: 'باز کردن',
+    move_left: 'به چپ',
+    move_right: 'به راست',
+    edit_program: 'ویرایش برنامه',
+    add_new_program: 'افزودن برنامهٔ جدید',
+    edit_program_no: 'ویرایش برنامهٔ شمارهٔ {n}',
+    fill_form_below: 'فرم زیر را پر کنید',
+    auto_fetch_info: '⚡ دریافت خودکار اطلاعات',
+    auto_fetch_desc: 'لینک IMDb یا ویکی‌پدیا برنامه را وارد کنید تا نام، توضیحات، تصویر و سایر اطلاعات خودکار دریافت شود.',
+    auto_fetch_placeholder: 'https://www.imdb.com/title/... یا https://fa.wikipedia.org/...',
+    fetching: '⏳ در حال دریافت...',
+    fetch_btn: '⚡ دریافت',
+    elements_placeholder: 'مثلاً: plants, screens/monitors',
+    materials_placeholder: 'مثلاً: wood, glass, metal',
+    colors_placeholder: 'مثلاً: red, blue, white',
+    update_btn: '✓ بروزرسانی',
+    add_program_btn: '+ افزودن برنامه',
+    add_genre_new: '+ افزودن ژانر جدید',
+    genre_name_required: 'نام ژانر *',
+    genre_name_placeholder: 'مثلاً: مستند، انیمیشن، کودک...',
+    description_label: 'توضیحات',
+    description_placeholder: 'توضیح کوتاه دربارهٔ این ژانر...',
+    genre_color_label: 'رنگ ژانر',
+    preview_label: 'پیش‌نمایش:',
+    save_genre: '✓ ذخیره ژانر',
+    publish_social_title: '📱 انتشار در شبکه‌های اجتماعی',
+    select_platform: 'انتخاب پلتفرم',
+    post_preview: 'پیش‌نمایش پست',
+    direct_send_to: '📡 ارسال مستقیم به {platform}',
+    bot_configured: 'ربات {platform} پیکربندی شده — مقصد: {chatId}',
+    bot_config_required: 'برای ارسال مستقیم، ابتدا توکن ربات و شناسهٔ کانال را وارد کنید',
+    bot_settings: '⚙ تنظیمات ربات',
+    configure_bot: '＋ پیکربندی ربات',
+    sending: '⏳ در حال ارسال...',
+    manual_publish_to: '📤 انتشار دستی در {platform}',
+    select_platform_first: 'ابتدا پلتفرم را انتخاب کنید',
+    bot_config_title: '⚙ تنظیمات ربات انتشار',
+    bot_config_help_intro: 'برای ارسال مستقیم پست‌ها به کانال یا گروه، یک ربات بسازید و آن را ادمین مقصد کنید:',
+    bot_config_help_tg: '• تلگرام: ربات @BotFather → /newbot',
+    bot_config_help_bale: '• بله: ربات @BotFather@ → ساخت ربات جدید',
+    bot_config_help_admin: '• سپس ربات را به کانال/گروه ادمین کنید',
+    platform_label: 'پلتفرم',
+    telegram_label: 'تلگرام',
+    bale_label: 'بله',
+    bot_token_label: 'توکن ربات (Bot Token)',
+    chat_id_label: 'شناسهٔ مقصد (Chat ID)',
+    chat_id_help: 'برای کانال: نام کاربری کانال (مثل @mychannel) یا Chat ID عددی. برای چت خصوصی: Chat ID عددی شما.',
+    test_connection: '🔍 تست اتصال',
+    testing: '⏳ در حال بررسی...',
+    save_settings: '✓ ذخیره تنظیمات',
+    clear_btn: '🗑 پاک کردن',
+    hide_btn: '🙈 پنهان',
+    show_btn: '👁 نمایش',
+    pdf_preview_title: '📄 پیش‌نمایش گزارش PDF',
+    excel_preview_title: '📊 پیش‌نمایش گزارش Excel',
+    program_count_label: 'تعداد برنامه‌ها',
+    format_label: 'فرمت',
+    report_title_full: 'گزارش جامع آرشیو برنامه‌های تلویزیونی',
+    banke_rasane_archive: 'بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی',
+    programs_unit: 'برنامه',
+    genre_category_unit: 'دستهٔ ژانری',
+    report_structure: 'ساختار گزارش (۸ بخش) — هر بخش شامل توضیحات کامل',
+    section_exec_summary: 'خلاصه اجرایی',
+    section_exec_summary_desc: 'مرور کلی آرشیو، حجم داده‌ها، یافته‌های کلیدی و نکات مهم برای تصمیم‌گیرندگان',
+    section_methodology: 'روش جمع‌آوری داده',
+    section_methodology_desc: 'توضیح منابع داده، فرایند طبقه‌بندی ژانری و رویکرد ترکیبی',
+    section_stats_overview: 'نمای آماری کلی',
+    section_stats_overview_desc: '۴ کارت آماری + ۵ نمودار میله‌ای: اندازه استودیو، سبک دکور، تماشاگر، نورپردازی، چیدمان',
+    section_genre_analysis: 'تحلیل توزیع ژانرها',
+    section_genre_analysis_desc: 'نمودار کامل توزیع + معرفی تفصیلی هر دسته با شمارش، درصد، و برنامه‌های شاخص',
+    section_decor_analysis: 'تحلیل دکور و صحنه',
+    section_decor_analysis_desc: '۴ نمودار: عناصر پرتکرار صحنه، مصالح، طیف رنگی، نورپردازی + یافته‌های تحلیلی',
+    section_program_list: 'فهرست تفصیلی برنامه‌ها',
+    section_program_list_desc: 'کارت کامل برای هر برنامه: تصویر، توضیحات فارسی، تگ‌ها، مشخصات دکور، خلاصه',
+    section_conclusion: 'نتیجه‌گیری و پیشنهادها',
+    section_conclusion_desc: 'جمع‌بندی یافته‌ها + ۵ پیشنهاد اجرایی + بخش امضا و تاریخ',
+    section_appendix: 'پیوست: نمایهٔ الفبایی',
+    section_appendix_desc: 'فهرست کامل همهٔ برنامه‌ها به ترتیب الفبایی با شماره و دستهٔ ژانری',
+    sample_program_card: 'نمونه کارت برنامه (از بخش ۶)',
+    sample_program: 'نمونه برنامه',
+    identifier_label: 'شناسه:',
+    excel_banke_rasane: 'بانک رسانه — خروجی Excel',
+    name_col: 'نام',
+    category_col: 'دسته',
+    generating: '⏳ در حال تولید...',
+    download_file: '⬇ دانلود فایل {format}',
+    pdf_help_text: 'گزارش شامل ۸ بخش است: صفحهٔ عنوان، فهرست مطالب، خلاصهٔ اجرایی، روش تحقیق، نمای آماری، تحلیل ژانرها، تحلیل دکور، و معرفی تفصیلی برنامه‌ها.',
+    print_dialog_help: 'پس از کلیک روی دانلود، پنجره چاپ باز می‌شود — مقاس «A4» و «Save as PDF» را انتخاب کنید.',
+    banke_rasane_stats_reports: 'آمار و گزارش‌های بانک رسانه',
+    no_programs_for_report: 'برنامه‌ای برای این گزارش وجود ندارد',
+    system_settings_title: '⚙ تنظیمات سیستم',
+    close_settings: 'بستن تنظیمات',
+    tab_server: 'سرور',
+    tab_users: 'کاربران',
+    tab_password: 'رمز عبور',
+    tab_audit: 'تاریخچه',
+    api_server_url: '🖥 آدرس سرور API',
+    api_server_desc: 'آدرس سرویس API که این برنامه به آن متصل می‌شود. پیش‌فرض:',
+    save_address: '✓ ذخیره آدرس',
+    server_help: 'راهنما: آدرس وارد شده باید ریشهٔ سرویس API باشد (بدون مسیرهای /api/...). اگر از گیتوی Caddy استفاده می‌کنید، می‌توانید آدرس نسبی وارد کنید. پس از ذخیره، توکن فعلی شما معتبر می‌ماند.',
+    users_management: '👥 مدیریت کاربران',
+    users_management_desc: 'افزودن، حذف یا تغییر نقش کاربران سیستم. نقش‌ها: مدیر (دسترسی کامل)، ویراستار (افزودن/ویرایش برنامه‌ها)، بیننده (فقط مشاهده).',
+    add_new_user: '＋ افزودن کاربر جدید',
+    username_placeholder: 'نام کاربری',
+    display_name_optional: 'نام نمایشی (اختیاری)',
+    password_placeholder_min: 'رمز عبور (حداقل ۴ کاراکتر)',
+    create_user: '＋ ایجاد کاربر',
+    creating: '⏳ در حال ایجاد...',
+    current_users: 'کاربران فعلی',
+    change_password_title: '🔑 تغییر رمز عبور',
+    change_password_desc: 'رمز عبور خود را تغییر دهید. پس از تغییر، تمام نشست‌های فعال شما باطل شده و باید دوباره وارد شوید.',
+    current_account: '👤 حساب فعلی:',
+    current_password: 'رمز فعلی',
+    new_password: 'رمز جدید',
+    confirm_new_password: 'تکرار رمز جدید',
+    password_mismatch: '⚠ رمز جدید و تأیید آن یکسان نیستند',
+    change_password_btn: '✓ تغییر رمز عبور',
+    audit_log_title: '📜 تاریخچه تغییرات',
+    audit_log_desc: 'گزارش اخیر افزودن، ویرایش و حذف برنامه‌ها به همراه کاربر انجام‌دهنده و زمان دقیق.',
+    refresh: '↻ بازخوانی',
+    action_create: 'افزودن',
+    action_update: 'ویرایش',
+    action_delete: 'حذف',
+    program_hash: 'برنامهٔ #',
+    program_created_log: 'برنامهٔ «{name}» ایجاد شد.',
+    program_deleted_log: 'برنامهٔ «{name}» حذف شد.',
+    field_log: 'فیلد',
+    no_changes_recorded: 'هیچ تغییری ثبت نشده است.',
+    loading_users: 'در حال بارگذاری...',
+    loading_history: 'در حال بارگذاری...',
+    error_loading_users: 'خطا در بارگذاری کاربران',
+    error_loading_history: 'خطا در بارگذاری تاریخچه',
+    cannot_delete_self: 'نمی‌توانید حساب خودتان را حذف کنید',
+    cannot_change_role_self: 'نمی‌توانید نقش خودتان را تغییر دهید',
+    help_label: 'راهنما:',
+    clear_compare_list: 'پاک کردن فهرست مقایسه',
+    values_differ: 'مقدار در دو برنامه متفاوت است',
+    name_program: 'نام برنامه',
+    connection_ok: 'اتصال برقرار شد ✓',
+    connection_invalid_response: 'پاسخ نامعتبر: {body}',
+    connection_error: 'خطا در اتصال: {msg}',
+    server_url_saved: 'آدرس سرور ذخیره شد. برای اعمال کامل، صفحه را بارگذاری مجدد کنید.',
+    user_created_toast: 'کاربر «{name}» ساخته شد',
+    user_deleted_toast: 'کاربر حذف شد',
+    user_role_changed_toast: 'نقش «{name}» به {role} تغییر کرد',
+    role_changed_self_toast: 'نمی‌توانید نقش خودتان را تغییر دهید',
+    fill_three_fields: 'هر سه فیلد را پر کنید',
+    password_min_length: 'رمز جدید باید حداقل ۴ کاراکتر باشد',
+    passwords_dont_match: 'رمز جدید و تأیید آن یکسان نیستند',
+    password_must_differ: 'رمز جدید باید با رمز فعلی متفاوت باشد',
+    password_changed_toast: 'رمز با موفقیت تغییر کرد. لطفاً دوباره وارد شوید.',
+    error_changing_password: 'خطا در تغییر رمز',
+    fetch_imdb_wiki_prompt: 'لینک IMDb یا ویکی‌پدیا را وارد کنید',
+    fetch_error_toast: 'خطا در دریافت اطلاعات',
+    fetch_success_toast: 'اطلاعات با موفقیت دریافت شد',
+    name_required_toast: 'نام برنامه الزامی است',
+    max_images_toast: 'حداکثر {n} تصویر مجاز است',
+    image_duplicate_toast: 'این تصویر قبلاً اضافه شده',
+    images_added_partial_toast: 'فقط {added} تصویر اضافه شد (حداکثر {max})',
+    image_compress_error_toast: 'خطا در فشرده‌سازی: {name}',
+    fetch_failed_toast: 'خطا: {msg}',
+    delete_user_confirm: 'کاربر «{name}» حذف شود؟',
+    tags_hint: 'برچسب‌ها را با کاما (، یا ,) جدا کنید — مثلاً: مدرن، گرم، چوبی',
+    tags_placeholder: 'مدرن، گرم، چوبی...',
+    preset_tags_hint: 'برچسب‌های پیشنهادی این ژانر:',
+    clear_all: 'پاک کردن همه',
+    banke_rasane_brand: 'بانک رسانه',
+    bot_token_required: 'توکن را وارد کنید',
+    bot_test_ok: '✅ ربات «@{name}» شناسایی شد',
+    bot_test_invalid: '❌ توکن نامعتبر',
+    bot_test_network_error: '❌ خطای شبکه',
+    bot_config_required_toast: 'ابتدا تنظیمات ربات را وارد کنید',
+    post_sent_to: '✅ پست به {platform} ارسال شد',
+    post_send_failed: '❌ {msg}',
+    post_send_network_error: '❌ خطای شبکه هنگام ارسال',
+    edit_field: 'ویرایش',
+    archive_intro_subtitle: '{n} برنامهٔ تلویزیونی در {g} ژانر',
+    archive_comprehensive_report: 'گزارش جامع آرشیو برنامه‌های تلویزیونی',
+    report_sample_card_intro: 'نمونه کارت برنامه (از بخش ۶)',
+    full_report_detailed_first: 'در گزارش کامل، ۸۰ برنامهٔ نخست به‌صورت تفصیلی و همهٔ {n} برنامه در نمایهٔ الفبایی',
+    social_card_brand: 'بانک رسانه',
+    social_card_programs_count: '{n} برنامهٔ منتخب',
+    social_card_more_count: 'و {n} برنامهٔ دیگر...',
+    genre_preview_default: '—',
+    genre_default_desc: 'توضیحات...',
   },
   en: {
     app_title: 'Specialized TV Program Archive',
@@ -909,6 +1437,270 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
     switch_to_dark: 'Switch to dark mode',
     switch_to_en: 'Switch to English',
     switch_to_fa: 'Switch to Persian',
+    // ----- Added en translations -----
+    enter_username_password: 'Please enter username and password',
+    login_failed: 'Login failed',
+    default_user_hint: 'Default user: ',
+    nav_dashboard_desc: 'Home and genres',
+    nav_programs_desc: 'Full list of programs',
+    nav_bookmarks_desc: 'Programs you bookmarked',
+    nav_add_desc: 'Add or edit a program',
+    nav_reports_desc: 'Stats and exports',
+    dashboard_subtitle: 'Database of {n} TV programs across {g} genres',
+    view_search: 'View & search',
+    islamic_only_desc: 'Only programs related to Islamic countries',
+    has_image_only_desc: 'Only programs with images',
+    has_video_only_desc: 'Only programs with videos',
+    view_only_desc: 'View only — sign in as admin/editor to edit',
+    selected: 'selected',
+    publish_social: 'Publish to social media',
+    pdf_report: 'PDF report',
+    excel_report: 'Excel report',
+    decor_classic_traditional: 'Classic/Traditional',
+    decor_lux_decorative: 'Lux/Decorative',
+    decor_unknown: 'Unknown',
+    decor_neutral: 'Neutral',
+    decor_warm: 'Warm',
+    decor_cold: 'Cold',
+    decor_dramatic: 'Dramatic',
+    with_audience: 'With audience',
+    without_audience: 'Without audience',
+    program_no_label: 'Program No.',
+    videos_of_program: 'Program videos',
+    videos_count_suffix: 'videos',
+    direct_access: 'Direct access',
+    watch_on_youtube: 'Watch on YouTube',
+    imdb_page: 'IMDb page',
+    wikipedia_page: 'Wikipedia',
+    bookmarked: 'Bookmarked',
+    bookmark_verb: 'Bookmark',
+    edit: 'Edit',
+    delete_program: 'Delete program',
+    confirm_delete_question: 'Delete this program? (cannot be undone)',
+    yes_delete: 'Yes, delete',
+    decor_scene_specs: 'Decor and scene specifications',
+    category_label: 'Category',
+    decor_style: 'Decor style',
+    studio_size: 'Studio size',
+    audience: 'Audience',
+    effects: 'Effects',
+    layout: 'Layout',
+    lighting: 'Lighting',
+    decor_elements: 'Decor elements',
+    materials: 'Materials',
+    colors: 'Colors',
+    decor_summary: 'Decor summary',
+    tags_label: 'Tags',
+    detected_countries: 'Detected countries:',
+    origin_country_entered: 'Origin country (entered):',
+    program_name_required: 'Program name *',
+    origin_country_label: 'Origin country',
+    name_placeholder: 'e.g.: BBC Breakfast',
+    country_placeholder: 'e.g.: Iran, Turkey',
+    about_program_fa: 'About this program (Persian)',
+    persian_description_placeholder: 'Persian description about the program — what kind of program it is, what content it has...',
+    decor_summary_placeholder: 'Full description of decor and scene of the program...',
+    program_images: 'Program images',
+    image_count_of: 'of',
+    first_image_cover: 'First image = cover',
+    compression_notice: '📐 Uploaded images are auto-resized to max 1280px width and compressed at JPEG 80% quality.',
+    paste_image_url: 'Paste image URL here...',
+    add_link: 'Add link',
+    upload_file: 'Upload file',
+    no_images_yet: 'No images added yet. You can paste a URL or upload a file.',
+    cover_badge: 'Cover',
+    add_btn: 'Add',
+    program_videos: 'Program videos',
+    video_constraints: '🎞 Direct videos: max 30s and 5MB. Upload longer videos to YouTube/Aparat and add the link.',
+    select_video_file: '🎞 Select video file',
+    youtube_search_link: 'YouTube search link (auto)',
+    paste_video_url: 'Paste video URL (YouTube, Aparat, Vimeo, Telegram...)',
+    add_video: 'Add video',
+    open_btn: 'Open',
+    move_left: 'Move left',
+    move_right: 'Move right',
+    edit_program: 'Edit program',
+    add_new_program: 'Add new program',
+    edit_program_no: 'Edit program No. {n}',
+    fill_form_below: 'Please fill out the form below',
+    auto_fetch_info: '⚡ Auto-fetch info',
+    auto_fetch_desc: 'Enter the program\'s IMDb or Wikipedia link to auto-fill name, description, image and other info.',
+    auto_fetch_placeholder: 'https://www.imdb.com/title/... or https://en.wikipedia.org/...',
+    fetching: '⏳ Fetching...',
+    fetch_btn: '⚡ Fetch',
+    elements_placeholder: 'e.g.: plants, screens/monitors',
+    materials_placeholder: 'e.g.: wood, glass, metal',
+    colors_placeholder: 'e.g.: red, blue, white',
+    update_btn: '✓ Update',
+    add_program_btn: '+ Add program',
+    add_genre_new: '+ Add new genre',
+    genre_name_required: 'Genre name *',
+    genre_name_placeholder: 'e.g.: Documentary, Animation, Kids...',
+    description_label: 'Description',
+    description_placeholder: 'Brief description of this genre...',
+    genre_color_label: 'Genre color',
+    preview_label: 'Preview:',
+    save_genre: '✓ Save genre',
+    publish_social_title: '📱 Publish to social media',
+    select_platform: 'Select platform',
+    post_preview: 'Post preview',
+    direct_send_to: '📡 Direct send to {platform}',
+    bot_configured: 'Bot {platform} configured — destination: {chatId}',
+    bot_config_required: 'For direct send, enter the bot token and channel ID first',
+    bot_settings: '⚙ Bot settings',
+    configure_bot: '＋ Configure bot',
+    sending: '⏳ Sending...',
+    manual_publish_to: '📤 Manual publish to {platform}',
+    select_platform_first: 'Select a platform first',
+    bot_config_title: '⚙ Publishing bot settings',
+    bot_config_help_intro: 'To send posts directly to a channel or group, create a bot and make it admin of the destination:',
+    bot_config_help_tg: '• Telegram: bot @BotFather → /newbot',
+    bot_config_help_bale: '• Bale: bot @BotFather@ → create new bot',
+    bot_config_help_admin: '• Then make the bot admin of the channel/group',
+    platform_label: 'Platform',
+    telegram_label: 'Telegram',
+    bale_label: 'Bale',
+    bot_token_label: 'Bot Token',
+    chat_id_label: 'Destination ID (Chat ID)',
+    chat_id_help: 'For channel: channel username (like @mychannel) or numeric Chat ID. For private chat: your numeric Chat ID.',
+    test_connection: '🔍 Test connection',
+    testing: '⏳ Testing...',
+    save_settings: '✓ Save settings',
+    clear_btn: '🗑 Clear',
+    hide_btn: '🙈 Hide',
+    show_btn: '👁 Show',
+    pdf_preview_title: '📄 PDF report preview',
+    excel_preview_title: '📊 Excel report preview',
+    program_count_label: 'Program count',
+    format_label: 'Format',
+    report_title_full: 'Comprehensive TV Program Archive Report',
+    banke_rasane_archive: 'Banke Rasaneh — Specialized TV Programs Archive',
+    programs_unit: 'programs',
+    genre_category_unit: 'genre categories',
+    report_structure: 'Report structure (8 sections) — each section includes full description',
+    section_exec_summary: 'Executive summary',
+    section_exec_summary_desc: 'Archive overview, data volume, key findings and important notes for decision makers',
+    section_methodology: 'Data collection methodology',
+    section_methodology_desc: 'Explanation of data sources, genre classification process and hybrid approach',
+    section_stats_overview: 'Statistical overview',
+    section_stats_overview_desc: '4 stat cards + 5 bar charts: studio size, decor style, audience, lighting, layout',
+    section_genre_analysis: 'Genre distribution analysis',
+    section_genre_analysis_desc: 'Full distribution chart + detailed introduction of each category with count, percent, and notable programs',
+    section_decor_analysis: 'Decor and scene analysis',
+    section_decor_analysis_desc: '4 charts: recurring scene elements, materials, color palette, lighting + analytical findings',
+    section_program_list: 'Detailed program list',
+    section_program_list_desc: 'Full card for each program: image, Persian description, tags, decor specs, summary',
+    section_conclusion: 'Conclusion and recommendations',
+    section_conclusion_desc: 'Summary of findings + 5 actionable recommendations + signature and date section',
+    section_appendix: 'Appendix: alphabetical index',
+    section_appendix_desc: 'Complete list of all programs in alphabetical order with number and genre category',
+    sample_program_card: 'Sample program card (from section 6)',
+    sample_program: 'Sample program',
+    identifier_label: 'ID:',
+    excel_banke_rasane: 'Banke Rasaneh — Excel output',
+    name_col: 'Name',
+    category_col: 'Category',
+    generating: '⏳ Generating...',
+    download_file: '⬇ Download {format} file',
+    pdf_help_text: 'The report includes 8 sections: title page, table of contents, executive summary, methodology, statistical overview, genre analysis, decor analysis, and detailed program introductions.',
+    print_dialog_help: 'After clicking download, a print dialog will open — choose "A4" size and "Save as PDF".',
+    banke_rasane_stats_reports: 'Banke Rasaneh stats & reports',
+    no_programs_for_report: 'No programs for this report',
+    system_settings_title: '⚙ System settings',
+    close_settings: 'Close settings',
+    tab_server: 'Server',
+    tab_users: 'Users',
+    tab_password: 'Password',
+    tab_audit: 'Audit log',
+    api_server_url: '🖥 API server URL',
+    api_server_desc: 'Address of the API service this app connects to. Default:',
+    save_address: '✓ Save address',
+    server_help: 'Help: the entered address should be the root of the API service (without /api/... paths). If you are using the Caddy gateway, you can enter a relative address. After saving, your current token remains valid.',
+    users_management: '👥 Users management',
+    users_management_desc: 'Add, delete or change roles of system users. Roles: admin (full access), editor (add/edit programs), viewer (view only).',
+    add_new_user: '＋ Add new user',
+    username_placeholder: 'Username',
+    display_name_optional: 'Display name (optional)',
+    password_placeholder_min: 'Password (min 4 chars)',
+    create_user: '＋ Create user',
+    creating: '⏳ Creating...',
+    current_users: 'Current users',
+    change_password_title: '🔑 Change password',
+    change_password_desc: 'Change your password. After changing, all your active sessions will be invalidated and you must sign in again.',
+    current_account: '👤 Current account:',
+    current_password: 'Current password',
+    new_password: 'New password',
+    confirm_new_password: 'Confirm new password',
+    password_mismatch: '⚠ New password and confirmation do not match',
+    change_password_btn: '✓ Change password',
+    audit_log_title: '📜 Audit log',
+    audit_log_desc: 'Recent reports of program additions, edits and deletions with the user and exact time.',
+    refresh: '↻ Refresh',
+    action_create: 'Create',
+    action_update: 'Update',
+    action_delete: 'Delete',
+    program_hash: 'Program #',
+    program_created_log: 'Program "{name}" was created.',
+    program_deleted_log: 'Program "{name}" was deleted.',
+    field_log: 'Field',
+    no_changes_recorded: 'No changes recorded.',
+    loading_users: 'Loading...',
+    loading_history: 'Loading...',
+    error_loading_users: 'Error loading users',
+    error_loading_history: 'Error loading history',
+    cannot_delete_self: 'You cannot delete your own account',
+    cannot_change_role_self: 'You cannot change your own role',
+    help_label: 'Help:',
+    clear_compare_list: 'Clear compare list',
+    values_differ: 'Values differ between the two programs',
+    name_program: 'Program name',
+    connection_ok: 'Connection established ✓',
+    connection_invalid_response: 'Invalid response: {body}',
+    connection_error: 'Connection error: {msg}',
+    server_url_saved: 'Server URL saved. To fully apply, reload the page.',
+    user_created_toast: 'User "{name}" created',
+    user_deleted_toast: 'User deleted',
+    user_role_changed_toast: 'Role of "{name}" changed to {role}',
+    role_changed_self_toast: 'You cannot change your own role',
+    fill_three_fields: 'Please fill out all three fields',
+    password_min_length: 'New password must be at least 4 characters',
+    passwords_dont_match: 'New password and confirmation do not match',
+    password_must_differ: 'New password must differ from current password',
+    password_changed_toast: 'Password changed successfully. Please sign in again.',
+    error_changing_password: 'Error changing password',
+    fetch_imdb_wiki_prompt: 'Please enter IMDb or Wikipedia link',
+    fetch_error_toast: 'Error fetching info',
+    fetch_success_toast: 'Info fetched successfully',
+    name_required_toast: 'Program name is required',
+    max_images_toast: 'Max {n} images allowed',
+    image_duplicate_toast: 'This image is already added',
+    images_added_partial_toast: 'Only {added} image(s) added (max {max})',
+    image_compress_error_toast: 'Error compressing: {name}',
+    fetch_failed_toast: 'Error: {msg}',
+    delete_user_confirm: 'Delete user "{name}"?',
+    tags_hint: 'Separate tags with commas (, or ،) — e.g.: modern, warm, wood',
+    tags_placeholder: 'modern, warm, wood...',
+    preset_tags_hint: 'Suggested tags for this genre:',
+    clear_all: 'Clear all',
+    banke_rasane_brand: 'Banke Rasaneh',
+    bot_token_required: 'Please enter the bot token',
+    bot_test_ok: '✅ Bot "@{name}" identified',
+    bot_test_invalid: '❌ Invalid token',
+    bot_test_network_error: '❌ Network error',
+    bot_config_required_toast: 'Please configure the bot first',
+    post_sent_to: '✅ Post sent to {platform}',
+    post_send_failed: '❌ {msg}',
+    post_send_network_error: '❌ Network error while sending',
+    edit_field: 'Edit',
+    archive_intro_subtitle: '{n} TV programs across {g} genres',
+    archive_comprehensive_report: 'Comprehensive TV Program Archive Report',
+    report_sample_card_intro: 'Sample program card (from section 6)',
+    full_report_detailed_first: 'In the full report, the first 80 programs are detailed and all {n} programs are in the alphabetical index',
+    social_card_brand: 'Banke Rasaneh',
+    social_card_programs_count: '{n} selected programs',
+    social_card_more_count: 'and {n} more programs...',
+    genre_preview_default: '—',
+    genre_default_desc: 'Description...',
   },
 };
 
@@ -916,7 +1708,7 @@ const STRINGS: Record<Lang, Record<StringKey, string>> = {
 type LangContextValue = {
   lang: Lang;
   setLang: (l: Lang) => void;
-  t: (key: StringKey) => string;
+  t: (key: StringKey, params?: Record<string, string | number>) => string;
 };
 const LangContext = createContext<LangContextValue>({
   lang: 'fa',
@@ -928,7 +1720,15 @@ function LangProvider({ lang, setLang, children }: { lang: Lang; setLang: (l: La
   const value = useMemo<LangContextValue>(() => ({
     lang,
     setLang,
-    t: (k: StringKey) => STRINGS[lang][k] || STRINGS.fa[k] || k,
+    t: (k: StringKey, params?: Record<string, string | number>) => {
+      let s = STRINGS[lang][k] || STRINGS.fa[k] || k;
+      if (params) {
+        for (const pk of Object.keys(params)) {
+          s = s.split(`{${pk}}`).join(String(params[pk]));
+        }
+      }
+      return s;
+    },
   }), [lang, setLang]);
   return <LangContext.Provider value={value}>{children}</LangContext.Provider>;
 }
@@ -978,6 +1778,8 @@ export default function Home() {
   const [showCompareModal, setShowCompareModal] = useState(false);
 
   // Theme disabled — always dark green
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const THEME_KEY = 'bankresaneh_theme_v1';
 
   // 🌐 Language — 'fa' (Persian, default) or 'en' (English UI strings).
   const [lang, setLang] = useState<'fa' | 'en'>('fa');
@@ -1450,7 +2252,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
     if (loading) return;
     setError(null);
     if (!username.trim() || !password) {
-      setError(lang === 'en' ? 'Please enter username and password' : 'نام کاربری و رمز عبور را وارد کنید');
+      setError(t('enter_username_password'));
       return;
     }
     setLoading(true);
@@ -1458,7 +2260,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
       const data = await api.login(username.trim(), password);
       onLogin(data.user);
     } catch (err: any) {
-      setError(err?.message || (lang === 'en' ? 'Login failed' : 'ورود ناموفق بود'));
+      setError(err?.message || t('login_failed'));
     } finally {
       setLoading(false);
     }
@@ -1641,8 +2443,8 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
             {t('version')} • {t('app_subtitle')}
           </p>
           <p style={{ color: 'rgba(168, 230, 193, 0.45)' }} className="text-xs mt-2">
-            {lang === 'en' ? 'Default user: ' : 'نام کاربری پیش‌فرض: '}
-            <span dir="ltr">admin</span> {lang === 'en' ? '/ pass: ' : '/ رمز: '}
+            {t('default_user_hint')}
+            <span dir="ltr">admin</span> / {lang === 'en' ? 'pass: ' : 'رمز: '}
             <span dir="ltr">admin</span>
           </p>
         </div>
@@ -1878,11 +2680,11 @@ function DrawerMenu({
   const { t, lang } = useLang();
 
   const navItems = [
-    { key: 'dashboard', label: t('dashboard'), icon: 'home', desc: lang === 'en' ? 'Home and genres' : 'صفحهٔ اصلی و ژانرها' },
-    { key: 'programs', label: t('all_programs'), icon: 'grid', desc: lang === 'en' ? 'Full list of programs' : 'لیست کامل برنامه‌ها' },
-    { key: 'bookmarks', label: t('bookmarks'), icon: 'bookmark', desc: lang === 'en' ? 'Programs you bookmarked' : 'برنامه‌هایی که نشان کرده‌اید' },
-    { key: 'add', label: t('add_program'), icon: 'plus', desc: lang === 'en' ? 'Add or edit a program' : 'افزودن یا ویرایش برنامه' },
-    { key: 'reports', label: t('reports'), icon: 'reports', desc: lang === 'en' ? 'Stats and exports' : 'آمار و خروجی' },
+    { key: 'dashboard', label: t('dashboard'), icon: 'home', desc: t('nav_dashboard_desc') },
+    { key: 'programs', label: t('all_programs'), icon: 'grid', desc: t('nav_programs_desc') },
+    { key: 'bookmarks', label: t('bookmarks'), icon: 'bookmark', desc: t('nav_bookmarks_desc') },
+    { key: 'add', label: t('add_program'), icon: 'plus', desc: t('nav_add_desc') },
+    { key: 'reports', label: t('reports'), icon: 'reports', desc: t('nav_reports_desc') },
   ] as const;
 
   // Don't render anything if not open — keeps DOM clean
@@ -2175,6 +2977,7 @@ function MobileBottomNav({
   genres?: Genre[];
 }) {
   const [showGenres, setShowGenres] = useState(false);
+  const { t, lang } = useLang();
 
   return (
     <>
@@ -2200,7 +3003,7 @@ function MobileBottomNav({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg" style={{ color: '#1a2e22' }}>ژانرها ({genres.length})</h3>
+              <h3 className="font-bold text-lg" style={{ color: '#1a2e22' }}>{t('genres_section')} ({genres.length})</h3>
               <button
                 onClick={() => setShowGenres(false)}
                 className="p-2 rounded-lg"
@@ -2240,7 +3043,7 @@ function MobileBottomNav({
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-bold truncate" style={{ color: '#1a2e22' }}>{g.nameFa}</div>
                         <div className="text-xs font-bold" style={{ color: g.color }}>
-                          {count.toLocaleString('fa-IR')} برنامه
+                          {count.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')} {t('programs_count')}
                         </div>
                       </div>
                     </div>
@@ -2265,12 +3068,12 @@ function MobileBottomNav({
             padding: '8px',
           }}
         >
-          <MobileNavBtn label="منو" icon="menu" active={false} onClick={onOpenDrawer} highlight />
-          <MobileNavBtn label="آرشیو" icon="home" active={currentView === 'dashboard'} onClick={() => onNavigate('dashboard')} />
-          <MobileNavBtn label="برنامه‌ها" icon="grid" active={currentView === 'programs'} onClick={() => onNavigate('programs')} />
-          <MobileNavBtn label="ژانرها" icon="genre" active={showGenres} onClick={() => setShowGenres(!showGenres)} highlight />
-          <MobileNavBtn label="افزودن" icon="plus" active={currentView === 'add'} onClick={() => onNavigate('add')} />
-          <MobileNavBtn label="خروج" icon="exit" active={false} onClick={onLogout} />
+          <MobileNavBtn label={t('menu')} icon="menu" active={false} onClick={onOpenDrawer} highlight />
+          <MobileNavBtn label={t('dashboard')} icon="home" active={currentView === 'dashboard'} onClick={() => onNavigate('dashboard')} />
+          <MobileNavBtn label={t('all_programs')} icon="grid" active={currentView === 'programs'} onClick={() => onNavigate('programs')} />
+          <MobileNavBtn label={t('genres_section')} icon="genre" active={showGenres} onClick={() => setShowGenres(!showGenres)} highlight />
+          <MobileNavBtn label={t('add_program')} icon="plus" active={currentView === 'add'} onClick={() => onNavigate('add')} />
+          <MobileNavBtn label={t('logout')} icon="exit" active={false} onClick={onLogout} />
         </div>
       </nav>
     </>
@@ -2350,9 +3153,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
           </span>
         </div>
         <p className="text-fg-muted" style={{ color: 'var(--fg-muted)' }}>
-          {lang === 'en'
-            ? `${t('app_subtitle')} — ${talkShows.length.toLocaleString('fa-IR')} programs in ${genres.length} genres`
-            : `بانک اطلاعاتی ${talkShows.length.toLocaleString('fa-IR')} برنامهٔ تلویزیونی در ${genres.length} ژانر`}
+          {t('dashboard_subtitle', { n: talkShows.length.toLocaleString('fa-IR'), g: genres.length })}
         </p>
       </header>
 
@@ -2473,7 +3274,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
               <h3 className="font-bold text-lg mb-1 text-white">{g.nameFa}</h3>
               <p className="text-sm mt-3" style={{ color: 'rgba(255,255,255,0.8)' }}>{g.description}</p>
               <div className="mt-4 flex items-center text-sm font-bold text-white">
-                {lang === 'en' ? 'View & search' : 'مشاهده و جستجو'}
+                {t('view_search')}
                 <svg className="w-4 h-4 mr-1 rtl-flip" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
@@ -2770,7 +3571,7 @@ function ProgramsView({
           <button
             onClick={() => setIslamicOnly(!islamicOnly)}
             className="btn-base px-3 py-2 rounded-xl text-sm font-medium flex-shrink-0"
-            title={lang === 'en' ? 'Only programs related to Islamic countries' : 'فقط برنامه‌های مرتبط با کشورهای اسلامی'}
+            title={t('islamic_only_desc')}
             style={islamicOnly ? {
               background: 'linear-gradient(135deg, #0891b2 0%, #0e7490 100%)',
               color: 'white',
@@ -2788,7 +3589,7 @@ function ProgramsView({
           <button
             onClick={() => setHasImageOnly(!hasImageOnly)}
             className="btn-base px-3 py-2 rounded-xl text-sm font-medium flex-shrink-0"
-            title={lang === 'en' ? 'Only programs with images' : 'فقط برنامه‌های دارای تصویر'}
+            title={t('has_image_only_desc')}
             style={hasImageOnly ? {
               background: 'linear-gradient(135deg, #db2777 0%, #9d174d 100%)',
               color: 'white',
@@ -2806,7 +3607,7 @@ function ProgramsView({
           <button
             onClick={() => setHasVideoOnly(!hasVideoOnly)}
             className="btn-base px-3 py-2 rounded-xl text-sm font-medium flex-shrink-0"
-            title={lang === 'en' ? 'Only programs with videos' : 'فقط برنامه‌های دارای ویدیو'}
+            title={t('has_video_only_desc')}
             style={hasVideoOnly ? {
               background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
               color: 'white',
@@ -2889,7 +3690,7 @@ function ProgramsView({
               }}
               title={t('no_access_desc')}
             >
-              🔒 {lang === 'en' ? 'View only — sign in as admin/editor to edit' : 'فقط مشاهده — برای افزودن یا ویرایش با حساب مدیر وارد شوید'}
+              🔒 {t('view_only_desc')}
             </div>
           )}
         </div>
@@ -2956,28 +3757,28 @@ function ProgramsView({
             style={{ borderTop: '1px solid var(--input-border)' }}
           >
             <span className="font-medium text-sm text-fg-strong" style={{ color: 'var(--accent-text)' }}>
-              {selectedIds.length.toLocaleString('fa-IR')} {lang === 'en' ? 'selected' : 'برنامه انتخاب شده'}
+              {selectedIds.length.toLocaleString('fa-IR')} {t('selected')}
             </span>
             <button
               onClick={handleUploadSelected}
               className="btn-base px-3 py-1.5 rounded-lg text-sm font-medium"
               style={{ background: 'rgba(124, 58, 237, 0.15)', color: '#7c3aed', border: '1px solid rgba(124, 58, 237, 0.3)' }}
             >
-              📱 {lang === 'en' ? 'Publish to social media' : 'انتشار در شبکه‌های اجتماعی'}
+              📱 {t('publish_social')}
             </button>
             <button
               onClick={handlePDF}
               className="btn-base px-3 py-1.5 rounded-lg text-sm font-medium"
               style={{ background: 'rgba(220, 38, 38, 0.15)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}
             >
-              📄 {lang === 'en' ? 'PDF report' : 'گزارش PDF'}
+              📄 {t('pdf_report')}
             </button>
             <button
               onClick={handleExcel}
               className="btn-base px-3 py-1.5 rounded-lg text-sm font-medium"
               style={{ background: 'rgba(2, 144, 72, 0.15)', color: '#016035', border: '1px solid rgba(2, 144, 72, 0.3)' }}
             >
-              📊 {lang === 'en' ? 'Excel report' : 'گزارش Excel'}
+              📊 {t('excel_report')}
             </button>
             <button
               onClick={() => { setSelectedIds([]); setSelectionMode(false); }}
@@ -3700,7 +4501,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
           {!thumb.image && <div className="absolute inset-0" style={{ background: thumb.pattern }}></div>}
           <button
             onClick={(e) => { e.stopPropagation(); onClose(); }}
-            aria-label="بستن"
+            aria-label={t('close')}
             className="absolute p-2.5 rounded-lg"
             style={{
               top: '16px',
@@ -3743,7 +4544,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
             <h2 className="text-2xl font-bold mb-2" style={{ direction: 'ltr', textAlign: 'right', textShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
               {show.name}
             </h2>
-            <p className="text-sm opacity-90">برنامهٔ شمارهٔ {show.num.toLocaleString('fa-IR')}</p>
+            <p className="text-sm opacity-90">{t('program_no_label')} {show.num.toLocaleString('fa-IR')}</p>
           </div>
         </div>
 
@@ -3756,7 +4557,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
 
           {/* Persian description */}
           <div className="mb-6 p-4 rounded-xl" style={{ background: `${thumb.accent}10`, border: `1px solid ${thumb.accent}25` }}>
-            <h4 className="font-bold mb-2" style={{ color: '#1a2e22' }}>دربارهٔ برنامه</h4>
+            <h4 className="font-bold mb-2" style={{ color: '#1a2e22' }}>{t('about_program')}</h4>
             <p style={{ color: '#4a5d52', lineHeight: 1.8 }}>{show.descriptionFa}</p>
           </div>
 
@@ -3764,9 +4565,9 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
           {show.videos && show.videos.length > 0 && (
             <div className="mb-6">
               <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>
-                🎬 ویدیوهای برنامه
+                🎬 {t('videos_of_program')}
                 <span className="text-xs font-normal mr-2" style={{ color: '#7a8a80' }}>
-                  ({show.videos.length.toLocaleString('fa-IR')} ویدیو)
+                  ({show.videos.length.toLocaleString('fa-IR')} {t('videos_count_suffix')})
                 </span>
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -3828,7 +4629,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
 
           {/* Access links */}
           <div className="mb-6">
-            <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>دسترسی مستقیم</h4>
+            <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>{t('direct_access')}</h4>
             <div className="flex flex-wrap gap-2">
               <a
                 href={show.youtube}
@@ -3837,7 +4638,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                 className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
                 style={{ background: 'rgba(220, 38, 38, 0.15)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)', textDecoration: 'none' }}
               >
-                ▶ تماشا در یوتیوب
+                ▶ {t('watch_on_youtube')}
               </a>
               <a
                 href={show.imdb}
@@ -3846,7 +4647,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                 className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
                 style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#d97706', border: '1px solid rgba(245, 158, 11, 0.3)', textDecoration: 'none' }}
               >
-                🎬 صفحهٔ IMDb
+                🎬 {t('imdb_page')}
               </a>
               <a
                 href={show.wikipedia}
@@ -3855,7 +4656,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                 className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
                 style={{ background: 'rgba(37, 99, 235, 0.15)', color: '#2563eb', border: '1px solid rgba(37, 99, 235, 0.3)', textDecoration: 'none' }}
               >
-                📖 ویکی‌پدیا
+                📖 {t('wikipedia_page')}
               </a>
             </div>
           </div>
@@ -3867,7 +4668,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
               className="px-4 py-2 rounded-xl text-sm font-medium"
               style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)', color: 'white' }}
             >
-              📱 انتشار در شبکه‌های اجتماعی
+              📱 {t('publish_social')}
             </button>
             {onToggleBookmark && (
               <button
@@ -3877,9 +4678,9 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                   ? { background: 'rgba(245, 158, 11, 0.25)', color: '#b45309', border: '1px solid rgba(245, 158, 11, 0.55)' }
                   : { background: 'rgba(245, 158, 11, 0.12)', color: '#b45309', border: '1px solid rgba(245, 158, 11, 0.3)' }
                 }
-                title={isBookmarked ? 'حذف از نشان‌شده‌ها' : 'افزودن به نشان‌شده‌ها'}
+                title={isBookmarked ? t('remove_from_bookmarks') : t('add_to_bookmarks')}
               >
-                {isBookmarked ? '★ نشان‌شده' : '☆ نشان کردن'}
+                {isBookmarked ? `★ ${t('bookmarked')}` : `☆ ${t('bookmark_verb')}`}
               </button>
             )}
             {onAddToCompare && (
@@ -3887,9 +4688,9 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                 onClick={onAddToCompare}
                 className="px-4 py-2 rounded-xl text-sm font-medium"
                 style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#b45309', border: '1px solid rgba(245, 158, 11, 0.3)' }}
-                title="افزودن به فهرست مقایسه"
+                title={t('add_to_compare')}
               >
-                ⚖ افزودن به مقایسه
+                ⚖ {t('add_to_compare')}
               </button>
             )}
             {canEdit && (
@@ -3898,7 +4699,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                 className="px-4 py-2 rounded-xl text-sm font-medium"
                 style={{ background: 'rgba(2, 144, 72, 0.15)', color: '#016035', border: '1px solid rgba(2, 144, 72, 0.3)' }}
               >
-                ✏ ویرایش
+                ✏ {t('edit')}
               </button>
             )}
             <button
@@ -3906,14 +4707,14 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
               className="px-4 py-2 rounded-xl text-sm font-medium"
               style={{ background: 'rgba(220, 38, 38, 0.15)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}
             >
-              📄 گزارش PDF
+              📄 {t('pdf_report')}
             </button>
             <button
               onClick={() => onExport(show, 'excel')}
               className="px-4 py-2 rounded-xl text-sm font-medium"
               style={{ background: 'rgba(2, 144, 72, 0.15)', color: '#016035', border: '1px solid rgba(2, 144, 72, 0.3)' }}
             >
-              📊 گزارش Excel
+              📊 {t('excel_report')}
             </button>
             {canEdit && (
               <button
@@ -3921,7 +4722,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                 className="px-4 py-2 rounded-xl text-sm font-medium"
                 style={{ background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}
               >
-                🗑 حذف برنامه
+                🗑 {t('delete_program')}
               </button>
             )}
           </div>
@@ -3933,7 +4734,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
               style={{ background: 'rgba(220, 38, 38, 0.08)', border: '1px solid rgba(220, 38, 38, 0.25)' }}
             >
               <span className="text-sm font-medium" style={{ color: '#dc2626' }}>
-                این برنامه حذف شود؟ (قابل بازگشت نیست)
+                {t('confirm_delete_question')}
               </span>
               <div className="flex gap-2 flex-shrink-0">
                 <button
@@ -3941,14 +4742,14 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                   className="px-3 py-1.5 rounded-lg text-sm font-medium"
                   style={{ background: 'rgba(122, 138, 128, 0.15)', color: '#4a5d52', border: '1px solid rgba(122, 138, 128, 0.3)' }}
                 >
-                  انصراف
+                  {t('cancel')}
                 </button>
                 <button
                   onClick={() => { onDelete(show.num); onClose(); }}
                   className="px-3 py-1.5 rounded-lg text-sm font-bold"
                   style={{ background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)', color: 'white' }}
                 >
-                  بله، حذف کن
+                  {t('yes_delete')}
                 </button>
               </div>
             </div>
@@ -3956,20 +4757,20 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
 
           {/* Decor details */}
           <div>
-            <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>مشخصات دکور و صحنه</h4>
+            <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>{t('decor_scene_specs')}</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <DetailField label="دسته‌بندی" value={show.category} />
-              <DetailField label="سبک دکور" value={show.style} />
-              <DetailField label="اندازهٔ استودیو" value={show.size} />
-              <DetailField label="تماشاگر" value={show.viewers} />
-              <DetailField label="سبک دکور" value={show.style} />
-              <DetailField label="جلوه‌ها" value={show.effects} />
-              <DetailField label="چیدمان" value={show.layout} />
-              <DetailField label="نورپردازی" value={show.lighting} />
-              <DetailField label="عناصر دکور" value={show.elements} />
-              <DetailField label="مواد" value={show.materials} />
+              <DetailField label={t('category_label')} value={show.category} />
+              <DetailField label={t('decor_style')} value={show.style} />
+              <DetailField label={t('studio_size')} value={show.size} />
+              <DetailField label={t('audience')} value={show.viewers} />
+              <DetailField label={t('decor_style')} value={show.style} />
+              <DetailField label={t('effects')} value={show.effects} />
+              <DetailField label={t('layout')} value={show.layout} />
+              <DetailField label={t('lighting')} value={show.lighting} />
+              <DetailField label={t('decor_elements')} value={show.elements} />
+              <DetailField label={t('materials')} value={show.materials} />
               <div className="sm:col-span-2">
-                <DetailField label="رنگ‌آمیزی" value={show.colors} />
+                <DetailField label={t('colors')} value={show.colors} />
               </div>
             </div>
           </div>
@@ -3977,7 +4778,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
           {/* Decor summary */}
           {show.summary && show.summary !== '—' && (
             <div className="mt-6 p-4 rounded-xl" style={{ background: `${thumb.accent}10`, border: `1px solid ${thumb.accent}25` }}>
-              <h4 className="font-bold mb-2" style={{ color: '#1a2e22' }}>خلاصهٔ دکور</h4>
+              <h4 className="font-bold mb-2" style={{ color: '#1a2e22' }}>{t('decor_summary')}</h4>
               <p style={{ color: '#4a5d52', lineHeight: 1.7 }}>{show.summary}</p>
             </div>
           )}
@@ -3985,7 +4786,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
           {/* Tags section — user-defined tags + detected Islamic countries */}
           {((show.tags && show.tags.length > 0) || countries.length > 0 || show.country) && (
             <div className="mt-6 p-4 rounded-xl" style={{ background: 'rgba(124, 58, 237, 0.06)', border: '1px solid rgba(124, 58, 237, 0.2)' }}>
-              <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>🏷 برچسب‌ها</h4>
+              <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>🏷 {t('tags_label')}</h4>
               {show.tags && show.tags.length > 0 && (
                 <div className="flex items-center gap-2 flex-wrap mb-2">
                   {show.tags.map((t, i) => (
@@ -4001,7 +4802,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
               )}
               {countries.length > 0 && (
                 <div className="flex items-center gap-2 flex-wrap mb-2">
-                  <span className="text-xs font-bold" style={{ color: '#7a8a80' }}>🌍 کشورهای شناسایی‌شده:</span>
+                  <span className="text-xs font-bold" style={{ color: '#7a8a80' }}>🌍 {t('detected_countries')}</span>
                   {countries.map((c, i) => (
                     <span
                       key={i}
@@ -4015,7 +4816,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
               )}
               {show.country && (
                 <div className="text-xs" style={{ color: '#7a8a80' }}>
-                  کشور مبدا (وارد شده): <strong style={{ color: '#1a2e22' }}>{show.country}</strong>
+                  {t('origin_country_entered')} <strong style={{ color: '#1a2e22' }}>{show.country}</strong>
                 </div>
               )}
             </div>
@@ -4089,6 +4890,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
   presetGenre?: Genre | null;
   genres?: Genre[];
 }) {
+  const { t } = useLang();
   const [form, setForm] = useState<Partial<TalkShow>>(
     editingShow || {
       num: Math.max(0, ...talkShows.map(s => s.num)) + 1,
@@ -4118,7 +4920,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
 
   const handleAutoFetch = async () => {
     if (!fetchUrl) {
-      showToast('لینک IMDb یا ویکی‌پدیا را وارد کنید');
+      showToast(t('fetch_imdb_wiki_prompt'));
       return;
     }
     setFetching(true);
@@ -4130,7 +4932,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       });
       const data = await res.json();
       if (data.error) {
-        showToast(`خطا: ${data.error}`);
+        showToast(t('fetch_failed_toast', { msg: data.error }));
       } else {
         const info = data.info;
         const updated = { ...form };
@@ -4160,10 +4962,10 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
           updated.socialPost = `🎬 ${updated.name}\n\n📝 ${updated.descriptionFa || ''}\n\n#بانک_رسانه #تاک_شو`;
         }
         setForm(updated);
-        showToast('اطلاعات با موفقیت دریافت شد');
+        showToast(t('fetch_success_toast'));
       }
     } catch (e) {
-      showToast('خطا در دریافت اطلاعات');
+      showToast(t('fetch_error_toast'));
     } finally {
       setFetching(false);
     }
@@ -4171,7 +4973,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
 
   const handleSubmit = () => {
     if (!form.name) {
-      showToast('نام برنامه الزامی است');
+      showToast(t('name_required_toast'));
       return;
     }
     // Auto-generate links if not set
@@ -4202,26 +5004,26 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
     <>
       <header className="mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold mb-1" style={{ color: '#1a2e22' }}>
-          {editingShow ? 'ویرایش برنامه' : 'افزودن برنامهٔ جدید'}
+          {editingShow ? t('edit_program') : t('add_new_program')}
         </h1>
         <p style={{ color: '#7a8a80' }}>
-          {editingShow ? `ویرایش برنامهٔ شمارهٔ ${editingShow.num.toLocaleString('fa-IR')}` : 'فرم زیر را پر کنید'}
+          {editingShow ? t('edit_program_no', { n: editingShow.num.toLocaleString('fa-IR') }) : t('fill_form_below')}
         </p>
       </header>
 
       <div className="premium-glass p-6 space-y-4">
         {/* Auto-fetch from IMDb/Wikipedia */}
         <div className="p-4 rounded-xl" style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.15)' }}>
-          <h4 className="font-bold mb-2" style={{ color: '#1a2e22' }}>⚡ دریافت خودکار اطلاعات</h4>
+          <h4 className="font-bold mb-2" style={{ color: '#1a2e22' }}>{t('auto_fetch_info')}</h4>
           <p className="text-xs mb-3" style={{ color: '#7a8a80' }}>
-            لینک IMDb یا ویکی‌پدیا برنامه را وارد کنید تا نام، توضیحات، تصویر و سایر اطلاعات خودکار دریافت شود.
+            {t('auto_fetch_desc')}
           </p>
           <div className="flex gap-2">
             <input
               type="text"
               value={fetchUrl}
               onChange={(e) => setFetchUrl(e.target.value)}
-              placeholder="https://www.imdb.com/title/... یا https://fa.wikipedia.org/..."
+              placeholder={t('auto_fetch_placeholder')}
               style={{
                 flex: 1,
                 padding: '10px 16px',
@@ -4241,78 +5043,78 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
               className="btn-enter-premium"
               style={{ padding: '10px 24px', fontSize: '14px', whiteSpace: 'nowrap' }}
             >
-              {fetching ? '⏳ در حال دریافت...' : '⚡ دریافت'}
+              {fetching ? t('fetching') : t('fetch_btn')}
             </button>
           </div>
         </div>
 
-        <FormField label="نام برنامه *" value={form.name || ''} onChange={v => setForm({ ...form, name: v })} placeholder="مثلاً: BBC Breakfast" />
+        <FormField label={t('program_name_required')} value={form.name || ''} onChange={v => setForm({ ...form, name: v })} placeholder={t('name_placeholder')} />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormSelect
-            label="دسته‌بندی"
+            label={t('category_label')}
             value={form.category || ''}
             onChange={v => setForm({ ...form, category: v })}
             options={genres.map(g => ({ value: g.nameFa, label: g.nameFa }))}
           />
-          <FormField label="کشور مبدا" value={form.country || ''} onChange={v => setForm({ ...form, country: v })} placeholder="مثلاً: ایران، ترکیه" />
+          <FormField label={t('origin_country_label')} value={form.country || ''} onChange={v => setForm({ ...form, country: v })} placeholder={t('country_placeholder')} />
           <FormSelect
-            label="اندازهٔ استودیو"
+            label={t('studio_size')}
             value={form.size || ''}
             onChange={v => setForm({ ...form, size: v })}
             options={[
-              { value: 'بزرگ/لوکس', label: 'بزرگ/لوکس' },
-              { value: 'متوسط/استاندارد', label: 'متوسط/استاندارد' },
-              { value: 'کوچک/اقتصادی', label: 'کوچک/اقتصادی' },
+              { value: 'بزرگ/لوکس', label: t('large_lux') },
+              { value: 'متوسط/استاندارد', label: t('medium_std') },
+              { value: 'کوچک/اقتصادی', label: t('small_econ') },
             ]}
           />
           <FormSelect
-            label="تماشاگر"
+            label={t('audience')}
             value={form.viewers || ''}
             onChange={v => setForm({ ...form, viewers: v })}
             options={[
-              { value: 'با تماشاگر', label: 'با تماشاگر' },
-              { value: 'بدون تماشاگر', label: 'بدون تماشاگر' },
-              { value: 'نامشخص', label: 'نامشخص' },
+              { value: 'با تماشاگر', label: t('with_audience') },
+              { value: 'بدون تماشاگر', label: t('without_audience') },
+              { value: 'نامشخص', label: t('decor_unknown') },
             ]}
           />
           <FormSelect
-            label="سبک دکور"
+            label={t('decor_style')}
             value={form.style || ''}
             onChange={v => setForm({ ...form, style: v })}
             options={[
-              { value: 'مدرن', label: 'مدرن' },
-              { value: 'ترکیبی', label: 'ترکیبی' },
-              { value: 'مینیمال', label: 'مینیمال' },
-              { value: 'کلاسیک/سنتی', label: 'کلاسیک/سنتی' },
-              { value: 'فاخر/تزئینی', label: 'فاخر/تزئینی' },
+              { value: 'مدرن', label: t('modern') },
+              { value: 'ترکیبی', label: t('composite') },
+              { value: 'مینیمال', label: t('minimal') },
+              { value: 'کلاسیک/سنتی', label: t('decor_classic_traditional') },
+              { value: 'فاخر/تزئینی', label: t('decor_lux_decorative') },
             ]}
           />
           <FormSelect
-            label="نورپردازی"
+            label={t('lighting')}
             value={form.lighting || ''}
             onChange={v => setForm({ ...form, lighting: v })}
             options={[
-              { value: 'خنثی', label: 'خنثی' },
-              { value: 'گرم', label: 'گرم' },
-              { value: 'سرد', label: 'سرد' },
-              { value: 'ترکیبی', label: 'ترکیبی' },
-              { value: 'دراماتیک', label: 'دراماتیک' },
+              { value: 'خنثی', label: t('decor_neutral') },
+              { value: 'گرم', label: t('decor_warm') },
+              { value: 'سرد', label: t('decor_cold') },
+              { value: 'ترکیبی', label: t('composite') },
+              { value: 'دراماتیک', label: t('decor_dramatic') },
             ]}
           />
         </div>
 
-        <FormField label="عناصر دکور" value={form.elements || ''} onChange={v => setForm({ ...form, elements: v })} placeholder="مثلاً: plants, screens/monitors" />
-        <FormField label="مواد" value={form.materials || ''} onChange={v => setForm({ ...form, materials: v })} placeholder="مثلاً: wood, glass, metal" />
-        <FormField label="رنگ‌آمیزی" value={form.colors || ''} onChange={v => setForm({ ...form, colors: v })} placeholder="مثلاً: red, blue, white" />
+        <FormField label={t('decor_elements')} value={form.elements || ''} onChange={v => setForm({ ...form, elements: v })} placeholder={t('elements_placeholder')} />
+        <FormField label={t('materials')} value={form.materials || ''} onChange={v => setForm({ ...form, materials: v })} placeholder={t('materials_placeholder')} />
+        <FormField label={t('colors')} value={form.colors || ''} onChange={v => setForm({ ...form, colors: v })} placeholder={t('colors_placeholder')} />
 
         {/* Persian description */}
         <div>
-          <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>دربارهٔ برنامه (فارسی)</label>
+          <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>{t('about_program_fa')}</label>
           <textarea
             value={form.descriptionFa || ''}
             onChange={(e) => setForm({ ...form, descriptionFa: e.target.value })}
-            placeholder="توضیحات فارسی دربارهٔ برنامه — چه برنامه‌ای است، چه محتوایی دارد..."
+            placeholder={t('persian_description_placeholder')}
             rows={3}
             style={{
               width: '100%',
@@ -4329,11 +5131,11 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
         </div>
 
         <div>
-          <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>خلاصهٔ دکور</label>
+          <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>{t('decor_summary')}</label>
           <textarea
             value={form.summary || ''}
             onChange={(e) => setForm({ ...form, summary: e.target.value })}
-            placeholder="توضیحات کامل دکور و صحنهٔ برنامه..."
+            placeholder={t('decor_summary_placeholder')}
             rows={4}
             style={{
               width: '100%',
@@ -4377,14 +5179,14 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
             className="btn-enter-premium"
             style={{ padding: '12px 32px', fontSize: '15px' }}
           >
-            {editingShow ? '✓ بروزرسانی' : '+ افزودن برنامه'}
+            {editingShow ? t('update_btn') : t('add_program_btn')}
           </button>
           <button
             onClick={() => { setEditingShow(null); onDone(); }}
             className="px-6 py-3 rounded-xl text-sm font-medium"
             style={{ background: 'rgba(122, 138, 128, 0.15)', color: '#4a5d52', border: '1px solid rgba(122, 138, 128, 0.3)' }}
           >
-            انصراف
+            {t('cancel')}
           </button>
         </div>
       </div>
@@ -4461,6 +5263,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
   onChange: (imgs: string[]) => void;
   showToast: (msg: string) => void;
 }) {
+  const { t, lang } = useLang();
   const [urlInput, setUrlInput] = useState('');
   const [compressing, setCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -4478,11 +5281,11 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
   const compressImage = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onerror = () => reject(new Error(`خواندن فایل ناموفق بود: ${file.name}`));
+      reader.onerror = () => reject(new Error(t('image_compress_error_toast', { name: file.name })));
       reader.onload = () => {
         const dataUrl = reader.result as string;
         const img = new window.Image();
-        img.onerror = () => reject(new Error(`تصویر نامعتبر است: ${file.name}`));
+        img.onerror = () => reject(new Error(t('image_compress_error_toast', { name: file.name })));
         img.onload = () => {
           let { width, height } = img;
           if (width > MAX_WIDTH) {
@@ -4520,11 +5323,11 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
   const addUrl = () => {
     if (!urlInput.trim()) return;
     if (images.length >= MAX_IMAGES) {
-      showToast(`حداکثر ${MAX_IMAGES.toLocaleString('fa-IR')} تصویر مجاز است`);
+      showToast(t('max_images_toast', { n: MAX_IMAGES }));
       return;
     }
     if (images.includes(urlInput.trim())) {
-      showToast('این تصویر قبلاً اضافه شده');
+      showToast(t('image_duplicate_toast'));
       return;
     }
     onChange([...images, urlInput.trim()]);
@@ -4538,7 +5341,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
     const remaining = MAX_IMAGES - imagesRef.current.length;
     const toAdd = fileArr.slice(0, remaining);
     if (toAdd.length < fileArr.length) {
-      showToast(`فقط ${toAdd.length.toLocaleString('fa-IR')} تصویر اضافه شد (حداکثر ${MAX_IMAGES.toLocaleString('fa-IR')})`);
+      showToast(t('images_added_partial_toast', { added: toAdd.length, max: MAX_IMAGES }));
     }
     setCompressing(true);
     try {
@@ -4550,7 +5353,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
             onChange([...current, compressed]);
           }
         } catch (err: any) {
-          showToast(err?.message || `خطا در فشرده‌سازی: ${file.name}`);
+          showToast(err?.message || t('image_compress_error_toast', { name: file.name }));
         }
       }
     } finally {
@@ -4576,19 +5379,19 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
     <div className="p-4 rounded-xl" style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.15)' }}>
       <div className="flex items-center justify-between mb-3">
         <h4 className="font-bold" style={{ color: '#1a2e22' }}>
-          🖼 تصاویر برنامه
+          🖼 {t('program_images')}
           <span className="text-xs font-normal mr-2" style={{ color: '#7a8a80' }}>
-            ({images.length.toLocaleString('fa-IR')} از {MAX_IMAGES.toLocaleString('fa-IR')})
+            ({images.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')} {t('image_count_of')} {MAX_IMAGES.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')})
           </span>
         </h4>
         {images.length > 0 && (
-          <span className="text-xs" style={{ color: '#016035' }}>تصویر اول = کاور</span>
+          <span className="text-xs" style={{ color: '#016035' }}>{t('first_image_cover')}</span>
         )}
       </div>
 
       {/* Compression notice */}
       <div className="text-xs mb-3" style={{ color: '#7a8a80' }}>
-        📐 تصاویر آپلودی به‌صورت خودکار به حداکثر عرض ۱۲۸۰ پیکسل تغییر اندازه و با کیفیت JPEG ۸۰٪ فشرده می‌شوند.
+        {t('compression_notice')}
       </div>
 
       {/* URL input + file upload */}
@@ -4598,7 +5401,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
           value={urlInput}
           onChange={(e) => setUrlInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addUrl())}
-          placeholder="لینک تصویر را اینجا بچسبانید..."
+          placeholder={t('paste_image_url')}
           disabled={images.length >= MAX_IMAGES}
           style={{
             flex: 1,
@@ -4625,7 +5428,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
             whiteSpace: 'nowrap',
           }}
         >
-          + افزودن لینک
+          + {t('add_link')}
         </button>
         <button
           onClick={() => fileInputRef.current?.click()}
@@ -4638,7 +5441,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
             whiteSpace: 'nowrap',
           }}
         >
-          {compressing ? '⏳ در حال فشرده‌سازی...' : '📁 آپلود فایل'}
+          {compressing ? t('fetching') : `📁 ${t('upload_file')}`}
         </button>
         <input
           ref={fileInputRef}
@@ -4658,7 +5461,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
         >
           <div className="text-3xl mb-2 opacity-40">🖼</div>
           <p className="text-xs" style={{ color: '#7a8a80' }}>
-            هنوز تصویری اضافه نشده. می‌تونید لینک بچسبانید یا فایل آپلود کنید.
+            {t('no_images_yet')}
           </p>
         </div>
       ) : (
@@ -4687,7 +5490,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
                   className="absolute top-1 right-1 text-xs px-2 py-0.5 rounded-md font-bold"
                   style={{ background: '#029048', color: 'white' }}
                 >
-                  کاور
+                  {t('cover_badge')}
                 </span>
               )}
               {/* Number badge */}
@@ -4711,7 +5514,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
                     color: idx === 0 ? 'rgba(255,255,255,0.5)' : '#1a2e22',
                     cursor: idx === 0 ? 'not-allowed' : 'pointer',
                   }}
-                  title="به چپ"
+                  title={t('move_left')}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -4721,7 +5524,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
                   onClick={() => removeImage(idx)}
                   className="p-1.5 rounded-lg"
                   style={{ background: 'rgba(220,38,38,0.9)', color: 'white' }}
-                  title="حذف"
+                  title={t('cancel')}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -4736,7 +5539,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
                     color: idx === images.length - 1 ? 'rgba(255,255,255,0.5)' : '#1a2e22',
                     cursor: idx === images.length - 1 ? 'not-allowed' : 'pointer',
                   }}
-                  title="به راست"
+                  title={t('move_right')}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -4761,7 +5564,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
               <svg className="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
               </svg>
-              <span className="text-xs font-medium">افزودن</span>
+              <span className="text-xs font-medium">{t('add_btn')}</span>
             </button>
           )}
         </div>
@@ -4779,6 +5582,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
   onVideosChange: (vids: string[]) => void;
   onYoutubeChange: (url: string) => void;
 }) {
+  const { t, lang } = useLang();
   const [urlInput, setUrlInput] = useState('');
   const [uploadWarning, setUploadWarning] = useState<string | null>(null);
   const videoFileRef = useRef<HTMLInputElement>(null);
@@ -4815,7 +5619,9 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
     // Size check
     if (file.size > MAX_VIDEO_BYTES) {
       setUploadWarning(
-        `⚠ حجم فایل ${formatBytes(file.size)} است — بیش از حد مجاز (${formatBytes(MAX_VIDEO_BYTES)}). لطفاً فایل کوچک‌تری انتخاب کنید.`
+        lang === 'en'
+          ? `⚠ File size ${formatBytes(file.size)} exceeds the limit (${formatBytes(MAX_VIDEO_BYTES)}). Please choose a smaller file.`
+          : `⚠ حجم فایل ${formatBytes(file.size)} است — بیش از حد مجاز (${formatBytes(MAX_VIDEO_BYTES)}). لطفاً فایل کوچک‌تری انتخاب کنید.`
       );
       if (videoFileRef.current) videoFileRef.current.value = '';
       return;
@@ -4829,16 +5635,21 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
       const duration = v.duration;
       if (duration > MAX_VIDEO_DURATION) {
         setUploadWarning(
-          `⚠ مدت ویدیو ${duration.toFixed(1)} ثانیه است — بیش از حد مجاز (${MAX_VIDEO_DURATION} ثانیه). لطفاً ویدیوی کوتاه‌تری انتخاب کنید.`
+          lang === 'en'
+            ? `⚠ Video duration ${duration.toFixed(1)}s exceeds the limit (${MAX_VIDEO_DURATION}s). Please choose a shorter video.`
+            : `⚠ مدت ویدیو ${duration.toFixed(1)} ثانیه است — بیش از حد مجاز (${MAX_VIDEO_DURATION} ثانیه). لطفاً ویدیوی کوتاه‌تری انتخاب کنید.`
         );
       } else {
-        setUploadWarning(`✓ فایل «${file.name}» قابل قبول است (${formatBytes(file.size)}، ${duration.toFixed(1)} ثانیه) — اما ویدیوها در نسخهٔ فعلی به‌صورت بومی ذخیره نمی‌شوند. لطفاً آن را در سرویس اشتراک‌گذاری ویدیو (یوتیوب، آپارات و...) آپلود کنید و لینک را اضافه کنید.`);
+        setUploadWarning(lang === 'en'
+          ? `✓ File "${file.name}" accepted (${formatBytes(file.size)}, ${duration.toFixed(1)}s) — but videos are not stored locally in this version. Please upload it to a video sharing service (YouTube, Aparat, ...) and add the link.`
+          : `✓ فایل «${file.name}» قابل قبول است (${formatBytes(file.size)}، ${duration.toFixed(1)} ثانیه) — اما ویدیوها در نسخهٔ فعلی به‌صورت بومی ذخیره نمی‌شوند. لطفاً آن را در سرویس اشتراک‌گذاری ویدیو (یوتیوب، آپارات و...) آپلود کنید و لینک را اضافه کنید.`
+        );
       }
       if (videoFileRef.current) videoFileRef.current.value = '';
     };
     v.onerror = () => {
       URL.revokeObjectURL(url);
-      setUploadWarning('⚠ فایل ویدیو نامعتبر است یا قابل خواندن نیست.');
+      setUploadWarning(lang === 'en' ? '⚠ Invalid video file or cannot be read.' : '⚠ فایل ویدیو نامعتبر است یا قابل خواندن نیست.');
       if (videoFileRef.current) videoFileRef.current.value = '';
     };
     v.src = url;
@@ -4847,15 +5658,15 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
   return (
     <div className="p-4 rounded-xl" style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.15)' }}>
       <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>
-        🎬 ویدیوهای برنامه
+        🎬 {t('program_videos')}
         <span className="text-xs font-normal mr-2" style={{ color: '#7a8a80' }}>
-          ({videos.length.toLocaleString('fa-IR')} ویدیو)
+          ({videos.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')} {t('videos_count_suffix')})
         </span>
       </h4>
 
       {/* Constraints reminder */}
       <div className="text-xs mb-3" style={{ color: '#7a8a80' }}>
-        🎞 ویدیوهای مستقیم: حداکثر ۳۰ ثانیه و ۵ مگابایت. ویدیوهای بلندتر را روی یوتیوب/آپارات بارگذاری کرده و لینک اضافه کنید.
+        {t('video_constraints')}
       </div>
 
       {/* Video file upload (with size + duration validation) */}
@@ -4870,7 +5681,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
             whiteSpace: 'nowrap',
           }}
         >
-          🎞 انتخاب فایل ویدیو
+          {t('select_video_file')}
         </button>
         <input
           ref={videoFileRef}
@@ -4896,7 +5707,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
 
       {/* Main YouTube search link field (auto-generated) */}
       <div className="mb-3">
-        <label className="text-xs font-bold mb-1 block" style={{ color: '#4a5d52' }}>لینک جستجوی یوتیوب (خودکار)</label>
+        <label className="text-xs font-bold mb-1 block" style={{ color: '#4a5d52' }}>{t('youtube_search_link')}</label>
         <input
           type="text"
           value={youtube}
@@ -4925,7 +5736,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
           value={urlInput}
           onChange={(e) => setUrlInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addVideo())}
-          placeholder="لینک ویدیو (یوتیوب، آپارات، Vimeo، تلگرام و...) را بچسبانید"
+          placeholder={t('paste_video_url')}
           style={{
             flex: 1,
             padding: '10px 16px',
@@ -4951,7 +5762,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
             whiteSpace: 'nowrap',
           }}
         >
-          + افزودن ویدیو
+          + {t('add_video')}
         </button>
       </div>
 
@@ -5001,7 +5812,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
                   rel="noopener noreferrer"
                   className="p-2 rounded-lg flex-shrink-0"
                   style={{ background: 'rgba(2,144,72,0.1)', color: '#016035' }}
-                  title="باز کردن"
+                  title={t('open_btn')}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -5012,7 +5823,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
                   onClick={() => removeVideo(idx)}
                   className="p-2 rounded-lg flex-shrink-0"
                   style={{ background: 'rgba(220,38,38,0.1)', color: '#dc2626' }}
-                  title="حذف"
+                  title={t('cancel')}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -5074,14 +5885,15 @@ function TagsEditor({ tags, onChange, presetTags }: {
   onChange: (tags: string[]) => void;
   presetTags?: string[];
 }) {
+  const { t, lang } = useLang();
   const [input, setInput] = useState('');
 
   const commit = (next: string[]) => {
     // De-duplicate + trim. Empty strings are dropped.
     const seen = new Set<string>();
     const clean: string[] = [];
-    for (const t of next) {
-      const s = (t || '').trim();
+    for (const tag of next) {
+      const s = (tag || '').trim();
       if (!s) continue;
       const key = s.toLowerCase();
       if (seen.has(key)) continue;
@@ -5103,25 +5915,25 @@ function TagsEditor({ tags, onChange, presetTags }: {
     onChange(tags.filter((_, i) => i !== idx));
   };
 
-  const togglePreset = (t: string) => {
-    const exists = tags.some(x => x.toLowerCase() === t.toLowerCase());
+  const togglePreset = (tag: string) => {
+    const exists = tags.some(x => x.toLowerCase() === tag.toLowerCase());
     if (exists) {
-      onChange(tags.filter(x => x.toLowerCase() !== t.toLowerCase()));
+      onChange(tags.filter(x => x.toLowerCase() !== tag.toLowerCase()));
     } else {
-      commit([...tags, t]);
+      commit([...tags, tag]);
     }
   };
 
   return (
     <div className="p-4 rounded-xl" style={{ background: 'rgba(124, 58, 237, 0.06)', border: '1px solid rgba(124, 58, 237, 0.2)' }}>
       <h4 className="font-bold mb-2" style={{ color: '#1a2e22' }}>
-        🏷 برچسب‌ها
+        🏷 {t('tags_label')}
         <span className="text-xs font-normal mr-2" style={{ color: '#7a8a80' }}>
-          ({tags.length.toLocaleString('fa-IR')} برچسب)
+          ({tags.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')} {t('tags_label')})
         </span>
       </h4>
       <p className="text-xs mb-3" style={{ color: '#7a8a80' }}>
-        برچسب‌ها را با کاما (، یا ,) جدا کنید — مثلاً: مدرن، گرم، چوبی
+        {t('tags_hint')}
       </p>
 
       {/* Comma-separated input + Add button */}
@@ -5131,7 +5943,7 @@ function TagsEditor({ tags, onChange, presetTags }: {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addFromInput(); } }}
-          placeholder="مدرن، گرم، چوبی..."
+          placeholder={t('tags_placeholder')}
           style={{
             flex: 1,
             padding: '10px 16px',
@@ -5154,26 +5966,26 @@ function TagsEditor({ tags, onChange, presetTags }: {
             whiteSpace: 'nowrap',
           }}
         >
-          + افزودن
+          + {t('add_btn')}
         </button>
       </div>
 
       {/* Removable pill list */}
       {tags.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap mb-3">
-          {tags.map((t, i) => (
+          {tags.map((tag, i) => (
             <span
               key={i}
               className="text-xs px-2 py-1 rounded-md font-medium flex items-center gap-1"
               style={{ background: 'rgba(124, 58, 237, 0.18)', color: '#6d28d9', border: '1px solid rgba(124, 58, 237, 0.3)' }}
             >
-              #{t}
+              #{tag}
               <button
                 onClick={() => removeTag(i)}
-                aria-label={`حذف ${t}`}
+                aria-label={`${t('cancel')} ${tag}`}
                 className="hover:opacity-70"
                 style={{ color: '#7c3aed', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1 }}
-                title="حذف"
+                title={t('cancel')}
               >
                 ×
               </button>
@@ -5183,9 +5995,9 @@ function TagsEditor({ tags, onChange, presetTags }: {
             onClick={() => onChange([])}
             className="text-xs px-2 py-1 rounded-md font-medium"
             style={{ background: 'rgba(220, 38, 38, 0.1)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.25)' }}
-            title="پاک کردن همه"
+            title={t('clear_all')}
           >
-            پاک کردن همه
+            {t('clear_all')}
           </button>
         </div>
       )}
@@ -5193,14 +6005,14 @@ function TagsEditor({ tags, onChange, presetTags }: {
       {/* Preset quick-add buttons (from the genre's presetTags) */}
       {presetTags && presetTags.length > 0 && (
         <div>
-          <div className="text-xs font-bold mb-2" style={{ color: '#4a5d52' }}>برچسب‌های پیشنهادی این ژانر:</div>
+          <div className="text-xs font-bold mb-2" style={{ color: '#4a5d52' }}>{t('preset_tags_hint')}</div>
           <div className="flex items-center gap-2 flex-wrap">
-            {presetTags.map(t => {
-              const selected = tags.some(x => x.toLowerCase() === t.toLowerCase());
+            {presetTags.map(tag => {
+              const selected = tags.some(x => x.toLowerCase() === tag.toLowerCase());
               return (
                 <button
-                  key={t}
-                  onClick={() => togglePreset(t)}
+                  key={tag}
+                  onClick={() => togglePreset(tag)}
                   className="text-xs px-2 py-1 rounded-md font-medium transition-all"
                   style={selected ? {
                     background: 'rgba(124, 58, 237, 0.4)',
@@ -5212,7 +6024,7 @@ function TagsEditor({ tags, onChange, presetTags }: {
                     border: '1px solid rgba(124, 58, 237, 0.2)',
                   }}
                 >
-                  {selected ? '✓ ' : '+ '}{t}
+                  {selected ? '✓ ' : '+ '}{tag}
                 </button>
               );
             })}
@@ -5234,6 +6046,7 @@ function AddGenreModal({ onClose, onSave }: {
   onClose: () => void;
   onSave: (g: Genre) => void;
 }) {
+  const { t, lang } = useLang();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [color, setColor] = useState(GENRE_COLOR_PRESETS[0]);
@@ -5248,7 +6061,7 @@ function AddGenreModal({ onClose, onSave }: {
       nameFa: trimmed,
       name: trimmed,
       color,
-      description: description.trim() || `ژانر سفارشی: ${trimmed}`,
+      description: description.trim() || (lang === 'en' ? `Custom genre: ${trimmed}` : `ژانر سفارشی: ${trimmed}`),
       filterFn: (s: TalkShow) => s.category.includes(trimmed),
       isCustom: true,
       tags: DEFAULT_GENRE_TAGS,
@@ -5263,7 +6076,7 @@ function AddGenreModal({ onClose, onSave }: {
       <div className="modal-content" style={{ maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.1)' }}>
-          <h2 className="text-xl font-bold" style={{ color: '#1a2e22' }}>+ افزودن ژانر جدید</h2>
+          <h2 className="text-xl font-bold" style={{ color: '#1a2e22' }}>{t('add_genre_new')}</h2>
           <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#7a8a80' }}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -5273,12 +6086,12 @@ function AddGenreModal({ onClose, onSave }: {
 
         <div className="p-6 space-y-4">
           <div>
-            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>نام ژانر *</label>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>{t('genre_name_required')}</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="مثلاً: مستند، انیمیشن، کودک..."
+              placeholder={t('genre_name_placeholder')}
               style={{
                 width: '100%',
                 padding: '10px 16px',
@@ -5293,11 +6106,11 @@ function AddGenreModal({ onClose, onSave }: {
           </div>
 
           <div>
-            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>توضیحات</label>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>{t('description_label')}</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="توضیح کوتاه دربارهٔ این ژانر..."
+              placeholder={t('description_placeholder')}
               rows={2}
               style={{
                 width: '100%',
@@ -5314,7 +6127,7 @@ function AddGenreModal({ onClose, onSave }: {
           </div>
 
           <div>
-            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>رنگ ژانر</label>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>{t('genre_color_label')}</label>
             <div className="flex items-center gap-2 flex-wrap">
               {GENRE_COLOR_PRESETS.map(c => (
                 <button
@@ -5341,15 +6154,15 @@ function AddGenreModal({ onClose, onSave }: {
               border: `1px solid ${color}50`,
             }}
           >
-            <div className="text-xs font-bold mb-1" style={{ color: '#7a8a80' }}>پیش‌نمایش:</div>
+            <div className="text-xs font-bold mb-1" style={{ color: '#7a8a80' }}>{t('preview_label')}</div>
             <div className="flex items-center gap-2">
               <span
                 className="w-3 h-3 rounded-full"
                 style={{ background: color, boxShadow: `0 0 10px ${color}` }}
               ></span>
-              <strong style={{ color: '#1a2e22' }}>{name || '—'}</strong>
+              <strong style={{ color: '#1a2e22' }}>{name || t('genre_preview_default')}</strong>
             </div>
-            <p className="text-xs mt-1" style={{ color: '#4a5d52' }}>{description || 'توضیحات...'}</p>
+            <p className="text-xs mt-1" style={{ color: '#4a5d52' }}>{description || t('genre_default_desc')}</p>
           </div>
 
           <div className="flex gap-3 pt-2">
@@ -5359,14 +6172,14 @@ function AddGenreModal({ onClose, onSave }: {
               className="btn-enter-premium flex-1"
               style={{ opacity: name.trim() ? 1 : 0.5, cursor: name.trim() ? 'pointer' : 'not-allowed' }}
             >
-              ✓ ذخیره ژانر
+              {t('save_genre')}
             </button>
             <button
               onClick={onClose}
               className="px-6 py-3 rounded-xl text-sm font-medium"
               style={{ background: 'rgba(122,138,128,0.15)', color: '#4a5d52', border: '1px solid rgba(122,138,128,0.3)' }}
             >
-              انصراف
+              {t('cancel')}
             </button>
           </div>
         </div>
@@ -5390,6 +6203,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
   onConfirm: (platform: string) => void;
   onOpenBotConfig: () => void;
 }) {
+  const { t, lang } = useLang();
   const [selectedPlatform, setSelectedPlatform] = useState<string>('');
   const [postText, setPostText] = useState(
     shows.length === 1
@@ -5401,12 +6215,12 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
-  const directSendSupported = selectedPlatform === 'تلگرام' || selectedPlatform === 'بله';
+  const directSendSupported = selectedPlatform === t('telegram_label') || selectedPlatform === t('bale_label');
 
   // Send the post directly to the selected channel via the /api/publish-social route.
   const handleDirectSend = async () => {
     if (!botConfig || !botConfig.token || !botConfig.chatId) {
-      setSendResult({ ok: false, msg: 'ابتدا تنظیمات ربات را وارد کنید' });
+      setSendResult({ ok: false, msg: t('bot_config_required_toast') });
       return;
     }
     setSending(true);
@@ -5429,12 +6243,12 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
       });
       const data = await res.json();
       if (data.ok) {
-        setSendResult({ ok: true, msg: `✅ پست به ${selectedPlatform} ارسال شد` });
+        setSendResult({ ok: true, msg: t('post_sent_to', { platform: selectedPlatform }) });
       } else {
-        setSendResult({ ok: false, msg: `❌ ${data.error || 'ارسال ناموفق'}` });
+        setSendResult({ ok: false, msg: t('post_send_failed', { msg: data.error || t('post_send_failed', { msg: '' }) }) });
       }
     } catch {
-      setSendResult({ ok: false, msg: '❌ خطای شبکه هنگام ارسال' });
+      setSendResult({ ok: false, msg: t('post_send_network_error') });
     } finally {
       setSending(false);
     }
@@ -5567,7 +6381,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
       <div className="modal-content" style={{ maxWidth: '700px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.1)' }}>
-          <h2 className="text-xl font-bold" style={{ color: '#1a2e22' }}>📱 انتشار در شبکه‌های اجتماعی</h2>
+          <h2 className="text-xl font-bold" style={{ color: '#1a2e22' }}>{t('publish_social_title')}</h2>
           <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#7a8a80' }}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -5578,7 +6392,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
         <div className="p-6 space-y-5">
           {/* Platform selection */}
           <div>
-            <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>انتخاب پلتفرم</h4>
+            <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>{t('select_platform')}</h4>
             <div className="grid grid-cols-3 gap-2">
               {SOCIAL_PLATFORMS.map(p => (
                 <button
@@ -5604,7 +6418,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
 
           {/* Post preview — with image + description */}
           <div>
-            <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>پیش‌نمایش پست</h4>
+            <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>{t('post_preview')}</h4>
             <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(0,0,0,0.1)' }}>
               {/* Card image preview — real program image or 1080x1080 social card */}
               <div
@@ -5636,9 +6450,9 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
                 <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(1,10,5,0.3) 0%, rgba(1,10,5,0.8) 100%)' }}></div>
 
                 <div className="relative z-10 h-full flex flex-col items-center justify-center p-8 text-center text-white">
-                  <div className="text-xs mb-3 opacity-60">بانک رسانه</div>
+                  <div className="text-xs mb-3 opacity-60">{t('banke_rasane_brand')}</div>
                   <div className="text-2xl font-bold mb-4">
-                    {shows.length === 1 ? shows[0].name : `${shows.length.toLocaleString('fa-IR')} برنامهٔ منتخب`}
+                    {shows.length === 1 ? shows[0].name : t('social_card_programs_count', { n: shows.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR') })}
                   </div>
                   {/* Description */}
                   <div className="text-sm opacity-80 max-w-xs line-clamp-3" style={{ lineHeight: 1.6 }}>
@@ -5649,7 +6463,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
                   </div>
                   {/* Category badge */}
                   <div className="mt-4 px-4 py-1.5 rounded-full text-xs" style={{ background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)' }}>
-                    {shows[0]?.category?.replace(/^\d+\.\s*/, '') || 'تاک‌شو'}
+                    {shows[0]?.category?.replace(/^\d+\.\s*/, '') || (lang === 'en' ? 'Talk show' : 'تاک‌شو')}
                   </div>
                 </div>
               </div>
@@ -5682,11 +6496,11 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
               >
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-bold" style={{ color: '#1a2e22' }}>📡 ارسال مستقیم به {selectedPlatform}</div>
+                    <div className="text-sm font-bold" style={{ color: '#1a2e22' }}>{t('direct_send_to', { platform: selectedPlatform })}</div>
                     <div className="text-xs" style={{ color: '#7a8a80' }}>
                       {botConfig
-                        ? `ربات ${botConfig.platform === 'telegram' ? 'تلگرام' : 'بله'} پیکربندی شده — مقصد: ${botConfig.chatId}`
-                        : 'برای ارسال مستقیم، ابتدا توکن ربات و شناسهٔ کانال را وارد کنید'}
+                        ? t('bot_configured', { platform: botConfig.platform === 'telegram' ? t('telegram_label') : t('bale_label'), chatId: botConfig.chatId })
+                        : t('bot_config_required')}
                     </div>
                   </div>
                   <button
@@ -5694,7 +6508,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
                     className="px-3 py-1.5 rounded-lg text-xs font-medium flex-shrink-0"
                     style={{ background: 'rgba(2,144,72,0.12)', color: '#016035', border: '1px solid rgba(2,144,72,0.3)' }}
                   >
-                    {botConfig ? '⚙ تنظیمات ربات' : '＋ پیکربندی ربات'}
+                    {botConfig ? t('bot_settings') : t('configure_bot')}
                   </button>
                 </div>
                 <button
@@ -5703,7 +6517,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
                   className="btn-enter-premium w-full mt-3"
                   style={{ opacity: botConfig && !sending ? 1 : 0.5, cursor: botConfig && !sending ? 'pointer' : 'not-allowed' }}
                 >
-                  {sending ? '⏳ در حال ارسال...' : `📡 ارسال مستقیم به ${selectedPlatform}`}
+                  {sending ? t('sending') : t('direct_send_to', { platform: selectedPlatform })}
                 </button>
                 {sendResult && (
                   <div
@@ -5727,14 +6541,14 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
                 className="btn-enter-premium flex-1"
                 style={{ opacity: selectedPlatform ? 1 : 0.5, cursor: selectedPlatform ? 'pointer' : 'not-allowed' }}
               >
-                {selectedPlatform ? `📤 انتشار دستی در ${selectedPlatform}` : 'ابتدا پلتفرم را انتخاب کنید'}
+                {selectedPlatform ? t('manual_publish_to', { platform: selectedPlatform }) : t('select_platform_first')}
               </button>
               <button
                 onClick={onClose}
                 className="px-6 py-3 rounded-xl text-sm font-medium"
                 style={{ background: 'rgba(122,138,128,0.15)', color: '#4a5d52', border: '1px solid rgba(122,138,128,0.3)' }}
               >
-                انصراف
+                {t('cancel')}
               </button>
             </div>
           </div>
@@ -5748,6 +6562,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
 // BOT CONFIG MODAL — configure Telegram/Bale bot token + chat ID
 // ============================================
 function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const { t } = useLang();
   const initial = loadBotConfig();
   const [platform, setPlatform] = useState<'telegram' | 'bale'>(initial?.platform || 'telegram');
   const [token, setToken] = useState(initial?.token || '');
@@ -5757,19 +6572,19 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
   const [showToken, setShowToken] = useState(false);
 
   const handleTest = async () => {
-    if (!token) { setTestResult({ ok: false, msg: 'توکن را وارد کنید' }); return; }
+    if (!token) { setTestResult({ ok: false, msg: t('bot_token_required') }); return; }
     setTesting(true);
     setTestResult(null);
     try {
       const res = await fetch(`/api/publish-social?platform=${platform}&token=${encodeURIComponent(token)}`);
       const data = await res.json();
       if (data.ok) {
-        setTestResult({ ok: true, msg: `✅ ربات «@${data.bot.username}» شناسایی شد` });
+        setTestResult({ ok: true, msg: t('bot_test_ok', { name: data.bot.username }) });
       } else {
-        setTestResult({ ok: false, msg: `❌ ${data.error || 'توکن نامعتبر'}` });
+        setTestResult({ ok: false, msg: t('post_send_failed', { msg: data.error || t('bot_test_invalid') }) });
       }
     } catch {
-      setTestResult({ ok: false, msg: '❌ خطای شبکه' });
+      setTestResult({ ok: false, msg: t('bot_test_network_error') });
     } finally {
       setTesting(false);
     }
@@ -5793,7 +6608,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
       <div className="modal-content" style={{ maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.1)' }}>
-          <h2 className="text-xl font-bold" style={{ color: '#1a2e22' }}>⚙ تنظیمات ربات انتشار</h2>
+          <h2 className="text-xl font-bold" style={{ color: '#1a2e22' }}>{t('bot_config_title')}</h2>
           <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#7a8a80' }}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -5804,17 +6619,17 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
         <div className="p-6 space-y-5">
           {/* Intro help */}
           <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(2,144,72,0.06)', border: '1px solid rgba(2,144,72,0.15)', color: '#4a5d52' }}>
-            برای ارسال مستقیم پست‌ها به کانال یا گروه، یک ربات بسازید و آن را ادمین مقصد کنید:
+            {t('bot_config_help_intro')}
             <ul className="mt-2 space-y-1 text-xs" style={{ color: '#7a8a80' }}>
-              <li>• تلگرام: ربات <code style={{ direction: 'ltr' }}>@BotFather</code> → /newbot</li>
-              <li>• بله: ربات <code style={{ direction: 'ltr' }}>@BotFather@</code> → ساخت ربات جدید</li>
-              <li>• سپس ربات را به کانال/گروه ادمین کنید</li>
+              <li>{t('bot_config_help_tg')}</li>
+              <li>{t('bot_config_help_bale')}</li>
+              <li>{t('bot_config_help_admin')}</li>
             </ul>
           </div>
 
           {/* Platform picker */}
           <div>
-            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>پلتفرم</label>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>{t('platform_label')}</label>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => setPlatform('telegram')}
@@ -5822,7 +6637,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
                 style={platform === 'telegram' ? { background: '#0088cc', color: 'white', border: '2px solid #0088cc' } : { background: '#0088cc15', color: '#0088cc', border: '1px solid #0088cc30' }}
               >
                 <div className="text-2xl mb-1">✈</div>
-                <div className="text-sm font-bold">تلگرام</div>
+                <div className="text-sm font-bold">{t('telegram_label')}</div>
               </button>
               <button
                 onClick={() => setPlatform('bale')}
@@ -5830,14 +6645,14 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
                 style={platform === 'bale' ? { background: '#ffaa00', color: 'white', border: '2px solid #ffaa00' } : { background: '#ffaa0015', color: '#ffaa00', border: '1px solid #ffaa0030' }}
               >
                 <div className="text-2xl mb-1">💬</div>
-                <div className="text-sm font-bold">بله</div>
+                <div className="text-sm font-bold">{t('bale_label')}</div>
               </button>
             </div>
           </div>
 
           {/* Bot token */}
           <div>
-            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>توکن ربات (Bot Token)</label>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>{t('bot_token_label')}</label>
             <div className="flex gap-2">
               <input
                 type={showToken ? 'text' : 'password'}
@@ -5862,14 +6677,14 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
                 className="px-3 rounded-xl text-sm font-medium"
                 style={{ background: 'rgba(122,138,128,0.15)', color: '#4a5d52', border: '1px solid rgba(122,138,128,0.3)' }}
               >
-                {showToken ? '🙈 پنهان' : '👁 نمایش'}
+                {showToken ? t('hide_btn') : t('show_btn')}
               </button>
             </div>
           </div>
 
           {/* Chat ID */}
           <div>
-            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>شناسهٔ مقصد (Chat ID)</label>
+            <label className="text-sm font-bold mb-2 block" style={{ color: '#1a2e22' }}>{t('chat_id_label')}</label>
             <input
               type="text"
               value={chatId}
@@ -5889,7 +6704,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
               }}
             />
             <p className="text-xs mt-1" style={{ color: '#7a8a80' }}>
-              برای کانال: نام کاربری کانال (مثل @mychannel) یا Chat ID عددی. برای چت خصوصی: Chat ID عددی شما.
+              {t('chat_id_help')}
             </p>
           </div>
 
@@ -5905,7 +6720,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
               cursor: testing || !token ? 'not-allowed' : 'pointer',
             }}
           >
-            {testing ? '⏳ در حال بررسی...' : '🔍 تست اتصال ربات'}
+            {testing ? t('testing') : t('test_connection')}
           </button>
           {testResult && (
             <div
@@ -5927,7 +6742,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
               className="btn-enter-premium flex-1"
               style={{ opacity: token && chatId ? 1 : 0.5, cursor: token && chatId ? 'pointer' : 'not-allowed' }}
             >
-              ✓ ذخیره تنظیمات
+              {t('save_settings')}
             </button>
             {initial && (
               <button
@@ -5935,7 +6750,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
                 className="px-4 py-2 rounded-xl text-sm font-medium"
                 style={{ background: 'rgba(220,38,38,0.12)', color: '#dc2626', border: '1px solid rgba(220,38,38,0.3)' }}
               >
-                🗑 پاک کردن
+                {t('clear_btn')}
               </button>
             )}
           </div>
@@ -5954,6 +6769,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
   onClose: () => void;
   onDownload: () => void;
 }) {
+  const { t, lang } = useLang();
   const [downloading, setDownloading] = useState(false);
 
   const handleDownload = async () => {
@@ -5979,7 +6795,15 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
       } else {
         // Excel: generate a proper .xls file (HTML table that Excel opens natively).
         // Persian text is preserved by emitting UTF-8 + BOM and the meta charset.
-        const headers = ['شماره', 'نام برنامه', 'دسته‌بندی', 'اندازه', 'سبک', 'خلاصه', 'توضیحات'];
+        const headers = [
+          t('show_num'),
+          t('name_program'),
+          t('category_label'),
+          t('studio_size'),
+          t('decor_style'),
+          t('decor_summary'),
+          t('about_program'),
+        ];
         const escapeHtml = (s: unknown) => String(s ?? '')
           .replace(/&/g, '&amp;')
           .replace(/</g, '&lt;')
@@ -5998,7 +6822,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
           ];
           return `<tr>${cells.map((c, idx) => `<td style="padding:6px 8px;border:1px solid #ddd;font-family:Tahoma;font-size:12px;${idx === 0 ? 'text-align:center;' : 'text-align:right;'}">${escapeHtml(c)}</td>`).join('')}</tr>`;
         }).join('');
-        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>بانک رسانه — خروجی Excel</title></head><body><table style="border-collapse:collapse;width:100%;">${headerRow}${bodyRows}</table></body></html>`;
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${t('excel_banke_rasane')}</title></head><body><table style="border-collapse:collapse;width:100%;">${headerRow}${bodyRows}</table></body></html>`;
         // Prepend UTF-8 BOM so Excel detects Persian correctly.
         const blob = new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel;charset=utf-8' });
         const url = URL.createObjectURL(blob);
@@ -6022,7 +6846,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
         {/* Header */}
         <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(2,144,72,0.1)' }}>
           <h2 className="text-xl font-bold" style={{ color: '#1a2e22' }}>
-            {format === 'pdf' ? '📄 پیش‌نمایش گزارش PDF' : '📊 پیش‌نمایش گزارش Excel'}
+            {format === 'pdf' ? t('pdf_preview_title') : t('excel_preview_title')}
           </h2>
           <button onClick={onClose} className="p-2 rounded-lg" style={{ color: '#7a8a80' }}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -6036,16 +6860,16 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
           <div className="mb-4 p-4 rounded-xl" style={{ background: 'rgba(2,144,72,0.08)', border: '1px solid rgba(2,144,72,0.2)' }}>
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm" style={{ color: '#4a5d52' }}>تعداد برنامه‌ها</div>
-                <div className="text-2xl font-bold" style={{ color: '#016035' }}>{shows.length.toLocaleString('fa-IR')}</div>
+                <div className="text-sm" style={{ color: '#4a5d52' }}>{t('program_count_label')}</div>
+                <div className="text-2xl font-bold" style={{ color: '#016035' }}>{shows.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
               </div>
               <div>
-                <div className="text-sm" style={{ color: '#4a5d52' }}>فرمت</div>
+                <div className="text-sm" style={{ color: '#4a5d52' }}>{t('format_label')}</div>
                 <div className="text-2xl font-bold" style={{ color: format === 'pdf' ? '#dc2626' : '#016035' }}>{format.toUpperCase()}</div>
               </div>
               <div>
-                <div className="text-sm" style={{ color: '#4a5d52' }}>تاریخ</div>
-                <div className="text-2xl font-bold" style={{ color: '#1a2e22' }}>{new Date().toLocaleDateString('fa-IR')}</div>
+                <div className="text-sm" style={{ color: '#4a5d52' }}>{t('date')}</div>
+                <div className="text-2xl font-bold" style={{ color: '#1a2e22' }}>{new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
               </div>
             </div>
           </div>
@@ -6061,15 +6885,15 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
                   color: 'white',
                 }}
               >
-                <div style={{ color: 'rgba(168, 230, 193, 0.6)', fontSize: '11px', letterSpacing: '4px', marginBottom: '12px' }}>بانک رسانه</div>
+                <div style={{ color: 'rgba(168, 230, 193, 0.6)', fontSize: '11px', letterSpacing: '4px', marginBottom: '12px' }}>{t('banke_rasane_brand')}</div>
                 <div style={{ color: '#4ade80', marginBottom: '10px', filter: 'drop-shadow(0 0 16px rgba(74, 222, 128, 0.5))' }}>
                   <svg viewBox="0 0 64 64" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="2" style={{ display: 'inline-block' }}>
                     <rect x="6" y="14" width="52" height="36" rx="4" />
                     <path d="M6 22h52M14 14v-4M50 14v-4M20 32l10 6-10 6z" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-black mb-2" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.4)' }}>گزارش جامع آرشیو برنامه‌های تلویزیونی</h3>
-                <p className="text-xs" style={{ color: 'rgba(168, 230, 193, 0.8)' }}>بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی</p>
+                <h3 className="text-xl font-black mb-2" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.4)' }}>{t('report_title_full')}</h3>
+                <p className="text-xs" style={{ color: 'rgba(168, 230, 193, 0.8)' }}>{t('banke_rasane_archive')}</p>
                 <div
                   className="flex justify-center gap-4 mt-4 mx-auto"
                   style={{
@@ -6082,18 +6906,18 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
                   }}
                 >
                   <div>
-                    <div className="text-xl font-black" style={{ color: '#4ade80' }}>{shows.length.toLocaleString('fa-IR')}</div>
-                    <div className="text-xs" style={{ color: 'rgba(168, 230, 193, 0.7)' }}>برنامه</div>
+                    <div className="text-xl font-black" style={{ color: '#4ade80' }}>{shows.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
+                    <div className="text-xs" style={{ color: 'rgba(168, 230, 193, 0.7)' }}>{t('programs_unit')}</div>
                   </div>
                   <div style={{ width: '1px', background: 'rgba(74, 222, 128, 0.3)' }}></div>
                   <div>
-                    <div className="text-xl font-black" style={{ color: '#4ade80' }}>{new Set(shows.map(s => s.category)).size.toLocaleString('fa-IR')}</div>
-                    <div className="text-xs" style={{ color: 'rgba(168, 230, 193, 0.7)' }}>دستهٔ ژانری</div>
+                    <div className="text-xl font-black" style={{ color: '#4ade80' }}>{new Set(shows.map(s => s.category)).size.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
+                    <div className="text-xs" style={{ color: 'rgba(168, 230, 193, 0.7)' }}>{t('genre_category_unit')}</div>
                   </div>
                   <div style={{ width: '1px', background: 'rgba(74, 222, 128, 0.3)' }}></div>
                   <div>
-                    <div className="text-xl font-black" style={{ color: '#4ade80' }}>{new Date().toLocaleDateString('fa-IR')}</div>
-                    <div className="text-xs" style={{ color: 'rgba(168, 230, 193, 0.7)' }}>تاریخ</div>
+                    <div className="text-xl font-black" style={{ color: '#4ade80' }}>{new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
+                    <div className="text-xs" style={{ color: 'rgba(168, 230, 193, 0.7)' }}>{t('date')}</div>
                   </div>
                 </div>
               </div>
@@ -6101,18 +6925,18 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
               {/* Sections list — shows the report structure with descriptions */}
               <div className="p-4" style={{ background: '#f8faf9' }}>
                 <div className="text-xs font-bold mb-3" style={{ color: '#016035', paddingRight: '8px', borderRight: '3px solid #029048' }}>
-                  ساختار گزارش (۸ بخش) — هر بخش شامل توضیحات کامل
+                  {t('report_structure')}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {[
-                    { n: 1, t: 'خلاصه اجرایی', icon: '📋', desc: 'مرور کلی آرشیو، حجم داده‌ها، یافته‌های کلیدی و نکات مهم برای تصمیم‌گیرندگان' },
-                    { n: 2, t: 'روش جمع‌آوری داده', icon: '🔬', desc: 'توضیح منابع داده، فرایند طبقه‌بندی ژانری و رویکرد ترکیبی' },
-                    { n: 3, t: 'نمای آماری کلی', icon: '📊', desc: '۴ کارت آماری + ۵ نمودار میله‌ای: اندازه استودیو، سبک دکور، تماشاگر، نورپردازی، چیدمان' },
-                    { n: 4, t: 'تحلیل توزیع ژانرها', icon: '🏷', desc: 'نمودار کامل توزیع + معرفی تفصیلی هر دسته با شمارش، درصد، و برنامه‌های شاخص' },
-                    { n: 5, t: 'تحلیل دکور و صحنه', icon: '🎨', desc: '۴ نمودار: عناصر پرتکرار صحنه، مصالح، طیف رنگی، نورپردازی + یافته‌های تحلیلی' },
-                    { n: 6, t: 'فهرست تفصیلی برنامه‌ها', icon: '📚', desc: 'کارت کامل برای هر برنامه: تصویر، توضیحات فارسی، تگ‌ها، مشخصات دکور، خلاصه' },
-                    { n: 7, t: 'نتیجه‌گیری و پیشنهادها', icon: '💡', desc: 'جمع‌بندی یافته‌ها + ۵ پیشنهاد اجرایی + بخش امضا و تاریخ' },
-                    { n: 8, t: 'پیوست: نمایهٔ الفبایی', icon: '📑', desc: 'فهرست کامل همهٔ برنامه‌ها به ترتیب الفبایی با شماره و دستهٔ ژانری' },
+                    { n: 1, t: t('section_exec_summary'), icon: '📋', desc: t('section_exec_summary_desc') },
+                    { n: 2, t: t('section_methodology'), icon: '🔬', desc: t('section_methodology_desc') },
+                    { n: 3, t: t('section_stats_overview'), icon: '📊', desc: t('section_stats_overview_desc') },
+                    { n: 4, t: t('section_genre_analysis'), icon: '🏷', desc: t('section_genre_analysis_desc') },
+                    { n: 5, t: t('section_decor_analysis'), icon: '🎨', desc: t('section_decor_analysis_desc') },
+                    { n: 6, t: t('section_program_list'), icon: '📚', desc: t('section_program_list_desc') },
+                    { n: 7, t: t('section_conclusion'), icon: '💡', desc: t('section_conclusion_desc') },
+                    { n: 8, t: t('section_appendix'), icon: '📑', desc: t('section_appendix_desc') },
                   ].map(s => (
                     <div
                       key={s.n}
@@ -6123,7 +6947,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
                         className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0"
                         style={{ background: 'linear-gradient(135deg, #029048 0%, #016035 100%)', color: 'white', boxShadow: '0 2px 6px rgba(2, 144, 72, 0.3)' }}
                       >
-                        {s.n.toLocaleString('fa-IR')}
+                        {s.n.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}
                       </span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 mb-1">
@@ -6141,7 +6965,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
 
               {/* Sample program card preview */}
               <div className="p-4" style={{ background: 'white', borderTop: '1px solid #e0e8e4' }}>
-                <div className="text-xs font-bold mb-2" style={{ color: '#016035' }}>نمونه کارت برنامه (از بخش ۶)</div>
+                <div className="text-xs font-bold mb-2" style={{ color: '#016035' }}>{t('sample_program_card')}</div>
                 <div
                   className="rounded-lg overflow-hidden"
                   style={{ border: '1px solid #e0e8e4', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}
@@ -6153,11 +6977,11 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
                     <span
                       className="w-5 h-5 rounded flex items-center justify-center text-xs font-bold flex-shrink-0"
                       style={{ background: '#029048', color: 'white' }}
-                    >۱</span>
+                    >{lang === 'en' ? '1' : '۱'}</span>
                     <span className="text-xs font-bold flex-1" style={{ color: '#1a2e22', direction: 'ltr', textAlign: 'right' }}>
-                      {shows[0]?.name || 'نمونه برنامه'}
+                      {shows[0]?.name || t('sample_program')}
                     </span>
-                    <span className="text-xs" style={{ color: '#7a8a80' }}>شناسه: ۱</span>
+                    <span className="text-xs" style={{ color: '#7a8a80' }}>{t('identifier_label')} {lang === 'en' ? '1' : '۱'}</span>
                   </div>
                   <div className="p-2 flex gap-2">
                     <div
@@ -6167,10 +6991,10 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap gap-1 mb-1">
                         <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(2,144,72,0.08)', color: '#016035', fontSize: '9px' }}>
-                          {shows[0]?.style || 'مدرن'}
+                          {shows[0]?.style || t('modern')}
                         </span>
                         <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(2,144,72,0.08)', color: '#016035', fontSize: '9px' }}>
-                          {shows[0]?.size || 'متوسط'}
+                          {shows[0]?.size || t('medium_std')}
                         </span>
                       </div>
                       <p className="text-xs" style={{ color: '#2a3a30', lineHeight: 1.5 }}>
@@ -6183,7 +7007,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
 
               {shows.length > 80 && (
                 <div className="p-2 text-center text-xs" style={{ background: '#fef9e7', color: '#7a8a80' }}>
-                  در گزارش کامل، ۸۰ برنامهٔ نخست به‌صورت تفصیلی و همهٔ {shows.length.toLocaleString('fa-IR')} برنامه در نمایهٔ الفبایی
+                  {t('full_report_detailed_first', { n: shows.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR') })}
                 </div>
               )}
             </div>
@@ -6193,24 +7017,24 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
           {format === 'excel' && (
             <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(0,0,0,0.1)' }}>
               <div className="p-3 text-center" style={{ background: 'linear-gradient(135deg, #029048 0%, #016035 100%)', color: 'white' }}>
-                <div className="text-lg font-bold">بانک رسانه — خروجی Excel</div>
-                <div className="text-xs opacity-80">{shows.length.toLocaleString('fa-IR')} برنامه</div>
+                <div className="text-lg font-bold">{t('excel_banke_rasane')}</div>
+                <div className="text-xs opacity-80">{shows.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')} {t('programs_unit')}</div>
               </div>
               <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
                 <table className="w-full" style={{ fontSize: '12px' }}>
                   <thead style={{ position: 'sticky', top: 0, background: '#f5efe0', zIndex: 1 }}>
                     <tr>
                       <th className="text-right p-2 font-bold" style={{ color: '#4a5d52' }}>#</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#4a5d52' }}>نام</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#4a5d52' }}>دسته</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#4a5d52' }}>سبک</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#4a5d52' }}>اندازه</th>
+                      <th className="text-right p-2 font-bold" style={{ color: '#4a5d52' }}>{t('name_col')}</th>
+                      <th className="text-right p-2 font-bold" style={{ color: '#4a5d52' }}>{t('category_col')}</th>
+                      <th className="text-right p-2 font-bold" style={{ color: '#4a5d52' }}>{t('decor_style')}</th>
+                      <th className="text-right p-2 font-bold" style={{ color: '#4a5d52' }}>{t('studio_size')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {shows.slice(0, 50).map((s, i) => (
                       <tr key={s.num} style={{ borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-                        <td className="p-2" style={{ color: '#7a8a80' }}>{(i + 1).toLocaleString('fa-IR')}</td>
+                        <td className="p-2" style={{ color: '#7a8a80' }}>{(i + 1).toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</td>
                         <td className="p-2 font-medium" style={{ color: '#1a2e22', direction: 'ltr', textAlign: 'right' }}>{s.name}</td>
                         <td className="p-2" style={{ color: '#4a5d52' }}>{s.category.replace(/^\d+\.\s*/, '').substring(0, 20)}</td>
                         <td className="p-2" style={{ color: '#4a5d52' }}>{s.style}</td>
@@ -6230,20 +7054,20 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
               disabled={downloading}
               className="btn-enter-premium flex-1"
             >
-              {downloading ? '⏳ در حال تولید...' : `⬇ دانلود فایل ${format.toUpperCase()}`}
+              {downloading ? t('generating') : t('download_file', { format: format.toUpperCase() })}
             </button>
             <button
               onClick={onClose}
               className="px-6 py-3 rounded-xl text-sm font-medium"
               style={{ background: 'rgba(122,138,128,0.15)', color: '#4a5d52', border: '1px solid rgba(122,138,128,0.3)' }}
             >
-              انصراف
+              {t('cancel')}
             </button>
           </div>
           {format === 'pdf' && (
             <p className="mt-3 text-xs text-center" style={{ color: '#7a8a80', lineHeight: 1.7 }}>
-              گزارش شامل ۸ بخش است: صفحهٔ عنوان، فهرست مطالب، خلاصهٔ اجرایی، روش تحقیق، نمای آماری، تحلیل ژانرها، تحلیل دکور، و معرفی تفصیلی برنامه‌ها.<br />
-              پس از کلیک روی دانلود، پنجره چاپ باز می‌شود — مقاس «A4» و «Save as PDF» را انتخاب کنید.
+              {t('pdf_help_text')}<br />
+              {t('print_dialog_help')}
             </p>
           )}
         </div>
@@ -6269,32 +7093,32 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
   };
 
   const reports = [
-    { id: 1, title: lang === 'en' ? 'Full report of all programs' : 'گزارش کامل همهٔ برنامه‌ها', type: 'pdf', count: stats.total, date: '۱۴۰۴/۰۸/۲۵' },
-    { id: 2, title: lang === 'en' ? 'Report of programs uploaded to social media' : 'گزارش برنامه‌های آپلود شده در فضای مجازی', type: 'excel', count: stats.uploaded, date: '۱۴۰۴/۰۸/۲۵' },
+    { id: 1, title: lang === 'en' ? 'Full report of all programs' : 'گزارش کامل همهٔ برنامه‌ها', type: 'pdf', count: stats.total, date: lang === 'en' ? new Date().toLocaleDateString('en-US') : new Date().toLocaleDateString('fa-IR') },
+    { id: 2, title: lang === 'en' ? 'Report of programs uploaded to social media' : 'گزارش برنامه‌های آپلود شده در فضای مجازی', type: 'excel', count: stats.uploaded, date: lang === 'en' ? new Date().toLocaleDateString('en-US') : new Date().toLocaleDateString('fa-IR') },
   ];
 
   return (
     <>
       <header className="mb-8 animate-view-enter">
         <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-fg-strong" style={{ color: 'var(--fg-strong)' }}>{t('reports')}</h1>
-        <p className="text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{lang === 'en' ? 'Banke Rasaneh stats & reports' : 'آمار و گزارش‌های بانک رسانه'}</p>
+        <p className="text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('banke_rasane_stats_reports')}</p>
       </header>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 animate-view-enter">
         <div className="premium-glass p-5">
-          <div className="text-3xl font-black mb-1" style={{ color: '#029048' }}>{stats.total.toLocaleString('fa-IR')}</div>
+          <div className="text-3xl font-black mb-1" style={{ color: '#029048' }}>{stats.total.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
           <div className="text-sm text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('total_programs')}</div>
         </div>
         <div className="premium-glass p-5">
-          <div className="text-3xl font-black mb-1" style={{ color: '#7c3aed' }}>{stats.uploaded.toLocaleString('fa-IR')}</div>
+          <div className="text-3xl font-black mb-1" style={{ color: '#7c3aed' }}>{stats.uploaded.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
           <div className="text-sm text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('uploaded')}</div>
         </div>
         <div className="premium-glass p-5">
-          <div className="text-3xl font-black mb-1" style={{ color: '#016035' }}>{GENRES.length.toLocaleString('fa-IR')}</div>
+          <div className="text-3xl font-black mb-1" style={{ color: '#016035' }}>{GENRES.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
           <div className="text-sm text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('genre')}</div>
         </div>
         <div className="premium-glass p-5">
-          <div className="text-3xl font-black mb-1" style={{ color: '#2563eb' }}>{stats.withImage.toLocaleString('fa-IR')}</div>
+          <div className="text-3xl font-black mb-1" style={{ color: '#2563eb' }}>{stats.withImage.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</div>
           <div className="text-sm text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{t('with_image')}</div>
         </div>
       </div>
@@ -6323,7 +7147,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                 onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--table-row-bg-odd)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
-                <td className="p-4 text-sm text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{(idx + 1).toLocaleString('fa-IR')}</td>
+                <td className="p-4 text-sm text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{(idx + 1).toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</td>
                 <td className="p-4 text-sm font-medium text-fg-strong" style={{ color: 'var(--fg-strong)' }}>{r.title}</td>
                 <td className="p-4 hidden sm:table-cell">
                   <span
@@ -6336,7 +7160,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                     {r.type === 'pdf' ? t('pdf') : t('excel')}
                   </span>
                 </td>
-                <td className="p-4 text-sm text-fg-soft" style={{ color: 'var(--fg-soft)' }}>{r.count.toLocaleString('fa-IR')}</td>
+                <td className="p-4 text-sm text-fg-soft" style={{ color: 'var(--fg-soft)' }}>{r.count.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}</td>
                 <td className="p-4 text-sm hidden sm:table-cell text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{r.date}</td>
                 <td className="p-4">
                   <button
@@ -6346,7 +7170,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                       let shows: TalkShow[] = [];
                       if (r.id === 1) shows = talkShows;
                       else if (r.id === 2) shows = talkShows.filter(s => uploadedShows.includes(s.num));
-                      if (shows.length === 0) { showToast(lang === 'en' ? 'No programs for this report' : 'برنامه‌ای برای این گزارش وجود ندارد'); return; }
+                      if (shows.length === 0) { showToast(t('no_programs_for_report')); return; }
                       onExport(shows, r.type === 'pdf' ? 'pdf' : 'excel');
                     }}
                   >
@@ -6379,13 +7203,14 @@ function SettingsModal({
   showToast: (msg: string) => void;
   onLogout: () => void;
 }) {
+  const { t } = useLang();
   const [tab, setTab] = useState<'server' | 'users' | 'password' | 'audit'>('server');
 
   const tabs = [
-    { key: 'server' as const,   label: 'سرور',     icon: '🖥' },
-    { key: 'users' as const,    label: 'کاربران',  icon: '👥' },
-    { key: 'password' as const, label: 'رمز عبور', icon: '🔑' },
-    { key: 'audit' as const,    label: 'تاریخچه',  icon: '📜' },
+    { key: 'server' as const,   label: t('tab_server'),     icon: '🖥' },
+    { key: 'users' as const,    label: t('tab_users'),     icon: '👥' },
+    { key: 'password' as const, label: t('tab_password'),  icon: '🔑' },
+    { key: 'audit' as const,    label: t('tab_audit'),     icon: '📜' },
   ];
 
   return (
@@ -6415,10 +7240,10 @@ function SettingsModal({
             borderBottom: '1px solid rgba(74, 222, 128, 0.4)',
           }}
         >
-          <h2 className="text-lg font-bold" style={{ color: 'white' }}>⚙ تنظیمات سیستم</h2>
+          <h2 className="text-lg font-bold" style={{ color: 'white' }}>{t('system_settings_title')}</h2>
           <button
             onClick={onClose}
-            aria-label="بستن تنظیمات"
+            aria-label={t('close_settings')}
             className="p-2 rounded-lg transition-colors"
             style={{ color: 'rgba(255, 255, 255, 0.7)' }}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(220, 38, 38, 0.25)'; e.currentTarget.style.color = '#fca5a5'; }}
@@ -6435,12 +7260,12 @@ function SettingsModal({
           className="flex items-center gap-1 p-2 flex-shrink-0"
           style={{ background: 'rgba(2, 144, 72, 0.05)', borderBottom: '1px solid rgba(2, 144, 72, 0.12)' }}
         >
-          {tabs.map((t) => {
-            const active = tab === t.key;
+          {tabs.map((tabItem) => {
+            const active = tab === tabItem.key;
             return (
               <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
+                key={tabItem.key}
+                onClick={() => setTab(tabItem.key)}
                 className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition-all"
                 style={active ? {
                   background: 'linear-gradient(135deg, #029048 0%, #016035 100%)',
@@ -6451,8 +7276,8 @@ function SettingsModal({
                   border: '1px solid transparent',
                 }}
               >
-                <span>{t.icon}</span>
-                <span>{t.label}</span>
+                <span>{tabItem.icon}</span>
+                <span>{tabItem.label}</span>
               </button>
             );
           })}
@@ -6472,6 +7297,7 @@ function SettingsModal({
 
 // --- Tab 1: Server URL ---
 function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) {
+  const { t } = useLang();
   const [url, setUrl] = useState('');
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -6487,12 +7313,12 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
       const res = await fetch(`${url.replace(/\/+$/, '')}/api/health`, { method: 'GET' });
       const data = await res.json();
       if (res.ok && data?.status === 'ok') {
-        setTestResult({ ok: true, msg: 'اتصال برقرار شد ✓' });
+        setTestResult({ ok: true, msg: t('connection_ok') });
       } else {
-        setTestResult({ ok: false, msg: `پاسخ نامعتبر: ${JSON.stringify(data).slice(0, 100)}` });
+        setTestResult({ ok: false, msg: t('connection_invalid_response', { body: JSON.stringify(data).slice(0, 100) }) });
       }
     } catch (e: any) {
-      setTestResult({ ok: false, msg: `خطا در اتصال: ${e?.message || 'نامشخص'}` });
+      setTestResult({ ok: false, msg: t('connection_error', { msg: e?.message || '' }) });
     } finally {
       setTesting(false);
     }
@@ -6500,16 +7326,16 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
 
   const handleSave = () => {
     setApiBase(url);
-    showToast('آدرس سرور ذخیره شد. برای اعمال کامل، صفحه را بارگذاری مجدد کنید.');
-    setTestResult({ ok: true, msg: 'ذخیره شد ✓ — آدرس جدید اعمال شد.' });
+    showToast(t('server_url_saved'));
+    setTestResult({ ok: true, msg: t('server_url_saved') });
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div>
-        <h3 className="text-base font-bold mb-1" style={{ color: '#1a2e22' }}>🖥 آدرس سرور API</h3>
+        <h3 className="text-base font-bold mb-1" style={{ color: '#1a2e22' }}>{t('api_server_url')}</h3>
         <p className="text-sm mb-3" style={{ color: '#7a8a80' }}>
-          آدرس سرویس API که این برنامه به آن متصل می‌شود. پیش‌فرض: <code dir="ltr" style={{ background: 'rgba(2,144,72,0.1)', padding: '2px 6px', borderRadius: '6px', color: '#016035' }}>http://localhost:3002</code>
+          {t('api_server_desc')} <code dir="ltr" style={{ background: 'rgba(2,144,72,0.1)', padding: '2px 6px', borderRadius: '6px', color: '#016035' }}>http://localhost:3002</code>
         </p>
         <input
           type="text"
@@ -6559,7 +7385,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
             cursor: testing || !url ? 'not-allowed' : 'pointer',
           }}
         >
-          {testing ? '⏳ در حال تست...' : '🔍 تست اتصال'}
+          {testing ? t('testing') : t('test_connection')}
         </button>
         <button
           onClick={handleSave}
@@ -6570,7 +7396,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
             boxShadow: '0 4px 12px rgba(2, 144, 72, 0.3)',
           }}
         >
-          ✓ ذخیره آدرس
+          {t('save_address')}
         </button>
       </div>
 
@@ -6578,8 +7404,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
         className="p-3 rounded-xl text-xs"
         style={{ background: 'rgba(2, 144, 72, 0.05)', border: '1px solid rgba(2, 144, 72, 0.15)', color: '#4a5d52', lineHeight: 1.7 }}
       >
-        <strong>راهنما:</strong> آدرس وارد شده باید ریشهٔ سرویس API باشد (بدون مسیرهای <code dir="ltr">/api/...</code>).
-        اگر از گیتوی Caddy استفاده می‌کنید، می‌توانید آدرس نسبی وارد کنید. پس از ذخیره، توکن فعلی شما معتبر می‌ماند.
+        {t('server_help')}
       </div>
     </div>
   );
@@ -6587,6 +7412,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
 
 // --- Tab 2: Users management ---
 function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showToast: (msg: string) => void }) {
+  const { t, lang } = useLang();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -6600,7 +7426,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
       const list = await api.getUsers();
       setUsers(list);
     } catch (e: any) {
-      setError(e?.message || 'خطا در بارگذاری کاربران');
+      setError(e?.message || t('error_loading_users'));
     } finally {
       setLoading(false);
     }
@@ -6610,7 +7436,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
 
   const handleCreate = async () => {
     if (!newUser.username.trim() || !newUser.password) {
-      showToast('نام کاربری و رمز را وارد کنید');
+      showToast(t('enter_username_password'));
       return;
     }
     setCreating(true);
@@ -6621,11 +7447,11 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
         role: newUser.role,
         name: newUser.name,
       });
-      showToast(`کاربر «${newUser.username}» ساخته شد`);
+      showToast(t('user_created_toast', { name: newUser.username }));
       setNewUser({ username: '', password: '', role: 'viewer', name: '' });
       await load();
     } catch (e: any) {
-      showToast(e?.message || 'خطا در ایجاد کاربر');
+      showToast(e?.message || t('error_loading_users'));
     } finally {
       setCreating(false);
     }
@@ -6633,38 +7459,46 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
 
   const handleDelete = async (u: User) => {
     if (u.id === currentUser.id) {
-      showToast('نمی‌توانید حساب خودتان را حذف کنید');
+      showToast(t('cannot_delete_self'));
       return;
     }
-    if (!confirm(`کاربر «${u.username}» حذف شود؟`)) return;
+    if (!confirm(t('delete_user_confirm', { name: u.username }))) return;
     try {
       await api.deleteUser(u.id);
-      showToast('کاربر حذف شد');
+      showToast(t('user_deleted_toast'));
       await load();
     } catch (e: any) {
-      showToast(e?.message || 'خطا در حذف کاربر');
+      showToast(e?.message || t('error_loading_users'));
     }
   };
 
   const handleChangeRole = async (u: User, newRole: string) => {
     if (newRole === u.role) return;
+    if (u.id === currentUser.id) {
+      showToast(t('cannot_change_role_self'));
+      return;
+    }
     try {
       await api.updateUser(u.id, { role: newRole });
-      showToast(`نقش «${u.username}» به ${newRole} تغییر کرد`);
+      showToast(t('user_role_changed_toast', { name: u.username, role: newRole }));
       await load();
     } catch (e: any) {
-      showToast(e?.message || 'خطا در تغییر نقش');
+      showToast(e?.message || t('error_loading_users'));
     }
   };
 
-  const roleLabel: Record<string, string> = { admin: 'مدیر', editor: 'ویراستار', viewer: 'بیننده' };
+  const roleLabel: Record<string, string> = {
+    admin: t('role_admin'),
+    editor: t('role_editor'),
+    viewer: t('role_viewer'),
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div>
-        <h3 className="text-base font-bold mb-1" style={{ color: '#1a2e22' }}>👥 مدیریت کاربران</h3>
+        <h3 className="text-base font-bold mb-1" style={{ color: '#1a2e22' }}>{t('users_management')}</h3>
         <p className="text-sm" style={{ color: '#7a8a80' }}>
-          افزودن، حذف یا تغییر نقش کاربران سیستم. نقش‌ها: مدیر (دسترسی کامل)، ویراستار (افزودن/ویرایش برنامه‌ها)، بیننده (فقط مشاهده).
+          {t('users_management_desc')}
         </p>
       </div>
 
@@ -6673,12 +7507,12 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
         className="p-4 rounded-xl"
         style={{ background: 'rgba(2, 144, 72, 0.05)', border: '1px solid rgba(2, 144, 72, 0.15)' }}
       >
-        <h4 className="font-bold text-sm mb-3" style={{ color: '#1a2e22' }}>＋ افزودن کاربر جدید</h4>
+        <h4 className="font-bold text-sm mb-3" style={{ color: '#1a2e22' }}>{t('add_new_user')}</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
           <input
             type="text"
             dir="ltr"
-            placeholder="نام کاربری"
+            placeholder={t('username_placeholder')}
             value={newUser.username}
             onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
             style={{
@@ -6695,7 +7529,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
           />
           <input
             type="text"
-            placeholder="نام نمایشی (اختیاری)"
+            placeholder={t('display_name_optional')}
             value={newUser.name}
             onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
             style={{
@@ -6711,7 +7545,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
           <input
             type="password"
             dir="ltr"
-            placeholder="رمز عبور (حداقل ۴ کاراکتر)"
+            placeholder={t('password_placeholder_min')}
             value={newUser.password}
             onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
             style={{
@@ -6740,9 +7574,9 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
               fontFamily: 'inherit',
             }}
           >
-            <option value="viewer">بیننده</option>
-            <option value="editor">ویراستار</option>
-            <option value="admin">مدیر</option>
+            <option value="viewer">{t('role_viewer')}</option>
+            <option value="editor">{t('role_editor')}</option>
+            <option value="admin">{t('role_admin')}</option>
           </select>
         </div>
         <button
@@ -6757,17 +7591,17 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
             cursor: creating ? 'not-allowed' : 'pointer',
           }}
         >
-          {creating ? '⏳ در حال ایجاد...' : '＋ ایجاد کاربر'}
+          {creating ? t('creating') : t('create_user')}
         </button>
       </div>
 
       {/* Users list */}
       <div>
         <h4 className="font-bold text-sm mb-2" style={{ color: '#1a2e22' }}>
-          کاربران فعلی ({users.length.toLocaleString('fa-IR')})
+          {t('current_users')} ({users.length.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')})
         </h4>
         {loading && (
-          <div className="p-4 text-center text-sm" style={{ color: '#7a8a80' }}>در حال بارگذاری...</div>
+          <div className="p-4 text-center text-sm" style={{ color: '#7a8a80' }}>{t('loading_users')}</div>
         )}
         {error && (
           <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}>
@@ -6796,7 +7630,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
                   <div className="font-bold text-sm" style={{ color: '#1a2e22' }} title={u.username}>
                     {u.name || u.username}{' '}
                     {u.id === currentUser.id && (
-                      <span className="text-xs font-normal" style={{ color: '#7a8a80' }}>(شما)</span>
+                      <span className="text-xs font-normal" style={{ color: '#7a8a80' }}>({lang === 'en' ? 'you' : 'شما'})</span>
                     )}
                   </div>
                   <div className="text-xs" style={{ color: '#7a8a80' }} dir="ltr">@{u.username}</div>
@@ -6817,11 +7651,11 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
                     cursor: u.id === currentUser.id ? 'not-allowed' : 'pointer',
                     opacity: u.id === currentUser.id ? 0.6 : 1,
                   }}
-                  title={u.id === currentUser.id ? 'نمی‌توانید نقش خودتان را تغییر دهید' : 'تغییر نقش'}
+                  title={u.id === currentUser.id ? t('cannot_change_role_self') : t('edit_field')}
                 >
-                  <option value="viewer">بیننده</option>
-                  <option value="editor">ویراستار</option>
-                  <option value="admin">مدیر</option>
+                  <option value="viewer">{t('role_viewer')}</option>
+                  <option value="editor">{t('role_editor')}</option>
+                  <option value="admin">{t('role_admin')}</option>
                 </select>
                 <button
                   onClick={() => handleDelete(u)}
@@ -6834,8 +7668,8 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
                     cursor: u.id === currentUser.id ? 'not-allowed' : 'pointer',
                     opacity: u.id === currentUser.id ? 0.4 : 1,
                   }}
-                  title={u.id === currentUser.id ? 'نمی‌توانید خودتان را حذف کنید' : `حذف ${u.username}`}
-                  aria-label={`حذف کاربر ${u.username}`}
+                  title={u.id === currentUser.id ? t('cannot_delete_self') : `${t('cancel')} ${u.username}`}
+                  aria-label={`${t('cancel')} ${u.username}`}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -6860,6 +7694,7 @@ function SettingsPasswordTab({
   showToast: (msg: string) => void;
   onLogout: () => void;
 }) {
+  const { t } = useLang();
   const [oldPw, setOldPw] = useState('');
   const [newPw, setNewPw] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
@@ -6868,29 +7703,29 @@ function SettingsPasswordTab({
 
   const handleChange = async () => {
     if (!oldPw || !newPw || !confirmPw) {
-      showToast('هر سه فیلد را پر کنید');
+      showToast(t('fill_three_fields'));
       return;
     }
     if (newPw.length < 4) {
-      showToast('رمز جدید باید حداقل ۴ کاراکتر باشد');
+      showToast(t('password_min_length'));
       return;
     }
     if (newPw !== confirmPw) {
-      showToast('رمز جدید و تأیید آن یکسان نیستند');
+      showToast(t('passwords_dont_match'));
       return;
     }
     if (newPw === oldPw) {
-      showToast('رمز جدید باید با رمز فعلی متفاوت باشد');
+      showToast(t('password_must_differ'));
       return;
     }
     setSaving(true);
     try {
       await api.changePassword(oldPw, newPw);
-      showToast('رمز با موفقیت تغییر کرد. لطفاً دوباره وارد شوید.');
+      showToast(t('password_changed_toast'));
       // Force re-login since the API invalidated the session.
       setTimeout(() => { onLogout(); }, 1500);
     } catch (e: any) {
-      showToast(e?.message || 'خطا در تغییر رمز');
+      showToast(e?.message || t('error_changing_password'));
     } finally {
       setSaving(false);
     }
@@ -6913,9 +7748,9 @@ function SettingsPasswordTab({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div>
-        <h3 className="text-base font-bold mb-1" style={{ color: '#1a2e22' }}>🔑 تغییر رمز عبور</h3>
+        <h3 className="text-base font-bold mb-1" style={{ color: '#1a2e22' }}>{t('change_password_title')}</h3>
         <p className="text-sm" style={{ color: '#7a8a80' }}>
-          رمز عبور خود را تغییر دهید. پس از تغییر، تمام نشست‌های فعال شما باطل شده و باید دوباره وارد شوید.
+          {t('change_password_desc')}
         </p>
       </div>
 
@@ -6923,15 +7758,15 @@ function SettingsPasswordTab({
         className="p-3 rounded-xl text-sm flex items-center gap-2"
         style={{ background: 'rgba(2, 144, 72, 0.08)', border: '1px solid rgba(2, 144, 72, 0.2)', color: '#016035' }}
       >
-        <span>👤 حساب فعلی:</span>
+        <span>{t('current_account')}</span>
         <strong>{currentUser.name || currentUser.username}</strong>
         <span dir="ltr" style={{ color: '#7a8a80' }}>@{currentUser.username}</span>
       </div>
 
       {[
-        { label: 'رمز فعلی', val: oldPw, set: setOldPw },
-        { label: 'رمز جدید', val: newPw, set: setNewPw },
-        { label: 'تکرار رمز جدید', val: confirmPw, set: setConfirmPw },
+        { label: t('current_password'), val: oldPw, set: setOldPw },
+        { label: t('new_password'), val: newPw, set: setNewPw },
+        { label: t('confirm_new_password'), val: confirmPw, set: setConfirmPw },
       ].map((f, i) => (
         <div key={i}>
           <label className="block text-sm font-bold mb-2" style={{ color: '#1a2e22' }}>{f.label}</label>
@@ -6949,7 +7784,7 @@ function SettingsPasswordTab({
               onClick={() => setShowPw(!showPw)}
               className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-lg"
               style={{ color: '#4a5d52', background: 'transparent' }}
-              aria-label={showPw ? 'پنهان کردن رمز' : 'نمایش رمز'}
+              aria-label={showPw ? t('hide_password') : t('show_password')}
             >
               {showPw ? (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -6971,7 +7806,7 @@ function SettingsPasswordTab({
           className="p-3 rounded-xl text-sm font-medium"
           style={{ background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}
         >
-          ⚠ رمز جدید و تأیید آن یکسان نیستند
+          {t('password_mismatch')}
         </div>
       )}
 
@@ -6987,7 +7822,7 @@ function SettingsPasswordTab({
           cursor: saving ? 'not-allowed' : 'pointer',
         }}
       >
-        {saving ? '⏳ در حال تغییر...' : '✓ تغییر رمز عبور'}
+        {saving ? t('testing') : t('change_password_btn')}
       </button>
     </div>
   );
@@ -7011,24 +7846,24 @@ function CompareModal({ shows, onClose, onClear }: {
     return String(x ?? '') !== String(y ?? '');
   };
   const fields: { key: keyof TalkShow; label: string }[] = [
-    { key: 'num', label: lang === 'en' ? 'Number' : 'شماره' },
-    { key: 'name', label: lang === 'en' ? 'Name' : 'نام برنامه' },
-    { key: 'category', label: lang === 'en' ? 'Category' : 'دسته‌بندی' },
+    { key: 'num', label: t('show_num') },
+    { key: 'name', label: t('name_program') },
+    { key: 'category', label: t('category_label') },
     { key: 'country', label: lang === 'en' ? 'Country' : 'کشور' },
-    { key: 'size', label: lang === 'en' ? 'Studio size' : 'اندازهٔ استودیو' },
-    { key: 'style', label: lang === 'en' ? 'Decor style' : 'سبک دکور' },
-    { key: 'viewers', label: lang === 'en' ? 'Audience' : 'تماشاگر' },
-    { key: 'layout', label: lang === 'en' ? 'Layout' : 'چیدمان' },
-    { key: 'effects', label: lang === 'en' ? 'Effects' : 'جلوه‌ها' },
-    { key: 'lighting', label: lang === 'en' ? 'Lighting' : 'نورپردازی' },
-    { key: 'elements', label: lang === 'en' ? 'Decor elements' : 'عناصر دکور' },
-    { key: 'materials', label: lang === 'en' ? 'Materials' : 'مواد' },
-    { key: 'colors', label: lang === 'en' ? 'Colors' : 'رنگ‌آمیزی' },
-    { key: 'summary', label: lang === 'en' ? 'Summary' : 'خلاصه' },
-    { key: 'descriptionFa', label: lang === 'en' ? 'Persian description' : 'توضیحات فارسی' },
+    { key: 'size', label: t('studio_size') },
+    { key: 'style', label: t('decor_style') },
+    { key: 'viewers', label: t('audience') },
+    { key: 'layout', label: t('layout') },
+    { key: 'effects', label: t('effects') },
+    { key: 'lighting', label: t('lighting') },
+    { key: 'elements', label: t('decor_elements') },
+    { key: 'materials', label: t('materials') },
+    { key: 'colors', label: t('colors') },
+    { key: 'summary', label: t('decor_summary') },
+    { key: 'descriptionFa', label: t('about_program_fa') },
     { key: 'youtube', label: 'YouTube' },
     { key: 'imdb', label: 'IMDb' },
-    { key: 'wikipedia', label: lang === 'en' ? 'Wikipedia' : 'ویکی‌پدیا' },
+    { key: 'wikipedia', label: t('wikipedia_page') },
   ];
 
   return (
@@ -7042,7 +7877,7 @@ function CompareModal({ shows, onClose, onClear }: {
               onClick={onClear}
               className="btn-base px-3 py-1.5 rounded-lg text-xs font-medium"
               style={{ background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}
-              title={lang === 'en' ? 'Clear compare list' : 'پاک کردن فهرست مقایسه'}
+              title={t('clear_compare_list')}
             >
               🗑 {t('clear_list')}
             </button>
@@ -7084,7 +7919,7 @@ function CompareModal({ shows, onClose, onClear }: {
                     <div className="flex-1 min-w-0">
                       <div className="text-xs text-fg-muted" style={{ color: 'var(--fg-muted)' }}>{idx === 0 ? t('program_first') : t('program_second')}</div>
                       <div className="font-bold text-sm truncate text-fg-strong" style={{ color: 'var(--fg-strong)', direction: 'ltr', textAlign: 'right' }}>{s.name}</div>
-                      <div className="text-xs text-fg-soft" style={{ color: 'var(--fg-soft)' }}>#{s.num.toLocaleString('fa-IR')} • {s.style}</div>
+                      <div className="text-xs text-fg-soft" style={{ color: 'var(--fg-soft)' }}>#{s.num.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')} • {s.style}</div>
                     </div>
                   </div>
                 </div>
@@ -7122,7 +7957,7 @@ function CompareModal({ shows, onClose, onClear }: {
                           <span
                             className="mr-1 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold"
                             style={{ background: 'rgba(245, 158, 11, 0.18)', color: '#b45309' }}
-                            title={lang === 'en' ? 'Values differ between the two programs' : 'مقدار در دو برنامه متفاوت است'}
+                            title={t('values_differ')}
                           >
                             {t('difference')}
                           </span>
@@ -7166,7 +8001,7 @@ function CompareModal({ shows, onClose, onClear }: {
             className="mt-4 p-3 rounded-xl text-xs text-fg-soft"
             style={{ background: 'rgba(245, 158, 11, 0.06)', border: '1px solid rgba(245, 158, 11, 0.2)', color: 'var(--fg-soft)' }}
           >
-            <strong style={{ color: '#b45309' }}>{lang === 'en' ? 'Help:' : 'راهنما:'}</strong> {t('help_diff')}
+            <strong style={{ color: '#b45309' }}>{t('help_label')}</strong> {t('help_diff')}
           </div>
 
           <div className="mt-5 flex justify-end gap-3">
@@ -7186,6 +8021,7 @@ function CompareModal({ shows, onClose, onClear }: {
 
 // --- Tab 4: Audit log (تاریخچه تغییرات) ---
 function SettingsAuditTab() {
+  const { t, lang } = useLang();
   const [changes, setChanges] = useState<Array<{
     id: number;
     show_num: number | null;
@@ -7208,7 +8044,7 @@ function SettingsAuditTab() {
       const list = await api.getChanges(200);
       setChanges(list);
     } catch (e: any) {
-      setError(e?.message || 'خطا در بارگذاری تاریخچه');
+      setError(e?.message || t('error_loading_history'));
     } finally {
       setLoading(false);
     }
@@ -7217,9 +8053,9 @@ function SettingsAuditTab() {
   useEffect(() => { load(); }, []);
 
   const actionLabel: Record<string, string> = {
-    create: 'افزودن',
-    update: 'ویرایش',
-    delete: 'حذف',
+    create: t('action_create'),
+    update: t('action_update'),
+    delete: t('action_delete'),
   };
 
   const actionColor: Record<string, string> = {
@@ -7234,9 +8070,9 @@ function SettingsAuditTab() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div className="flex items-start justify-between gap-2 flex-wrap">
         <div>
-          <h3 className="text-base font-bold mb-1" style={{ color: '#1a2e22' }}>📜 تاریخچه تغییرات</h3>
+          <h3 className="text-base font-bold mb-1" style={{ color: '#1a2e22' }}>{t('audit_log_title')}</h3>
           <p className="text-sm" style={{ color: '#7a8a80' }}>
-            گزارش اخیر افزودن، ویرایش و حذف برنامه‌ها به همراه کاربر انجام‌دهنده و زمان دقیق.
+            {t('audit_log_desc')}
           </p>
         </div>
         <button
@@ -7249,7 +8085,7 @@ function SettingsAuditTab() {
             cursor: 'pointer',
           }}
         >
-          ↻ بازخوانی
+          {t('refresh')}
         </button>
       </div>
 
@@ -7270,13 +8106,13 @@ function SettingsAuditTab() {
               border: '1px solid rgba(2, 144, 72, 0.15)',
             }}
           >
-            {k === 'all' ? 'همه' : actionLabel[k]}
+            {k === 'all' ? t('all') : actionLabel[k]}
           </button>
         ))}
       </div>
 
       {loading && (
-        <div className="p-4 text-center text-sm" style={{ color: '#7a8a80' }}>در حال بارگذاری...</div>
+        <div className="p-4 text-center text-sm" style={{ color: '#7a8a80' }}>{t('loading_history')}</div>
       )}
       {error && (
         <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}>
@@ -7285,7 +8121,7 @@ function SettingsAuditTab() {
       )}
       {!loading && !error && filtered.length === 0 && (
         <div className="p-6 text-center text-sm" style={{ color: '#7a8a80' }}>
-          هیچ تغییری ثبت نشده است.
+          {t('no_changes_recorded')}
         </div>
       )}
       {!loading && !error && filtered.length > 0 && (
@@ -7313,13 +8149,13 @@ function SettingsAuditTab() {
                     {c.username ? `@${c.username}` : '—'}
                     {c.show_num != null && (
                       <span className="text-xs font-normal mr-2" style={{ color: '#7a8a80' }}>
-                        برنامهٔ #{c.show_num.toLocaleString('fa-IR')}
+                        {t('program_hash')}{c.show_num.toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR')}
                       </span>
                     )}
                   </div>
                   {c.action === 'update' && c.field && (
                     <div className="text-xs mt-1" style={{ color: '#4a5d52' }}>
-                      فیلد <strong>{c.field}</strong>:
+                      {t('field_log')} <strong>{c.field}</strong>:
                       {c.old_value && (
                         <span style={{ color: '#dc2626', textDecoration: 'line-through', marginRight: '6px' }}>
                           «{c.old_value.length > 60 ? c.old_value.substring(0, 60) + '…' : c.old_value}»
@@ -7332,16 +8168,16 @@ function SettingsAuditTab() {
                   )}
                   {c.action === 'create' && (
                     <div className="text-xs mt-1" style={{ color: '#4a5d52' }}>
-                      برنامهٔ «{c.new_value || '—'}» ایجاد شد.
+                      {t('program_created_log', { name: c.new_value || '—' })}
                     </div>
                   )}
                   {c.action === 'delete' && (
                     <div className="text-xs mt-1" style={{ color: '#4a5d52' }}>
-                      برنامهٔ «{c.old_value || '—'}» حذف شد.
+                      {t('program_deleted_log', { name: c.old_value || '—' })}
                     </div>
                   )}
                   <div className="text-[10px] mt-1" style={{ color: '#7a8a80' }}>
-                    {date.toLocaleDateString('fa-IR')} {date.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}
+                    {date.toLocaleDateString(lang === 'en' ? 'en-US' : 'fa-IR')} {date.toLocaleTimeString(lang === 'en' ? 'en-US' : 'fa-IR', { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
               </div>
