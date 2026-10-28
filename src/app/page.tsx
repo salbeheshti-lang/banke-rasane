@@ -4049,7 +4049,7 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
             src={thumb.image}
             alt={show.name}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
           />
         ) : (
           <>
@@ -4517,7 +4517,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                 top: 0,
                 left: 0,
               }}
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
             />
           )}
           {!thumb.image && <div className="absolute inset-0" style={{ background: thumb.pattern }}></div>}
@@ -4614,7 +4614,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                         style={{ background: thumbUrl ? '#000' : `${platform.color}20` }}
                       >
                         {thumbUrl ? (
-                          <img src={thumbUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                          <img src={thumbUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }} />
                         ) : (
                           <span className="text-2xl">{platform.icon}</span>
                         )}
@@ -4868,7 +4868,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                     >
                       <div className="aspect-video relative overflow-hidden">
                         {rThumb.image ? (
-                          <img src={rThumb.image} alt={r.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                          <img src={rThumb.image} alt={r.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }} />
                         ) : (
                           <div className="absolute inset-0" style={{ background: rThumb.gradient }}></div>
                         )}
@@ -5806,7 +5806,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
                   style={{ background: thumb ? '#000' : `${platform.color}20` }}
                 >
                   {thumb ? (
-                    <img src={thumb} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    <img src={thumb} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }} />
                   ) : (
                     <span className="text-xl">{platform.icon}</span>
                   )}
@@ -6465,7 +6465,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
                       left: 0,
                       opacity: 0.7,
                     }}
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
                   />
                 )}
                 {/* Dark overlay for text readability */}
@@ -7931,7 +7931,7 @@ function CompareModal({ shows, onClose, onClear }: {
                       style={{ background: thumb.gradient }}
                     >
                       {thumb.image ? (
-                        <img src={thumb.image} alt={s.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                        <img src={thumb.image} alt={s.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }} />
                       ) : (
                         <div className="absolute inset-0 flex items-center justify-center text-white font-black text-lg" style={{ background: thumb.gradient }}>
                           {s.name.charAt(0).toUpperCase()}
