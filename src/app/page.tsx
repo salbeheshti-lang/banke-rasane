@@ -1785,7 +1785,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
     { label: 'کل برنامه‌ها', value: talkShows.length, color: '#029048', icon: 'film' },
     { label: 'ژانرها', value: genres.length, color: '#2563eb', icon: 'tag' },
     { label: 'آپلود شده در فضای مجازی', value: uploadedCount, color: '#7c3aed', icon: 'cloud' },
-    { label: 'با تصویر (PDF + وب)', value: 149 + 23, color: '#db2777', icon: 'image' },
+    { label: 'با تصویر', value: talkShows.filter(s => s.images && s.images.length > 0).length, color: '#db2777', icon: 'image' },
   ];
 
   return (
@@ -2976,7 +2976,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
             <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>مشخصات دکور و صحنه</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <DetailField label="دسته‌بندی" value={show.category} />
-              <DetailField label="منبع داده" value={show.source} />
+              <DetailField label="سبک دکور" value={show.style} />
               <DetailField label="اندازهٔ استودیو" value={show.size} />
               <DetailField label="تماشاگر" value={show.viewers} />
               <DetailField label="سبک دکور" value={show.style} />
@@ -3111,7 +3111,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       num: Math.max(0, ...talkShows.map(s => s.num)) + 1,
       name: '',
       category: presetCategory || '',
-      source: 'متن',
+      source: '',
       size: 'متوسط/استاندارد',
       viewers: 'بدون تماشاگر',
       style: 'مدرن',
@@ -3273,16 +3273,6 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
             options={genres.map(g => ({ value: g.nameFa, label: g.nameFa }))}
           />
           <FormField label="کشور مبدا" value={form.country || ''} onChange={v => setForm({ ...form, country: v })} placeholder="مثلاً: ایران، ترکیه" />
-          <FormSelect
-            label="منبع داده"
-            value={form.source || ''}
-            onChange={v => setForm({ ...form, source: v })}
-            options={[
-              { value: 'تصویر PDF', label: 'تصویر PDF' },
-              { value: 'تصویر وب', label: 'تصویر وب' },
-              { value: 'متن', label: 'تحلیل متنی' },
-            ]}
-          />
           <FormSelect
             label="اندازهٔ استودیو"
             value={form.size || ''}
@@ -4975,8 +4965,8 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {[
                     { n: 1, t: 'خلاصه اجرایی', icon: '📋', desc: 'مرور کلی آرشیو، حجم داده‌ها، یافته‌های کلیدی و نکات مهم برای تصمیم‌گیرندگان' },
-                    { n: 2, t: 'روش جمع‌آوری داده', icon: '🔬', desc: 'توضیح منابع داده (اکسل، PDF، تصاویر وب)، فرایند طبقه‌بندی ژانری و رویکرد ترکیبی' },
-                    { n: 3, t: 'نمای آماری کلی', icon: '📊', desc: '۴ کارت آماری + ۵ نمودار میله‌ای: منبع داده، اندازه استودیو، سبک دکور، تماشاگر، نورپردازی' },
+                    { n: 2, t: 'روش جمع‌آوری داده', icon: '🔬', desc: 'توضیح منابع داده، فرایند طبقه‌بندی ژانری و رویکرد ترکیبی' },
+                    { n: 3, t: 'نمای آماری کلی', icon: '📊', desc: '۴ کارت آماری + ۵ نمودار میله‌ای: اندازه استودیو، سبک دکور، تماشاگر، نورپردازی، چیدمان' },
                     { n: 4, t: 'تحلیل توزیع ژانرها', icon: '🏷', desc: 'نمودار کامل توزیع + معرفی تفصیلی هر دسته با شمارش، درصد، و برنامه‌های شاخص' },
                     { n: 5, t: 'تحلیل دکور و صحنه', icon: '🎨', desc: '۴ نمودار: عناصر پرتکرار صحنه، مصالح، طیف رنگی، نورپردازی + یافته‌های تحلیلی' },
                     { n: 6, t: 'فهرست تفصیلی برنامه‌ها', icon: '📚', desc: 'کارت کامل برای هر برنامه: تصویر، توضیحات فارسی، تگ‌ها، مشخصات دکور، خلاصه' },
@@ -5132,8 +5122,6 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
 }) {
   const stats = {
     total: talkShows.length,
-    pdf: talkShows.filter(s => s.source === 'تصویر PDF').length,
-    web: talkShows.filter(s => s.source === 'تصویر وب').length,
     text: talkShows.filter(s => s.source === 'متن').length,
     uploaded: uploadedShows.length,
   };
@@ -5141,8 +5129,6 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
   const reports = [
     { id: 1, title: 'گزارش کامل همهٔ برنامه‌ها', type: 'pdf', count: stats.total, date: '۱۴۰۴/۰۸/۲۵' },
     { id: 2, title: 'گزارش برنامه‌های آپلود شده در فضای مجازی', type: 'excel', count: stats.uploaded, date: '۱۴۰۴/۰۸/۲۵' },
-    { id: 3, title: 'گزارش برنامه‌های با تصویر PDF', type: 'pdf', count: stats.pdf, date: '۱۴۰۴/۰۷/۱۸' },
-    { id: 4, title: 'گزارش برنامه‌های با تصویر وب', type: 'excel', count: stats.web, date: '۱۴۰۴/۰۷/۱۳' },
   ];
 
   return (
@@ -5162,12 +5148,12 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
           <div style={{ color: '#4a5d52' }} className="text-sm">آپلود شده</div>
         </div>
         <div className="premium-glass p-5">
-          <div className="text-3xl font-black mb-1" style={{ color: '#dc2626' }}>{stats.pdf.toLocaleString('fa-IR')}</div>
-          <div style={{ color: '#4a5d52' }} className="text-sm">با تصویر PDF</div>
+          <div className="text-3xl font-black mb-1" style={{ color: '#016035' }}>{GENRES.length.toLocaleString('fa-IR')}</div>
+          <div style={{ color: '#4a5d52' }} className="text-sm">ژانرها</div>
         </div>
         <div className="premium-glass p-5">
-          <div className="text-3xl font-black mb-1" style={{ color: '#2563eb' }}>{stats.web.toLocaleString('fa-IR')}</div>
-          <div style={{ color: '#4a5d52' }} className="text-sm">با تصویر وب</div>
+          <div className="text-3xl font-black mb-1" style={{ color: '#2563eb' }}>{talkShows.filter(s => s.images && s.images.length > 0).length.toLocaleString('fa-IR')}</div>
+          <div style={{ color: '#4a5d52' }} className="text-sm">با تصویر</div>
         </div>
       </div>
 
@@ -5217,8 +5203,6 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                       let shows: TalkShow[] = [];
                       if (r.id === 1) shows = talkShows;
                       else if (r.id === 2) shows = talkShows.filter(s => uploadedShows.includes(s.num));
-                      else if (r.id === 3) shows = talkShows.filter(s => s.source === 'تصویر PDF');
-                      else if (r.id === 4) shows = talkShows.filter(s => s.source === 'تصویر وب');
                       if (shows.length === 0) { showToast('برنامه‌ای برای این گزارش وجود ندارد'); return; }
                       onExport(shows, r.type === 'pdf' ? 'pdf' : 'excel');
                     }}
