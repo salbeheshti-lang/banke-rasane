@@ -110,6 +110,45 @@ function nowSec() {
 
 const SESSION_TTL = 7 * 24 * 60 * 60; // 7 days
 
+// Basic per-username throttling for the local API. Multi-instance deployments
+// should enforce a shared rate limit at the edge as well.
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_ATTEMPTS = 8;
+const loginAttempts = new Map();
+
+function isLoginRateLimited(username) {
+  const now = Date.now();
+  const record = loginAttempts.get(username);
+  if (!record || record.windowStart + LOGIN_WINDOW_MS <= now) {
+    loginAttempts.delete(username);
+    return false;
+  }
+  return record.count >= LOGIN_MAX_ATTEMPTS;
+}
+
+function recordLoginFailure(username) {
+  const now = Date.now();
+  let record = loginAttempts.get(username);
+  if (!record || record.windowStart + LOGIN_WINDOW_MS <= now) {
+    record = { count: 0, windowStart: now };
+  }
+  record.count += 1;
+  loginAttempts.set(username, record);
+
+  if (loginAttempts.size > 10000) {
+    for (const [key, value] of loginAttempts) {
+      if (value.windowStart + LOGIN_WINDOW_MS <= now) loginAttempts.delete(key);
+    }
+    while (loginAttempts.size > 10000) {
+      loginAttempts.delete(loginAttempts.keys().next().value);
+    }
+  }
+}
+
+function clearLoginFailures(username) {
+  loginAttempts.delete(username);
+}
+
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -355,14 +394,26 @@ const server = Bun.serve({
       const username = String(body?.username || '').trim();
       const password = String(body?.password || '');
       if (!username || !password) return json({ error: 'نام کاربری و رمز عبور را وارد کنید' }, 400);
+      const rateKey = username.toLocaleLowerCase('en-US');
+      if (isLoginRateLimited(rateKey)) {
+        return json({ error: 'تعداد تلاش‌های ورود بیش از حد مجاز است؛ ۱۵ دقیقه دیگر تلاش کنید' }, 429);
+      }
       const user = getUserByUsername(username);
       if (!user) {
+        recordLoginFailure(rateKey);
         return json({ error: 'نام کاربری یا رمز عبور نادرست است' }, 401);
       }
-      const passwordCheck = verifyPassword(password, user.password_hash);
+      let passwordCheck;
+      try {
+        passwordCheck = verifyPassword(password, user.password_hash);
+      } catch {
+        passwordCheck = { valid: false, upgradedHash: null };
+      }
       if (!passwordCheck.valid) {
+        recordLoginFailure(rateKey);
         return json({ error: 'نام کاربری یا رمز عبور نادرست است' }, 401);
       }
+      clearLoginFailures(rateKey);
       if (passwordCheck.upgradedHash) {
         db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordCheck.upgradedHash, user.id);
       }
