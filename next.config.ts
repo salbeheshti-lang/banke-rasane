@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
   reactStrictMode: false,
   // Allow dev assets/HMR to be served through the preview gateway & local IPs
   allowedDevOrigins: ["127.0.0.1", "http://127.0.0.1", "http://localhost", "http://21.0.10.169"],
+  pageExtensions: ["tsx", "ts", "jsx", "js"],
+  experimental: {
+    externalDir: true,
+  },
 };
 
 export default nextConfig;
