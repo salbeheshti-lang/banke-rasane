@@ -55,16 +55,23 @@ jobs:
         shell: bash
         run: |
           ls -la release/
-          if ! ls release/*-Setup.exe 2>/dev/null; then
-            echo "ERROR: No -Setup.exe found in release/"
+          # electron-builder names the file "<productName> Setup <version>.exe"
+          # The productName contains a space (بانک رسانه), so the filename has spaces.
+          # Use a glob that matches either "Setup" or "-Setup" with or without dashes.
+          SETUP=$(find release -maxdepth 1 -name "*Setup*.exe" -type f | head -1)
+          if [ -z "$SETUP" ]; then
+            echo "ERROR: No Setup.exe found in release/"
+            ls -la release/
             exit 1
           fi
+          echo "Found installer: $SETUP"
 
       - name: Rename installer to friendly name
         shell: bash
         run: |
-          mv release/*-Setup.exe release/BankResaneh-Setup.exe 2>/dev/null
-          ls -la release/
+          SETUP=$(find release -maxdepth 1 -name "*Setup*.exe" -type f | head -1)
+          cp "$SETUP" release/BankResaneh-Setup.exe
+          ls -la release/BankResaneh-Setup.exe
 
       - name: Upload as workflow artifact (always)
         uses: actions/upload-artifact@v4
