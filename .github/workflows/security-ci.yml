@@ -1,0 +1,73 @@
+name: Security and build checks
+
+on:
+  push:
+    branches:
+      - main
+      - fix/audit-ui-preserving
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app-checks:
+    name: App install, lint, typecheck, build, dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install dependencies from lockfile
+        run: bun install --frozen-lockfile
+      - name: Lint
+        run: bun run lint
+      - name: TypeScript check
+        run: bun x tsc --noEmit
+      - name: Production build
+        env:
+          DATABASE_URL: file:./ci.db
+          ADMIN_INITIAL_PASSWORD: ci-only-not-for-production
+        run: bun run build
+      - name: Dependency vulnerability audit
+        run: bun audit --audit-level high
+
+  worker-checks:
+    name: Cloudflare Worker bundle validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate Worker bundle without deploying
+        run: npx --yes wrangler@4 deploy --dry-run --outdir=/tmp/banke-rasane-worker-dist
+        working-directory: worker
+
+  secret-scan:
+    name: Secret and credential scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan repository history for secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
