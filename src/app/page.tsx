@@ -3096,7 +3096,7 @@ function ProgramsView({
   const [sortBy, setSortBy] = useState<'relevance' | 'name' | 'count'>('relevance');
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const islamicOnly = false;
+  const [islamicOnly, setIslamicOnly] = useState(false);
 
   // Debounce search input (200ms)
   useEffect(() => {
@@ -3259,6 +3259,7 @@ function ProgramsView({
     if (filterLighting !== 'all') shows = shows.filter(s => s.lighting === filterLighting);
     if (filterHasImages) shows = shows.filter(s => s.images && s.images.length > 0 && s.images[0] !== '/banke-rasane-logo.png');
     if (filterHasVideos) shows = shows.filter(s => s.videos && s.videos.length > 0);
+    if (islamicOnly) shows = shows.filter(s => detectCountries(s).length > 0);
     
     if (debouncedSearch) {
       const fields: (keyof TalkShow)[] = genre?.searchFields || ['name', 'summary', 'category', 'descriptionFa'];
@@ -3291,7 +3292,7 @@ function ProgramsView({
     }
     
     return shows;
-  }, [talkShows, genre, debouncedSearch, filterSize, filterViewers, filterStyle, filterLighting, filterHasImages, filterHasVideos, sortBy]);
+  }, [talkShows, genre, debouncedSearch, filterSize, filterViewers, filterStyle, filterLighting, filterHasImages, filterHasVideos, islamicOnly, sortBy]);
 
   const handleUploadSelected = () => {
     const selectedShows = filteredShows.filter(s => selectedIds.includes(s.num));
@@ -3588,7 +3589,7 @@ function ProgramsView({
         {/* Filters — two horizontally scrollable rows (no chaotic wrapping on mobile) */}
         <div className="space-y-2">
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-            <span className="text-sm flex-shrink-0" style={{ color: '#8a8a7a' }}>{t('filter_size')}</span>
+            <span className="text-sm font-bold flex-shrink-0" style={{ color: '#CDEFEF' }}>{t('filter_size')}</span>
             {[
               { key: 'all', label: t('filter_all') },
               { key: 'بزرگ/لوکس', label: t('filter_large') },
@@ -3603,8 +3604,9 @@ function ProgramsView({
                   background: 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)',
                   color: 'white',
                 } : {
-                  background: 'rgba(255, 255, 255, 0.8)',
-                  color: '#5a6b4a',
+                  background: 'rgba(255, 255, 255, 0.12)',
+                  color: '#CDEFEF',
+                  border: '1px solid rgba(205, 239, 239, 0.15)',
                 }}
               >
                 {f.label}
@@ -3612,7 +3614,7 @@ function ProgramsView({
             ))}
           </div>
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-            <span className="text-sm flex-shrink-0" style={{ color: '#8a8a7a' }}>{t('filter_style')}</span>
+            <span className="text-sm font-bold flex-shrink-0" style={{ color: '#CDEFEF' }}>{t('filter_style')}</span>
             {[
               { key: 'all', label: t('filter_all') },
               { key: 'مدرن', label: t('filter_modern') },
@@ -3628,8 +3630,9 @@ function ProgramsView({
                   background: 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)',
                   color: 'white',
                 } : {
-                  background: 'rgba(255, 255, 255, 0.8)',
-                  color: '#5a6b4a',
+                  background: 'rgba(255, 255, 255, 0.12)',
+                  color: '#CDEFEF',
+                  border: '1px solid rgba(205, 239, 239, 0.15)',
                 }}
               >
                 {f.label}
