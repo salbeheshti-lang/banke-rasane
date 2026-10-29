@@ -387,6 +387,41 @@ const server = Bun.serve({
     const url = new URL(req.url);
     const { pathname } = url;
     const method = req.method.toUpperCase();
+    const origin = req.headers.get('Origin');
+    const configuredOrigins = String(process.env.BANKRESANE_ALLOWED_ORIGINS || '')
+      .split(',')
+      .map(value => value.trim())
+      .filter(Boolean);
+    const originIsAllowed = configuredOrigins.length === 0 || configuredOrigins.includes(origin || '');
+    const corsHeaders = {
+      ...(configuredOrigins.length === 0
+        ? { 'Access-Control-Allow-Origin': '*' }
+        : (origin && originIsAllowed ? { 'Access-Control-Allow-Origin': origin, 'Vary': 'Origin' } : {})),
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    };
+    // Request-scoped response helpers allow a deployment-specific CORS allowlist.
+    const json = (body, status = 200) => new Response(JSON.stringify(body), {
+      status,
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'Referrer-Policy': 'no-referrer',
+        ...corsHeaders,
+      },
+    });
+    const corsOptions = () => new Response(null, {
+      status: 204,
+      headers: {
+        ...corsHeaders,
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'Referrer-Policy': 'no-referrer',
+      },
+    });
 
     if (method === 'OPTIONS') return corsOptions();
 
