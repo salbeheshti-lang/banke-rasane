@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import { api, setApiBase, getApiBase, User } from '@/lib/api';
+import { rankSearchShows } from '@/lib/search';
 
 // ============================================
 // TYPES
@@ -2016,21 +2017,14 @@ function ProgramsView({
     if (filterViewers !== 'all') shows = shows.filter(s => s.viewers === filterViewers);
     if (filterStyle !== 'all') shows = shows.filter(s => s.style === filterStyle);
     if (islamicOnly) shows = shows.filter(s => detectCountries(s).length > 0);
-    if (search) {
-      const q = search.toLowerCase();
-      // Section-specific search: use genre.searchFields if defined, else default to name+summary+category.
-      const fields: (keyof TalkShow)[] = genre?.searchFields || ['name', 'summary', 'category'];
-      shows = shows.filter(s => {
-        for (const f of fields) {
-          const v = s[f];
-          if (typeof v === 'string') {
-            if (v.toLowerCase().includes(q) || v.includes(search)) return true;
-          } else if (Array.isArray(v)) {
-            if (v.some(item => String(item).toLowerCase().includes(q) || String(item).includes(search))) return true;
-          }
-        }
-        return false;
-      });
+    if (search.trim()) {
+      // Ranked, Persian-normalized search. Genre fields get a small relevance boost,
+      // while common metadata is also searched to avoid hiding useful records.
+      shows = rankSearchShows(
+        shows,
+        search,
+        (genre?.searchFields || ['name', 'summary', 'category']) as string[],
+      );
     }
     return shows;
   }, [talkShows, genre, search, filterSize, filterViewers, filterStyle, islamicOnly]);
