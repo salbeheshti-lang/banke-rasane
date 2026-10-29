@@ -1,0 +1,2002 @@
+     1→'use client';
+     2→
+     3→import { useState, useEffect, useMemo, useRef } from 'react';
+     4→import type React from 'react';
+     5→import Image from 'next/image';
+     6→import dynamic from 'next/dynamic';
+     7→import { type Lang, t as translate, STRINGS, LangProvider, useLang, LangContext, LangContextValue, TFunc } from '@/lib/i18n';
+     8→import { api, setApiBase, getApiBase, User } from '@/lib/api';
+     9→
+    10→// Video editor loaded dynamically (FFmpeg.wasm needs browser)
+    11→const VideoEditor = dynamic(() => import('@/components/VideoEditor'), { ssr: false });
+    12→
+    13→// ============================================
+    14→// TYPES
+    15→// ============================================
+    16→interface TalkShow {
+    17→  num: number;
+    18→  name: string;
+    19→  category: string;
+    20→  source: string;
+    21→  size: string;
+    22→  viewers: string;
+    23→  style: string;
+    24→  effects: string;
+    25→  layout: string;
+    26→  elements: string;
+    27→  materials: string;
+    28→  colors: string;
+    29→  lighting: string;
+    30→  summary: string;
+    31→  descriptionFa: string;
+    32→  youtube: string;
+    33→  imdb: string;
+    34→  wikipedia: string;
+    35→  socialPost: string;
+    36→  country?: string;
+    37→  tags?: string[];
+    38→  images?: string[];
+    39→  videos?: string[];
+    40→}
+    41→
+    42→// A "section-specific tag" — derives a small badge label from a TalkShow field
+    43→// (only when the field has a meaningful value). Each Genre chooses which tags to show.
+    44→type TagSpec = { id: string; label: (s: TalkShow) => string | null };
+    45→
+    46→interface Genre {
+    47→  id: string;
+    48→  key: string;
+    49→  nameFa: string;
+    50→  name: string;          // English name (also serves as `nameEn`)
+    51→  nameEn?: string;       // Optional explicit English name (defaults to `name`)
+    52→  color: string;
+    53→  description: string;   // Persian description
+    54→  descriptionEn?: string; // Optional English description
+    55→  filterFn: (s: TalkShow) => boolean;
+    56→  // Section-specific tags shown on cards in this genre's view
+    57→  tags?: TagSpec[];
+    58→  // Preset tags offered as quick-add buttons in AddEditView when this genre is preset
+    59→  presetTags?: string[];
+    60→  // Which TalkShow fields the ProgramsView search bar should match against
+    61→  searchFields?: (keyof TalkShow)[];
+    62→  // True for user-created genres (stored in localStorage)
+    63→  isCustom?: boolean;
+    64→}
+    65→
+    66→// Returns the localized name of a genre based on the current language.
+    67→// Falls back to `name` (English) if `nameEn` is not set, and to `nameFa` for Farsi.
+    68→function genreName(g: Genre, lang: Lang): string {
+    69→  if (lang === 'en') return g.nameEn || g.name || g.nameFa;
+    70→  return g.nameFa || g.name;
+    71→}
+    72→
+    73→// Returns the localized description of a genre (English version optional).
+    74→function genreDescription(g: Genre, lang: Lang): string {
+    75→  if (lang === 'en') return g.descriptionEn || g.description;
+    76→  return g.description;
+    77→}
+    78→
+    79→// Small inline component that pulls a translated string from the LangContext.
+    80→// Useful when a component can't call useLang() at the top of its body
+    81→// (e.g. inside a JSX prop that needs translation).
+    82→function LangText({ k, args, style, className }: { k: string; args?: (string | number)[]; style?: React.CSSProperties; className?: string }) {
+    83→  const { t } = useLang();
+    84→  return <span style={style} className={className}>{t(k, args)}</span>;
+    85→}
+    86→
+    87→// Reusable tag specifications — each Genre picks a subset for its `tags` array.
+    88→const TAG_LIBRARY: Record<string, TagSpec> = {
+    89→  style: { id: 'style', label: s => s.style || null },
+    90→  size: { id: 'size', label: s => s.size || null },
+    91→  viewers: { id: 'viewers', label: s => (s.viewers === 'با تماشاگر' ? 'با تماشاگر' : null) },
+    92→  layout: { id: 'layout', label: s => s.layout || null },
+    93→  effects: { id: 'effects', label: s => s.effects || null },
+    94→  elements: { id: 'elements', label: s => s.elements || null },
+    95→  materials: { id: 'materials', label: s => s.materials || null },
+    96→  colors: { id: 'colors', label: s => s.colors || null },
+    97→  lighting: { id: 'lighting', label: s => s.lighting || null },
+    98→};
+    99→
+   100→// Default tag set for the "decor" view (or any genre without its own tags).
+   101→const DEFAULT_GENRE_TAGS: TagSpec[] = [TAG_LIBRARY.style, TAG_LIBRARY.size, TAG_LIBRARY.viewers];
+   102→
+   103→// Real genres from Excel - 17 categories + technical decor view + 3 extras (PSA, deep observation, ads)
+   104→const GENRES: Genre[] = [
+   105→  {
+   106→    id: 'decor', key: 'decor', nameFa: 'دکور برنامه‌ها', name: 'Decor Analysis',
+   107→    color: '#55AEB7', description: 'همهٔ ۵۶۰ برنامه با تحلیل دکور و صحنه', filterFn: () => true,
+   108→    tags: DEFAULT_GENRE_TAGS,
+   109→    presetTags: ['مدرن', 'مینیمال', 'چوب', 'تکنولوژی', 'گرم', 'لوکس', 'تاریک', 'روشن'],
+   110→    searchFields: ['name', 'summary', 'materials', 'colors'],
+   111→  },
+   112→  {
+   113→    id: 'interview', key: 'interview', nameFa: 'تاک‌شوی مصاحبه‌محور', name: 'Interview',
+   114→    color: '#FF514C', description: '۱۰۲ برنامه', filterFn: s => s.category.includes('مصاحبه'),
+   115→    tags: [TAG_LIBRARY.layout, TAG_LIBRARY.viewers],
+   116→    presetTags: ['مصاحبه اختصاصی', 'مهمان ویژه', 'تکنولوژی', 'استودیو', 'مدرن', 'گریل'],
+   117→    searchFields: ['name', 'summary', 'category', 'layout'],
+   118→  },
+   119→  {
+   120→    id: 'comedy', key: 'comedy', nameFa: 'تاک‌شوی طنز و کمدی', name: 'Comedy',
+   121→    color: '#FF168B', description: '۸۹ برنامه', filterFn: s => s.category.includes('طنز'),
+   122→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
+   123→    presetTags: ['طنز', 'استندآپ', 'شخصیت‌محور', 'استودیوی رنگارنگ', 'پویا'],
+   124→    searchFields: ['name', 'summary', 'style', 'effects'],
+   125→  },
+   126→  {
+   127→    id: 'news', key: 'news', nameFa: 'تاک‌شوی سیاسی و خبری', name: 'News/Politics',
+   128→    color: '#00D9D5', description: '۶۸ برنامه', filterFn: s => s.category.includes('خبری') || s.category.includes('سیاسی'),
+   129→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting],
+   130→    presetTags: ['خبری', 'تحلیل سیاسی', 'مهمان سیاسی', 'رسمی', 'مدرن'],
+   131→    searchFields: ['name', 'summary', 'descriptionFa', 'category'],
+   132→  },
+   133→  {
+   134→    id: 'lifestyle', key: 'lifestyle', nameFa: 'تاک‌شوی تخصصی و سبک زندگی', name: 'Lifestyle',
+   135→    color: '#9957FF', description: '۵۴ برنامه', filterFn: s => s.category.includes('تخصصی'),
+   136→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.materials],
+   137→    presetTags: ['سبک زندگی', 'آشپزی', 'سلامت', 'مد', 'منزل', 'طبیعت'],
+   138→    searchFields: ['name', 'summary', 'category', 'materials'],
+   139→  },
+   140→  {
+   141→    id: 'cultural', key: 'cultural', nameFa: 'تاک‌شوی فرهنگی، هنری', name: 'Cultural',
+   142→    color: '#20E6AD', description: '۵۲ برنامه', filterFn: s => s.category.includes('فرهنگی'),
+   143→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.materials],
+   144→    presetTags: ['فرهنگی', 'هنری', 'سنتی', 'تاریخی', 'موسیقی'],
+   145→    searchFields: ['name', 'summary', 'category', 'materials'],
+   146→  },
+   147→  {
+   148→    id: 'celebrity', key: 'celebrity', nameFa: 'تاک‌شوی گروهی سلبریتی‌ها', name: 'Celebrity',
+   149→    color: '#FF4F93', description: '۴۲ برنامه', filterFn: s => s.category.includes('سلبریتی'),
+   150→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.size],
+   151→    presetTags: ['سلبریتی', 'گروهی', 'مهمان‌محور', 'سرگرمی', 'لوکس'],
+   152→    searchFields: ['name', 'summary', 'style', 'size'],
+   153→  },
+   154→  {
+   155→    id: 'panel', key: 'panel', nameFa: 'تاک‌شوی پنلی و میزگرد', name: 'Panel',
+   156→    color: '#008D9C', description: '۲۳ برنامه', filterFn: s => s.category.includes('پنلی'),
+   157→    tags: [TAG_LIBRARY.layout, TAG_LIBRARY.size],
+   158→    presetTags: ['پنل', 'میزگرد', 'چندمهمانه', 'بحث', 'تخصصی'],
+   159→    searchFields: ['name', 'summary', 'category', 'layout'],
+   160→  },
+   161→  {
+   162→    id: 'morning', key: 'morning', nameFa: 'تاک‌شوی روزانه/صبحگاهی', name: 'Morning Show',
+   163→    color: '#FFD34E', description: '۲۰ برنامه', filterFn: s => s.category.includes('صبحگاهی'),
+   164→    tags: [TAG_LIBRARY.size, TAG_LIBRARY.viewers],
+   165→    presetTags: ['صبحگاهی', 'روزانه', 'پویا', 'با تماشاگر', 'موسیقی زنده'],
+   166→    searchFields: ['name', 'summary', 'category', 'viewers'],
+   167→  },
+   168→  {
+   169→    id: 'reality', key: 'reality', nameFa: 'ریلیتی شو / مسابقه', name: 'Reality/Competition',
+   170→    color: '#FF594E', description: '۱۹ برنامه', filterFn: s => s.category.includes('مسابقه') || s.category.includes('رئالیتی'),
+   171→    tags: [TAG_LIBRARY.effects, TAG_LIBRARY.style],
+   172→    presetTags: ['مسابقه', 'رئالیتی', 'داورمحور', 'پیروز', 'تعاملی'],
+   173→    searchFields: ['name', 'summary', 'style', 'effects'],
+   174→  },
+   175→  {
+   176→    id: 'night', key: 'night', nameFa: 'تاک‌شوی شبانه', name: 'Late Night',
+   177→    color: '#A66BFF', description: '۱۵ برنامه', filterFn: s => s.category.includes('شبانه'),
+   178→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting],
+   179→    presetTags: ['شبانه', 'تاریک', 'کمدی', 'مصاحبه کوتاه', 'مدرن'],
+   180→    searchFields: ['name', 'summary', 'style', 'lighting'],
+   181→  },
+   182→  {
+   183→    id: 'entertainment', key: 'entertainment', nameFa: 'صنعت سرگرمی / پشت‌صحنه', name: 'Entertainment',
+   184→    color: '#E72C42', description: '۱۳ برنامه', filterFn: s => s.category.includes('سرگرمی'),
+   185→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
+   186→    presetTags: ['سرگرمی', 'پشت‌صحنه', 'گوینده', 'مدرن', 'تعاملی'],
+   187→    searchFields: ['name', 'summary', 'style', 'effects'],
+   188→  },
+   189→  {
+   190→    id: 'location', key: 'location', nameFa: 'موقعیت‌محور / خارج از استودیو', name: 'On-Location',
+   191→    color: '#079C79', description: '۱۲ برنامه', filterFn: s => s.category.includes('موقعیت'),
+   192→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.materials],
+   193→    presetTags: ['موقعیت‌محور', 'بیرون از استودیو', 'میدانی', 'طبیعت', 'شهری'],
+   194→    searchFields: ['name', 'summary', 'category', 'materials'],
+   195→  },
+   196→  {
+   197→    id: 'digital', key: 'digital', nameFa: 'تاک‌شوی دیجیتال / اینترنتی', name: 'Digital',
+   198→    color: '#00E6A0', description: '۱۰ برنامه', filterFn: s => s.category.includes('دیجیتال'),
+   199→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
+   200→    presetTags: ['دیجیتال', 'اینترنتی', 'استریم', 'تعاملی', 'مدرن'],
+   201→    searchFields: ['name', 'summary', 'style', 'effects'],
+   202→  },
+   203→  {
+   204→    id: 'relationships', key: 'relationships', nameFa: 'تاک‌شوی روابط و تعارض', name: 'Relationships',
+   205→    color: '#E60075', description: '۸ برنامه', filterFn: s => s.category.includes('روابط'),
+   206→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
+   207→    presetTags: ['روابط', 'تعارض', 'خانوادگی', 'گفتگومحور', 'صمیمی'],
+   208→    searchFields: ['name', 'summary', 'style', 'layout'],
+   209→  },
+   210→  {
+   211→    id: 'radio', key: 'radio', nameFa: 'تاک‌شوی رادیویی / صوتی', name: 'Radio/Audio',
+   212→    color: '#B8C9C8', description: '۶ برنامه', filterFn: s => s.category.includes('رادیویی'),
+   213→    tags: [TAG_LIBRARY.layout, TAG_LIBRARY.effects],
+   214→    presetTags: ['رادیویی', 'صوتی', 'گفتگو', 'مدرن', 'استودیویی'],
+   215→    searchFields: ['name', 'summary', 'layout', 'effects'],
+   216→  },
+   217→  {
+   218→    id: 'human', key: 'human', nameFa: 'تاک‌شوی انسانی و داستان‌محور', name: 'Human Stories',
+   219→    color: '#075267', description: '۵ برنامه', filterFn: s => s.category.includes('انسانی'),
+   220→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.materials],
+   221→    presetTags: ['انسانی', 'داستان‌محور', 'مصاحبه عمیق', 'صمیمی', 'مستندگونه'],
+   222→    searchFields: ['name', 'summary', 'style', 'materials'],
+   223→  },
+   224→  {
+   225→    id: 'psa', key: 'psa', nameFa: 'پیام خدمت عمومی (PSA)', name: 'Public Service Announcement (PSA)',
+   226→    color: '#00E6A0', description: 'پیام‌های آگاهی‌بخش و خدمت عمومی',
+   227→    filterFn: s => s.category.includes('PSA') || s.category.includes('پیام خدمت'),
+   228→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
+   229→    presetTags: ['خدمت عمومی', 'آگاهی‌بخش', 'آموزشی', 'اجتماعی', 'کوتاه'],
+   230→    searchFields: ['name', 'summary', 'category', 'descriptionFa'],
+   231→  },
+   232→  {
+   233→    id: 'deepobs', key: 'deepobs', nameFa: 'پایش تحلیلی', name: 'Deep Observation',
+   234→    color: '#7040DF', description: 'تحلیل و رصد عمیق برنامه‌ها',
+   235→    filterFn: s => s.category.includes('پایش تحلیلی'),
+   236→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting, TAG_LIBRARY.materials],
+   237→    presetTags: ['تحلیلی', 'رصد عمیق', 'بررسی تخصصی', 'مقایسه‌ای', 'تفصیلی'],
+   238→    searchFields: ['name', 'summary', 'descriptionFa', 'materials'],
+   239→  },
+   240→  {
+   241→    id: 'funeral', key: 'funeral', nameFa: 'سوگواری و خاکسپاری', name: 'Funeral Coverage',
+   242→    color: '#8EADAE', description: 'پوشش خبری مراسم خاکسپاری و سوگواری شخصیت‌ها',
+   243→    filterFn: s => s.category.includes('خاکسپاری') || s.category.includes('سوگواری'),
+   244→    tags: [],
+   245→    presetTags: ['رسمی', 'مذهبی', 'دولتی', 'مردمی', 'سنتی'],
+   246→    searchFields: ['name', 'summary', 'descriptionFa'],
+   247→  },
+   248→  {
+   249→    id: 'war', key: 'war', nameFa: 'برنامه‌های جنگ و بحران', name: 'War & Conflict',
+   250→    color: '#741D39', description: 'برنامه‌های تلویزیونی با موضوع جنگ و منازعات',
+   251→    filterFn: s => s.category.includes('جنگ') || s.category.includes('بحران'),
+   252→    tags: [],
+   253→    presetTags: ['مستند جنگ', 'تحلیل نظامی', 'خبری', 'بیانیه'],
+   254→    searchFields: ['name', 'summary', 'descriptionFa'],
+   255→  },
+   256→  {
+   257→    id: 'debate', key: 'debate', nameFa: 'مناظرات انتخاباتی', name: 'Electoral Debates',
+   258→    color: '#00A6B5', description: 'مناظرات و بحث‌های انتخاباتی',
+   259→    filterFn: s => s.category.includes('مناظره') || s.category.includes('انتخابات'),
+   260→    tags: [],
+   261→    presetTags: ['ریاست جمهوری', 'پارلمانی', 'محلی', 'حزبی'],
+   262→    searchFields: ['name', 'summary', 'descriptionFa'],
+   263→  },
+   264→  {
+   265→    id: 'ads', key: 'ads', nameFa: 'آگهی‌های تبلیغاتی', name: 'Advertisements',
+   266→    color: '#E8BBA5', description: 'تبلیغات و آگهی‌های تجاری',
+   267→    filterFn: s => s.category.includes('آگهی'),
+   268→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.colors],
+   269→    presetTags: ['تبلیغاتی', 'تجاری', 'برندمحور', 'جذاب', 'کوتاه'],
+   270→    searchFields: ['name', 'summary', 'category', 'colors'],
+   271→  },
+   272→  {
+   273→    id: 'film-review', key: 'film-review', nameFa: 'نقد و بررسی فیلم', name: 'Film Review',
+   274→    color: '#FF4F93', description: 'برنامه‌های نقد و بررسی فیلم و تلویزیون',
+   275→    filterFn: s => s.category.includes('نقد و بررسی فیلم'),
+   276→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
+   277→    presetTags: ['نقد فیلم', 'سینما', 'تحلیل', 'مصاحبه', 'فرهنگ عامه'],
+   278→    searchFields: ['name', 'summary', 'category', 'descriptionFa'],
+   279→  },
+   280→  {
+   281→    id: 'family', key: 'family', nameFa: 'خانواده و افزایش جمعیت', name: 'Family & Population',
+   282→    color: '#00E6A0', description: 'برنامه‌های تلویزیونی حوزه خانواده و فرزندآوری',
+   283→    filterFn: s => s.category.includes('خانواده و افزایش جمعیت'),
+   284→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.materials],
+   285→    presetTags: ['خانواده', 'فرزندآوری', 'واقعیت‌نما', 'سبک زندگی', 'جمعیت'],
+   286→    searchFields: ['name', 'summary', 'category', 'descriptionFa'],
+   287→  },
+   288→  {
+   289→    id: 'ramadan', key: 'ramadan', nameFa: 'برنامه‌های ماه مبارک رمضان', name: 'Ramadan Programs',
+   290→    color: '#FFD34E', description: 'برنامه‌های ماه مبارک رمضان در کشورهای اسلامی',
+   291→    filterFn: s => s.category.includes('ماه مبارک رمضان'),
+   292→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting],
+   293→    presetTags: ['رمضان', 'مذهبی', 'قرآنی', 'افطار', 'سحری'],
+   294→    searchFields: ['name', 'summary', 'category', 'descriptionFa'],
+   295→  },
+   296→  {
+   297→    id: 'live-camera', key: 'live-camera', nameFa: 'پخش زنده', name: 'Live Broadcast',
+   298→    color: '#00D9D5', description: 'پخش زنده از سراسر جهان',
+   299→    filterFn: s => s.category.includes('پخش زنده دوربین'),
+   300→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
+   301→    presetTags: ['دوربین زنده', 'گردشگری', 'شهر', 'طبیعت', 'استریم'],
+   302→    searchFields: ['name', 'summary', 'category', 'descriptionFa'],
+   303→  },
+   304→  {
+   305→    id: 'constitution', key: 'constitution', nameFa: 'قانون اساسی', name: 'Constitutional Law',
+   306→    color: '#008D9C', description: 'برنامه‌های مرتبط با قانون اساسی',
+   307→    filterFn: s => s.category.includes('قانون اساسی'),
+   308→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
+   309→    presetTags: ['قانون', 'اساسی', 'حقوقی', 'مدنی', 'مذهبی'],
+   310→    searchFields: ['name', 'summary', 'category', 'descriptionFa'],
+   311→  },
+   312→  {
+   313→    id: 'police', key: 'police', nameFa: 'برنامه‌های پلیسی', name: 'Police Shows',
+   314→    color: '#075267', description: 'برنامه‌های تلویزیونی با موضوع پلیس و امنیت',
+   315→    filterFn: s => s.category.includes('پلیسی') || s.category.includes('پلیس'),
+   316→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
+   317→    presetTags: ['پلیسی', 'جنایی', 'امنیتی', 'تحقیقات', 'مامور'],
+   318→    searchFields: ['name', 'summary', 'category', 'descriptionFa'],
+   319→  },
+   320→  {
+   321→    id: 'fifth-column', key: 'fifth-column', nameFa: 'ستون پنجم', name: 'Fifth Column',
+   322→    color: '#741D39', description: 'آثار تلویزیونی با موضوع ستون پنجم',
+   323→    filterFn: s => s.category.includes('ستون پنجم'),
+   324→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
+   325→    presetTags: ['ستون پنجم', 'جاسوسی', 'ضداطلاعاتی', 'امنیت ملی', 'نفوذ'],
+   326→    searchFields: ['name', 'summary', 'category', 'descriptionFa'],
+   327→  },
+   328→  {
+   329→    id: 'tree-planting', key: 'tree-planting', nameFa: 'کاشت درخت', name: 'Tree Planting',
+   330→    color: '#20E6AD', description: 'برنامه‌های مرتبط با کاشت درخت و محیط زیست',
+   331→    filterFn: s => s.category.includes('Tree Planting') || s.category.includes('کاشت درخت'),
+   332→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.materials],
+   333→    presetTags: ['محیط زیست', 'کاشت درخت', 'طبیعت', 'سبز', 'حفاظت'],
+   334→    searchFields: ['name', 'summary', 'category', 'descriptionFa'],
+   335→  },
+   336→  {
+   337→    id: 'school-opening', key: 'school-opening', nameFa: 'مدرسه و دانش‌آموز', name: 'School & Student',
+   338→    color: '#FFD34E', description: 'برنامه‌های مرتبط با مدرسه، دانش‌آموز و بازگشایی مدارس',
+   339→    filterFn: s => s.category.includes('مدرسه') || s.category.includes('School') || s.category.includes('بازگشایی'),
+   340→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.size],
+   341→    presetTags: ['مدارس', 'آموزش', 'دانش‌آموز', 'بازگشایی', 'تحصیل'],
+   342→    searchFields: ['name', 'summary', 'category', 'descriptionFa'],
+   343→  },
+   344→  {
+   345→    id: 'travel-road', key: 'travel-road', nameFa: 'برنامه‌های سفر و جاده', name: 'Travel & Road Shows',
+   346→    color: '#55AEB7', description: 'برنامه‌های سفرنامه‌ای و جاده‌ای',
+   347→    filterFn: s => s.category.includes('travel road') || s.category.includes('سفر و جاده'),
+   348→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
+   349→    presetTags: ['سفر', 'جاده', 'گردشگری', 'مردم‌شناسی', 'موقعیت‌محور'],
+   350→    searchFields: ['name', 'summary', 'category', 'descriptionFa'],
+   351→  },
+   352→  {
+   353→    id: 'investment', key: 'investment', nameFa: 'سرمایه‌گذاری در تولید', name: 'Production Investment',
+   354→    color: '#9957FF', description: 'برنامه‌های مرتبط با سرمایه‌گذاری در تولید',
+   355→    filterFn: s => s.category.includes('سرمایه‌گذاری') || s.category.includes('Investment'),
+   356→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.materials],
+   357→    presetTags: ['سرمایه‌گذاری', 'تولید', 'اقتصاد', 'صنعت', 'کارآفرینی'],
+   358→    searchFields: ['name', 'summary', 'category', 'descriptionFa'],
+   359→  },
+   360→  {
+   361→    id: 'school-student', key: 'school-student', nameFa: 'مدرسه و دانش‌آموز', name: 'School & Student',
+   362→    color: '#FF594E', description: 'برنامه‌های مرتبط با مدرسه و دانش‌آموزان',
+   363→    filterFn: s => s.category.includes('مدرسه و دانش') || s.category.includes('School'),
+   364→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.size],
+   365→    presetTags: ['مدرسه', 'دانش‌آموز', 'آموزش', 'معلم', 'کودک'],
+   366→    searchFields: ['name', 'summary', 'category', 'descriptionFa'],
+   367→  },
+   368→  {
+   369→    id: 'christmas', key: 'christmas', nameFa: 'ویژه‌برنامه‌های کریسمس', name: 'Christmas Specials',
+   370→    color: '#E8BBA5', description: 'ویژه‌برنامه‌های کریسمس در کشورهای مختلف',
+   371→    filterFn: s => s.category.includes('کریسمس') || s.category.includes('Christmas'),
+   372→    tags: [TAG_LIBRARY.style, TAG_LIBRARY.colors],
+   373→    presetTags: ['کریسمس', 'جشن', 'آیین', 'کشورهای مختلف', 'ویژه'],
+   374→    searchFields: ['name', 'summary', 'category', 'descriptionFa'],
+   375→  },
+   376→];
+   377→
+   378→// ============================================
+   379→// ISLAMIC COUNTRIES FILTER
+   380→// ~40 Persian country names — used to detect a show's country from its text.
+   381→// ============================================
+   382→const ISLAMIC_COUNTRIES: string[] = [
+   383→  'ایران', 'افغانستان', 'پاکستان', 'ترکیه', 'عربستان', 'عراق', 'سوریه', 'مصر',
+   384→  'یمن', 'عمان', 'قطر', 'کویت', 'بحرین', 'امارات', 'اردن', 'لبنان',
+   385→  'فلسطین', 'سودان', 'لیبی', 'تونس', 'الجزایر', 'مراکش', 'موریتانی', 'سومالی',
+   386→  'مالزی', 'اندونزی', 'برونئی', 'بنگلادش', 'مالدیو', 'کومور', 'ازبکستان', 'تاجیکستان',
+   387→  'ترکمنستان', 'قرقیزستان', 'قزاقستان', 'آذربایجان', 'مالی', 'نیجر', 'چاد', 'سنگال',
+   388→];
+   389→
+   390→// Returns the list of Islamic countries mentioned in a show's text (description, summary, country).
+   391→function detectCountries(show: TalkShow): string[] {
+   392→  const text = `${show.descriptionFa || ''} ${show.summary || ''} ${show.country || ''}`;
+   393→  const found: string[] = [];
+   394→  for (const c of ISLAMIC_COUNTRIES) {
+   395→    // Word-boundary-style match: country must not be part of a longer Persian word.
+   396→    // We use a regex that requires non-letter / start / end on either side.
+   397→    const escaped = c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+   398→    const re = new RegExp(`(^|[^\\u0600-\\u06FFa-zA-Z])${escaped}([^\\u0600-\\u06FFa-zA-Z]|$)`);
+   399→    if (re.test(text)) found.push(c);
+   400→  }
+   401→  return Array.from(new Set(found));
+   402→}
+   403→
+   404→// ============================================
+   405→// RELATED PROGRAMS
+   406→// Score: same category +5, same layout +3, shared elements (Jaccard up to +3),
+   407→//        same style +2, same effects +2, same country +2, same size +1, same viewers +1
+   408→// ============================================
+   409→function findRelated(show: TalkShow, allShows: TalkShow[], limit = 6): TalkShow[] {
+   410→  const showElements = (show.elements || '').split(/[,،\s]+/).filter(Boolean);
+   411→  const candidates = allShows.filter(s => s.num !== show.num);
+   412→  const scored = candidates.map(s => {
+   413→    let score = 0;
+   414→    if (s.category === show.category) score += 5;
+   415→    if (s.layout === show.layout) score += 3;
+   416→    const sElements = (s.elements || '').split(/[,،\s]+/).filter(Boolean);
+   417→    if (showElements.length > 0 && sElements.length > 0) {
+   418→      const intersection = showElements.filter(e => sElements.includes(e)).length;
+   419→      const union = new Set([...showElements, ...sElements]).size || 1;
+   420→      score += Math.round((intersection / union) * 3);
+   421→    }
+   422→    if (s.style === show.style) score += 2;
+   423→    if (s.effects === show.effects) score += 2;
+   424→    if (s.country && show.country && s.country === show.country) score += 2;
+   425→    if (s.size === show.size) score += 1;
+   426→    if (s.viewers === show.viewers) score += 1;
+   427→    return { show: s, score };
+   428→  });
+   429→  return scored
+   430→    .filter(x => x.score > 0)
+   431→    .sort((a, b) => b.score - a.score)
+   432→    .slice(0, limit)
+   433→    .map(x => x.show);
+   434→}
+   435→
+   436→// ============================================
+   437→// CUSTOM GENRES — persisted in localStorage so user-added genres survive refresh
+   438→// ============================================
+   439→const CUSTOM_GENRES_KEY = 'bankresaneh_custom_genres_v1';
+   440→
+   441→type StoredGenre = {
+   442→  id: string;
+   443→  nameFa: string;
+   444→  name?: string;
+   445→  color: string;
+   446→  description: string;
+   447→};
+   448→
+   449→function loadCustomGenres(): Genre[] {
+   450→  if (typeof window === 'undefined') return [];
+   451→  try {
+   452→    const raw = window.localStorage.getItem(CUSTOM_GENRES_KEY);
+   453→    if (!raw) return [];
+   454→    const arr = JSON.parse(raw);
+   455→    if (!Array.isArray(arr)) return [];
+   456→    return arr
+   457→      .filter((g: any) => g && typeof g === 'object' && typeof g.id === 'string' && typeof g.nameFa === 'string' && typeof g.color === 'string')
+   458→      .map((g: StoredGenre) => ({
+   459→        id: g.id,
+   460→        key: g.id,
+   461→        nameFa: g.nameFa,
+   462→        name: g.name || g.nameFa,
+   463→        color: g.color,
+   464→        description: g.description || '',
+   465→        // Match shows whose category contains the genre's Persian name
+   466→        filterFn: (s: TalkShow) => s.category.includes(g.nameFa) || (g.name ? s.category.includes(g.name) : false),
+   467→        isCustom: true,
+   468→        tags: DEFAULT_GENRE_TAGS,
+   469→        presetTags: [],
+   470→        searchFields: ['name', 'summary', 'category', 'descriptionFa'] as (keyof TalkShow)[],
+   471→      }));
+   472→  } catch {
+   473→    return [];
+   474→  }
+   475→}
+   476→
+   477→function saveCustomGenres(genres: Genre[]) {
+   478→  if (typeof window === 'undefined') return;
+   479→  try {
+   480→    const arr: StoredGenre[] = genres.map(g => ({
+   481→      id: g.id, nameFa: g.nameFa, name: g.name, color: g.color, description: g.description,
+   482→    }));
+   483→    window.localStorage.setItem(CUSTOM_GENRES_KEY, JSON.stringify(arr));
+   484→  } catch {
+   485→    // ignore storage errors
+   486→  }
+   487→}
+   488→
+   489→// Render the section-specific tags (from genre.tags or DEFAULT_GENRE_TAGS) as small badges.
+   490→function renderGenreTags(show: TalkShow, genre?: Genre | null): { id: string; label: string }[] {
+   491→  const specs = (genre && genre.tags) ? genre.tags : DEFAULT_GENRE_TAGS;
+   492→  const out: { id: string; label: string }[] = [];
+   493→  for (const spec of specs) {
+   494→    const label = spec.label(show);
+   495→    if (label) out.push({ id: spec.id, label });
+   496→  }
+   497→  return out;
+   498→}
+   499→
+   500→function toFa(n: number | null | undefined): string {
+   501→  if (n === null || n === undefined || n === 0) return '-';
+   502→  return n.toLocaleString('fa-IR');
+   503→}
+   504→
+   505→// Adjust a hex color brightness (-100 to +100)
+   506→function adjustColor(hex: string, amount: number): string {
+   507→  let r = parseInt(hex.slice(1, 3), 16);
+   508→  let g = parseInt(hex.slice(3, 5), 16);
+   509→  let b = parseInt(hex.slice(5, 7), 16);
+   510→  r = Math.max(0, Math.min(255, r + amount));
+   511→  g = Math.max(0, Math.min(255, g + amount));
+   512→  b = Math.max(0, Math.min(255, b + amount));
+   513→  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+   514→}
+   515→
+   516→// Get show's real image if available, otherwise generate thumbnail from decor properties
+   517→function getShowThumbnail(show: TalkShow): { gradient: string; pattern: string; accent: string; image: string | null } {
+   518→  // Check if show has real images from PDF
+   519→  if (show.images && show.images.length > 0) {
+   520→    const thumb = generateThumbnailColors(show);
+   521→    return { ...thumb, image: show.images[0] };
+   522→  }
+   523→  return { ...generateThumbnailColors(show), image: null };
+   524→}
+   525→
+   526→function generateThumbnailColors(show: TalkShow): { gradient: string; pattern: string; accent: string } {
+   527→  // Extract colors from show's color field
+   528→  const colorStr = show.colors || '';
+   529→  let primary = '#10b981';
+   530→  let secondary = '#0d7c4a';
+   531→
+   532→  if (colorStr.includes('red') || colorStr.includes('قرمز')) primary = '#dc2626';
+   533→  else if (colorStr.includes('blue') || colorStr.includes('آبی')) primary = '#2563eb';
+   534→  else if (colorStr.includes('purple') || colorStr.includes('بنفش')) primary = '#7c3aed';
+   535→  else if (colorStr.includes('pink') || colorStr.includes('صورتی')) primary = '#db2777';
+   536→  else if (colorStr.includes('orange') || colorStr.includes('نارنجی')) primary = '#ea580c';
+   537→  else if (colorStr.includes('yellow') || colorStr.includes('زرد')) primary = '#f59e0b';
+   538→  else if (colorStr.includes('green') || colorStr.includes('سبز')) primary = '#10b981';
+   539→  else if (colorStr.includes('gold') || colorStr.includes('طلایی')) primary = '#b45309';
+   540→  else if (colorStr.includes('white') || colorStr.includes('سفید')) primary = '#5a6b4a';
+   541→
+   542→  if (colorStr.includes('wood') || colorStr.includes('چوب')) secondary = '#92400e';
+   543→  else if (colorStr.includes('dark') || colorStr.includes('تاریک')) secondary = '#1a2e1a';
+   544→  else if (colorStr.includes('black') || colorStr.includes('مشکی')) secondary = '#0a0a0a';
+   545→  else secondary = primary + '88';
+   546→
+   547→  const gradient = `linear-gradient(135deg, ${primary} 0%, ${secondary} 100%)`;
+   548→  const pattern = `radial-gradient(circle at 30% 40%, ${primary}40 0%, transparent 50%), radial-gradient(circle at 70% 60%, ${secondary}40 0%, transparent 50%)`;
+   549→
+   550→  return { gradient, pattern, accent: primary };
+   551→}
+   552→
+   553→// ============================================
+   554→// VIDEO HELPERS — platform detection + YouTube thumbnail extraction
+   555→// ============================================
+   556→function getYoutubeThumbnail(url: string): string | null {
+   557→  const patterns = [
+   558→    /youtube\.com\/watch\?v=([\w-]{11})/,
+   559→    /youtu\.be\/([\w-]{11})/,
+   560→    /youtube\.com\/embed\/([\w-]{11})/,
+   561→    /youtube\.com\/shorts\/([\w-]{11})/,
+   562→  ];
+   563→  for (const p of patterns) {
+   564→    const m = url.match(p);
+   565→    if (m) return `https://img.youtube.com/vi/${m[1]}/mqdefault.jpg`;
+   566→  }
+   567→  return null;
+   568→}
+   569→
+   570→function getVideoPlatformInfo(url: string): { name: string; icon: string; color: string } {
+   571→  if (url.includes('youtube.com') || url.includes('youtu.be')) return { name: 'یوتیوب', icon: '▶', color: '#dc2626' };
+   572→  if (url.includes('aparat.com')) return { name: 'آپارات', icon: '🎬', color: '#ed1c24' };
+   573→  if (url.includes('vimeo.com')) return { name: 'Vimeo', icon: '🎥', color: '#19b7ea' };
+   574→  if (url.includes('dailymotion.com')) return { name: 'Dailymotion', icon: '📺', color: '#0066dc' };
+   575→  if (url.includes('t.me') || url.includes('telegram')) return { name: 'تلگرام', icon: '✈', color: '#0088cc' };
+   576→  if (url.includes('instagram.com')) return { name: 'اینستاگرام', icon: '📷', color: '#e1306c' };
+   577→  return { name: 'ویدیو', icon: '🎬', color: '#8a8a7a' };
+   578→}
+   579→
+   580→// ============================================
+   581→// SHOW IMAGE GALLERY — displays all images for a show in modal
+   582→// ============================================
+   583→function ShowImageGallery({ images, showName }: { images: string[]; showName: string }) {
+   584→  const [activeIdx, setActiveIdx] = useState(0);
+   585→  const [lightbox, setLightbox] = useState<string | null>(null);
+   586→
+   587→  return (
+   588→    <div className="mb-6">
+   589→      <h4 className="font-bold mb-3" style={{ color: '#1a2e1a' }}>
+   590→        🖼 تصاویر برنامه
+   591→        <span className="text-xs font-normal mr-2" style={{ color: '#8a8a7a' }}>
+   592→          ({images.length.toLocaleString('fa-IR')} تصویر)
+   593→        </span>
+   594→      </h4>
+   595→
+   596→      {/* Main image */}
+   597→      <div
+   598→        className="rounded-xl overflow-hidden mb-3 relative cursor-pointer"
+   599→        style={{ aspectRatio: '16/9', background: 'rgba(232, 228, 216, 0.5)', border: '1px solid rgba(13, 124, 74, 0.3)' }}
+   600→        onClick={() => images[activeIdx] && setLightbox(images[activeIdx])}
+   601→      >
+   602→        <img
+   603→          src={images[activeIdx]}
+   604→          alt={`${showName} - تصویر ${(activeIdx + 1).toLocaleString('fa-IR')}`}
+   605→          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+   606→          onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
+   607→        />
+   608→        {images.length > 1 && (
+   609→          <>
+   610→            <button
+   611→              onClick={(e) => { e.stopPropagation(); setActiveIdx((activeIdx - 1 + images.length) % images.length); }}
+   612→              className="absolute top-1/2 right-2 -translate-y-1/2 p-2 rounded-full"
+   613→              style={{ background: 'rgba(0,0,0,0.6)', color: 'white' }}
+   614→            >
+   615→              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+   616→                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+   617→              </svg>
+   618→            </button>
+   619→            <button
+   620→              onClick={(e) => { e.stopPropagation(); setActiveIdx((activeIdx + 1) % images.length); }}
+   621→              className="absolute top-1/2 left-2 -translate-y-1/2 p-2 rounded-full"
+   622→              style={{ background: 'rgba(0,0,0,0.6)', color: 'white' }}
+   623→            >
+   624→              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+   625→                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+   626→              </svg>
+   627→            </button>
+   628→            <div
+   629→              className="absolute bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold"
+   630→              style={{ background: 'rgba(0,0,0,0.7)', color: 'white' }}
+   631→            >
+   632→              {(activeIdx + 1).toLocaleString('fa-IR')} / {images.length.toLocaleString('fa-IR')}
+   633→            </div>
+   634→          </>
+   635→        )}
+   636→      </div>
+   637→
+   638→      {/* Thumbnails strip */}
+   639→      {images.length > 1 && (
+   640→        <div className="flex gap-2 overflow-x-auto pb-2" style={{ scrollbarWidth: 'thin' }}>
+   641→          {images.map((img, idx) => (
+   642→            <button
+   643→              key={idx}
+   644→              onClick={() => setActiveIdx(idx)}
+   645→              className="rounded-lg overflow-hidden flex-shrink-0 transition-all"
+   646→              style={{
+   647→                width: '64px',
+   648→                height: '48px',
+   649→                border: idx === activeIdx ? '3px solid #10b981' : '2px solid rgba(13, 124, 74, 0.3)',
+   650→                opacity: idx === activeIdx ? 1 : 0.6,
+   651→              }}
+   652→            >
+   653→              <img
+   654→                src={img}
+   655→                alt={`تصویر ${(idx + 1).toLocaleString('fa-IR')}`}
+   656→                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+   657→                onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
+   658→              />
+   659→            </button>
+   660→          ))}
+   661→        </div>
+   662→      )}
+   663→
+   664→      {/* Lightbox — full size view */}
+   665→      {lightbox && (
+   666→        <div
+   667→          className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+   668→          style={{ background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(8px)' }}
+   669→          onClick={() => setLightbox(null)}
+   670→        >
+   671→          <button
+   672→            className="absolute top-4 left-4 p-3 rounded-full"
+   673→            style={{ background: 'rgba(255,255,255,0.15)', color: 'white' }}
+   674→            onClick={() => setLightbox(null)}
+   675→          >
+   676→            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+   677→              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+   678→            </svg>
+   679→          </button>
+   680→          <img
+   681→            src={lightbox}
+   682→            alt={showName}
+   683→            style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', borderRadius: '12px' }}
+   684→            onClick={(e) => e.stopPropagation()}
+   685→          />
+   686→        </div>
+   687→      )}
+   688→    </div>
+   689→  );
+   690→}
+   691→
+   692→// ============================================
+   693→// MAIN APP
+   694→// ============================================
+   695→// ============================================
+   696→// LOCAL PERSISTENCE — user edits are saved in localStorage so they survive a refresh.
+   697→// ============================================
+   698→type Overrides = {
+   699→  added: TalkShow[];                       // shows created by the user
+   700→  edited: Record<number, TalkShow>;        // edits to shows from the base JSON
+   701→  deleted: number[];                       // base shows hidden by the user
+   702→};
+   703→
+   704→const OVERRIDES_KEY = 'bankresaneh_overrides_v1';
+   705→
+   706→function loadOverrides(): Overrides {
+   707→  if (typeof window === 'undefined') return { added: [], edited: {}, deleted: [] };
+   708→  try {
+   709→    const raw = window.localStorage.getItem(OVERRIDES_KEY);
+   710→    if (!raw) return { added: [], edited: {}, deleted: [] };
+   711→    const o = JSON.parse(raw);
+   712→    return {
+   713→      added: Array.isArray(o.added) ? o.added : [],
+   714→      edited: o.edited && typeof o.edited === 'object' ? o.edited : {},
+   715→      deleted: Array.isArray(o.deleted) ? o.deleted : [],
+   716→    };
+   717→  } catch {
+   718→    return { added: [], edited: {}, deleted: [] };
+   719→  }
+   720→}
+   721→
+   722→function saveOverrides(o: Overrides) {
+   723→  if (typeof window === 'undefined') return;
+   724→  try {
+   725→    window.localStorage.setItem(OVERRIDES_KEY, JSON.stringify(o));
+   726→  } catch {
+   727→    // Storage full or unavailable — silently ignore (edits stay in-memory only).
+   728→  }
+   729→}
+   730→
+   731→// Merge base shows with the user's overrides: drop deleted ones, replace edited ones, prepend added ones.
+   732→function applyOverrides(base: TalkShow[], o: Overrides): TalkShow[] {
+   733→  const deleted = new Set(o.deleted);
+   734→  const out: TalkShow[] = [];
+   735→  for (const s of base) {
+   736→    if (deleted.has(s.num)) continue;
+   737→    out.push(o.edited[s.num] || s);
+   738→  }
+   739→  return [...o.added, ...out];
+   740→}
+   741→
+   742→export default function Home() {
+   743→  return (
+   744→    <LangProvider>
+   745→      <HomeContent />
+   746→    </LangProvider>
+   747→  );
+   748→}
+   749→
+   750→function HomeContent() {
+   751→  const { t, lang, setLang } = useLang();
+   752→  const [currentView, setCurrentView] = useState<'dashboard' | 'programs' | 'genre' | 'reports' | 'add'>('dashboard');
+   753→  const [selectedGenre, setSelectedGenre] = useState<Genre | null>(null);
+   754→  const [authLoading, setAuthLoading] = useState(true);
+   755→  const [isMobile, setIsMobile] = useState(false);
+   756→  const [talkShows, setTalkShows] = useState<TalkShow[]>([]);
+   757→  // Base data (raw from JSON, never mutated) used to recompute the merged list.
+   758→  const [baseShows, setBaseShows] = useState<TalkShow[]>([]);
+   759→  // User changes persisted to localStorage so add/edit/delete survive a refresh.
+   760→  const [overrides, setOverrides] = useState<Overrides>({ added: [], edited: {}, deleted: [] });
+   761→  const [uploadedShows, setUploadedShows] = useState<number[]>([]);
+   762→  const [selectedShow, setSelectedShow] = useState<TalkShow | null>(null);
+   763→  const [editingShow, setEditingShow] = useState<TalkShow | null>(null);
+   764→  const [toast, setToast] = useState<string | null>(null);
+   765→  const [publishShows, setPublishShows] = useState<TalkShow[] | null>(null);
+   766→  const [showBotConfig, setShowBotConfig] = useState(false);
+   767→  const [exportPreview, setExportPreview] = useState<{ shows: TalkShow[]; format: 'pdf' | 'excel' } | null>(null);
+   768→  const [drawerOpen, setDrawerOpen] = useState(false);
+   769→  // Ticker configuration modal (admin only) — choose which programs appear in the popular bar
+   770→  const [showTickerConfig, setShowTickerConfig] = useState(false);
+   771→  const [showAnalyticsConfig, setShowAnalyticsConfig] = useState(false);
+   772→  const [showVideoEditor, setShowVideoEditor] = useState(false);
+   773→  const toggleLang = () => setLang(lang === 'fa' ? 'en' : 'fa');
+   774→  // Navigation history so every view can navigate back to the previous one
+   775→  const [viewStack, setViewStack] = useState<Array<{ view: typeof currentView; genre: Genre | null }>>([]);
+   776→  // Real authenticated user (null = logged out → show login screen)
+   777→  const [currentUser, setCurrentUser] = useState<User | null>(null);
+   778→  // Settings modal (admin only)
+   779→  const [showSettings, setShowSettings] = useState(false);
+   780→  // User-created custom genres (persisted to localStorage) — merged with GENRES.
+   781→  const [customGenres, setCustomGenres] = useState<Genre[]>([]);
+   782→  // When the user clicks "+ افزودن برنامه" from inside a genre view, that genre's
+   783→  // Persian name is preset here so AddEditView's category field starts with it.
+   784→  const [presetCategory, setPresetCategory] = useState<string | undefined>(undefined);
+   785→  // When AddEditView opens with a preset genre, its preset tags are offered as quick-adds.
+   786→  const [presetGenre, setPresetGenre] = useState<Genre | null>(null);
+   787→
+   788→  // The full list of genres = default GENRES + user customGenres.
+   789→  const genres: Genre[] = useMemo(() => [...GENRES, ...customGenres], [customGenres]);
+   790→
+   791→  // Role helpers — viewer is read-only (no add/edit/delete), admin can manage users + settings.
+   792→  const role = currentUser?.role || null;
+   793→  const canEdit = role === 'admin' || role === 'editor';
+   794→  const isAdmin = role === 'admin';
+   795→
+   796→  useEffect(() => {
+   797→    const check = () => setIsMobile(window.innerWidth < 768);
+   798→    check();
+   799→    window.addEventListener('resize', check);
+   800→    return () => window.removeEventListener('resize', check);
+   801→  }, []);
+   802→
+   803→  useEffect(() => {
+   804→    // Load persisted overrides first, then merge them with the base JSON data.
+   805→    const saved = loadOverrides();
+   806→    setOverrides(saved);
+   807→    // Restore custom genres saved in a previous session.
+   808→    setCustomGenres(loadCustomGenres());
+   809→    fetch('/talk-shows-data.json')
+   810→      .then(r => r.json())
+   811→      .then((data: TalkShow[]) => {
+   812→        setBaseShows(data);
+   813→        setTalkShows(applyOverrides(data, saved));
+   814→      })
+   815→      .catch(e => console.error('Failed to load data:', e));
+   816→  }, []);
+   817→
+   818→  // On mount: check if a token exists in localStorage, validate via /api/auth/me.
+   819→  // If valid → set currentUser (skip login). If invalid → clear token, show login.
+   820→  useEffect(() => {
+   821→    const stored = typeof window !== 'undefined' ? localStorage.getItem('bankresaneh_token') : null;
+   822→    if (!stored) {
+   823→      setAuthLoading(false);
+   824→      return;
+   825→    }
+   826→    api.getCurrentUser()
+   827→      .then((user) => setCurrentUser(user))
+   828→      .catch(() => {
+   829→        localStorage.removeItem('bankresaneh_token');
+   830→      })
+   831→      .finally(() => setAuthLoading(false));
+   832→  }, []);
+   833→
+   834→  // Recompute the merged list whenever overrides change (e.g. after an edit).
+   835→  useEffect(() => {
+   836→    if (baseShows.length > 0) {
+   837→      setTalkShows(applyOverrides(baseShows, overrides));
+   838→    }
+   839→  }, [baseShows, overrides]);
+   840→
+   841→  const showToast = (msg: string) => {
+   842→    setToast(msg);
+   843→    setTimeout(() => setToast(null), 3000);
+   844→  };
+   845→
+   846→  // Persist a new set of overrides to state + localStorage in one place.
+   847→  const commitOverrides = (next: Overrides) => {
+   848→    setOverrides(next);
+   849→    saveOverrides(next);
+   850→  };
+   851→
+   852→  // Add a brand-new show, or update an existing one (created/edited by the user).
+   853→  const handleSaveShow = (show: TalkShow, isEdit: boolean) => {
+   854→    if (isEdit) {
+   855→      const inAdded = overrides.added.find(s => s.num === show.num);
+   856→      const next: Overrides = inAdded
+   857→        ? { ...overrides, added: overrides.added.map(s => s.num === show.num ? show : s) }
+   858→        : { ...overrides, edited: { ...overrides.edited, [show.num]: show } };
+   859→      commitOverrides(next);
+   860→      showToast(`برنامه «${show.name}» بروزرسانی شد`);
+   861→    } else {
+   862→      commitOverrides({ ...overrides, added: [show, ...overrides.added] });
+   863→      showToast(`برنامه «${show.name}» اضافه شد`);
+   864→    }
+   865→  };
+   866→
+   867→  // Delete a show (hides it from the list; user-added ones are removed outright).
+   868→  const handleDeleteShow = (num: number) => {
+   869→    const inAdded = overrides.added.find(s => s.num === num);
+   870→    const next: Overrides = inAdded
+   871→      ? { ...overrides, added: overrides.added.filter(s => s.num !== num) }
+   872→      : { ...overrides, deleted: Array.from(new Set([...overrides.deleted, num])) };
+   873→    commitOverrides(next);
+   874→    showToast('برنامه حذف شد');
+   875→  };
+   876→
+   877→  // Push the current view onto the history stack, then go to `to`.
+   878→  const navigate = (to: typeof currentView, genre: Genre | null = null) => {
+   879→    setViewStack(prev => [...prev, { view: currentView, genre: selectedGenre }]);
+   880→    setCurrentView(to);
+   881→    setSelectedGenre(genre);
+   882→    setDrawerOpen(false);
+   883→    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+   884→  };
+   885→
+   886→  // Pop the history stack and restore the previous view (used by the back button).
+   887→  const goBack = () => {
+   888→    setViewStack(prev => {
+   889→      if (prev.length === 0) return prev;
+   890→      const last = prev[prev.length - 1];
+   891→      setCurrentView(last.view);
+   892→      setSelectedGenre(last.genre);
+   893→      setDrawerOpen(false);
+   894→      if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+   895→      return prev.slice(0, -1);
+   896→    });
+   897→  };
+   898→
+   899→  const canGoBack = viewStack.length > 0;
+   900→
+   901→  const handleNavigate = (v: 'dashboard' | 'programs' | 'reports' | 'add') => {
+   902→    navigate(v, null);
+   903→  };
+   904→
+   905→  const handleGenreSelect = (g: Genre) => {
+   906→    navigate('genre', g);
+   907→  };
+   908→
+   909→  // User clicked "+ افزودن برنامه" from inside a genre view → preset the category
+   910→  // so AddEditView opens with this genre's Persian name already chosen.
+   911→  const handleAddFromGenre = (g: Genre) => {
+   912→    setPresetCategory(g.nameFa);
+   913→    setPresetGenre(g);
+   914→    setEditingShow(null);
+   915→    setViewStack(prev => [...prev, { view: currentView, genre: selectedGenre }]);
+   916→    setCurrentView('add');
+   917→    setSelectedGenre(null);
+   918→    setDrawerOpen(false);
+   919→    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+   920→  };
+   921→
+   922→  // Add a brand-new custom Genre to state + localStorage.
+   923→  const handleAddGenre = (g: Genre) => {
+   924→    const next = [...customGenres, g];
+   925→    setCustomGenres(next);
+   926→    saveCustomGenres(next);
+   927→    showToast(`ژانر «${g.nameFa}» اضافه شد`);
+   928→  };
+   929→
+   930→  const handleLogout = async () => {
+   931→    try { await api.logout(); } catch {}
+   932→    setCurrentUser(null);
+   933→    setDrawerOpen(false);
+   934→    // Reset navigation back to dashboard on logout.
+   935→    setCurrentView('dashboard');
+   936→    setSelectedGenre(null);
+   937→    setViewStack([]);
+   938→    setPresetCategory(undefined);
+   939→    setPresetGenre(null);
+   940→  };
+   941→
+   942→  const handleLoginSuccess = (user: User) => {
+   943→    setAuthLoading(true);
+   944→    setCurrentUser(user);
+   945→    // Reload shows from API (or local JSON) after login
+   946→    fetch('/talk-shows-data.json')
+   947→      .then(r => r.json())
+   948→      .then(data => {
+   949→        setBaseShows(data);
+   950→        setTalkShows(applyOverrides(data, loadOverrides()));
+   951→      })
+   952→      .catch(e => console.error('Failed to load data:', e))
+   953→      .finally(() => setAuthLoading(false));
+   954→  };
+   955→
+   956→  if (authLoading) {
+   957→    return (
+   958→      <div className="login-screen min-h-screen relative flex flex-col items-center justify-center">
+   959→        <div className="login-ambient-light green-1"></div>
+   960→        <div className="login-ambient-light green-2"></div>
+   961→        <div className="login-ambient-light green-3"></div>
+   962→        <div className="relative z-20 flex flex-col items-center" style={{ gap: '16px' }}>
+   963→          <div className="w-10 h-10 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(255,255,255,0.25)', borderTopColor: '#34d399' }}></div>
+   964→          <span style={{ color: 'rgba(134, 239, 172, 0.85)', fontSize: '14px' }}>{t('loading')}</span>
+   965→        </div>
+   966→      </div>
+   967→    );
+   968→  }
+   969→
+   970→  if (!currentUser) {
+   971→    return <LoginScreen onLogin={handleLoginSuccess} />;
+   972→  }
+   973→
+   974→  return (
+   975→    <div className="app-content min-h-screen">
+   976→      <TopAppBar
+   977→        onMenuClick={() => setDrawerOpen(true)}
+   978→        isMobile={isMobile}
+   979→        currentView={currentView}
+   980→        onBack={goBack}
+   981→        canGoBack={canGoBack}
+   982→      />
+   983→
+   984→      <DrawerMenu
+   985→        open={drawerOpen}
+   986→        onClose={() => setDrawerOpen(false)}
+   987→        currentView={currentView}
+   988→        onNavigate={handleNavigate}
+   989→        onGenreSelect={handleGenreSelect}
+   990→        onLogout={handleLogout}
+   991→        onOpenSettings={() => { setShowSettings(true); setDrawerOpen(false); }}
+   992→        currentUser={currentUser}
+   993→        isAdmin={isAdmin}
+   994→        talkShows={talkShows}
+   995→        genres={genres}
+   996→      />
+   997→
+   998→      <main key={currentView} className={`main-with-mesh animate-view-enter ${isMobile ? 'px-2 pt-20 pb-28' : 'p-6 pt-20'}`}>
+   999→        {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} onShowClick={setSelectedShow} onConfigureTicker={isAdmin ? () => setShowTickerConfig(true) : undefined} onConfigureAnalytics={isAdmin ? () => setShowAnalyticsConfig(true) : undefined} />}
+  1000→        {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} />}
+  1001→        {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} onGenreSelect={(g) => navigate('genre', g)} allGenres={genres} />}
+  1002→        {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} onExport={(shows, format) => setExportPreview({ shows, format })} />}
+  1003→        {currentView === 'add' && canEdit && <AddEditView talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setPresetCategory(undefined); setPresetGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} presetCategory={presetCategory} presetGenre={presetGenre} genres={genres} canEdit={canEdit} />}
+  1004→        {currentView === 'add' && !canEdit && (
+  1005→          <div className="premium-glass p-8 text-center">
+  1006→            <h2 className="text-2xl font-bold mb-2" style={{ color: '#dc2626' }}>دسترسی غیرمجاز</h2>
+  1007→            <p style={{ color: '#5a6b4a' }}>شما اجازهٔ افزودن یا ویرایش برنامه‌ها را ندارید. برای دسترسی کامل با حساب مدیر یا ویراستار وارد شوید.</p>
+  1008→          </div>
+  1009→        )}
+  1010→      </main>
+  1011→
+  1012→      {isMobile && (
+  1013→        <MobileBottomNav
+  1014→          currentView={currentView}
+  1015→          onNavigate={handleNavigate}
+  1016→          onGenreSelect={handleGenreSelect}
+  1017→          onLogout={handleLogout}
+  1018→          onOpenDrawer={() => setDrawerOpen(true)}
+  1019→          talkShows={talkShows}
+  1020→          genres={genres}
+  1021→        />
+  1022→      )}
+  1023→
+  1024→      {/* Show details modal — pass talkShows so the modal can compute related programs */}
+  1025→      {selectedShow && (
+  1026→        <ShowDetailsModal
+  1027→          show={selectedShow}
+  1028→          allShows={talkShows}
+  1029→          onClose={() => setSelectedShow(null)}
+  1030→          onEdit={(s) => { setSelectedShow(null); setEditingShow(s); setPresetGenre(null); setPresetCategory(undefined); navigate('add'); }}
+  1031→          onDelete={handleDeleteShow}
+  1032→          onPublish={(s) => setPublishShows([s])}
+  1033→          onExport={(s, fmt) => setExportPreview({ shows: [s], format: fmt })}
+  1034→          isUploaded={uploadedShows.includes(selectedShow.num)}
+  1035→          canEdit={canEdit}
+  1036→          onSwapShow={(s) => setSelectedShow(s)}
+  1037→        />
+  1038→      )}
+  1039→
+  1040→      {/* Publish to social media modal */}
+  1041→      {publishShows && (
+  1042→        <PublishModal
+  1043→          shows={publishShows}
+  1044→          onClose={() => setPublishShows(null)}
+  1045→          onConfirm={(platform) => {
+  1046→            showToast(`${publishShows.length.toLocaleString('fa-IR')} برنامه به ${platform} منتشر شد`);
+  1047→            setPublishShows(null);
+  1048→          }}
+  1049→          onOpenBotConfig={() => setShowBotConfig(true)}
+  1050→        />
+  1051→      )}
+  1052→
+  1053→      {/* Bot config modal (Telegram / Bale token + chat ID) */}
+  1054→      {showBotConfig && (
+  1055→        <BotConfigModal
+  1056→          onClose={() => setShowBotConfig(false)}
+  1057→          onSaved={() => { setShowBotConfig(false); showToast('تنظیمات ربات ذخیره شد'); }}
+  1058→        />
+  1059→      )}
+  1060→
+  1061→      {/* Settings modal (admin only) — server URL, users, change password */}
+  1062→      {showSettings && isAdmin && (
+  1063→        <SettingsModal
+  1064→          currentUser={currentUser}
+  1065→          onClose={() => setShowSettings(false)}
+  1066→          showToast={showToast}
+  1067→          onLogout={handleLogout}
+  1068→        />
+  1069→      )}
+  1070→
+  1071→      {/* Ticker config modal (admin only) — select which programs appear in the popular bar */}
+  1072→      {showTickerConfig && isAdmin && (
+  1073→        <TickerConfigModal
+  1074→          talkShows={talkShows}
+  1075→          onClose={() => setShowTickerConfig(false)}
+  1076→          showToast={showToast}
+  1077→        />
+  1078→      )}
+  1079→
+  1080→      {showAnalyticsConfig && isAdmin && (
+  1081→        <AnalyticsGenreConfigModal
+  1082→          genres={genres.filter(g => g.id !== 'decor' && g.id !== 'with-images')}
+  1083→          talkShows={talkShows}
+  1084→          onClose={() => setShowAnalyticsConfig(false)}
+  1085→          showToast={showToast}
+  1086→        />
+  1087→      )}
+  1088→
+  1089→      {showVideoEditor && canEdit && (
+  1090→        <VideoEditor
+  1091→          onClose={() => setShowVideoEditor(false)}
+  1092→          onSave={(blob, thumb, meta) => {
+  1093→            showToast?.(`ویدیو ذخیره شد (${(blob.size / (1024 * 1024)).toFixed(1)} MB)`);
+  1094→            setShowVideoEditor(false);
+  1095→          }}
+  1096→          showToast={showToast}
+  1097→        />
+  1098→      )}
+  1099→
+  1100→      {/* Export preview modal */}
+  1101→      {exportPreview && (
+  1102→        <ExportPreviewModal
+  1103→          shows={exportPreview.shows}
+  1104→          format={exportPreview.format}
+  1105→          onClose={() => setExportPreview(null)}
+  1106→          onDownload={() => {
+  1107→            showToast(`گزارش ${exportPreview.format.toUpperCase()} دانلود شد`);
+  1108→            setExportPreview(null);
+  1109→          }}
+  1110→        />
+  1111→      )}
+  1112→
+  1113→      {/* Toast notification */}
+  1114→      {toast && (
+  1115→        <div
+  1116→          style={{
+  1117→            position: 'fixed',
+  1118→            bottom: '32px',
+  1119→            left: '50%',
+  1120→            transform: 'translateX(-50%)',
+  1121→            background: 'rgba(13, 124, 74, 0.95)',
+  1122→            color: 'white',
+  1123→            padding: '12px 24px',
+  1124→            borderRadius: '12px',
+  1125→            boxShadow: '0 8px 32px rgba(13, 124, 74, 0.4)',
+  1126→            zIndex: 100,
+  1127→            fontSize: '14px',
+  1128→            fontWeight: 600,
+  1129→            animation: 'fade-in 0.3s ease-out',
+  1130→          }}
+  1131→        >
+  1132→          {toast}
+  1133→        </div>
+  1134→      )}
+  1135→    </div>
+  1136→  );
+  1137→}
+  1138→
+  1139→// ============================================
+  1140→// LOGIN SCREEN — real auth (username + password)
+  1141→// ============================================
+  1142→function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
+  1143→  const { t } = useLang();
+  1144→  const [isReady, setIsReady] = useState(false);
+  1145→  const [username, setUsername] = useState('');
+  1146→  const [password, setPassword] = useState('');
+  1147→  const [showPassword, setShowPassword] = useState(false);
+  1148→  const [loading, setLoading] = useState(false);
+  1149→  const [error, setError] = useState<string | null>(null);
+  1150→
+  1151→  useEffect(() => { setIsReady(true); }, []);
+  1152→
+  1153→  const handleSubmit = async (e: React.FormEvent) => {
+  1154→    e.preventDefault();
+  1155→    if (loading) return;
+  1156→    setError(null);
+  1157→    if (!username.trim() || !password) {
+  1158→      setError(t('login_error_required'));
+  1159→      return;
+  1160→    }
+  1161→    setLoading(true);
+  1162→    try {
+  1163→      const data = await api.login(username.trim(), password);
+  1164→      onLogin(data.user);
+  1165→    } catch (err: any) {
+  1166→      setError(err?.message || t('login_error_failed'));
+  1167→    } finally {
+  1168→      setLoading(false);
+  1169→    }
+  1170→  };
+  1171→
+  1172→  return (
+  1173→    <div className="login-screen min-h-screen relative flex flex-col items-center justify-center">
+  1174→      <div className="login-ambient-light green-1"></div>
+  1175→      <div className="login-ambient-light green-2"></div>
+  1176→      <div className="login-ambient-light green-3"></div>
+  1177→
+  1178→      <div
+  1179→        className={`relative z-20 flex flex-col items-center px-8 transition-all duration-1000 ${isReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+  1180→        style={{ maxWidth: '440px', width: '100%' }}
+  1181→      >
+  1182→        {/* Logo — gradient light beam sweeps ONLY across the logo pixels.
+  1183→            The beam is masked to the logo's own shape via mask-image,
+  1184→            so the "برق" appears only on the icon + "بانک رسانه" text. */}
+  1185→        <div className="mb-10 flex justify-center">
+  1186→          <div
+  1187→            className="logo-shimmer"
+  1188→            style={{ ['--logo-mask' as string]: 'url(/banke-rasane-logo.png)' }}
+  1189→          >
+  1190→            <Image
+  1191→              src="/banke-rasane-logo.png"
+  1192→              alt={t('banke_rasane')}
+  1193→              width={360}
+  1194→              height={196}
+  1195→              priority
+  1196→            />
+  1197→          </div>
+  1198→        </div>
+  1199→
+  1200→        {/* Login form */}
+  1201→        <form onSubmit={handleSubmit} className="w-full" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+  1202→          {/* Username */}
+  1203→          <div>
+  1204→            <label htmlFor="login-username" className="block text-sm font-bold mb-2" style={{ color: 'rgba(134, 239, 172, 0.9)' }}>
+  1205→              {t('login_username')}
+  1206→            </label>
+  1207→            <input
+  1208→              id="login-username"
+  1209→              type="text"
+  1210→              autoComplete="username"
+  1211→              dir="ltr"
+  1212→              value={username}
+  1213→              onChange={(e) => setUsername(e.target.value)}
+  1214→              placeholder="admin"
+  1215→              disabled={loading}
+  1216→              style={{
+  1217→                width: '100%',
+  1218→                background: 'rgba(255, 255, 255, 0.08)',
+  1219→                border: '1px solid rgba(52, 211, 153, 0.4)',
+  1220→                borderRadius: '12px',
+  1221→                padding: '12px 16px',
+  1222→                color: '#f0fdf4',
+  1223→                fontSize: '15px',
+  1224→                fontFamily: 'inherit',
+  1225→                outline: 'none',
+  1226→                textAlign: 'left',
+  1227→                direction: 'ltr',
+  1228→              }}
+  1229→            />
+  1230→          </div>
+  1231→
+  1232→          {/* Password with show/hide */}
+  1233→          <div>
+  1234→            <label htmlFor="login-password" className="block text-sm font-bold mb-2" style={{ color: 'rgba(134, 239, 172, 0.9)' }}>
+  1235→              {t('login_password')}
+  1236→            </label>
+  1237→            <div className="relative" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+  1238→              <input
+  1239→                id="login-password"
+  1240→                type={showPassword ? 'text' : 'password'}
+  1241→                autoComplete="current-password"
+  1242→                dir="ltr"
+  1243→                value={password}
+  1244→                onChange={(e) => setPassword(e.target.value)}
+  1245→                placeholder="••••••"
+  1246→                disabled={loading}
+  1247→                style={{
+  1248→                  flex: '1',
+  1249→                  background: 'rgba(255, 255, 255, 0.08)',
+  1250→                  border: '1px solid rgba(52, 211, 153, 0.4)',
+  1251→                  borderRadius: '12px',
+  1252→                  padding: '12px 16px',
+  1253→                  color: '#f0fdf4',
+  1254→                  fontSize: '15px',
+  1255→                  fontFamily: 'inherit',
+  1256→                  outline: 'none',
+  1257→                  textAlign: 'left',
+  1258→                  direction: 'ltr',
+  1259→                }}
+  1260→              />
+  1261→              <button
+  1262→                type="button"
+  1263→                onClick={() => setShowPassword(!showPassword)}
+  1264→                aria-label={showPassword ? t('login_hide_password') : t('login_show_password')}
+  1265→                disabled={loading}
+  1266→                className="p-2 rounded-lg transition-colors flex-shrink-0"
+  1267→                style={{ color: '#86efac', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(52, 211, 153, 0.3)' }}
+  1268→                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(13, 124, 74, 0.2)'; }}
+  1269→                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+  1270→              >
+  1271→                {showPassword ? (
+  1272→                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+  1273→                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.243 4.243L9.88 9.88" />
+  1274→                  </svg>
+  1275→                ) : (
+  1276→                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+  1277→                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+  1278→                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+  1279→                  </svg>
+  1280→                )}
+  1281→              </button>
+  1282→            </div>
+  1283→          </div>
+  1284→
+  1285→          {/* Error message */}
+  1286→          {error && (
+  1287→            <div
+  1288→              className="p-3 rounded-xl text-sm font-medium animate-fade-in"
+  1289→              style={{
+  1290→                background: 'rgba(220, 38, 38, 0.18)',
+  1291→                border: '1px solid rgba(220, 38, 38, 0.5)',
+  1292→                color: '#fca5a5',
+  1293→              }}
+  1294→            >
+  1295→              ⚠ {error}
+  1296→            </div>
+  1297→          )}
+  1298→
+  1299→          {/* Submit — green liquid-glass button (same .btn-enter-white class) */}
+  1300→          <button
+  1301→            type="submit"
+  1302→            disabled={loading}
+  1303→            className="btn-enter-white group"
+  1304→            style={{ marginTop: '8px' }}
+  1305→          >
+  1306→            <span className="relative z-10 flex items-center gap-3 justify-center" style={{ color: '#ffffff' }}>
+  1307→              {loading ? (
+  1308→                <>
+  1309→                  <div className="w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(255,255,255,0.35)', borderTopColor: '#ffffff' }}></div>
+  1310→                  <span>{t('login_submitting')}</span>
+  1311→                </>
+  1312→              ) : (
+  1313→                <>
+  1314→                  <span>{t('login_submit')}</span>
+  1315→                  <svg
+  1316→                    className="w-5 h-5 rtl-flip group-hover:-translate-x-1.5 transition-transform"
+  1317→                    fill="none"
+  1318→                    stroke="#ffffff"
+  1319→                    viewBox="0 0 24 24"
+  1320→                    strokeWidth={2.5}
+  1321→                  >
+  1322→                    <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+  1323→                  </svg>
+  1324→                </>
+  1325→              )}
+  1326→            </span>
+  1327→          </button>
+  1328→        </form>
+  1329→
+  1330→        <div className="mt-10 text-center">
+  1331→          <p style={{ color: 'rgba(134, 239, 172, 0.6)' }} className="text-xs tracking-wider">
+  1332→            {t('login_version')}
+  1333→          </p>
+  1334→          <p style={{ color: 'rgba(134, 239, 172, 0.45)' }} className="text-xs mt-2">
+  1335→            {t('login_default_label')}: <span dir="ltr">admin</span> / {t('login_password_label')}: <span dir="ltr">admin</span>
+  1336→          </p>
+  1337→        </div>
+  1338→        {/* Language toggle */}
+  1339→        <div className="mt-6 flex justify-center">
+  1340→          <LanguageToggle variant="login" />
+  1341→        </div>
+  1342→      </div>
+  1343→    </div>
+  1344→  );
+  1345→}
+  1346→
+  1347→// ============================================
+  1348→// LANGUAGE TOGGLE — switches UI between Farsi (fa) and English (en).
+  1349→// Shows "EN" when in Farsi mode (click → English),
+  1350→// shows "فا" when in English mode (click → Farsi).
+  1351→// Frosted-glass style that matches the teal header theme.
+  1352→// ============================================
+  1353→function LanguageToggle({ variant = 'header' }: { variant?: 'header' | 'login' }) {
+  1354→  const { lang, setLang } = useLang();
+  1355→  const isHeader = variant === 'header';
+  1356→  return (
+  1357→    <div
+  1358→      dir="ltr"
+  1359→      className="flex items-center rounded-full overflow-hidden flex-shrink-0 transition-all"
+  1360→      style={{
+  1361→        background: 'rgba(16, 58, 64, 0.55)',
+  1362→        border: '1px solid rgba(85, 174, 183, 0.40)',
+  1363→        backdropFilter: 'blur(22px) saturate(160%)',
+  1364→        WebkitBackdropFilter: 'blur(22px) saturate(160%)',
+  1365→        boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.18)',
+  1366→        padding: '3px',
+  1367→        gap: '2px',
+  1368→        height: isHeader ? '36px' : '40px',
+  1369→      }}
+  1370→    >
+  1371→      {/* فارسی button */}
+  1372→      <button
+  1373→        onClick={() => setLang('fa')}
+  1374→        className="rounded-full font-bold transition-all flex items-center justify-center"
+  1375→        style={{
+  1376→          padding: '0 14px',
+  1377→          fontSize: '13px',
+  1378→          height: '100%',
+  1379→          background: lang === 'fa'
+  1380→            ? 'linear-gradient(135deg, #00E5EF 0%, #00A6B5 100%)'
+  1381→            : 'transparent',
+  1382→          color: lang === 'fa' ? '#103A40' : 'rgba(244, 255, 255, 0.5)',
+  1383→          boxShadow: lang === 'fa' ? '0 2px 8px rgba(0, 229, 239, 0.35)' : 'none',
+  1384→          cursor: 'pointer',
+  1385→          border: 'none',
+  1386→          fontFamily: 'inherit',
+  1387→        }}
+  1388→      >
+  1389→        فارسی
+  1390→      </button>
+  1391→      {/* English button */}
+  1392→      <button
+  1393→        onClick={() => setLang('en')}
+  1394→        className="rounded-full font-bold transition-all flex items-center justify-center"
+  1395→        style={{
+  1396→          padding: '0 14px',
+  1397→          fontSize: '13px',
+  1398→          height: '100%',
+  1399→          background: lang === 'en'
+  1400→            ? 'linear-gradient(135deg, #00E5EF 0%, #00A6B5 100%)'
+  1401→            : 'transparent',
+  1402→          color: lang === 'en' ? '#103A40' : 'rgba(244, 255, 255, 0.5)',
+  1403→          boxShadow: lang === 'en' ? '0 2px 8px rgba(0, 229, 239, 0.35)' : 'none',
+  1404→          cursor: 'pointer',
+  1405→          border: 'none',
+  1406→          fontFamily: 'inherit',
+  1407→        }}
+  1408→      >
+  1409→        EN
+  1410→      </button>
+  1411→    </div>
+  1412→  );
+  1413→}
+  1414→
+  1415→// ============================================
+  1416→// TOP APP BAR — fixed at top, hamburger (3-line) on the right,
+  1417→// logo + title in the center, visible on BOTH desktop and mobile
+  1418→// ============================================
+  1419→function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack }: {
+  1420→  onMenuClick: () => void;
+  1421→  isMobile: boolean;
+  1422→  currentView: string;
+  1423→  onBack: () => void;
+  1424→  canGoBack: boolean;
+  1425→}) {
+  1426→  const { t } = useLang();
+  1427→  const viewTitles: Record<string, string> = {
+  1428→    dashboard: t('view_dashboard'),
+  1429→    programs: t('view_programs'),
+  1430→    genre: t('view_genre'),
+  1431→    reports: t('view_reports'),
+  1432→    add: t('view_add'),
+  1433→  };
+  1434→
+  1435→  return (
+  1436→    <header
+  1437→      className="fixed top-0 left-0 right-0 z-40 header-liquid-glass"
+  1438→      style={{
+  1439→        background: 'rgba(16, 58, 64, 0.72)',
+  1440→        backdropFilter: 'blur(22px) saturate(160%)',
+  1441→        WebkitBackdropFilter: 'blur(22px) saturate(160%)',
+  1442→        borderBottom: '1px solid rgba(85, 174, 183, 0.55)',
+  1443→        boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.32), 0 18px 45px rgba(8, 40, 45, 0.28)',
+  1444→        borderBottomLeftRadius: '24px',
+  1445→        borderBottomRightRadius: '24px',
+  1446→      }}
+  1447→    >
+  1448→      <div
+  1449→        className="flex items-center justify-between"
+  1450→        style={{
+  1451→          padding: isMobile ? '12px 16px' : '14px 28px',
+  1452→          minHeight: '64px',
+  1453→          gap: '12px',
+  1454→        }}
+  1455→      >
+  1456→        {/* Hamburger button — 3 lines — opens the drawer from the right */}
+  1457→        <button
+  1458→          onClick={onMenuClick}
+  1459→          aria-label={t('open_menu')}
+  1460→          className="flex flex-col justify-center items-center p-2.5 rounded-xl transition-all"
+  1461→          style={{
+  1462→            background: 'rgba(255, 255, 255, 0.10)',
+  1463→            border: '1px solid rgba(220, 250, 248, 0.25)',
+  1464→            color: '#F4FFFF',
+  1465→            boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.18)',
+  1466→            minWidth: '44px',
+  1467→            minHeight: '44px',
+  1468→          }}
+  1469→          onMouseEnter={(e) => {
+  1470→            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.20)';
+  1471→            e.currentTarget.style.transform = 'translateY(-1px)';
+  1472→          }}
+  1473→          onMouseLeave={(e) => {
+  1474→            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.10)';
+  1475→            e.currentTarget.style.transform = 'translateY(0)';
+  1476→          }}
+  1477→        >
+  1478→          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
+  1479→            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+  1480→          </svg>
+  1481→        </button>
+  1482→
+  1483→        {/* Center: logo + title */}
+  1484→        <div
+  1485→          className="flex items-center gap-3 flex-1 min-w-0"
+  1486→          style={{ justifyContent: 'center' }}
+  1487→        >
+  1488→          <Image
+  1489→            src="/banke-rasane-logo.png"
+  1490→            alt={t('banke_rasane')}
+  1491→            width={isMobile ? 90 : 130}
+  1492→            height={isMobile ? 24 : 34}
+  1493→            priority
+  1494→            style={{
+  1495→              filter: 'drop-shadow(0 2px 8px rgba(13, 124, 74, 0.25))',
+  1496→              flexShrink: 0,
+  1497→            }}
+  1498→          />
+  1499→          {!isMobile && (
+  1500→            <div
+  1501→              className="flex flex-col"
+  1502→              style={{ borderRight: '1px solid rgba(13, 124, 74, 0.15)', paddingRight: '12px' }}
+  1503→            >
+  1504→              <span style={{ color: '#ffffff', fontWeight: 800, fontSize: '15px', textShadow: '0 1px 4px rgba(0,0,0,0.5)', lineHeight: 1.2 }}>
+  1505→                {viewTitles[currentView] || t('banke_rasane')}
+  1506→              </span>
+  1507→              <span style={{ color: '#8a8a7a', fontSize: '11px', marginTop: '2px' }}>
+  1508→                {t('version_short')}
+  1509→              </span>
+  1510→            </div>
+  1511→          )}
+  1512→        </div>
+  1513→
+  1514→        {/* Left placeholder: back button (when there is history), else status badge */}
+  1515→        <div style={{ minWidth: '44px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px' }}>
+  1516→          <LanguageToggle variant="header" />
+  1517→          {canGoBack ? (
+  1518→            <button
+  1519→              onClick={onBack}
+  1520→              aria-label={t('back_aria')}
+  1521→              title={t('back_aria')}
+  1522→              className="flex items-center gap-2 rounded-xl transition-all"
+  1523→              style={{
+  1524→                background: 'rgba(255, 255, 255, 0.8)',
+  1525→                border: '1px solid rgba(13, 124, 74, 0.25)',
+  1526→                color: '#0d7c4a',
+  1527→                padding: isMobile ? '9px 12px' : '9px 16px',
+  1528→                boxShadow: '0 2px 8px rgba(13, 124, 74, 0.1), inset 0 1px 0 rgba(255,255,255,0.7)',
+  1529→                minWidth: '44px',
+  1530→                minHeight: '44px',
+  1531→                fontWeight: 700,
+  1532→                fontSize: '14px',
+  1533→              }}
+  1534→              onMouseEnter={(e) => { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+  1535→              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.8)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+  1536→            >
+  1537→              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+  1538→                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+  1539→              </svg>
+  1540→              {!isMobile && <span>{t('back')}</span>}
+  1541→            </button>
+  1542→          ) : isMobile ? (
+  1543→            <span
+  1544→              className="px-2.5 py-1 rounded-full text-xs font-bold"
+  1545→              style={{
+  1546→                background: 'rgba(13, 124, 74, 0.1)',
+  1547→                color: '#0d7c4a',
+  1548→                border: '1px solid rgba(13, 124, 74, 0.2)',
+  1549→              }}
+  1550→            >
+  1551→              {t('banke_rasane')}
+  1552→            </span>
+  1553→          ) : (
+  1554→            <div
+  1555→              className="flex items-center gap-2 px-3 py-1.5 rounded-xl"
+  1556→              style={{
+  1557→                background: 'rgba(13, 124, 74, 0.08)',
+  1558→                border: '1px solid rgba(13, 124, 74, 0.15)',
+  1559→              }}
+  1560→            >
+  1561→              <span
+  1562→                className="w-2 h-2 rounded-full"
+  1563→                style={{
+  1564→                  backgroundColor: '#10b981',
+  1565→                  boxShadow: '0 0 8px #10b981',
+  1566→                  animation: 'pulse 2s ease-in-out infinite',
+  1567→                }}
+  1568→              ></span>
+  1569→              <span style={{ color: '#5a6b4a', fontSize: '12px' }}>{t('connected')}</span>
+  1570→            </div>
+  1571→          )}
+  1572→        </div>
+  1573→      </div>
+  1574→
+  1575→      {/* Inline keyframe for pulse — scoped to top bar */}
+  1576→      <style>{`@keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: 0.45 } }`}</style>
+  1577→    </header>
+  1578→  );
+  1579→}
+  1580→
+  1581→// ============================================
+  1582→// DRAWER MENU — slide-out from the right side
+  1583→// Shared between desktop and mobile, opened by TopAppBar's hamburger
+  1584→// ============================================
+  1585→function DrawerMenu({
+  1586→  open,
+  1587→  onClose,
+  1588→  currentView,
+  1589→  onNavigate,
+  1590→  onGenreSelect,
+  1591→  onLogout,
+  1592→  onOpenSettings,
+  1593→  currentUser,
+  1594→  isAdmin,
+  1595→  talkShows,
+  1596→  genres = GENRES,
+  1597→}: {
+  1598→  open: boolean;
+  1599→  onClose: () => void;
+  1600→  currentView: string;
+  1601→  onNavigate: (v: 'dashboard' | 'programs' | 'reports' | 'add') => void;
+  1602→  onGenreSelect: (g: Genre) => void;
+  1603→  onLogout: () => void;
+  1604→  onOpenSettings: () => void;
+  1605→  currentUser: User | null;
+  1606→  isAdmin: boolean;
+  1607→  talkShows: TalkShow[];
+  1608→  genres?: Genre[];
+  1609→}) {
+  1610→  const [genresExpanded, setGenresExpanded] = useState(true);
+  1611→  const { t, lang } = useLang();
+  1612→
+  1613→  const navItems = [
+  1614→    { key: 'dashboard', label: t('nav_dashboard'), icon: 'home', desc: t('nav_dashboard_desc') },
+  1615→    { key: 'programs', label: t('nav_programs'), icon: 'grid', desc: t('nav_programs_desc') },
+  1616→    { key: 'add', label: t('nav_add'), icon: 'plus', desc: t('nav_add_desc') },
+  1617→    { key: 'reports', label: t('nav_reports'), icon: 'reports', desc: t('nav_reports_desc') },
+  1618→  ] as const;
+  1619→
+  1620→  // Don't render anything if not open — keeps DOM clean
+  1621→  if (!open) return null;
+  1622→
+  1623→  const roleLabel: Record<string, string> = {
+  1624→    admin: t('role_admin'),
+  1625→    editor: t('role_editor'),
+  1626→    viewer: t('role_viewer'),
+  1627→  };
+  1628→
+  1629→  return (
+  1630→    <div
+  1631→      className="fixed inset-0 z-50"
+  1632→      style={{ background: 'rgba(0, 0, 0, 0.55)', backdropFilter: 'blur(6px)', animation: 'fade-in 0.2s ease-out' }}
+  1633→      onClick={onClose}
+  1634→    >
+  1635→      <aside
+  1636→        className="fixed top-0 right-0 bottom-0 animate-drawer-slide-in flex flex-col drawer-premium drawer-liquid-glass"
+  1637→        style={{
+  1638→          width: 'min(360px, 90vw)',
+  1639→          background: 'rgba(10, 36, 40, 0.85)',
+  1640→          backdropFilter: 'blur(22px) saturate(160%)',
+  1641→          WebkitBackdropFilter: 'blur(22px) saturate(160%)',
+  1642→          borderLeft: '1px solid rgba(85, 174, 183, 0.55)',
+  1643→          boxShadow: 'inset 1px 0 0 rgba(255, 255, 255, 0.32), -20px 0 64px rgba(8, 40, 45, 0.35)',
+  1644→        }}
+  1645→        onClick={(e) => e.stopPropagation()}
+  1646→      >
+  1647→        {/* Decorative emerald glow at top */}
+  1648→        <div
+  1649→          aria-hidden
+  1650→          style={{
+  1651→            position: 'absolute',
+  1652→            top: -60, right: -40,
+  1653→            width: 240, height: 240,
+  1654→            background: 'radial-gradient(circle, rgba(85, 174, 183, 0.22) 0%, transparent 65%)',
+  1655→            pointerEvents: 'none',
+  1656→            zIndex: 0,
+  1657→          }}
+  1658→        />
+  1659→        <div
+  1660→          aria-hidden
+  1661→          style={{
+  1662→            position: 'absolute',
+  1663→            bottom: 80, right: -60,
+  1664→            width: 220, height: 220,
+  1665→            background: 'radial-gradient(circle, rgba(23, 108, 120, 0.18) 0%, transparent 70%)',
+  1666→            pointerEvents: 'none',
+  1667→            zIndex: 0,
+  1668→          }}
+  1669→        />
+  1670→
+  1671→        {/* Drawer header — teal glass strip matching header + logo + close */}
+  1672→        <div
+  1673→          className="p-4 flex items-center justify-between flex-shrink-0 relative z-10"
+  1674→          style={{
+  1675→            background: 'linear-gradient(135deg, rgba(85, 174, 183, 0.18) 0%, rgba(23, 108, 120, 0.10) 100%)',
+  1676→            borderBottom: '1px solid rgba(85, 174, 183, 0.35)',
+  1677→          }}
+  1678→        >
+  1679→          <Image
+  1680→            src="/banke-rasane-logo.png"
+  1681→            alt={t('banke_rasane')}
+  1682→            width={140}
+  1683→            height={36}
+  1684→            priority
+  1685→            style={{ filter: 'drop-shadow(0 2px 12px rgba(85, 174, 183, 0.4))' }}
+  1686→          />
+  1687→          <button
+  1688→            onClick={onClose}
+  1689→            className="p-2 rounded-xl transition-all relative z-20"
+  1690→            style={{
+  1691→              color: '#CDEFEF',
+  1692→              background: 'rgba(85, 174, 183, 0.12)',
+  1693→              border: '1px solid rgba(85, 174, 183, 0.35)',
+  1694→            }}
+  1695→            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(220, 38, 38, 0.18)'; e.currentTarget.style.color = '#fca5a5'; e.currentTarget.style.borderColor = 'rgba(220, 38, 38, 0.35)'; }}
+  1696→            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(85, 174, 183, 0.12)'; e.currentTarget.style.color = '#CDEFEF'; e.currentTarget.style.borderColor = 'rgba(85, 174, 183, 0.35)'; }}
+  1697→            title={t('close_menu')}
+  1698→            aria-label={t('close_menu')}
+  1699→          >
+  1700→            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  1701→              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+  1702→            </svg>
+  1703→          </button>
+  1704→        </div>
+  1705→
+  1706→        {/* Navigation + genres (scrollable) */}
+  1707→        <nav
+  1708→          className="flex-1 overflow-y-auto p-3 relative z-10"
+  1709→          style={{ scrollbarWidth: 'thin' }}
+  1710→        >
+  1711→          <div className="space-y-1">
+  1712→            {navItems.map((item) => {
+  1713→              const isActive = currentView === item.key;
+  1714→              return (
+  1715→                <button
+  1716→                  key={item.key}
+  1717→                  onClick={() => onNavigate(item.key as any)}
+  1718→                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all w-full text-right relative"
+  1719→                  style={isActive ? {
+  1720→                    background: 'linear-gradient(135deg, rgba(85, 174, 183, 0.25) 0%, rgba(23, 108, 120, 0.15) 100%)',
+  1721→                    border: '1px solid rgba(85, 174, 183, 0.50)',
+  1722→                    color: '#00E5EF',
+  1723→                    boxShadow: '0 4px 18px rgba(85, 174, 183, 0.20), inset 0 1px 0 rgba(255,255,255,0.15)',
+  1724→                  } : {
+  1725→                    border: '1px solid transparent',
+  1726→                    color: '#F4FFFF',
+  1727→                  }}
+  1728→                  onMouseEnter={(e) => {
+  1729→                    if (!isActive) {
+  1730→                      e.currentTarget.style.background = 'rgba(85, 174, 183, 0.15)';
+  1731→                      e.currentTarget.style.color = '#00E5EF';
+  1732→                      e.currentTarget.style.borderColor = 'rgba(85, 174, 183, 0.30)';
+  1733→                    }
+  1734→                  }}
+  1735→                  onMouseLeave={(e) => {
+  1736→                    if (!isActive) {
+  1737→                      e.currentTarget.style.background = 'transparent';
+  1738→                      e.currentTarget.style.color = '#F4FFFF';
+  1739→                      e.currentTarget.style.borderColor = 'transparent';
+  1740→                    }
+  1741→                  }}
+  1742→                >
+  1743→                  {/* Active accent stripe */}
+  1744→                  {isActive && (
+  1745→                    <span
+  1746→                      aria-hidden
+  1747→                      style={{
+  1748→                        position: 'absolute',
+  1749→                        right: 0, top: '18%', bottom: '18%',
+  1750→                        width: 3,
+  1751→                        borderRadius: 3,
+  1752→                        background: 'linear-gradient(180deg, #00E5EF, #55AEB7)',
+  1753→                        boxShadow: '0 0 12px rgba(0, 229, 239, 0.8)',
+  1754→                      }}
+  1755→                    />
+  1756→                  )}
+  1757→                  <NavIcon name={item.icon} />
+  1758→                  <div className="flex-1 min-w-0">
+  1759→                    <div className="font-bold text-sm" style={{ color: 'inherit' }}>{item.label}</div>
+  1760→                    <div className="text-xs" style={{ color: isActive ? 'rgba(205, 239, 237, 0.85)' : 'rgba(205, 239, 237, 0.55)', marginTop: '2px' }}>{item.desc}</div>
+  1761→                  </div>
+  1762→                </button>
+  1763→              );
+  1764→            })}
+  1765→          </div>
+  1766→
+  1767→          {/* Genres section */}
+  1768→          <div className="mt-6">
+  1769→            <button
+  1770→              onClick={() => setGenresExpanded(!genresExpanded)}
+  1771→              className="flex items-center justify-between w-full px-3 mb-2 text-xs font-bold uppercase tracking-wider"
+  1772→              style={{ color: '#55AEB7' }}
+  1773→            >
+  1774→              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+  1775→                <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: 6, background: '#00E5EF', boxShadow: '0 0 10px rgba(0, 229, 239, 0.9)' }} />
+  1776→                {t('genres_section')} ({genres.length})
+  1777→              </span>
+  1778→              <svg
+  1779→                className="w-4 h-4 transition-transform"
+  1780→                style={{ transform: genresExpanded ? 'rotate(0deg)' : 'rotate(-90deg)' }}
+  1781→                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+  1782→              >
+  1783→                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+  1784→              </svg>
+  1785→            </button>
+  1786→
+  1787→            {genresExpanded && (
+  1788→              <div className="space-y-0.5 animate-fade-in-up">
+  1789→                {genres.map((g) => {
+  1790→                  const count = talkShows.filter(g.filterFn).length;
+  1791→                  return (
+  1792→                    <button
+  1793→                      key={g.id}
+  1794→                      onClick={() => onGenreSelect(g)}
+  1795→                      className="flex items-center gap-3 px-3 py-2 rounded-lg transition-all group w-full"
+  1796→                      style={{ color: '#F4FFFF' }}
+  1797→                      onMouseEnter={(e) => {
+  1798→                        e.currentTarget.style.background = `${g.color}30`;
+  1799→                        e.currentTarget.style.color = g.color;
+  1800→                      }}
+  1801→                      onMouseLeave={(e) => {
+  1802→                        e.currentTarget.style.background = 'transparent';
+  1803→                        e.currentTarget.style.color = '#F4FFFF';
+  1804→                      }}
+  1805→                    >
+  1806→                      <div
+  1807→                        className="w-2.5 h-2.5 rounded-full flex-shrink-0 group-hover:scale-125 transition-transform"
+  1808→                        style={{
+  1809→                          backgroundColor: g.color,
+  1810→                        }}
+  1811→                      ></div>
+  1812→                      <span className="text-sm flex-1 text-right truncate font-medium">{genreName(g, lang)}</span>
+  1813→                      <span
+  1814→                        className="text-xs font-bold"
+  1815→                        style={{ color: g.color }}
+  1816→                      >
+  1817→                        {count.toLocaleString('fa-IR')}
+  1818→                      </span>
+  1819→                    </button>
+  1820→                  );
+  1821→                })}
+  1822→              </div>
+  1823→            )}
+  1824→          </div>
+  1825→        </nav>
+  1826→
+  1827→        {/* User info + settings + logout footer */}
+  1828→        <div
+  1829→          className="p-3 flex-shrink-0 relative z-10"
+  1830→          style={{ borderTop: '1px solid rgba(85, 174, 183, 0.35)' }}
+  1831→        >
+  1832→          {currentUser && (
+  1833→            <div
+  1834→              className="mb-2 p-3 rounded-xl"
+  1835→              style={{
+  1836→                background: 'linear-gradient(135deg, rgba(85, 174, 183, 0.18) 0%, rgba(23, 108, 120, 0.10) 100%)',
+  1837→                border: '1px solid rgba(85, 174, 183, 0.30)',
+  1838→              }}
+  1839→            >
+  1840→              <div className="flex items-center gap-3">
+  1841→                <div
+  1842→                  className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+  1843→                  style={{
+  1844→                    background: 'linear-gradient(135deg, #00E5EF 0%, #176C78 100%)',
+  1845→                    color: '#103A40',
+  1846→                    border: '1px solid rgba(0, 229, 239, 0.6)',
+  1847→                    fontWeight: 700,
+  1848→                    fontSize: '14px',
+  1849→                    boxShadow: '0 4px 16px rgba(0, 229, 239, 0.35)',
+  1850→                  }}
+  1851→                >
+  1852→                  {(currentUser.name || currentUser.username).charAt(0).toUpperCase()}
+  1853→                </div>
+  1854→                <div className="flex-1 min-w-0">
+  1855→                  <div className="font-bold text-sm" style={{ color: '#F4FFFF' }} title={currentUser.username}>
+  1856→                    {currentUser.name || currentUser.username}
+  1857→                  </div>
+  1858→                  <div className="flex items-center gap-2 mt-0.5">
+  1859→                    <span
+  1860→                      className="text-xs px-1.5 py-0.5 rounded-md font-bold"
+  1861→                      style={{
+  1862→                        background: currentUser.role === 'admin' ? 'rgba(220, 38, 38, 0.25)' : currentUser.role === 'editor' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(0, 229, 239, 0.25)',
+  1863→                        color: currentUser.role === 'admin' ? '#fca5a5' : currentUser.role === 'editor' ? '#fcd34d' : '#00E5EF',
+  1864→                      }}
+  1865→                    >
+  1866→                      {roleLabel[currentUser.role] || currentUser.role}
+  1867→                    </span>
+  1868→                    <span className="text-xs" style={{ color: 'rgba(205, 239, 237, 0.6)' }} dir="ltr">
+  1869→                      @{currentUser.username}
+  1870→                    </span>
+  1871→                  </div>
+  1872→                </div>
+  1873→              </div>
+  1874→            </div>
+  1875→          )}
+  1876→
+  1877→          {/* Settings button — admin only */}
+  1878→          {isAdmin && (
+  1879→            <button
+  1880→              onClick={onOpenSettings}
+  1881→              className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all w-full mb-1"
+  1882→              style={{ color: '#F4FFFF' }}
+  1883→              onMouseEnter={(e) => {
+  1884→                e.currentTarget.style.background = 'rgba(85, 174, 183, 0.18)';
+  1885→                e.currentTarget.style.color = '#00E5EF';
+  1886→              }}
+  1887→              onMouseLeave={(e) => {
+  1888→                e.currentTarget.style.background = 'transparent';
+  1889→                e.currentTarget.style.color = '#F4FFFF';
+  1890→              }}
+  1891→            >
+  1892→              <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+  1893→                <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+  1894→                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+  1895→              </svg>
+  1896→              <span className="font-bold text-sm">{t('settings')}</span>
+  1897→            </button>
+  1898→          )}
+  1899→
+  1900→          <button
+  1901→            onClick={onLogout}
+  1902→            className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all w-full"
+  1903→            style={{ color: '#F4FFFF' }}
+  1904→            onMouseEnter={(e) => {
+  1905→              e.currentTarget.style.background = 'rgba(220, 38, 38, 0.18)';
+  1906→              e.currentTarget.style.color = '#fca5a5';
+  1907→            }}
+  1908→            onMouseLeave={(e) => {
+  1909→              e.currentTarget.style.background = 'transparent';
+  1910→              e.currentTarget.style.color = '#F4FFFF';
+  1911→            }}
+  1912→          >
+  1913→            <NavIcon name="exit" />
+  1914→            <span className="font-bold text-sm">{t('logout')}</span>
+  1915→          </button>
+  1916→        </div>
+  1917→      </aside>
+  1918→    </div>
+  1919→  );
+  1920→}
+  1921→
+  1922→function NavIcon({ name }: { name: string }) {
+  1923→  const icons: Record<string, React.ReactElement> = {
+  1924→    home: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />,
+  1925→    grid: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />,
+  1926→    plus: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />,
+  1927→    reports: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />,
+  1928→    exit: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />,
+  1929→  };
+  1930→  return (
+  1931→    <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  1932→      {icons[name] || icons.home}
+  1933→    </svg>
+  1934→  );
+  1935→}
+  1936→
+  1937→// ============================================
+  1938→// MOBILE BOTTOM NAV
+  1939→// (the drawer menu is now shared & owned by the App level —
+  1940→//  the bottom nav's "menu" button just calls onOpenDrawer)
+  1941→// ============================================
+  1942→function MobileBottomNav({
+  1943→  currentView,
+  1944→  onNavigate,
+  1945→  onGenreSelect,
+  1946→  onLogout,
+  1947→  onOpenDrawer,
+  1948→  talkShows,
+  1949→  genres = GENRES,
+  1950→}: {
+  1951→  currentView: string;
+  1952→  onNavigate: (v: 'dashboard' | 'programs' | 'reports' | 'add') => void;
+  1953→  onGenreSelect: (g: Genre) => void;
+  1954→  onLogout: () => void;
+  1955→  onOpenDrawer: () => void;
+  1956→  talkShows: TalkShow[];
+  1957→  genres?: Genre[];
+  1958→}) {
+  1959→  const [showGenres, setShowGenres] = useState(false);
+  1960→  const { t, lang } = useLang();
+  1961→
+  1962→  return (
+  1963→    <>
+  1964→      {showGenres && (
+  1965→        <div
+  1966→          className="fixed inset-0 z-40"
+  1967→          style={{ background: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(6px)' }}
+  1968→          onClick={() => setShowGenres(false)}
+  1969→        >
+  1970→          <div
+  1971→            className="fixed bottom-0 left-0 right-0 p-4 animate-slide-up-nav"
+  1972→            style={{
+  1973→              background: 'rgba(10, 36, 40, 0.85)',
+  1974→              backdropFilter: 'blur(22px) saturate(160%)',
+  1975→              WebkitBackdropFilter: 'blur(22px) saturate(160%)',
+  1976→              borderTop: '1px solid rgba(85, 174, 183, 0.55)',
+  1977→              borderRadius: '24px 24px 0 0',
+  1978→              boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.32), 0 -18px 45px rgba(8, 40, 45, 0.28)',
+  1979→              paddingBottom: '32px',
+  1980→              maxHeight: '70vh',
+  1981→              overflowY: 'auto',
+  1982→            }}
+  1983→            onClick={(e) => e.stopPropagation()}
+  1984→          >
+  1985→            <div className="flex items-center justify-between mb-4">
+  1986→              <h3 className="font-bold text-lg" style={{ color: '#F4FFFF' }}>{t('genres_section')} ({genres.length})</h3>
+  1987→              <button
+  1988→                onClick={() => setShowGenres(false)}
+  1989→                className="p-2 rounded-lg"
+  1990→                style={{ color: '#CDEFEF', background: 'rgba(85, 174, 183, 0.15)', border: '1px solid rgba(85, 174, 183, 0.35)' }}
+  1991→              >
+  1992→                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  1993→                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+  1994→                </svg>
+  1995→              </button>
+  1996→            </div>
+  1997→            <div className="grid grid-cols-2 gap-2">
+  1998→              {genres.map((g) => {
+  1999→                const count = talkShows.filter(g.filterFn).length;
+  2000→                return (
+
+[showing lines 1-2000 of 7252; use offset=2001 with limit to continue reading]

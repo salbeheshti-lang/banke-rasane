@@ -1,0 +1,132 @@
+[api-service] Installing dependencies...
+bun install v1.3.14 (0d9b296a)
+No packages! Deleted empty lockfile
+
+[1.00ms] done
+[api-service] Running bun run dev...
+$ bun --hot index.js
+[seed] shows table already has 560 rows — skipping seed
+298 | seedShows();
+299 | 
+300 | // ------------------252 |     resolve(import.meta.dir, '../../public/talk-sho
+                                   ^
+error: Unterminated string literal
+    at /home/z/my-project/mini-services/api-service/index.js:252:30
+[seed] shows table already has 560 rows — skipping seed
+[bankresaneh-api] listening on http://localhost:3002
+256 |       .run('admin', sha256('admin'), 'admin',
+                                                   ^
+error: Unexpected end of file
+    at /home/z/my-project/mini-services/api-service/index.js:256:46
+[seed] shows table already has 560 rows — skipping seed
+[bankresaneh-api] listening on http://localhost:3002
+373 |       return json({ success: t
+                                   ^
+error: Expected "}" but found end of file
+    at /home/z/my-project/mini-services/api-service/index.js:373:30
+[seed] shows table already has 560 rows — skipping seed
+[bankresaneh-api] listening on http://localhost:3002
+[seed] shows table already has 560 rows — skipping seed
+[bankresaneh-api] listening on http://localhost:3002
+error: Unexpected end of file
+    at /home/z/my-project/mini-services/api-service/index.js:245:3
+[migration] added column users.last_seen
+[migration] added column users.job_title
+[migration] added column users.department
+[migration] added column users.bio
+[migration] added column users.avatar
+[seed] shows table already has 560 rows — skipping seed
+[bankresaneh-api] listening on http://localhost:3002
+[seed] shows table already has 560 rows — skipping seed
+[bankresaneh-api] listening on http://localhost:3002
+error: Unexpected end of file
+    at /home/z/my-project/mini-services/api-service/index.js:245:3
+[seed] shows table already has 560 rows — skipping seed
+[bankresaneh-api] listening on http://localhost:3002
+[seed] shows table already has 560 rows — skipping seed
+[bankresaneh-api] listening on http://localhost:3002
+error: script "dev" was terminated by signal SIGTERM (Polite quit request)
+----------------------------------------------
+333 | // Router
+334 | // ---------------------------------------------------------------------------
+335 | const server = Bun.serve({
+                         ^
+error: Failed to start server. Is port 3002 in use?
+ syscall: "listen",
+   errno: 0,
+    code: "EADDRINUSE"
+
+      at /home/z/my-project/mini-services/api-service/index.js:335:20
+[seed] shows table already has 560 rows — skipping seed
+340 | seedShows();
+341 | 
+342 | // ---------------------------------------------------------------------------
+343 | // Router
+344 | // ---------------------------------------------------------------------------
+345 | const server = Bun.serve({
+                         ^
+error: Failed to start server. Is port 3002 in use?
+ syscall: "listen",
+   errno: 0,
+    code: "EADDRINUSE"
+
+      at /home/z/my-project/mini-services/api-service/index.js:345:20
+[seed] shows table already has 560 rows — skipping seed
+360 | seedShows();
+361 | 
+362 | // ---------------------------------------------------------------------------
+363 | // Router
+364 | // ---------------------------------------------------------------------------
+365 | const server = Bun.serve({
+                         ^
+error: Failed to start server. Is port 3002 in use?
+ syscall: "listen",
+   errno: 0,
+    code: "EADDRINUSE"
+
+      at /home/z/my-project/mini-services/api-service/index.js:365:20
+[seed] shows table already has 560 rows — skipping seed
+360 | seedShows();
+361 | 
+362 | // ---------------------------------------------------------------------------
+363 | // Router
+364 | // ---------------------------------------------------------------------------
+365 | const server = Bun.serve({
+                         ^
+error: Failed to start server. Is port 3002 in use?
+ syscall: "listen",
+   errno: 0,
+    code: "EADDRINUSE"
+
+      at /home/z/my-project/mini-services/api-service/index.js:365:20
+error: Unexpected end of file
+    at /home/z/my-project/mini-services/api-service/index.js:245:3
+[seed] shows table already has 560 rows — skipping seed
+360 | seedShows();
+361 | 
+362 | // ---------------------------------------------------------------------------
+363 | // Router
+364 | // ---------------------------------------------------------------------------
+365 | const server = Bun.serve({
+                         ^
+error: Failed to start server. Is port 3002 in use?
+ syscall: "listen",
+   errno: 0,
+    code: "EADDRINUSE"
+
+      at /home/z/my-project/mini-services/api-service/index.js:365:20
+[seed] shows table already has 560 rows — skipping seed
+360 | seedShows();
+361 | 
+362 | // ---------------------------------------------------------------------------
+363 | // Router
+364 | // ---------------------------------------------------------------------------
+365 | const server = Bun.serve({
+                         ^
+error: Failed to start server. Is port 3002 in use?
+ syscall: "listen",
+   errno: 0,
+    code: "EADDRINUSE"
+
+      at /home/z/my-project/mini-services/api-service/index.js:365:20
+error: script "dev" was terminated by signal SIGTERM (Polite quit request)

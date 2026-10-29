@@ -1,0 +1,55 @@
+$ bun --hot index.js
+[seed] shows table already has 560 rows — skipping seed
+[bankresaneh-api] listening on http://localhost:3002
+$ bun --hot index.js
+[seed] shows table already has 560 rows — skipping seed
+[bankresaneh-api] listening on http://localhost:3002
+$ bun --hot index.js
+[seed] shows table already has 560 rows — skipping seed
+[bankresaneh-api] listening on http://localhost:3002
+$ bun --hot index.js
+[seed] shows table already has 560 rows — skipping seed
+[bankresaneh-api] listening on http://localhost:3002
+$ bun --hot index.js
+[seed] shows table already has 560 rows — skipping seed
+[bankresaneh-api] listening on http://localhost:3002
+$ bun --hot index.js
+[seed] shows table already has 560 rows — skipping seed
+[bankresaneh-api] listening on http://localhost:3002
+$ bun --hot index.js
+[seed] shows table already has 560 rows — skipping seed
+[bankresaneh-api] listening on http://localhost:3002
+[seed] DB has 2088 shows, JSON has 2088 — up to date, skipping
+[bankresaneh-api] listening on http://localhost:3002
+error: script "dev" was terminated by signal SIGTERM (Polite quit request)
+$ bun --hot index.js
+[seed] DB has 2088 shows, JSON has 2088 — up to date, skipping
+[bankresaneh-api] listening on http://localhost:3002
+[migration] added column users.deputy
+[seed] DB has 2088 shows, JSON has 2088 — up to date, skipping
+[bankresaneh-api] listening on http://localhost:3002
+[seed] DB has 2088 shows, JSON has 2088 — up to date, skipping
+[bankresaneh-api] listening on http://localhost:3002
+[seed] DB has 2088 shows, JSON has 2088 — up to date, skipping
+[bankresaneh-api] listening on http://localhost:3002
+error: script "dev" was terminated by signal SIGTERM (Polite quit request)
+$ bun --hot index.js
+[seed] DB has 2088 shows, JSON has 2088 — up to date, skipping
+[bankresaneh-api] listening on http://localhost:3002
+[migration] added column users.phone
+[seed] DB has 2088 shows, JSON has 2088 — up to date, skipping
+[bankresaneh-api] listening on http://localhost:3002
+[seed] DB has 2088 shows, JSON has 2088 — up to date, skipping
+[bankresaneh-api] listening on http://localhost:3002
+[seed] DB has 2088 shows, JSON has 2088 — up to date, skipping
+[bankresaneh-api] listening on http://localhost:3002
+[seed] DB has 2088 shows, JSON has 2088 — up to date, skipping
+[bankresaneh-api] listening on http://localhost:3002
+[seed] DB has 2088 shows, JSON has 2088 — up to date, skipping
+[bankresaneh-api] listening on http://localhost:3002
+[seed] DB has 2088 shows, JSON has 2088 — up to date, skipping
+[bankresaneh-api] listening on http://localhost:3002
+error: script "dev" was terminated by signal SIGTERM (Polite quit request)
+$ bun --hot index.js
+[seed] DB has 2088 shows, JSON has 2088 — up to date, skipping
+[bankresaneh-api] listening on http://localhost:3002

@@ -1,0 +1,4 @@
+[seed] created default admin: admin / admin
+[seed] loading shows from /home/z/my-project/public/talk-shows-data.json
+[seed] inserted 560 shows
+[bankresaneh-api] listening on http://localhost:3002

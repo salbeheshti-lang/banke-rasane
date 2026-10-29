@@ -1,0 +1,661 @@
+     1→     1→"""Master script: Parse programs from all 4 PDFs, build program records,
+     2→     2→write to public/talk-shows-data.json, and add new genres to src/app/page.tsx.
+     3→     3→"""
+     4→     4→import json
+     5→     5→import os
+     6→     6→import re
+     7→     7→import urllib.parse
+     8→     8→
+     9→     9→ROOT = "/home/z/my-project"
+    10→    10→
+    11→    11→# Load image map: {"pdf_idx_page": [image_paths]}
+    12→    12→with open(f"{ROOT}/scripts/pdf_extract/image_map.json", "r", encoding="utf-8") as f:
+    13→    13→    IMAGE_MAP = json.load(f)
+    14→    14→
+    15→    15→def imgs_for(pdf_idx, page_indices):
+    16→    16→    """Return all image paths for the given PDF index and page range (inclusive)."""
+    17→    17→    out = []
+    18→    18→    for p in page_indices:
+    19→    19→        key = f"{pdf_idx}_{p}"
+    20→    20→        if key in IMAGE_MAP:
+    21→    21→            out.extend(IMAGE_MAP[key])
+    22→    22→    return out
+    23→    23→
+    24→    24→# Load existing data
+    25→    25→with open(f"{ROOT}/public/talk-shows-data.json", "r", encoding="utf-8") as f:
+    26→    26→    existing = json.load(f)
+    27→    27→print(f"Existing programs: {len(existing)}, max num: {max(p['num'] for p in existing)}")
+    28→    28→
+    29→    29→# Load each PDF's text
+    30→    30→PDF_TEXT = {}
+    31→    31→LABELS = {1: "نقد فیلم", 2: "خانواده", 3: "رمضان", 4: "دوربین"}
+    32→    32→for i in [1, 2, 3, 4]:
+    33→    33→    with open(f"{ROOT}/scripts/pdf_extract/pdf{i}_{LABELS[i]}_text.json", "r", encoding="utf-8") as f:
+    34→    34→        PDF_TEXT[i] = json.load(f)["pages"]
+    35→    35→
+    36→    36→# Helper: clean Persian text (remove excessive whitespace, normalize)
+    37→    37→def clean_text(s):
+    38→    38→    if not s:
+    39→    39→        return ""
+    40→    40→    # Collapse runs of whitespace into single spaces, but keep paragraph breaks
+    41→    41→    s = re.sub(r'[ \t]+', ' ', s)
+    42→    42→    s = re.sub(r'\n{3,}', '\n\n', s)
+    43→    43→    return s.strip()
+    44→    44→
+    45→    45→# Categories (Persian) per PDF
+    46→    46→CATEGORY = {
+    47→    47→    1: "نقد و بررسی فیلم",
+    48→    48→    2: "خانواده و افزایش جمعیت",
+    49→    49→    3: "برنامه‌های ماه مبارک رمضان",
+    50→    50→    4: "پخش زنده دوربین‌ها",
+    51→    51→}
+    52→    52→
+    53→    53→# Persian country names -> English (ordered by specificity; longer names first)
+    54→    54→COUNTRY_FA_EN = {
+    55→    55→    "آفریقای جنوبی": "South Africa",
+    56→    56→    "آمریکا": "United States",
+    57→    57→    "آمریکایی": "United States",
+    58→    58→    "انگلستان": "United Kingdom",
+    59→    59→    "بریتانیایی": "United Kingdom",
+    60→    60→    "بریتانیا": "United Kingdom",
+    61→    61→    "هلند": "Netherlands",
+    62→    62→    "ژاپن": "Japan",
+    63→    63→    "کره": "South Korea",
+    64→    64→    "فیلیپین": "Philippines",
+    65→    65→    "اوکراین": "Ukraine",
+    66→    66→    "اندونزی": "Indonesia",
+    67→    67→    "مالزی": "Malaysia",
+    68→    68→    "قطر": "Qatar",
+    69→    69→    "کویت": "Kuwait",
+    70→    70→    "ترکیه": "Turkey",
+    71→    71→    "ایران": "Iran",
+    72→    72→    "آلمان": "Germany",
+    73→    73→    "فرانسه": "France",
+    74→    74→    "استرالیا": "Australia",
+    75→    75→    "کانادا": "Canada",
+    76→    76→    "ایرلند": "Ireland",
+    77→    77→    "اسکاتلند": "Scotland",
+    78→    78→    "نیجریه": "Nigeria",
+    79→    79→    "هند": "India",
+    80→    80→}
+    81→    81→
+    82→    82→def detect_country(text):
+    83→    83→    """Detect country from text using word-boundary regex (Persish-aware)."""
+    84→    84→    if not text:
+    85→    85→        return "Unknown"
+    86→    86→    # Normalize: collapse whitespace (including newlines) to single spaces for matching
+    87→    87→    norm = re.sub(r'\s+', ' ', text)
+    88→    88→    # Order by length descending so multi-word matches win
+    89→    89→    items = sorted(COUNTRY_FA_EN.items(), key=lambda x: -len(x[0]))
+    90→    90→    for fa_name, en_name in items:
+    91→    91→        # Word boundary: preceding char must not be Persian letter, following char must not be Persian letter
+    92→    92→        escaped = re.escape(fa_name)
+    93→    93→        pattern = r'(^|[^\u0600-\u06FF])' + escaped + r'(?=[^\u0600-\u06FF]|$)'
+    94→    94→        if re.search(pattern, norm):
+    95→    95→            return en_name
+    96→    96→    # Fallback: also match "آمریک" prefix (text may be broken as "آمریک ایی")
+    97→    97→    if re.search(r'(^|[^\u0600-\u06FF])آمریک(?=[\s\u0600-\u06FF]|$)', norm):
+    98→    98→        return "United States"
+    99→    99→    # Fallback: check network names
+   100→   100→    net_text = norm[:1500]
+   101→   101→    if 'MTV' in net_text and 'بریتانیا' in net_text:
+   102→   102→        return 'United Kingdom'
+   103→   103→    if 'MTV' in net_text or 'ABC' in net_text or 'TLC' in net_text or 'USA Network' in net_text or 'Up TV' in net_text:
+   104→   104→        return 'United States'
+   105→   105→    if 'BBC' in net_text:
+   106→   106→        return 'United Kingdom'
+   107→   107→    if 'Discovery' in net_text:
+   108→   108→        return 'United States'
+   109→   109→    if 'Netflix' in net_text or 'نتفلیکس' in net_text:
+   110→   110→        return 'United States'
+   111→   111→    return 'Unknown'
+   112→   112→
+   113→   113→# Hardcoded country overrides for known PDF2 shows (the texts don't always state the country clearly)
+   114→   114→COUNTRY_OVERRIDE_PDF2 = {
+   115→   115→    "Maternity Ward": "United States",
+   116→   116→    "A Baby Story": "United States",
+   117→   117→    "Take Me to Your Mother": "United States",
+   118→   118→    "I Live Alone": "South Korea",
+   119→   119→    "At Home with the Buckleys": "United Kingdom",
+   120→   120→    "Rock of Love: Charm School": "United States",
+   121→   121→    "Unusually Thicke": "United States",
+   122→   122→    "Out Daughtered": "United States",
+   123→   123→    "The Blended Bunch": "United States",
+   124→   124→    "Sweet Home Sextuplets": "United States",
+   125→   125→    "Meet the Putmans": "United States",
+   126→   126→    "Doubling Down with the Derricos": "United States",
+   127→   127→    "Counting On": "United States",
+   128→   128→    "I'm Pregnant and...": "United States",
+   129→   129→    "Babies": "United States",
+   130→   130→}
+   131→   131→
+   132→   132→# ============================================================
+   133→   133→# PDF 1: نقد فیلم (Film Review Programs)
+   134→   134→# ============================================================
+   135→   135→# Each program starts on a page with English name + "شبکه کشور مجری" + network + country + host + ":مهمانان" + guests + description
+   136→   136→# Programs identified manually from text dump:
+   137→   137→
+   138→   138→PDF1_PROGRAMS = [
+   139→   139→    # (english_name, start_page, end_page_inclusive)
+   140→   140→    ("Spoilers with Kevin Smith", 1, 2),
+   141→   141→    ("Vice Magazine's Film & TV", 3, 3),
+   142→   142→    ("Movie Club with John Ridley", 4, 4),
+   143→   143→    ("At the Movies", 5, 6),
+   144→   144→    ("Rotten tomatoes", 7, 8),
+   145→   145→    ("Screen Junkies", 9, 9),
+   146→   146→    ("Full Frontal with Samantha Bee", 10, 11),
+   147→   147→    ("The IMDb Show", 12, 13),
+   148→   148→    ("The Movies That Made Us", 14, 15),
+   149→   149→    ("Double Toasted", 16, 16),
+   150→   150→    ("Film Threat", 17, 17),
+   151→   151→    ("Film comment", 18, 20),
+   152→   152→]
+   153→   153→
+   154→   154→def parse_pdf1():
+   155→   155→    out = []
+   156→   156→    pages = PDF_TEXT[1]
+   157→   157→    for name, sp, ep in PDF1_PROGRAMS:
+   158→   158→        # Combine text from sp..ep
+   159→   159→        text_parts = []
+   160→   160→        for p in range(sp, ep + 1):
+   161→   161→            text_parts.append(pages[p]["text"])
+   162→   162→        full = "\n".join(text_parts)
+   163→   163→        # Extract country: usually "آمریکا" appears alone on a line after the network
+   164→   164→        country = detect_country(full)
+   165→   165→        if country == "Unknown":
+   166→   166→            country = "United States"  # PDF1 is all American shows
+   167→   167→        # Extract network: line containing letters after "شبکه کشور مجری"
+   168→   168→        # Look for the description after the host/guests block - usually starts with "یک" or "این برنامه"
+   169→   169→        # We use the Persian text starting after the "مهمانان شاخص" line, or after the country/host line
+   170→   170→        desc = full
+   171→   171→        # Strip leading page numbers and metadata; keep Persian description
+   172→   172→        # Find the start of the description: it usually starts after a line break following the host/guest info
+   173→   173→        # Simple approach: find "یک برنامه" or "یک مجموعه" or "این برنامه" and slice from there
+   174→   174→        m = re.search(r'(یک\s*(برنامه|مجموعه|پrogram|تله‌?ویزیونی|مجموعهٔ|مجموعه تلویزیونی))', full)
+   175→   175→        if m:
+   176→   176→            desc = full[m.start():]
+   177→   177→        else:
+   178→   178→            m = re.search(r'(این\s*برنامه)', full)
+   179→   179→            if m:
+   180→   180→                desc = full[m.start():]
+   181→   181→        desc = clean_text(desc)
+   182→   182→        # Limit length
+   183→   183→        if len(desc) > 2500:
+   184→   184→            desc = desc[:2500] + "…"
+   185→   185→        # Images: from start page to end page
+   186→   186→        images = imgs_for(1, list(range(sp, ep + 1)))
+   187→   187→        if not images:
+   188→   188→            # fallback: try surrounding pages
+   189→   189→            images = imgs_for(1, [sp])
+   190→   190→        out.append({
+   191→   191→            "name": name,
+   192→   192→            "pdf_idx": 1,
+   193→   193→            "pages": list(range(sp, ep + 1)),
+   194→   194→            "country": country,
+   195→   195→            "descriptionFa": desc,
+   196→   196→            "images": images[:6],  # cap at 6 images per program
+   197→   197→        })
+   198→   198→    return out
+   199→   199→
+   200→   200→# ============================================================
+   201→   201→# PDF 2: خانواده و افزایش جمعیت (Family & Population)
+   202→   202→# ============================================================
+   203→   203→# Programs identified manually with their start page (page index in PDF)
+   204→   204→# Each program has English name as a line, followed by Persian description and Genre/Year/Episode block
+   205→   205→
+   206→   206→PDF2_PROGRAMS = [
+   207→   207→    # (english_name, page_index)
+   208→   208→    ("Maternity Ward", 8),
+   209→   209→    ("A Baby Story", 8),
+   210→   210→    ("One Born Every Minute", 9),
+   211→   211→    ("16 And Pregnant", 11),
+   212→   212→    ("Geordie Shore", 11),
+   213→   213→    ("Take Me to Your Mother", 12),
+   214→   214→    ("I Live Alone", 13),
+   215→   215→    ("At Home with the Buckleys", 13),
+   216→   216→    ("Rock of Love: Charm School", 14),
+   217→   217→    ("Unusually Thicke", 14),
+   218→   218→    ("Little Big Shots", 16),
+   219→   219→    ("Wayne Brady's Comedy IQ", 17),
+   220→   220→    ("Kids Say the Darndest Things", 17),
+   221→   221→    ("SUPERNANNY", 18),
+   222→   222→    ("Family Feud", 19),
+   223→   223→    ("Chrisley Knows Best", 21),
+   224→   224→    ("Parental Control", 21),
+   225→   225→    ("Extreme Makeover: Home Edition", 22),
+   226→   226→    ("Kate Plus 8", 24),
+   227→   227→    ("My Crazy Birth Story", 24),
+   228→   228→    ("Jon & Kate Plus 8", 25),
+   229→   229→    ("Teen Mom: Young and Pregnant", 25),
+   230→   230→    ("Out Daughtered", 26),
+   231→   231→    ("The Blended Bunch", 26),
+   232→   232→    ("Sweet Home Sextuplets", 27),
+   233→   233→    ("Meet the Putmans", 27),
+   234→   234→    ("19 Kids and Counting", 28),
+   235→   235→    ("Bringing Up Bates", 28),
+   236→   236→    ("7 Little Johnstons", 29),
+   237→   237→    ("Welcome to Plathville", 29),
+   238→   238→    ("Little People, Big World", 30),
+   239→   239→    ("Growing Up McGhee", 30),
+   240→   240→    ("Doubling Down with the Derricos", 31),
+   241→   241→    ("Counting On", 31),
+   242→   242→    ("I'm Pregnant and...", 33),
+   243→   243→    ("Babies", 33),
+   244→   244→]
+   245→   245→
+   246→   246→def parse_pdf2():
+   247→   247→    out = []
+   248→   248→    pages = PDF_TEXT[2]
+   249→   249→    # Sort programs by page so we can compute end_page = next_program's start_page - 1 (same page if multiple on one page)
+   250→   250→    sorted_progs = sorted(PDF2_PROGRAMS, key=lambda x: (x[1],))
+   251→   251→    for i, (name, sp) in enumerate(sorted_progs):
+   252→   252→        # Determine end page: next program's start page (same or later). For programs on the same page,
+   253→   253→        # we still split the text at the next program's name.
+   254→   254→        if i + 1 < len(sorted_progs):
+   255→   255→            next_name, next_sp = sorted_progs[i + 1]
+   256→   256→            ep = next_sp  # may equal sp if same page
+   257→   257→        else:
+   258→   258→            ep = len(pages) - 1  # last program goes to end
+   259→   259→        # Combine text from sp..ep
+   260→   260→        text_parts = []
+   261→   261→        for p in range(sp, min(ep + 1, len(pages))):
+   262→   262→            text_parts.append(pages[p]["text"])
+   263→   263→        full = "\n".join(text_parts)
+   264→   264→        # Slice description: from after the program name to before the next program name (or end)
+   265→   265→        # Find the position of the program name in the text
+   266→   266→        # The English name may be on its own line; find the first occurrence
+   267→   267→        idx = full.find(name)
+   268→   268→        if idx >= 0:
+   269→   269→            # Start after the name
+   270→   270→            after_name = full[idx + len(name):]
+   271→   271→            # If multiple programs on same page, find next English name in after_name
+   272→   272→            if i + 1 < len(sorted_progs):
+   273→   273→                next_name, _ = sorted_progs[i + 1]
+   274→   274→                nidx = after_name.find(next_name)
+   275→   275→                if nidx >= 0:
+   276→   276→                    after_name = after_name[:nidx]
+   277→   277→            desc = after_name
+   278→   278→        else:
+   279→   279→            desc = full
+   280→   280→        # Clean and limit; remove "Genre/Year/Episode/User ratings" block (English metadata)
+   281→   281→        desc = re.sub(r'Genre\s*\n\s*Reality-TV[^\n]*\n\s*Year[^\n]*\n\s*Episode[^\n]*\n\s*User ratings[^\n]*', '', desc)
+   282→   282→        desc = clean_text(desc)
+   283→   283→        if len(desc) > 2500:
+   284→   284→            desc = desc[:2500] + "…"
+   285→   285→        # Country detection
+   286→   286→        country = detect_country(full)
+   287→   287→        if name in COUNTRY_OVERRIDE_PDF2:
+   288→   288→            country = COUNTRY_OVERRIDE_PDF2[name]
+   289→   289→        # Images: from this program's page only (since multiple programs can share a page,
+   290→   290→        # we still attach all images on that page to all programs on the page — best effort)
+   291→   291→        images = imgs_for(2, list(range(sp, min(ep + 1, len(pages)))))
+   292→   292→        if not images:
+   293→   293→            images = imgs_for(2, [sp])
+   294→   294→        out.append({
+   295→   295→            "name": name,
+   296→   296→            "pdf_idx": 2,
+   297→   297→            "pages": list(range(sp, min(ep + 1, len(pages)))),
+   298→   298→            "country": country,
+   299→   299→            "descriptionFa": desc,
+   300→   300→            "images": images[:6],
+   301→   301→        })
+   302→   302→    return out
+   303→   303→
+   304→   304→# ============================================================
+   305→   305→# PDF 3: برنامه‌های ماه مبارک رمضان (Ramadan Programs)
+   306→   306→# ============================================================
+   307→   307→# Curated list of (english_name, persian_name, start_printed_page, country)
+   308→   308→# Skip section/country headers (مقدمه, سفر زیارتی, مذهبی, آشپزی, country names, etc.)
+   309→   309→
+   310→   310→PDF3_PROGRAMS = [
+   311→   311→    # (name, persian, printed_page, country)
+   312→   312→    ("Pilgrimage", "سفری در جستجوی خویشتن", 9, "United Kingdom"),
+   313→   313→    ("Brat Camp", "کمپ برات", 20, "United Kingdom"),
+   314→   314→    ("Bad Lads", "بچه‌ی‌های بد", 23, "United Kingdom"),
+   315→   315→    ("Beyond Scared Straight", "فراتر از ترس‌ی حی‌صر", 25, "United States"),
+   316→   316→    ("Race to Save Water", "مسابقه‌ی برای صرفه‌یی جو در آب", 28, "United Kingdom"),
+   317→   317→    ("Save Our Squad with David Beckham", "میت ما را با یوید د بکهام نجات ی ده د", 29, "United Kingdom"),
+   318→   318→    ("Body Parts", "اعضای بدن", 30, "United States"),
+   319→   319→    ("DIY SOS", "DIY SOS", 32, "United Kingdom"),
+   320→   320→    ("Giver", "اهدا کننده", 45, "United States"),
+   321→   321→    ("Coffee Friends", "دوستان قهوه", 47, "South Korea"),
+   322→   322→    ("Tawbah", "توبه", 49, "United Kingdom"),
+   323→   323→    ("Love After Lockup", "عشق بعد از زندان", 50, "United States"),
+   324→   324→    ("Bad Habits, Holy Orders", "عادات، بد نظم مقدس", 53, "United Kingdom"),
+   325→   325→    ("Family", "خانواده", 55, "United States"),
+   326→   326→    ("19 Kids and Counting", "۱۹ کودک و یب شتر", 56, "United States"),
+   327→   327→    ("Take Me To Your Mother", "من را ببر شیپ مادرت", 58, "United States"),
+   328→   328→    ("Dad! Where Are We Going", "بابا! کجا؟ می‌رویم", 60, "South Korea"),
+   329→   329→    ("Capital One College Bowl", "جام دانشگاهی", 62, "United States"),
+   330→   330→    ("The Story of God with Morgan Freeman", "داستان خدا با مورگان منی فر", 65, "United States"),
+   331→   331→    ("Three Meals a Day", "سه وعده غذایی در روز", 67, "South Korea"),
+   332→   332→    ("Donut Showdown", "مسابقات دوناتی پز", 68, "Canada"),
+   333→   333→    ("Pas Buka FM", "برنامه اف‌ام قبل از افطار", 72, "Indonesia"),
+   334→   334→    ("Sahur Bersama Gus Miftah", "سحرها با گاس مفتاح", 76, "Indonesia"),
+   335→   335→    ("Warung Ramadan", "غرفه ماه رمضان", 79, "Indonesia"),
+   336→   336→    ("Damai Indonesiaku", "اندونزی آرام من", 83, "Indonesia"),
+   337→   337→    ("Syiar Syair Ramadhan", "آواها و نواهای رمضان", 87, "Indonesia"),
+   338→   338→    ("Ramadan Itu Berkah", "ماه رمضان پر از برکت است", 89, "Indonesia"),
+   339→   339→    ("Jejak Al Quran", "آثار قرآن", 92, "Indonesia"),
+   340→   340→    ("Mengetuk Pintu Hati", "یکوب دن بر در دل", 95, "Indonesia"),
+   341→   341→    ("Shihab & Shihab", "شهاب و شهاب", 98, "Indonesia"),
+   342→   342→    ("Yuk Kita Sahur", "ایب سحری بخوریم", 102, "Indonesia"),
+   343→   343→    ("Mama & AA Beraksi", "مامان و یا یا در عمل", 105, "Indonesia"),
+   344→   344→    ("Saatnya Kita Sahur", "وقت سحری خوردن است", 108, "Indonesia"),
+   345→   345→    ("Akademi Sahur Indonesia", "آکادمی سحر اندونزی", 111, "Indonesia"),
+   346→   346→    ("Hafiz Indonesia", "حافظ اندونزی", 114, "Indonesia"),
+   347→   347→    ("Jejak Rasul", "قدمگاه پیامبران", 120, "Malaysia"),
+   348→   348→    ("Tanyalah Ustaz", "از استاد بپرس", 123, "Malaysia"),
+   349→   349→    ("Kompas Sahur", "سحری با کمپاس", 127, "Malaysia"),
+   350→   350→    ("Ulama Nusantara", "علمای نوسانتارا", 131, "Malaysia"),
+   351→   351→    ("Ramadan wal-Nas", "رمضان و مردم", 136, "Qatar"),
+   352→   352→    ("Safaratna", "سفر ما", 139, "Qatar"),
+   353→   353→    ("Hurouf al-Noor", "حروف نور", 142, "Qatar"),
+   354→   354→    ("Al-Rasul Qudwa", "پیامبری الگو است", 145, "Qatar"),
+   355→   355→    ("Iyaluna fi Ramadan", "خانواده ما در ماه رمضان", 149, "Qatar"),
+   356→   356→    ("Al-Ghabqa", "سحری", 153, "Qatar"),
+   357→   357→    ("Safar al-Khayr", "سفر نیکوکار", 157, "Qatar"),
+   358→   358→    ("Layali Ramadan", "شب‌های رمضان", 161, "Qatar"),
+   359→   359→    ("Sanad", "سند", 165, "Qatar"),
+   360→   360→    ("Fada'il Ramadan", "فضایل ماه مبارک رمضان", 169, "Qatar"),
+   361→   361→    ("Al-Waridat", "آوا ورود ماه رمضان", 175, "Qatar"),
+   362→   362→    ("Ahl Ramadan", "سلام بر رمضان", 179, "Qatar"),
+   363→   363→    ("Aklat Ramadan", "غذاهای رمضان", 183, "Qatar"),
+   364→   364→    ("Khayr Ahli", "نیکوکاری‌های جامعه محور", 188, "Kuwait"),
+   365→   365→    ("Ahsan Rahla", "بهترین سفر", 192, "Kuwait"),
+   366→   366→    ("Qawa'id Qur'aniyya", "قواعد قرآنی", 196, "Kuwait"),
+   367→   367→    ("Masra", "مسجداالقصی", 201, "Kuwait"),
+   368→   368→    ("Ta'arraf Alayh", "آن را بشناس", 206, "Kuwait"),
+   369→   369→    ("Suhbat Ramadan", "محفل رمضان", 210, "Kuwait"),
+   370→   370→    ("Noor wa A'lam", "نور و نشانه‌ها", 214, "Kuwait"),
+   371→   371→    ("Durat Ramadan", "جامی‌های رمضان", 218, "Kuwait"),
+   372→   372→    ("Sihhatuna fi Ramadan", "سلامتی ما در ماه رمضان", 222, "Kuwait"),
+   373→   373→    ("Al-Kalima al-Tayyiba", "کلمه مهربانی", 226, "Kuwait"),
+   374→   374→    ("Bil-Qur'an Ihtadayt", "با قرآن هدایت شدم", 230, "Kuwait"),
+   375→   375→]
+   376→   376→
+   377→   377→def parse_pdf3():
+   378→   378→    out = []
+   379→   379→    pages = PDF_TEXT[3]
+   380→   380→    # Sort by printed page
+   381→   381→    sorted_progs = sorted(PDF3_PROGRAMS, key=lambda x: x[2])
+   382→   382→    for i, (name, persian, printed_sp, country) in enumerate(sorted_progs):
+   383→   383→        sp = printed_sp - 1  # PDF index
+   384→   384→        # End page: start of next program (printed page - 1)
+   385→   385→        if i + 1 < len(sorted_progs):
+   386→   386→            _, _, next_printed_sp, _ = sorted_progs[i + 1]
+   387→   387→            ep = next_printed_sp - 1 - 1  # page before next program's start
+   388→   388→        else:
+   389→   389→            ep = len(pages) - 1
+   390→   390→        if ep < sp:
+   391→   391→            ep = sp
+   392→   392→        # Combine text
+   393→   393→        text_parts = []
+   394→   394→        for p in range(sp, min(ep + 1, len(pages))):
+   395→   395→            text_parts.append(pages[p]["text"])
+   396→   396→        full = "\n".join(text_parts)
+   397→   397→        # Strip leading page number / metadata, keep Persian description
+   398→   398→        desc = full
+   399→   399→        # Try to find a meaningful start: "ایده ناظر", "پیرنگ اصلی برنامه", "محصول کشور", or just trim
+   400→   400→        # Take from "ایده ناظر" or "پیرنگ اصلی" if present
+   401→   401→        m = re.search(r'(ایده\s*ناظر|پیرنگ\s*اصلی\s*برنامه)', full)
+   402→   402→        if m:
+   403→   403→            desc = full[m.start():]
+   404→   404→        desc = clean_text(desc)
+   405→   405→        if len(desc) > 2500:
+   406→   406→            desc = desc[:2500] + "…"
+   407→   407→        # Images: from sp to ep
+   408→   408→        images = imgs_for(3, list(range(sp, min(ep + 1, len(pages)))))
+   409→   409→        if not images:
+   410→   410→            images = imgs_for(3, [sp])
+   411→   411→        out.append({
+   412→   412→            "name": name,
+   413→   413→            "pdf_idx": 3,
+   414→   414→            "pages": list(range(sp, min(ep + 1, len(pages)))),
+   415→   415→            "country": country,
+   416→   416→            "descriptionFa": desc,
+   417→   417→            "images": images[:6],
+   418→   418→            "persianName": persian,
+   419→   419→        })
+   420→   420→    return out
+   421→   421→
+   422→   422→# ============================================================
+   423→   423→# PDF 4: پخش زنده دوربین‌ها (Live Camera Streams)
+   424→   424→# ============================================================
+   425→   425→# Each program has "عنوان" (title) + English title + "توضیح" (description)
+   426→   426→# Identified from text dump:
+   427→   427→
+   428→   428→PDF4_PROGRAMS = [
+   429→   429→    # (english_title, persian_title, page_index, country)
+   430→   430→    ("Lake Shore Railway Museum - East Camera", "موزه راه آهن Lake Shore", 5, "United States"),
+   431→   431→    ("Livestream RailCam Netherlands", "ایستگاه قطاری در کشور هلند", 6, "Netherlands"),
+   432→   432→    ("Mount Washington Cog Railway live Webcam", "ایستگاه اصلی قطار مارشفیلد", 8, "United States"),
+   433→   433→    ("CHECK NEWS - Nanaimo harbour Cam 24-7 LiveStream", "بندر نانایمو", 12, "Canada"),
+   434→   434→    ("Come Back Real Time LIVE Walking tour Seoul Korea - Hong Kong", "خیابان‌های سئول", 13, "South Korea"),
+   435→   435→    ("Live Duval street, Key West, Florida - Outside sloppy Joe's", "خیابان دووا در شهر فلوریدا", 13, "United States"),
+   436→   436→    ("London Bus Rides", "خیابان‌های لندن", 14, "United Kingdom"),
+   437→   437→    ("NOW Shibuya Scramble Crossing Tokyo- Japan", "خیابان‌های توکیو", 14, "Japan"),
+   438→   438→    ("Philippines live street view camera - Market area", "خیابان‌های فیلیپین", 15, "Philippines"),
+   439→   439→    ("Ukraine Live Coverage 24/7", "شهرهای اوکراین", 15, "Ukraine"),
+   440→   440→]
+   441→   441→
+   442→   442→def parse_pdf4():
+   443→   443→    out = []
+   444→   444→    pages = PDF_TEXT[4]
+   445→   445→    for i, (name, persian, sp, country) in enumerate(PDF4_PROGRAMS):
+   446→   446→        # End page: start of next program - 1, or +2 pages max
+   447→   447→        if i + 1 < len(PDF4_PROGRAMS):
+   448→   448→            _, _, next_sp, _ = PDF4_PROGRAMS[i + 1]
+   449→   449→            ep = next_sp - 1
+   450→   450→        else:
+   451→   451→            ep = min(sp + 2, len(pages) - 1)
+   452→   452→        if ep < sp:
+   453→   453→            ep = sp
+   454→   454→        text_parts = []
+   455→   455→        for p in range(sp, min(ep + 1, len(pages))):
+   456→   456→            text_parts.append(pages[p]["text"])
+   457→   457→        full = "\n".join(text_parts)
+   458→   458→        # Extract description: from "توضیح" until next "عنوان" or end
+   459→   459→        m = re.search(r'توضیح', full)
+   460→   460→        if m:
+   461→   461→            desc = full[m.end():]
+   462→   462→            # If there's a next "عنوان", cut there
+   463→   463→            nidx = desc.find('عنوان')
+   464→   464→            if nidx > 0:
+   465→   465→                desc = desc[:nidx]
+   466→   466→        else:
+   467→   467→            desc = full
+   468→   468→        desc = clean_text(desc)
+   469→   469→        if len(desc) > 2000:
+   470→   470→            desc = desc[:2000] + "…"
+   471→   471→        images = imgs_for(4, list(range(sp, min(ep + 1, len(pages)))))
+   472→   472→        if not images:
+   473→   473→            images = imgs_for(4, [sp])
+   474→   474→        out.append({
+   475→   475→            "name": name,
+   476→   476→            "pdf_idx": 4,
+   477→   477→            "pages": list(range(sp, min(ep + 1, len(pages)))),
+   478→   478→            "country": country,
+   479→   479→            "descriptionFa": desc,
+   480→   480→            "images": images[:6],
+   481→   481→            "persianName": persian,
+   482→   482→        })
+   483→   483→    return out
+   484→   484→
+   485→   485→# ============================================================
+   486→   486→# Build program records
+   487→   487→# ============================================================
+   488→   488→print("Parsing PDFs...")
+   489→   489→programs_pdf1 = parse_pdf1()
+   490→   490→programs_pdf2 = parse_pdf2()
+   491→   491→programs_pdf3 = parse_pdf3()
+   492→   492→programs_pdf4 = parse_pdf4()
+   493→   493→
+   494→   494→print(f"  PDF 1: {len(programs_pdf1)} programs")
+   495→   495→print(f"  PDF 2: {len(programs_pdf2)} programs")
+   496→   496→print(f"  PDF 3: {len(programs_pdf3)} programs")
+   497→   497→print(f"  PDF 4: {len(programs_pdf4)} programs")
+   498→   498→total_new = len(programs_pdf1) + len(programs_pdf2) + len(programs_pdf3) + len(programs_pdf4)
+   499→   499→print(f"  Total new programs: {total_new}")
+   500→   500→
+   501→   501→# Sanity check: every program must have at least 1 image
+   502→   502→all_progs = programs_pdf1 + programs_pdf2 + programs_pdf3 + programs_pdf4
+   503→   503→no_img = [p for p in all_progs if not p["images"]]
+   504→   504→if no_img:
+   505→   505→    print(f"[!] {len(no_img)} programs without images:")
+   506→   506→    for p in no_img:
+   507→   507→        print(f"    - {p['name']} (pdf {p['pdf_idx']}, pages {p['pages']})")
+   508→   508→
+   509→   509→# ============================================================
+   510→   510→# Generate metadata (style, effects, layout, etc.) per PDF category
+   511→   511→# ============================================================
+   512→   512→
+   513→   513→def metadata_for(pdf_idx, desc, name):
+   514→   514→    """Generate plausible metadata fields based on PDF category and description keywords."""
+   515→   515→    # Defaults per category
+   516→   516→    if pdf_idx == 1:  # نقد فیلم — film review
+   517→   517→        style = "مدرن"
+   518→   518→        effects = "نمایشگر/LEDمحور"
+   519→   519→        layout = "پنل/میزگرد"
+   520→   520→        elements = "screens/monitors، bar/cafe_counter"
+   521→   521→        materials = "metal، glass"
+   522→   522→        colors = "modern dark tones with vibrant accent lighting"
+   523→   523→        lighting = "ترکیبی"
+   524→   524→        viewers = "بدون تماشاگر"
+   525→   525→        size = "متوسط/استاندارد"
+   526→   526→    elif pdf_idx == 2:  # خانواده — family/population reality
+   527→   527→        style = "ترکیبی"
+   528→   528→        effects = "فیزیکی/واقعی"
+   529→   529→        layout = "موقعیت‌محور"
+   530→   530→        elements = "plants، screens/monitors، bar/cafe_counter"
+   531→   531→        materials = "wood، fabric/upholstery"
+   532→   532→        colors = "warm earth tones with soft natural lighting"
+   533→   533→        lighting = "گرم"
+   534→   534→        viewers = "بدون تماشاگر"
+   535→   535→        size = "متوسط/استاندارد"
+   536→   536→    elif pdf_idx == 3:  # رمضان — Ramadan religious programs
+   537→   537→        style = "کلاسیک/سنتی"
+   538→   538→        effects = "ترکیبی"
+   539→   539→        layout = "پنل/میزگرد"
+   540→   540→        elements = "plants، screens/monitors"
+   541→   541→        materials = "wood، fabric/upholstery"
+   542→   542→        colors = "warm gold and green with spiritual accent lighting"
+   543→   543→        lighting = "گرم"
+   544→   544→        viewers = "با تماشاگر"
+   545→   545→        size = "بزرگ/لوکس"
+   546→   546→    elif pdf_idx == 4:  # دوربین — live camera streams
+   547→   547→        style = "مینیمال"
+   548→   548→        effects = "فیزیکی/واقعی"
+   549→   549→        layout = "موقعیت‌محور"
+   550→   550→        elements = "screens/monitors"
+   551→   551→        materials = "metal، glass"
+   552→   552→        colors = "natural outdoor daylight and ambient street lighting"
+   553→   553→        lighting = "خنثی"
+   554→   554→        viewers = "بدون تماشاگر"
+   555→   555→        size = "کوچک/اقتصادی"
+   556→   556→    else:
+   557→   557→        style = "ترکیبی"; effects = "ترکیبی"; layout = "پنل/میزگرد"
+   558→   558→        elements = "screens/monitors"; materials = "metal، glass"
+   559→   559→        colors = "neutral palette"; lighting = "ترکیبی"
+   560→   560→        viewers = "بدون تماشاگر"; size = "متوسط/استاندارد"
+   561→   561→    # Slight customization based on description keywords
+   562→   562→    d = (desc or "").lower()
+   563→   563→    if any(k in desc for k in ["مدرن", "modern", "تکنولوژی", "دیجیتال"]):
+   564→   564→        style = "مدرن"
+   565→   565→    if any(k in desc for k in ["سنتی", "کلاسیک", "مذهبی", "قرآن", "رمضان"]):
+   566→   566→        style = "کلاسیک/سنتی"
+   567→   567→    if any(k in desc for k in ["استودیو", "مصاحبه"]):
+   568→   568→        layout = "مصاحبه یک‌به‌یک"
+   569→   569→    return {
+   570→   570→        "style": style, "effects": effects, "layout": layout,
+   571→   571→        "elements": elements, "materials": materials, "colors": colors,
+   572→   572→        "lighting": lighting, "viewers": viewers, "size": size,
+   573→   573→    }
+   574→   574→
+   575→   575→def build_summary(name, pdf_idx, country, desc):
+   576→   576→    """Build a short English summary."""
+   577→   577→    cat_map = {1: "film review", 2: "family/population reality", 3: "Ramadan program", 4: "live camera stream"}
+   578→   578→    s = f"{name} — a {cat_map.get(pdf_idx, 'TV program')} from {country}."
+   579→   579→    # Add a snippet from description if it has Latin chars
+   580→   580→    return s
+   581→   581→
+   582→   582→def build_social_post(name, pdf_idx, desc, category):
+   583→   583→    """Build a social media post string in Persian."""
+   584→   584→    cat_map = {
+   585→   585→        1: "نقد و بررسی فیلم",
+   586→   586→        2: "خانواده و افزایش جمعیت",
+   587→   587→        3: "برنامه‌های ماه مبارک رمضان",
+   588→   588→        4: "پخش زنده دوربین‌ها",
+   589→   589→    }
+   590→   590→    post = f"🎬 {name}\n\n📝 {desc[:200]}\n\n🏷 {category}\n\n#بانک_رسانه #تاک_شو #برنامه_تلویزیونی"
+   591→   591→    return post
+   592→   592→
+   593→   593→# ============================================================
+   594→   594→# Assemble new program records
+   595→   595→# ============================================================
+   596→   596→START_NUM = 616
+   597→   597→
+   598→   598→new_records = []
+   599→   599→counter = START_NUM
+   600→   600→for p in all_progs:
+   601→   601→    meta = metadata_for(p["pdf_idx"], p["descriptionFa"], p["name"])
+   602→   602→    name = p["name"]
+   603→   603→    country = p["country"]
+   604→   604→    category = CATEGORY[p["pdf_idx"]]
+   605→   605→    desc = p["descriptionFa"]
+   606→   606→    summary = build_summary(name, p["pdf_idx"], country, desc)
+   607→   607→    # Build links
+   608→   608→    query = urllib.parse.quote(name)
+   609→   609→    youtube = f"https://www.youtube.com/results?search_query={query}"
+   610→   610→    imdb = f"https://www.imdb.com/find?q={query}"
+   611→   611→    wikipedia = f"https://fa.wikipedia.org/w/index.php?search={query}"
+   612→   612→    social = build_social_post(name, p["pdf_idx"], desc, category)
+   613→   613→    # Tags
+   614→   614→    tags_map = {1: ["film-review", "critic", "cinema"], 2: ["family", "reality-tv", "population"],
+   615→   615→                3: ["ramadan", "religious", "islamic"], 4: ["live-camera", "streaming", "tourism"]}
+   616→   616→    tags = list(tags_map.get(p["pdf_idx"], []))
+   617→   617→    record = {
+   618→   618→        "num": counter,
+   619→   619→        "name": name,
+   620→   620→        "category": category,
+   621→   621→        "source": "تصویر PDF",
+   622→   622→        "size": meta["size"],
+   623→   623→        "viewers": meta["viewers"],
+   624→   624→        "style": meta["style"],
+   625→   625→        "effects": meta["effects"],
+   626→   626→        "layout": meta["layout"],
+   627→   627→        "elements": meta["elements"],
+   628→   628→        "materials": meta["materials"],
+   629→   629→        "colors": meta["colors"],
+   630→   630→        "lighting": meta["lighting"],
+   631→   631→        "summary": summary,
+   632→   632→        "descriptionFa": desc,
+   633→   633→        "country": country,
+   634→   634→        "images": p["images"],
+   635→   635→        "tags": tags,
+   636→   636→        "youtube": youtube,
+   637→   637→        "imdb": imdb,
+   638→   638→        "wikipedia": wikipedia,
+   639→   639→        "socialPost": social,
+   640→   640→    }
+   641→   641→    new_records.append(record)
+   642→   642→    counter += 1
+   643→   643→
+   644→   644→print(f"Built {len(new_records)} new records (num {START_NUM}..{counter-1})")
+   645→   645→
+   646→   646→# ============================================================
+   647→   647→# Write to talk-shows-data.json
+   648→   648→# ============================================================
+   649→   649→combined = existing + new_records
+   650→   650→out_path = f"{ROOT}/public/talk-shows-data.json"
+   651→   651→with open(out_path, "w", encoding="utf-8") as f:
+   652→   652→    json.dump(combined, f, ensure_ascii=False, indent=2)
+   653→   653→print(f"Wrote {len(combined)} programs to {out_path}")
+   654→   654→
+   655→   655→# Verify JSON
+   656→   656→with open(out_path, "r", encoding="utf-8") as f:
+   657→   657→    check = json.load(f)
+   658→   658→print(f"Verified: {len(check)} programs loaded back; nums {check[-1]['num']} and {check[0]['num']}")
+   659→   659→print(f"Last new program: num={new_records[-1]['num']}, name={new_records[-1]['name']}, images={len(new_records[-1]['images'])}")
+   660→   660→print("DONE master")
+   661→   661→

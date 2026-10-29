@@ -1,0 +1,23 @@
+skills/
+node_modules/
+.next/dev/logs/
+dev.log
+mini-services/api-service/bankresaneh.sqlite-shm
+mini-services/api-service/bankresaneh.sqlite-wal
+
+# Build cache & runtime — don't push these
+.next/
+download/
+upload/
+agent-ctx/
+
+# Large image sets — too heavy for git, use cloud storage instead
+public/program-images/new/
+
+# Worker build artifacts
+worker/dist/
+
+# Electron build
+electron/dist/
+electron/out/
+public/program-images/
