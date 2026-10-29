@@ -45,6 +45,7 @@ function makeEnv(allowedOrigins = '') {
       updated_at TEXT
     );
   `);
+  sqlite.exec(readFileSync(new URL('./migrations/0001_auth_login_attempts.sql', import.meta.url), 'utf8'));
 
   const DB = {
     prepare(sql) {
