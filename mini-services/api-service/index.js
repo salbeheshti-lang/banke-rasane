@@ -529,7 +529,8 @@ const server = Bun.serve({
            ?, ?, ?, ?, ?, ?,
            ?, ?, ?, ?, ?, ?)`).run(...row);
       } catch (e) {
-        return json({ error: 'خطا در ایجاد برنامه: ' + e.message }, 500);
+        console.error('[api] create show failed', e);
+        return json({ error: 'خطا در ایجاد برنامه' }, 500);
       }
       return json({ num: body.num });
     }
@@ -562,7 +563,8 @@ const server = Bun.serve({
             images=?, videos=?
             WHERE num=?`).run(...showToValues(merged).slice(1), num);
         } catch (e) {
-          return json({ error: 'خطا در بروزرسانی: ' + e.message }, 500);
+          console.error('[api] update show failed', e);
+          return json({ error: 'خطا در بروزرسانی برنامه' }, 500);
         }
         return json({ success: true });
       }
@@ -602,7 +604,8 @@ const server = Bun.serve({
           .run(username, hashPassword(password), role, name);
         return json({ id: Number(r.lastInsertRowid) });
       } catch (e) {
-        return json({ error: 'خطا در ایجاد کاربر: ' + e.message }, 500);
+        console.error('[api] create user failed', e);
+        return json({ error: 'خطا در ایجاد کاربر' }, 500);
       }
     }
 
