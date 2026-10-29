@@ -31,6 +31,8 @@ jobs:
           bun-version: latest
       - name: Install dependencies from lockfile
         run: bun install --frozen-lockfile
+      - name: Local API authentication and authorization integration tests
+        run: bun test mini-services/api-service/security.test.js
       - name: Lint
         run: bun run lint
       - name: Generate Prisma client
