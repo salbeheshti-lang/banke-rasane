@@ -77,13 +77,28 @@ function sha256(s) {
 function hashPassword(password) {
   const salt = randomBytes(16).toString('hex');
   const hash = scryptSync(password, salt, 64).toString('hex');
-  return `scrypt${salt}${hash}`;
+  return 'scrypt$' + salt + '$' + hash;
 }
 
 function verifyPassword(password, storedHash) {
   if (typeof storedHash !== 'string') return { valid: false, upgradedHash: null };
 
-  if (storedHash.startsWith('scrypt
+  if (storedHash.startsWith('scrypt$')) {
+    const parts = storedHash.split('$');
+    const salt = parts[1];
+    const expectedHex = parts[2];
+    if (!salt || !expectedHex) return { valid: false, upgradedHash: null };
+    const actual = scryptSync(password, salt, 64);
+    const expected = Buffer.from(expectedHex, 'hex');
+    const valid = actual.length === expected.length && timingSafeEqual(actual, expected);
+    return { valid, upgradedHash: null };
+  }
+
+  const actual = Buffer.from(sha256(password), 'hex');
+  const expected = Buffer.from(storedHash, 'hex');
+  const valid = actual.length === expected.length && timingSafeEqual(actual, expected);
+  return { valid, upgradedHash: valid ? hashPassword(password) : null };
+}
 
 function genToken() {
   return randomBytes(32).toString('hex');
