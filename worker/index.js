@@ -17,7 +17,11 @@ function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'Referrer-Policy': 'no-referrer',
       ...corsHeaders,
     },
   });
@@ -92,7 +96,7 @@ export default {
 
     // Handle CORS preflight
     if (method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeaders });
+      return new Response(null, { headers: { ...corsHeaders, 'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'no-referrer' } });
     }
 
     try {
@@ -339,7 +343,9 @@ export default {
       return jsonResponse({ error: 'مسیر یافت نشد', path }, 404);
 
     } catch (error) {
-      return jsonResponse({ error: 'خطای سرور', details: error.message }, 500);
+      // Keep internal SQL/runtime details in platform logs, never in API responses.
+      console.error('Worker request failed', { path, method, message: error instanceof Error ? error.message : 'unknown error' });
+      return jsonResponse({ error: 'خطای سرور' }, 500);
     }
   },
 };
