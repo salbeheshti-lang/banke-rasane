@@ -172,7 +172,12 @@ export default {
 
       // POST /api/auth/login — Login
       if (path === '/api/auth/login' && method === 'POST') {
-        const body = await request.json();
+        let body;
+        try {
+          body = await request.json();
+        } catch {
+          return jsonResponse({ error: 'درخواست نامعتبر است' }, 400);
+        }
         const username = typeof body?.username === 'string' ? body.username.trim() : '';
         const password = typeof body?.password === 'string' ? body.password : '';
 
