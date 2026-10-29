@@ -656,6 +656,7 @@ export default function Home() {
   useEffect(() => {
     // Load persisted overrides first, then merge them with the base JSON data.
     const saved = loadOverrides();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydrate persisted overrides after mount to preserve the current UI behavior.
     setOverrides(saved);
     // Restore custom genres saved in a previous session.
     setCustomGenres(loadCustomGenres());
@@ -673,6 +674,7 @@ export default function Home() {
   useEffect(() => {
     const stored = typeof window !== 'undefined' ? localStorage.getItem('bankresaneh_token') : null;
     if (!stored) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Resolve the initial auth gate when no persisted session exists.
       setAuthLoading(false);
       return;
     }
@@ -687,6 +689,7 @@ export default function Home() {
   // Recompute the merged list whenever overrides change (e.g. after an edit).
   useEffect(() => {
     if (baseShows.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Keep the displayed list synchronized with persisted edits.
       setTalkShows(applyOverrides(baseShows, overrides));
     }
   }, [baseShows, overrides]);
@@ -3463,6 +3466,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Keep a ref to the latest images array so async FileReader callbacks always see current state
   const imagesRef = useRef<string[]>(images);
+  // eslint-disable-next-line react-hooks/refs -- Async FileReader callbacks need the latest render's image list.
   imagesRef.current = images;
   const MAX_IMAGES = 8;
 
