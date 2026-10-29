@@ -95,6 +95,23 @@ addColumnIfMissing('users', 'phone',      "TEXT NOT NULL DEFAULT ''");     // ش
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+// Password hashing: salted SHA-256 (better than plain SHA-256).
+// Format: "salt$hash" where salt is 16 random hex chars.
+function hashPassword(password) {
+  const salt = randomBytes(16).toString('hex');
+  const hash = createHash('sha256').update(salt + password, 'utf8').digest('hex');
+  return salt + '$' + hash;
+}
+
+function verifyPassword(password, stored) {
+  // Support old format (plain sha256) for backwards compat
+  if (!stored.includes('$')) {
+    return stored === createHash('sha256').update(password, 'utf8').digest('hex');
+  }
+  const [salt, hash] = stored.split('$');
+  return hash === createHash('sha256').update(salt + password, 'utf8').digest('hex');
+}
+
 function sha256(s) {
   return createHash('sha256').update(s, 'utf8').digest('hex');
 }
@@ -109,25 +126,94 @@ function nowSec() {
 
 const SESSION_TTL = 7 * 24 * 60 * 60; // 7 days
 
-function json(body, status = 200) {
+// Simple in-memory rate limiter for login attempts.
+// Tracks failed attempts per IP. After 5 failures in 15 min, blocks for 15 min.
+const loginAttempts = new Map(); // ip → { count, firstAttempt, blockedUntil }
+const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
+const RATE_LIMIT_MAX = 5; // max attempts before block
+const RATE_LIMIT_BLOCK = 15 * 60 * 1000; // block duration
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const entry = loginAttempts.get(ip);
+  if (!entry) return { ok: true };
+  if (entry.blockedUntil && entry.blockedUntil > now) {
+    const waitSec = Math.ceil((entry.blockedUntil - now) / 1000);
+    return { ok: false, retryAfter: waitSec };
+  }
+  if (entry.blockedUntil && entry.blockedUntil <= now) {
+    // Block expired — reset
+    loginAttempts.delete(ip);
+    return { ok: true };
+  }
+  return { ok: true };
+}
+
+function recordFailedAttempt(ip) {
+  const now = Date.now();
+  let entry = loginAttempts.get(ip) || { count: 0, firstAttempt: now, blockedUntil: 0 };
+  // Reset if window expired
+  if (now - entry.firstAttempt > RATE_LIMIT_WINDOW) {
+    entry = { count: 0, firstAttempt: now, blockedUntil: 0 };
+  }
+  entry.count++;
+  if (entry.count >= RATE_LIMIT_MAX) {
+    entry.blockedUntil = now + RATE_LIMIT_BLOCK;
+  }
+  loginAttempts.set(ip, entry);
+}
+
+function clearRateLimit(ip) {
+  loginAttempts.delete(ip);
+}
+
+function getClientIP(req) {
+  const fwd = req.headers.get('x-forwarded-for');
+  if (fwd) return fwd.split(',')[0].trim();
+  return req.headers.get('x-real-ip') || 'unknown';
+}
+
+// Allowed CORS origins — restrict to known frontend origins
+const ALLOWED_ORIGINS = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:81',
+  'http://127.0.0.1:81',
+];
+
+function getCorsHeader(req) {
+  const origin = req.headers.get('origin') || '';
+  if (ALLOWED_ORIGINS.includes(origin)) return origin;
+  return ALLOWED_ORIGINS[0]; // default to first allowed origin
+}
+
+function json(body, status = 200, req) {
+  const corsOrigin = req ? getCorsHeader(req) : ALLOWED_ORIGINS[0];
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': corsOrigin,
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Credentials': 'true',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
     },
   });
 }
 
-function corsOptions() {
+function corsOptions(req) {
+  const corsOrigin = req ? getCorsHeader(req) : ALLOWED_ORIGINS[0];
   return new Response(null, {
     status: 204,
     headers: {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': corsOrigin,
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Credentials': 'true',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
     },
   });
 }
@@ -391,7 +477,7 @@ const server = Bun.serve({
     const { pathname } = url;
     const method = req.method.toUpperCase();
 
-    if (method === 'OPTIONS') return corsOptions();
+    if (method === "OPTIONS") return corsOptions(req);
 
     // ----- Health -----
     if (pathname === '/api/health' && method === 'GET') {
@@ -400,15 +486,25 @@ const server = Bun.serve({
 
     // ----- Auth: login -----
     if (pathname === '/api/auth/login' && method === 'POST') {
+      // Rate limit check
+      const ip = getClientIP(req);
+      const rl = checkRateLimit(ip);
+      if (!rl.ok) {
+        return json({ error: `تلاش‌های ناموفق زیاد. لطفاً ${rl.retryAfter} ثانیه صبر کنید.` }, 429);
+      }
+
       let body;
       try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400); }
       const username = String(body?.username || '').trim();
       const password = String(body?.password || '');
       if (!username || !password) return json({ error: 'نام کاربری و رمز عبور را وارد کنید' }, 400);
       const user = getUserByUsername(username);
-      if (!user || user.password_hash !== sha256(password)) {
+      if (!user || !verifyPassword(password, user.password_hash)) {
+        recordFailedAttempt(ip);
         return json({ error: 'نام کاربری یا رمز عبور نادرست است' }, 401);
       }
+      // Login success — clear rate limit
+      clearRateLimit(ip);
       // Mark user as online immediately on login.
       db.prepare('UPDATE users SET last_seen = ? WHERE id = ?').run(nowSec(), user.id);
       user.last_seen = nowSec();
@@ -475,10 +571,10 @@ const server = Bun.serve({
       const newPassword = String(body?.newPassword || '');
       if (!oldPassword || !newPassword) return json({ error: 'رمز قدیمی و جدید را وارد کنید' }, 400);
       if (newPassword.length < 4) return json({ error: 'رمز جدید باید حداقل ۴ کاراکتر باشد' }, 400);
-      if (user.password_hash !== sha256(oldPassword)) {
+      if (!verifyPassword(oldPassword, user.password_hash)) {
         return json({ error: 'رمز فعلی نادرست است' }, 401);
       }
-      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(sha256(newPassword), user.id);
+      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashPassword(newPassword), user.id);
       // Invalidate all sessions for this user, force re-login
       db.prepare('DELETE FROM sessions WHERE user_id = ?').run(user.id);
       return json({ success: true });
@@ -579,12 +675,12 @@ const server = Bun.serve({
       const role = ['admin', 'editor', 'viewer'].includes(body?.role) ? body.role : 'viewer';
       const name = String(body?.name || '');
       if (!username || !password) return json({ error: 'نام کاربری و رمز عبور را وارد کنید' }, 400);
-      if (password.length < 4) return json({ error: 'رمز باید حداقل ۴ کاراکتر باشد' }, 400);
+      if (password.length < 8) return json({ error: 'رمز باید حداقل ۸ کاراکتر باشد' }, 400);
       const exists = getUserByUsername(username);
       if (exists) return json({ error: 'این نام کاربری قبلاً ثبت شده است' }, 409);
       try {
         const r = db.prepare('INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)')
-          .run(username, sha256(password), role, name);
+          .run(username, hashPassword(password), role, name);
         return json({ id: Number(r.lastInsertRowid) });
       } catch (e) {
         return json({ error: 'خطا در ایجاد کاربر: ' + e.message }, 500);
@@ -615,9 +711,9 @@ const server = Bun.serve({
         const role = ['admin', 'editor', 'viewer'].includes(body?.role) ? body.role : target.role;
         const name = body?.name !== undefined ? String(body.name) : target.name;
         if (body?.password) {
-          if (String(body.password).length < 4) return json({ error: 'رمز باید حداقل ۴ کاراکتر باشد' }, 400);
+          if (String(body.password).length < 4) return json({ error: 'رمز باید حداقل ۸ کاراکتر باشد' }, 400);
           db.prepare('UPDATE users SET password_hash = ?, role = ?, name = ? WHERE id = ?')
-            .run(sha256(String(body.password)), role, name, id);
+            .run(hashPassword(String(body.password)), role, name, id);
         } else {
           db.prepare('UPDATE users SET role = ?, name = ? WHERE id = ?')
             .run(role, name, id);

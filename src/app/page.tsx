@@ -7422,7 +7422,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
           <input
             type="password"
             dir="ltr"
-            placeholder="رمز عبور (حداقل ۴ کاراکتر)"
+            placeholder="رمز عبور (حداقل ۸ کاراکتر)"
             value={newUser.password}
             onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
             style={{
@@ -7636,8 +7636,8 @@ function SettingsPasswordTab({
       showToast('هر سه فیلد را پر کنید');
       return;
     }
-    if (newPw.length < 4) {
-      showToast('رمز جدید باید حداقل ۴ کاراکتر باشد');
+    if (newPw.length < 8) {
+      showToast('رمز جدید باید حداقل ۸ کاراکتر باشد');
       return;
     }
     if (newPw !== confirmPw) {
