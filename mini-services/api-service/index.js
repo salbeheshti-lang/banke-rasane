@@ -367,6 +367,38 @@ const server = Bun.serve({
       return json({ success: true });
     }
 
+    // ----- Shows: indexed-style search with bounded pagination -----
+    if (pathname === '/api/shows/search' && method === 'GET') {
+      const rawSearch = url.searchParams.get('q') || url.searchParams.get('search') || '';
+      const normalize = (value) => String(value || '').normalize('NFKC').toLowerCase()
+        .replace(/[يى]/g, 'ی').replace(/ك/g, 'ک').replace(/[ۀة]/g, 'ه')
+        .replace(/[\u064B-\u065F\u0670]/g, '').replace(/[\u200c\u200d\uFEFF]/g, ' ')
+        .replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
+        .replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+        .replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim();
+      const query = normalize(rawSearch);
+      const category = normalize(url.searchParams.get('category') || '');
+      const page = Math.max(1, Math.min(1000000, parseInt(url.searchParams.get('page') || '1', 10) || 1));
+      const limit = Math.max(1, Math.min(100, parseInt(url.searchParams.get('limit') || '30', 10) || 30));
+      const terms = query.split(' ').filter(Boolean).slice(0, 8);
+      const conditions = [];
+      const params = [];
+      if (terms.length) {
+        conditions.push('(' + terms.map(() => "(name LIKE ? OR category LIKE ? OR summary LIKE ? OR descriptionFa LIKE ? OR source LIKE ? OR style LIKE ? OR effects LIKE ? OR layout LIKE ? OR elements LIKE ? OR materials LIKE ? OR colors LIKE ? OR lighting LIKE ?)").join(' AND ') + ')');
+        for (const term of terms) {
+          const pattern = '%' + term + '%';
+          params.push(pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern);
+        }
+      }
+      if (category) { conditions.push('LOWER(category) LIKE ?'); params.push('%' + category + '%'); }
+      const where = conditions.length ? ' WHERE ' + conditions.join(' AND ') : '';
+      const total = db.prepare('SELECT COUNT(*) AS total FROM shows' + where).get(...params).total;
+      const rows = db.prepare(`SELECT * FROM shows${where}
+        ORDER BY CASE WHEN LOWER(name) = ? THEN 0 WHEN LOWER(name) LIKE ? THEN 1 ELSE 2 END, num ASC
+        LIMIT ? OFFSET ?`).all(...params, query, query + '%', limit, (page - 1) * limit);
+      return json({ shows: rows.map(rowToShow), pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }, query: rawSearch });
+    }
+
     // ----- Shows: list -----
     if (pathname === '/api/shows' && method === 'GET') {
       const rows = db.prepare('SELECT * FROM shows ORDER BY num ASC').all();
