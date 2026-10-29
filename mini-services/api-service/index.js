@@ -3,7 +3,7 @@
 //  Port: 3002
 //
 //  Tables: users, sessions, shows
-//  Default admin: admin / admin (SHA-256 hashed)
+//  Initial admin: admin (requires ADMIN_INITIAL_PASSWORD; scrypt hashed)
 //  Seeds 560 shows from ../public/talk-shows-data.json on first run
 //  Session tokens: random hex, 7-day TTL
 //  All endpoints under /api/*
