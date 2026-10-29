@@ -1,2 +1,32 @@
 skills/
 node_modules/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Next.js / build output
+.next/
+out/
+dist/
+build/
+coverage/
+
+# Logs and runtime files
+*.log
+*.pid
+
+# Local databases and SQLite sidecars
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
