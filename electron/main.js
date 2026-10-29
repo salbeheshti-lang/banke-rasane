@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- Electron's main process uses CommonJS imports by design. */
 // Electron Main Process — بانک رسانه
 const { app, BrowserWindow, shell, dialog } = require('electron');
 const { spawn } = require('child_process');
