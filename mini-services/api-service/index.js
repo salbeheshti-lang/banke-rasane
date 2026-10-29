@@ -394,7 +394,7 @@ const server = Bun.serve({
       return json({ success: true });
     }
 
-    // ----- Shows: indexed-style search with bounded pagination -----
+    // ----- Shows: FTS5 search with bounded pagination -----
     if (pathname === '/api/shows/search' && method === 'GET') {
       const rawSearch = url.searchParams.get('q') || url.searchParams.get('search') || '';
       const normalize = (value) => String(value || '').normalize('NFKC').toLowerCase()
@@ -408,21 +408,41 @@ const server = Bun.serve({
       const page = Math.max(1, Math.min(1000000, parseInt(url.searchParams.get('page') || '1', 10) || 1));
       const limit = Math.max(1, Math.min(100, parseInt(url.searchParams.get('limit') || '30', 10) || 30));
       const terms = query.split(' ').filter(Boolean).slice(0, 8);
-      const conditions = [];
-      const params = [];
+      const offset = (page - 1) * limit;
+      let total = 0;
+      let rows = [];
+      const categorySql = category ? ' AND LOWER(shows.category) LIKE ?' : '';
+      const categoryParam = category ? ['%' + category + '%'] : [];
+
       if (terms.length) {
-        conditions.push('(' + terms.map(() => "(name LIKE ? OR category LIKE ? OR summary LIKE ? OR descriptionFa LIKE ? OR source LIKE ? OR style LIKE ? OR effects LIKE ? OR layout LIKE ? OR elements LIKE ? OR materials LIKE ? OR colors LIKE ? OR lighting LIKE ?)").join(' AND ') + ')');
-        for (const term of terms) {
-          const pattern = '%' + term + '%';
-          params.push(pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern);
+        const match = terms.map(term => '"' + term.replace(/"/g, '""') + '"*').join(' AND ');
+        try {
+          total = db.prepare(`SELECT COUNT(*) AS total FROM shows_fts JOIN shows ON shows.num = shows_fts.rowid WHERE shows_fts MATCH ?${categorySql}`).get(match, ...categoryParam).total;
+          rows = db.prepare(`SELECT shows.* FROM shows_fts JOIN shows ON shows.num = shows_fts.rowid
+            WHERE shows_fts MATCH ?${categorySql}
+            ORDER BY bm25(shows_fts, 12, 8, 6, 5, 3, 3, 3, 3, 3, 3, 2, 2),
+              CASE WHEN LOWER(shows.name) = ? THEN 0 WHEN LOWER(shows.name) LIKE ? THEN 1 ELSE 2 END,
+              shows.num ASC LIMIT ? OFFSET ?`).all(match, ...categoryParam, query, query + '%', limit, offset);
+        } catch (error) {
+          // Compatibility fallback for databases where FTS5 is unavailable.
+          const conditions = [];
+          const params = [];
+          for (const term of terms) {
+            const pattern = '%' + term + '%';
+            conditions.push('(name LIKE ? OR category LIKE ? OR summary LIKE ? OR descriptionFa LIKE ? OR source LIKE ? OR style LIKE ? OR effects LIKE ? OR layout LIKE ? OR elements LIKE ? OR materials LIKE ? OR colors LIKE ? OR lighting LIKE ?)');
+            params.push(pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern);
+          }
+          if (category) { conditions.push('LOWER(category) LIKE ?'); params.push('%' + category + '%'); }
+          const where = ' WHERE ' + conditions.join(' AND ');
+          total = db.prepare('SELECT COUNT(*) AS total FROM shows' + where).get(...params).total;
+          rows = db.prepare(`SELECT * FROM shows${where} ORDER BY CASE WHEN LOWER(name) = ? THEN 0 WHEN LOWER(name) LIKE ? THEN 1 ELSE 2 END, num ASC LIMIT ? OFFSET ?`)
+            .all(...params, query, query + '%', limit, offset);
         }
+      } else {
+        const where = category ? ' WHERE LOWER(category) LIKE ?' : '';
+        total = db.prepare('SELECT COUNT(*) AS total FROM shows' + where).get(...categoryParam).total;
+        rows = db.prepare(`SELECT * FROM shows${where} ORDER BY num ASC LIMIT ? OFFSET ?`).all(...categoryParam, limit, offset);
       }
-      if (category) { conditions.push('LOWER(category) LIKE ?'); params.push('%' + category + '%'); }
-      const where = conditions.length ? ' WHERE ' + conditions.join(' AND ') : '';
-      const total = db.prepare('SELECT COUNT(*) AS total FROM shows' + where).get(...params).total;
-      const rows = db.prepare(`SELECT * FROM shows${where}
-        ORDER BY CASE WHEN LOWER(name) = ? THEN 0 WHEN LOWER(name) LIKE ? THEN 1 ELSE 2 END, num ASC
-        LIMIT ? OFFSET ?`).all(...params, query, query + '%', limit, (page - 1) * limit);
       return json({ shows: rows.map(rowToShow), pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }, query: rawSearch });
     }
 
