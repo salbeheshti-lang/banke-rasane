@@ -43,8 +43,9 @@ jobs:
           if ! bun audit fix --latest; then
             echo "Audit reported remaining issues after automated fixes; continue with targeted package upgrades and final audit."
           fi
-          bun update --latest deepmerge-ts effect js-yaml
+          npm pkg set 'overrides.deepmerge-ts=^8.0.0' 'overrides.effect=^3.20.0' 'overrides.js-yaml=^4.3.2'
           bun add sharp@^0.35.5
+          bun install
           bun install
           bun run lint
           bun x prisma generate
