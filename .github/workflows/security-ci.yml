@@ -34,13 +34,16 @@ jobs:
       - name: Lint
         run: bun run lint
       - name: TypeScript check
+        if: always()
         run: bun x tsc --noEmit
       - name: Production build
+        if: always()
         env:
           DATABASE_URL: file:./ci.db
           ADMIN_INITIAL_PASSWORD: ci-only-not-for-production
         run: bun run build
       - name: Dependency vulnerability audit
+        if: always()
         run: bun audit --audit-level high
 
   worker-checks:
