@@ -116,10 +116,44 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
     const method = request.method;
+    const origin = request.headers.get('Origin');
+    const configuredOrigins = String(env.ALLOWED_ORIGINS || '')
+      .split(',')
+      .map(value => value.trim())
+      .filter(Boolean);
+    const originIsAllowed = configuredOrigins.length === 0 || configuredOrigins.includes(origin || '');
+    const corsHeaders = {
+      ...(configuredOrigins.length === 0
+        ? { 'Access-Control-Allow-Origin': '*' }
+        : (origin && originIsAllowed ? { 'Access-Control-Allow-Origin': origin, 'Vary': 'Origin' } : {})),
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    };
+    // Use request-scoped headers so deployments can configure an explicit origin allowlist.
+    const jsonResponse = (data, status = 200) => new Response(JSON.stringify(data), {
+      status,
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'Referrer-Policy': 'no-referrer',
+        ...corsHeaders,
+      },
+    });
 
     // Handle CORS preflight
     if (method === 'OPTIONS') {
-      return new Response(null, { headers: { ...corsHeaders, 'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'no-referrer' } });
+      return new Response(null, {
+        status: 204,
+        headers: {
+          ...corsHeaders,
+          'Cache-Control': 'no-store',
+          'X-Content-Type-Options': 'nosniff',
+          'X-Frame-Options': 'DENY',
+          'Referrer-Policy': 'no-referrer',
+        },
+      });
     }
 
     try {
