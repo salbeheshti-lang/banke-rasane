@@ -28,6 +28,17 @@ function jsonResponse(data, status = 200) {
 }
 
 // Helper: Hash password with PBKDF2
+function constantTimeEqual(left, right) {
+  if (typeof left !== 'string' || typeof right !== 'string' || left.length !== right.length) {
+    return false;
+  }
+  let difference = 0;
+  for (let i = 0; i < left.length; i += 1) {
+    difference |= left.charCodeAt(i) ^ right.charCodeAt(i);
+  }
+  return difference === 0;
+}
+
 async function hashPassword(password, salt) {
   const encoder = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
@@ -195,7 +206,7 @@ export default {
         }
 
         const hash = await hashPassword(password, user.salt);
-        if (hash !== user.password_hash) {
+        if (!constantTimeEqual(hash, user.password_hash)) {
           await recordFailedLogin(env, attemptKey, now);
           return jsonResponse({ error: 'نام کاربری یا رمز عبور اشتباه است' }, 401);
         }
