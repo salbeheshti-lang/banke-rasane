@@ -40,7 +40,9 @@ jobs:
             exit 0
           fi
           bun install --frozen-lockfile
-          bun audit fix
+          if ! bun audit fix; then
+            echo "Audit reported remaining issues after in-range fixes; continue with targeted package upgrades and final audit."
+          fi
           bun add sharp@^0.35.5
           bun install
           bun run lint
