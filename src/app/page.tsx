@@ -1190,8 +1190,6 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack }: {
       className="fixed top-0 left-0 right-0 z-40"
       style={{
         background: 'linear-gradient(180deg, #0a1f14 0%, #0d2218 100%)',
-        boxShadow: '0 2px 16px rgba(0, 0, 0, 0.3)',
-        borderBottom: '1px solid rgba(16, 185, 129, 0.3)',
         backdropFilter: 'blur(20px) saturate(160%)',
         WebkitBackdropFilter: 'blur(20px) saturate(160%)',
         borderBottom: '1px solid rgba(13, 124, 74, 0.1)',
@@ -1388,8 +1386,6 @@ function DrawerMenu({
         style={{
           width: 'min(340px, 88vw)',
           background: 'rgba(10, 25, 18, 0.85)',
-          backdropFilter: 'blur(30px) saturate(160%)',
-          WebkitBackdropFilter: 'blur(30px) saturate(160%)',
           backdropFilter: 'blur(30px) saturate(140%)',
           WebkitBackdropFilter: 'blur(30px) saturate(140%)',
           borderLeft: '1px solid rgba(13, 124, 74, 0.15)',
@@ -1623,7 +1619,7 @@ function DrawerMenu({
 }
 
 function NavIcon({ name }: { name: string }) {
-  const icons: Record<string, JSX.Element> = {
+  const icons: Record<string, import('react').ReactElement> = {
     home: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />,
     grid: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />,
     plus: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />,
@@ -1673,8 +1669,6 @@ function MobileBottomNav({
             className="fixed bottom-0 left-0 right-0 p-4 animate-slide-up-nav"
             style={{
               background: 'linear-gradient(180deg, #0a1f14 0%, #0d2218 100%)',
-        boxShadow: '0 2px 16px rgba(0, 0, 0, 0.3)',
-        borderBottom: '1px solid rgba(16, 185, 129, 0.3)',
               backdropFilter: 'blur(26px) saturate(160%)',
               WebkitBackdropFilter: 'blur(26px) saturate(160%)',
               borderTop: '1px solid rgba(13, 124, 74, 0.15)',
@@ -1744,8 +1738,6 @@ function MobileBottomNav({
           className="flex items-center justify-around no-scrollbar"
           style={{
             background: 'linear-gradient(180deg, #0a1f14 0%, #0d2218 100%)',
-        boxShadow: '0 2px 16px rgba(0, 0, 0, 0.3)',
-        borderBottom: '1px solid rgba(16, 185, 129, 0.3)',
             backdropFilter: 'blur(24px) saturate(160%)',
             WebkitBackdropFilter: 'blur(24px) saturate(160%)',
             border: '1px solid rgba(13, 124, 74, 0.15)',
@@ -1962,7 +1954,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
 }
 
 function StatIcon({ name }: { name: string }) {
-  const icons: Record<string, JSX.Element> = {
+  const icons: Record<string, import('react').ReactElement> = {
     film: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />,
     tag: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />,
     cloud: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />,
@@ -5109,6 +5101,8 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
     total: talkShows.length,
     text: talkShows.filter(s => s.source === 'متن').length,
     uploaded: uploadedShows.length,
+    genres: genres.length,
+    withImages: talkShows.filter(s => s.images && s.images.length > 0).length,
   };
 
   const reports = [
@@ -5133,11 +5127,11 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
           <div style={{ color: '#5a6b4a' }} className="text-sm">آپلود شده</div>
         </div>
         <div className="premium-glass p-5">
-          <div className="text-3xl font-black mb-1" style={{ color: '#dc2626' }}>{stats.pdf.toLocaleString('fa-IR')}</div>
+          <div className="text-3xl font-black mb-1" style={{ color: '#dc2626' }}>{stats.genres.toLocaleString('fa-IR')}</div>
           <div style={{ color: '#5a6b4a' }} className="text-sm">ژانرها</div>
         </div>
         <div className="premium-glass p-5">
-          <div className="text-3xl font-black mb-1" style={{ color: '#2563eb' }}>{stats.web.toLocaleString('fa-IR')}</div>
+          <div className="text-3xl font-black mb-1" style={{ color: '#2563eb' }}>{stats.withImages.toLocaleString('fa-IR')}</div>
           <div style={{ color: '#5a6b4a' }} className="text-sm">با تصویر</div>
         </div>
       </div>
@@ -5255,8 +5249,6 @@ function SettingsModal({
           className="flex items-center justify-between p-4 flex-shrink-0"
           style={{
             background: 'linear-gradient(180deg, #0a1f14 0%, #0d2218 100%)',
-        boxShadow: '0 2px 16px rgba(0, 0, 0, 0.3)',
-        borderBottom: '1px solid rgba(16, 185, 129, 0.3)',
             borderBottom: '1px solid rgba(13, 124, 74, 0.12)',
           }}
         >
