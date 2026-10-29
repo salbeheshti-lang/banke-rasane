@@ -1,0 +1,1270 @@
+     1→import { NextRequest, NextResponse } from 'next/server';
+     2→import { readFileSync } from 'node:fs';
+     3→import { resolve } from 'node:path';
+     4→
+     5→export const runtime = 'nodejs';
+     6→
+     7→// Read the real app logo (PNG) once at module load — embedded as a base64
+     8→// data URL in the PDF cover so it renders in the print-to-PDF window (which
+     9→// has no base URL to fetch assets from).
+    10→const LOGO_PNG_PATH = resolve(process.cwd(), 'public/banke-rasane-logo.png');
+    11→let LOGO_DATA_URL = '';
+    12→try {
+    13→  const buf = readFileSync(LOGO_PNG_PATH);
+    14→  LOGO_DATA_URL = `data:image/png;base64,${buf.toString('base64')}`;
+    15→} catch {
+    16→  // Fallback: empty string — the cover will just show the brand text.
+    17→  LOGO_DATA_URL = '';
+    18→}
+    19→
+    20→export async function POST(request: NextRequest) {
+    21→  try {
+    22→    const { shows, title, subtitle, organization } = await request.json();
+    23→
+    24→    if (!shows || !Array.isArray(shows) || shows.length === 0) {
+    25→      return NextResponse.json({ error: 'No shows provided' }, { status: 400 });
+    26→    }
+    27→
+    28→    // Build the base URL so relative image paths (e.g. /program-images/p1_img1.jpeg)
+    29→    // resolve correctly when the HTML is written into a print-to-PDF window
+    30→    // (which has origin 'about:blank'). Fall back to the request origin.
+    31→    const origin = request.nextUrl.origin;
+    32→
+    33→    // Generate a professional multi-section HTML report
+    34→    const html = generatePDFHtml(shows, {
+    35→      title: title || 'گزارش جامع آرشیو برنامه‌های تلویزیونی',
+    36→      subtitle: subtitle || 'بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی',
+    37→      organization: organization || 'بانک رسانه',
+    38→      origin,
+    39→    });
+    40→
+    41→    return new NextResponse(html, {
+    42→      status: 200,
+    43→      headers: {
+    44→        'Content-Type': 'text/html; charset=utf-8',
+    45→        'Content-Disposition': `attachment; filename="banke-rasane-report-${Date.now()}.html"`,
+    46→      },
+    47→    });
+    48→  } catch (error) {
+    49→    console.error('PDF export error:', error);
+    50→    return NextResponse.json(
+    51→      { error: 'PDF export failed', details: error instanceof Error ? error.message : String(error) },
+    52→      { status: 500 }
+    53→    );
+    54→  }
+    55→}
+    56→
+    57→interface PDFOptions {
+    58→  title: string;
+    59→  subtitle: string;
+    60→  organization: string;
+    61→  origin?: string;
+    62→}
+    63→
+    64→function generatePDFHtml(shows: any[], opts: PDFOptions): string {
+    65→  const now = new Date();
+    66→  const faDate = now.toLocaleDateString('fa-IR', { year: 'numeric', month: 'long', day: 'numeric' });
+    67→  const faDateShort = now.toLocaleDateString('fa-IR');
+    68→  const docId = `BR-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}-${shows.length}`;
+    69→  const total = shows.length;
+    70→
+    71→  // ---------- Aggregations ----------
+    72→  // Group by category
+    73→  const byCategory: Record<string, any[]> = {};
+    74→  shows.forEach(s => {
+    75→    const cat = (s.category || 'سایر').replace(/^\d+\.\s*/, '').trim() || 'سایر';
+    76→    if (!byCategory[cat]) byCategory[cat] = [];
+    77→    byCategory[cat].push(s);
+    78→  });
+    79→  const sortedCategories = Object.entries(byCategory).sort((a, b) => b[1].length - a[1].length);
+    80→
+    81→  // Source distribution
+    82→  const bySource = {
+    83→    pdf: shows.filter(s => s.source === 'تصویر PDF').length,
+    84→    web: shows.filter(s => s.source === 'تصویر وب').length,
+    85→    text: shows.filter(s => s.source === 'متن' || (!s.source)).length,
+    86→  };
+    87→
+    88→  // Size distribution
+    89→  const sizeBuckets: Record<string, number> = {};
+    90→  shows.forEach(s => {
+    91→    const k = s.size || 'نامشخص';
+    92→    sizeBuckets[k] = (sizeBuckets[k] || 0) + 1;
+    93→  });
+    94→
+    95→  // Style distribution
+    96→  const styleBuckets: Record<string, number> = {};
+    97→  shows.forEach(s => {
+    98→    const k = s.style || 'نامشخص';
+    99→    styleBuckets[k] = (styleBuckets[k] || 0) + 1;
+   100→  });
+   101→
+   102→  // Viewers distribution
+   103→  const viewersBuckets: Record<string, number> = {};
+   104→  shows.forEach(s => {
+   105→    const k = s.viewers || 'نامشخص';
+   106→    viewersBuckets[k] = (viewersBuckets[k] || 0) + 1;
+   107→  });
+   108→
+   109→  // Decor elements (top 12)
+   110→  const elementCounts: Record<string, number> = {};
+   111→  shows.forEach(s => {
+   112→    if (!s.elements) return;
+   113→    s.elements.split(/[,,،]/).map((x: string) => x.trim().toLowerCase()).filter(Boolean).forEach((e: string) => {
+   114→      elementCounts[e] = (elementCounts[e] || 0) + 1;
+   115→    });
+   116→  });
+   117→  const topElements = Object.entries(elementCounts).sort((a, b) => b[1] - a[1]).slice(0, 12);
+   118→
+   119→  // Materials (top 12)
+   120→  const materialCounts: Record<string, number> = {};
+   121→  shows.forEach(s => {
+   122→    if (!s.materials) return;
+   123→    s.materials.split(/[,,،]/).map((x: string) => x.trim().toLowerCase()).filter(Boolean).forEach((m: string) => {
+   124→      materialCounts[m] = (materialCounts[m] || 0) + 1;
+   125→    });
+   126→  });
+   127→  const topMaterials = Object.entries(materialCounts).sort((a, b) => b[1] - a[1]).slice(0, 12);
+   128→
+   129→  // Colors (top 12)
+   130→  const colorCounts: Record<string, number> = {};
+   131→  shows.forEach(s => {
+   132→    if (!s.colors) return;
+   133→    s.colors.split(/[,,،]/).map((x: string) => x.trim().toLowerCase()).filter(Boolean).forEach((c: string) => {
+   134→      colorCounts[c] = (colorCounts[c] || 0) + 1;
+   135→    });
+   136→  });
+   137→  const topColors = Object.entries(colorCounts).sort((a, b) => b[1] - a[1]).slice(0, 12);
+   138→
+   139→  // Lighting
+   140→  const lightingCounts: Record<string, number> = {};
+   141→  shows.forEach(s => {
+   142→    const k = s.lighting || 'نامشخص';
+   143→    lightingCounts[k] = (lightingCounts[k] || 0) + 1;
+   144→  });
+   145→
+   146→  const totalForPct = (b: Record<string, number>) => Object.values(b).reduce((a, c) => a + c, 0) || 1;
+   147→
+   148→  // ---------- Sections ----------
+   149→
+   150→  // COVER PAGE
+   151→  const cover = `
+   152→    <section class="cover">
+   153→      <div class="cover-bg-deco"></div>
+   154→      <div class="cover-content">
+   155→        <div class="cover-brand">بانک رسانه</div>
+   156→        <div class="cover-logo-mark">
+   157→          ${LOGO_DATA_URL ? `<img src="${LOGO_DATA_URL}" alt="بانک رسانه" class="cover-logo-img" />` : ''}
+   158→        </div>
+   159→        <h1 class="cover-title">${escapeHtml(opts.title)}</h1>
+   160→        <p class="cover-subtitle">${escapeHtml(opts.subtitle)}</p>
+   161→
+   162→        <div class="cover-stats">
+   163→          <div class="cover-stat">
+   164→            <div class="cover-stat-num">${total.toLocaleString('fa-IR')}</div>
+   165→            <div class="cover-stat-label">برنامهٔ تلویزیونی</div>
+   166→          </div>
+   167→          <div class="cover-stat-divider"></div>
+   168→          <div class="cover-stat">
+   169→            <div class="cover-stat-num">${sortedCategories.length.toLocaleString('fa-IR')}</div>
+   170→            <div class="cover-stat-label">دستهٔ ژانری</div>
+   171→          </div>
+   172→          <div class="cover-stat-divider"></div>
+   173→          <div class="cover-stat">
+   174→            <div class="cover-stat-num">${faDateShort}</div>
+   175→            <div class="cover-stat-label">تاریخ گزارش</div>
+   176→          </div>
+   177→        </div>
+   178→
+   179→        <div class="cover-meta">
+   180→          <div><span>شناسه سند:</span> <strong>${docId}</strong></div>
+   181→          <div><span>تهیه‌کننده:</span> <strong>${escapeHtml(opts.organization)}</strong></div>
+   182→          <div><span>نسخه:</span> <strong>۲.۰.۰</strong></div>
+   183→        </div>
+   184→
+   185→        <div class="cover-footnote">
+   186→          این سند به‌صورت خودکار توسط نرم‌افزار آرشیو تخصصی بانک رسانه تولید شده است.<br>
+   187→          تمامی داده‌ها از منابع تأییدشده شامل فایل اکسل دسته‌بندی دکور و فایل PDF توضیحات فارسی استخراج شده‌اند.
+   188→        </div>
+   189→      </div>
+   190→    </section>
+   191→  `;
+   192→
+   193→  // TABLE OF CONTENTS
+   194→  const tocItems = [
+   195→    { num: 1, title: 'خلاصه اجرایی', page: '۳' },
+   196→    { num: 2, title: 'روش جمع‌آوری و طبقه‌بندی داده', page: '۴' },
+   197→    { num: 3, title: 'نمای آماری کلی', page: '۵' },
+   198→    { num: 4, title: 'تحلیل توزیع ژانرها', page: '۶' },
+   199→    { num: 5, title: 'تحلیل دکور و صحنه', page: '۸' },
+   200→    { num: 6, title: 'فهرست تفصیلی برنامه‌ها', page: '۱۰' },
+   201→    { num: 7, title: 'نتیجه‌گیری و پیشنهادها', page: '۲۴' },
+   202→    { num: 8, title: 'پیوست: نمایهٔ الفبایی', page: '۲۵' },
+   203→  ];
+   204→  const tocHtml = `
+   205→    <section class="toc-section">
+   206→      <h2 class="section-title">فهرست مطالب</h2>
+   207→      <div class="toc-list">
+   208→        ${tocItems.map(t => `
+   209→          <div class="toc-item">
+   210→            <span class="toc-num">${t.num.toLocaleString('fa-IR')}</span>
+   211→            <span class="toc-title">${t.title}</span>
+   212→            <span class="toc-dots"></span>
+   213→            <span class="toc-page">${t.page}</span>
+   214→          </div>
+   215→        `).join('')}
+   216→      </div>
+   217→    </section>
+   218→  `;
+   219→
+   220→  // 1. EXECUTIVE SUMMARY
+   221→  const execSummary = `
+   222→    <section class="content-section">
+   223→      <div class="section-header">
+   224→        <span class="section-num">۱</span>
+   225→        <h2 class="section-title">خلاصه اجرایی</h2>
+   226→      </div>
+   227→      <p>
+   228→        گزارش پیش رو، حاصل بررسی و طبقه‌بندی <strong>${total.toLocaleString('fa-IR')}</strong> برنامهٔ تلویزیونی در قالب
+   229→        <strong>${sortedCategories.length.toLocaleString('fa-IR')}</strong> دستهٔ ژانری است که در آرشیو تخصصی بانک رسانه نگهداری
+   230→        می‌شود. هدف این آرشیو، فراهم‌آوردن مرجعی جامع و قابل‌استناد از برنامه‌های گفتگومی، تخصصی، فرهنگی، سرگرمی و رئالیتی
+   231→        تلویزیونی است تا به مطالعهٔ تطبیقی، تحلیل دکور و صحنه، و تصمیم‌گیری در حوزهٔ تولید محتوا کمک کند.
+   232→      </p>
+   233→      <p>
+   234→        داده‌ها از دو منبع تأییدشده گردآوری شده‌اند: فایل اکسل دسته‌بندی دکور که مشخصات فنی صحنه را در بر دارد، و فایل PDF
+   235→        توضیحات فارسی که روایت متنی هر برنامه را شامل می‌شود. در مجموع <strong>${(bySource.pdf + bySource.web).toLocaleString('fa-IR')}</strong>
+   236→        برنامه دارای تصویر مرجع (از PDF یا منابع وب) و <strong>${bySource.text.toLocaleString('fa-IR')}</strong> برنامه با تحلیل متنی
+   237→        ثبت شده‌اند. این تنوع منابع، اعتبار داده‌ها را در سطح قابل‌قبولی نگه می‌دارد.
+   238→      </p>
+   239→      <p>
+   240→        بزرگ‌ترین دستهٔ ژانری، <strong>${escapeHtml(sortedCategories[0]?.[0] || '—')}</strong> با
+   241→        <strong>${(sortedCategories[0]?.[1]?.length || 0).toLocaleString('fa-IR')}</strong> برنامه است و پس از آن دسته‌های
+   242→        <strong>${escapeHtml(sortedCategories[1]?.[0] || '—')}</strong> و
+   243→        <strong>${escapeHtml(sortedCategories[2]?.[0] || '—')}</strong> قرار دارند. این تمرکز نشان می‌دهد که بخش عمده‌ای از
+   244→        آرشیو به برنامه‌های گفتگومی و مصاحبه‌محور اختصاص دارد که با ماهیت آرشیو همخوانی دارد. در ادامه، گزارش به تحلیل
+   245→        آماری، بررسی ژانرها، تحلیل دکور و معرفی تفصیلی برنامه‌ها می‌پردازد.
+   246→      </p>
+   247→
+   248→      <div class="highlight-box">
+   249→        <div class="highlight-title">نکات کلیدی</div>
+   250→        <ul class="highlight-list">
+   251→          <li>حجم آرشیو: <strong>${total.toLocaleString('fa-IR')}</strong> برنامه در <strong>${sortedCategories.length.toLocaleString('fa-IR')}</strong> دستهٔ ژانری</li>
+   252→          <li>پراکندگی منبع داده: <strong>${bySource.pdf.toLocaleString('fa-IR')}</strong> PDF، <strong>${bySource.web.toLocaleString('fa-IR')}</strong> وب، <strong>${bySource.text.toLocaleString('fa-IR')}</strong> متنی</li>
+   253→          <li>بزرگ‌ترین دسته: <strong>${escapeHtml(sortedCategories[0]?.[0] || '—')}</strong> (<strong>${((sortedCategories[0]?.[1]?.length || 0) / total * 100).toFixed(0)}%</strong> از کل)</li>
+   254→          <li>گزارش شامل توضیحات فارسی، مشخصات دکور و تحلیل آماری است</li>
+   255→        </ul>
+   256→      </div>
+   257→    </section>
+   258→  `;
+   259→
+   260→  // 2. METHODOLOGY
+   261→  const methodology = `
+   262→    <section class="content-section">
+   263→      <div class="section-header">
+   264→        <span class="section-num">۲</span>
+   265→        <h2 class="section-title">روش جمع‌آوری و طبقه‌بندی داده</h2>
+   266→      </div>
+   267→      <p>
+   268→        داده‌های این آرشیو از طریق یک فرایند دو مرحله‌ای گردآوری شده است. در مرحلهٔ نخست، مشخصات فنی هر برنامه شامل
+   269→        اندازهٔ استودیو، حضور تماشاگر، سبک دکور، نورپردازی، عناصر صحنه، مصالح به‌کاررفته و طیف رنگی، در قالب یک فایل
+   270→        اکسل ساختاریافته ثبت شد. این فایل به‌عنوان منبع اصلی طبقه‌بندی فنی به‌کار رفته و مبنای دسته‌بندی ژانری نیز قرار
+   271→        گرفته است. در مرحلهٔ دوم، توضیحات فارسی هر برنامه از یک فایل PDF مرجع استخراج و با مشخصات فنی ادغام شد.
+   272→      </p>
+   273→      <p>
+   274→        طبقه‌بندی ژانری بر اساس محتوای tematique هر برنامه و مشخصات دکور آن انجام شده است. به‌عنوان مثال، برنامه‌هایی
+   275→        که با محتوای مصاحبه‌محور و گفتگوی فردی شناخته می‌شوند، در دستهٔ «تاک‌شوی مصاحبه‌محور» قرار گرفته‌اند و
+   276→        برنامه‌هایی با محتوای طنز و کمدی، در دستهٔ «تاک‌شوی طنز و کمدی» نگاشته شده‌اند. در مواردی که برنامه‌ها چندژانری
+   277→        بودند، دسته‌بندی بر اساس ژانر غالب انجام شده است.
+   278→      </p>
+   279→      <p>
+   280→        در خصوص تصاویر برنامه‌ها، برای بخشی از آرشیو تصاویر مستقیم از فایل PDF استخراج شده و برای بخش دیگر، تصاویر
+   281→        از منابع عمومی وب گردآوری شده است. برنامه‌های فاقد تصویر، با تحلیل متنی و رنگ‌آمیزی دکور مشخص شده‌اند. این
+   282→        رویکرد ترکیبی، امکان مطالعهٔ تطبیقی برنامه‌ها را بدون نیاز به منابع تک‌بعدی فراهم می‌کند.
+   283→      </p>
+   284→
+   285→      <div class="method-grid">
+   286→        <div class="method-card">
+   287→          <div class="method-icon">📊</div>
+   288→          <h4>منبع ۱: اکسل دسته‌بندی</h4>
+   289→          <p>شامل ۵۶۰ سطر داده با ۱۲ ستون مشخصات فنی — سبک، اندازه، نورپردازی، عناصر، مصالح، رنگ‌آمیزی.</p>
+   290→        </div>
+   291→        <div class="method-card">
+   292→          <div class="method-icon">📄</div>
+   293→          <h4>منبع ۲: PDF توضیحات فارسی</h4>
+   294→          <p>استخراج متن فارسی برای ۵۵۹ برنامه با توصیف محتوا، تاریخچه و ویژگی‌های برجستهٔ هر برنامه.</p>
+   295→        </div>
+   296→        <div class="method-card">
+   297→          <div class="method-icon">🖼</div>
+   298→          <h4>منبع ۳: تصاویر مرجع</h4>
+   299→          <p>${bySource.pdf.toLocaleString('fa-IR')} برنامه با تصویر PDF و ${bySource.web.toLocaleString('fa-IR')} برنامه با تصویر وب — بقیه با تحلیل متنی.</p>
+   300→        </div>
+   301→        <div class="method-card">
+   302→          <div class="method-icon">🏷</div>
+   303→          <h4>طبقه‌بندی ژانری</h4>
+   304→          <p>${sortedCategories.length.toLocaleString('fa-IR')} دستهٔ ژانری بر اساس محتوای tematique و مشخصات دکور — چندژانری‌ها بر اساس ژانر غالب.</p>
+   305→        </div>
+   306→      </div>
+   307→    </section>
+   308→  `;
+   309→
+   310→  // 3. STATISTICAL OVERVIEW
+   311→  const statCards = [
+   312→    { label: 'کل برنامه‌ها', value: total, color: '#029048' },
+   313→    { label: 'دسته‌های ژانری', value: sortedCategories.length, color: '#2563eb' },
+   314→    { label: 'برنامه‌های با تصویر', value: bySource.pdf + bySource.web, color: '#7c3aed' },
+   315→    { label: 'برنامه‌های با تحلیل متنی', value: bySource.text, color: '#db2777' },
+   316→  ];
+   317→
+   318→  // Helper to render a horizontal bar chart
+   319→  const renderBarChart = (items: [string, number][], color: string, total?: number) => {
+   320→    const t = total || items.reduce((a, [, c]) => a + c, 0) || 1;
+   321→    const max = Math.max(...items.map(([, c]) => c), 1);
+   322→    return items.map(([k, v]) => `
+   323→      <div class="bar-row">
+   324→        <div class="bar-label">${escapeHtml(k)}</div>
+   325→        <div class="bar-track">
+   326→          <div class="bar-fill" style="width: ${(v / max * 100).toFixed(1)}%; background: ${color};"></div>
+   327→        </div>
+   328→        <div class="bar-value">${v.toLocaleString('fa-IR')} <span class="bar-pct">(${(v / t * 100).toFixed(0)}%)</span></div>
+   329→      </div>
+   330→    `).join('');
+   331→  };
+   332→
+   333→  const statistics = `
+   334→    <section class="content-section">
+   335→      <div class="section-header">
+   336→        <span class="section-num">۳</span>
+   337→        <h2 class="section-title">نمای آماری کلی</h2>
+   338→      </div>
+   339→
+   340→      <div class="stat-grid">
+   341→        ${statCards.map(s => `
+   342→          <div class="stat-card" style="border-top: 4px solid ${s.color};">
+   343→            <div class="stat-num" style="color: ${s.color};">${s.value.toLocaleString('fa-IR')}</div>
+   344→            <div class="stat-label">${s.label}</div>
+   345→          </div>
+   346→        `).join('')}
+   347→      </div>
+   348→
+   349→      <h3 class="subsection-title">توزیع بر اساس منبع داده</h3>
+   350→      <div class="bar-chart">
+   351→        ${renderBarChart([
+   352→          ['تصویر PDF', bySource.pdf],
+   353→          ['تصویر وب', bySource.web],
+   354→          ['تحلیل متنی', bySource.text],
+   355→        ], '#029048', total)}
+   356→      </div>
+   357→
+   358→      <h3 class="subsection-title">توزیع بر اساس اندازهٔ استودیو</h3>
+   359→      <div class="bar-chart">
+   360→        ${renderBarChart(Object.entries(sizeBuckets).sort((a, b) => b[1] - a[1]), '#2563eb', total)}
+   361→      </div>
+   362→
+   363→      <h3 class="subsection-title">توزیع بر اساس سبک دکور</h3>
+   364→      <div class="bar-chart">
+   365→        ${renderBarChart(Object.entries(styleBuckets).sort((a, b) => b[1] - a[1]), '#7c3aed', total)}
+   366→      </div>
+   367→
+   368→      <h3 class="subsection-title">توزیع بر اساس حضور تماشاگر</h3>
+   369→      <div class="bar-chart">
+   370→        ${renderBarChart(Object.entries(viewersBuckets).sort((a, b) => b[1] - a[1]), '#db2777', total)}
+   371→      </div>
+   372→
+   373→      <h3 class="subsection-title">توزیع بر اساس نورپردازی</h3>
+   374→      <div class="bar-chart">
+   375→        ${renderBarChart(Object.entries(lightingCounts).sort((a, b) => b[1] - a[1]), '#ea580c', total)}
+   376→      </div>
+   377→    </section>
+   378→  `;
+   379→
+   380→  // 4. GENRE ANALYSIS
+   381→  const genreAnalysis = `
+   382→    <section class="content-section">
+   383→      <div class="section-header">
+   384→        <span class="section-num">۴</span>
+   385→        <h2 class="section-title">تحلیل توزیع ژانرها</h2>
+   386→      </div>
+   387→      <p>
+   388→        در این بخش، توزیع برنامه‌ها در <strong>${sortedCategories.length.toLocaleString('fa-IR')}</strong> دستهٔ ژانری
+   389→        به‌تفصیل بررسی می‌شود. هر دسته با شمارش برنامه‌ها، سهم نسبتی از کل آرشیو، و معرفی کوتاه برنامه‌های شاخص ارائه
+   390→        می‌شود. نمودار میله‌ای زیر، توزیع کامل را به‌صورت بصری نمایش می‌دهد.
+   391→      </p>
+   392→
+   393→      <h3 class="subsection-title">نمودار توزیع کامل ژانرها</h3>
+   394→      <div class="bar-chart">
+   395→        ${renderBarChart(sortedCategories.map(([k, v]) => [k, v.length]), '#029048', total)}
+   396→      </div>
+   397→
+   398→      <h3 class="subsection-title">معرفی تفصیلی دسته‌ها</h3>
+   399→      ${sortedCategories.map(([cat, items], idx) => {
+   400→        const pct = (items.length / total * 100).toFixed(1);
+   401→        const topShows = items.slice(0, 5).map(s => escapeHtml(s.name)).join('، ');
+   402→        return `
+   403→          <div class="genre-block">
+   404→            <div class="genre-block-header">
+   405→              <span class="genre-block-num">${(idx + 1).toLocaleString('fa-IR')}</span>
+   406→              <h4 class="genre-block-title">${escapeHtml(cat)}</h4>
+   407→              <span class="genre-block-count">${items.length.toLocaleString('fa-IR')} برنامه</span>
+   408→              <span class="genre-block-pct">${pct}٪</span>
+   409→            </div>
+   410→            <div class="genre-block-bar">
+   411→              <div class="genre-block-bar-fill" style="width: ${pct}%;"></div>
+   412→            </div>
+   413→            <p class="genre-block-desc">
+   414→              این دسته با <strong>${items.length.toLocaleString('fa-IR')}</strong> برنامه، معادل <strong>${pct}٪</strong> از
+   415→              کل آرشیو را در بر می‌گیرد. از برنامه‌های شاخص این دسته می‌توان به ${topShows || '—'} اشاره کرد.
+   416→            </p>
+   417→          </div>
+   418→        `;
+   419→      }).join('')}
+   420→    </section>
+   421→  `;
+   422→
+   423→  // 5. DECOR ANALYSIS
+   424→  const decorAnalysis = `
+   425→    <section class="content-section">
+   426→      <div class="section-header">
+   427→        <span class="section-num">۵</span>
+   428→        <h2 class="section-title">تحلیل دکور و صحنه</h2>
+   429→      </div>
+   430→      <p>
+   431→        در این بخش، تحلیل آماری مشخصات دکور و صحنهٔ برنامه‌ها ارائه می‌شود. این تحلیل شامل عناصر تکرارشوندهٔ صحنه
+   432→        (مانند صفحه نمایش، گیاه، کتاب)، مصالح به‌کاررفته (مانند چوب، شیشه، فلز)، طیف رنگی، و نوع نورپردازی است.
+   433→        نتایج این تحلیل می‌تواند به طراحی صحنهٔ برنامه‌های جدید و مطالعهٔ تطبیقی دکور کمک کند.
+   434→      </p>
+   435→
+   436→      <div class="decor-grid">
+   437→        <div class="decor-block">
+   438→          <h4 class="decor-block-title">عناصر صحنه (پرتکرارترین)</h4>
+   439→          <div class="bar-chart small">
+   440→            ${topElements.length ? renderBarChart(topElements, '#029048', totalForPct(elementCounts)) : '<p class="empty-state">داده‌ای ثبت نشده است.</p>'}
+   441→          </div>
+   442→        </div>
+   443→        <div class="decor-block">
+   444→          <h4 class="decor-block-title">مصالح به‌کاررفته</h4>
+   445→          <div class="bar-chart small">
+   446→            ${topMaterials.length ? renderBarChart(topMaterials, '#2563eb', totalForPct(materialCounts)) : '<p class="empty-state">داده‌ای ثبت نشده است.</p>'}
+   447→          </div>
+   448→        </div>
+   449→        <div class="decor-block">
+   450→          <h4 class="decor-block-title">طیف رنگی</h4>
+   451→          <div class="bar-chart small">
+   452→            ${topColors.length ? renderBarChart(topColors, '#7c3aed', totalForPct(colorCounts)) : '<p class="empty-state">داده‌ای ثبت نشده است.</p>'}
+   453→          </div>
+   454→        </div>
+   455→        <div class="decor-block">
+   456→          <h4 class="decor-block-title">نوع نورپردازی</h4>
+   457→          <div class="bar-chart small">
+   458→            ${renderBarChart(Object.entries(lightingCounts).sort((a, b) => b[1] - a[1]), '#db2777', total)}
+   459→          </div>
+   460→        </div>
+   461→      </div>
+   462→
+   463→      <div class="highlight-box">
+   464→        <div class="highlight-title">یافته‌های تحلیل دکور</div>
+   465→        <ul class="highlight-list">
+   466→          ${topElements.slice(0, 3).map(([e, c]) => `<li>عنصر صحنهٔ پرتکرار: <strong>${escapeHtml(e)}</strong> با ${c.toLocaleString('fa-IR')} مورد</li>`).join('') || '<li>داده‌ای در دسترس نیست.</li>'}
+   467→          ${topMaterials.slice(0, 3).map(([m, c]) => `<li>مادهٔ پرکاربرد: <strong>${escapeHtml(m)}</strong> با ${c.toLocaleString('fa-IR')} مورد</li>`).join('') || ''}
+   468→          ${topColors.slice(0, 3).map(([c, n]) => `<li>رنگ غالب: <strong>${escapeHtml(c)}</strong> با ${n.toLocaleString('fa-IR')} مورد</li>`).join('') || ''}
+   469→        </ul>
+   470→      </div>
+   471→    </section>
+   472→  `;
+   473→
+   474→  // 6. DETAILED PROGRAM LISTINGS — limit to first 80 to keep PDF reasonable
+   475→  const DETAIL_LIMIT = Math.min(shows.length, 80);
+   476→  const detailShows = shows.slice(0, DETAIL_LIMIT);
+   477→  const detailedListings = `
+   478→    <section class="content-section">
+   479→      <div class="section-header">
+   480→        <span class="section-num">۶</span>
+   481→        <h2 class="section-title">فهرست تفصیلی برنامه‌ها</h2>
+   482→      </div>
+   483→      <p>
+   484→        در این بخش، مشخصات کامل <strong>${DETAIL_LIMIT.toLocaleString('fa-IR')}</strong> برنامه از مجموع
+   485→        <strong>${total.toLocaleString('fa-IR')}</strong> برنامهٔ آرشیو ارائه می‌شود. برای هر برنامه، توضیحات فارسی،
+   486→        دسته‌بندی، مشخصات دکور و صحنه و خلاصهٔ تحلیلی آورده شده است. در صورت وجود تصویر مرجع، تصویر نیز درج شده است.
+   487→        ${total > DETAIL_LIMIT ? `<br><br><strong>توجه:</strong> به‌دلیل محدودیت حجم گزارش، تنها ${DETAIL_LIMIT.toLocaleString('fa-IR')} برنامهٔ نخست به‌صورت کامل معرفی شده‌اند. برای مشاهدهٔ کامل همهٔ برنامه‌ها، خروجی Excel یا آرشیو آنلاین را ملاحظه فرمایید.` : ''}
+   488→      </p>
+   489→
+   490→      ${detailShows.map((s, i) => {
+   491→        const desc = s.descriptionFa || s.summary || 'توضیحاتی برای این برنامه ثبت نشده است.';
+   492→        const hasImage = s.images && s.images.length > 0;
+   493→        // Prepend the app origin so relative image paths resolve in the
+   494→        // print-to-PDF window (which has origin 'about:blank').
+   495→        const imgSrc = hasImage
+   496→          ? (String(s.images[0]).startsWith('http')
+   497→              ? String(s.images[0])
+   498→              : `${opts.origin || ''}${String(s.images[0])}`)
+   499→          : '';
+   500→        return `
+   501→          <article class="program-card-print">
+   502→            <div class="program-card-header">
+   503→              <span class="program-card-num">${(i + 1).toLocaleString('fa-IR')}</span>
+   504→              <h3 class="program-card-name">${escapeHtml(s.name)}</h3>
+   505→              <span class="program-card-id">شناسه: ${s.num ? s.num.toLocaleString('fa-IR') : (i + 1).toLocaleString('fa-IR')}</span>
+   506→            </div>
+   507→            <div class="program-card-body">
+   508→              ${hasImage ? `
+   509→                <div class="program-card-image">
+   510→                  <img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(s.name)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+   511→                  <div class="program-card-image-fallback">تصویر بارگذاری نشد</div>
+   512→                </div>
+   513→              ` : `<div class="program-card-image"><div class="program-card-image-fallback" style="display:flex;">تصویر موجود نیست</div></div>`}
+   514→              <div class="program-card-info">
+   515→                <div class="program-card-tags">
+   516→                  <span class="tag">${escapeHtml((s.category || 'سایر').replace(/^\d+\.\s*/, ''))}</span>
+   517→                  <span class="tag">${escapeHtml(s.style || '—')}</span>
+   518→                  <span class="tag">${escapeHtml(s.size || '—')}</span>
+   519→                  <span class="tag">${escapeHtml(s.viewers || '—')}</span>
+   520→                </div>
+   521→                <p class="program-card-desc">${escapeHtml(desc)}</p>
+   522→                <div class="program-card-specs">
+   523→                  ${s.elements ? `<div class="spec-row"><span class="spec-label">عناصر دکور:</span> <span class="spec-value">${escapeHtml(s.elements)}</span></div>` : ''}
+   524→                  ${s.materials ? `<div class="spec-row"><span class="spec-label">مصالح:</span> <span class="spec-value">${escapeHtml(s.materials)}</span></div>` : ''}
+   525→                  ${s.colors ? `<div class="spec-row"><span class="spec-label">رنگ‌آمیزی:</span> <span class="spec-value">${escapeHtml(s.colors)}</span></div>` : ''}
+   526→                  ${s.lighting ? `<div class="spec-row"><span class="spec-label">نورپردازی:</span> <span class="spec-value">${escapeHtml(s.lighting)}</span></div>` : ''}
+   527→                  ${s.layout ? `<div class="spec-row"><span class="spec-label">چیدمان:</span> <span class="spec-value">${escapeHtml(s.layout)}</span></div>` : ''}
+   528→                  ${s.effects ? `<div class="spec-row"><span class="spec-label">جلوه‌ها:</span> <span class="spec-value">${escapeHtml(s.effects)}</span></div>` : ''}
+   529→                </div>
+   530→                ${s.summary && s.summary !== '—' ? `<p class="program-card-summary"><strong>خلاصهٔ دکور:</strong> ${escapeHtml(s.summary)}</p>` : ''}
+   531→              </div>
+   532→            </div>
+   533→          </article>
+   534→        `;
+   535→      }).join('')}
+   536→    </section>
+   537→  `;
+   538→
+   539→  // 7. CONCLUSION
+   540→  const conclusion = `
+   541→    <section class="content-section">
+   542→      <div class="section-header">
+   543→        <span class="section-num">۷</span>
+   544→        <h2 class="section-title">نتیجه‌گیری و پیشنهادها</h2>
+   545→      </div>
+   546→      <p>
+   547→        آرشیو تخصصی بانک رسانه با <strong>${total.toLocaleString('fa-IR')}</strong> برنامه در
+   548→        <strong>${sortedCategories.length.toLocaleString('fa-IR')}</strong> دستهٔ ژانری، یکی از جامع‌ترین مراجع موجود در
+   549→        حوزهٔ برنامه‌های تلویزیونی است. تنوع ژانری از مصاحبه‌محور تا رئالیتی و از خبری تا فرهنگی، امکان مطالعهٔ تطبیقی
+   550→        گسترده‌ای را فراهم می‌کند. تحلیل دکور و صحنه نیز الگوهای پرتکرار طراحی صحنه را آشکار ساخته و می‌تواند مبنای
+   551→        طراحی برنامه‌های جدید قرار گیرد.
+   552→      </p>
+   553→      <p>
+   554→        در ادامهٔ مسیر، توصیه می‌شود تصاویر باکیفیت برای همهٔ برنامه‌ها گردآوری شود تا بخش تحلیل بصری نیز تکمیل گردد.
+   555→        همچنین، افزودن قابلیت جستجوی پیشرفته بر اساس مشخصات دکور (مانند جستجوی برنامه‌های با نورپردازی گرم و مصالح
+   556→        چوبی) می‌تواند ارزش پژوهشی آرشیو را افزایش دهد. در نهایت، به‌روزرسانی منظم آرشیو با برنامه‌های جدید و بازبینی
+   557→        دسته‌بندی ژانری، پویایی و اعتبار آن را در بلندمدت تضمین می‌کند.
+   558→      </p>
+   559→
+   560→      <div class="highlight-box">
+   561→        <div class="highlight-title">پیشنهادهای اجرایی</div>
+   562→        <ul class="highlight-list">
+   563→          <li>تکمیل تصاویر مرجع برای ${bySource.text.toLocaleString('fa-IR')} برنامهٔ فاقد تصویر</li>
+   564→          <li>افزودن قابلیت جستجوی چندبُعدی بر اساس مشخصات دکور</li>
+   565→          <li>به‌روزرسانی فصلی آرشیو با برنامه‌های جدید تولیدشده</li>
+   566→          <li>تدوین گزارش‌های تخصصی به تفکیک ژانر برای استفادهٔ پژوهشی</li>
+   567→          <li>ایجاد نسخهٔ آنلاین آرشیو با قابلیت اشتراک‌گذاری در شبکه‌های اجتماعی</li>
+   568→        </ul>
+   569→      </div>
+   570→
+   571→      <div class="signature-block">
+   572→        <div class="signature-line"></div>
+   573→        <div class="signature-meta">
+   574→          <div>تهیه و تنظیم: <strong>${escapeHtml(opts.organization)}</strong></div>
+   575→          <div>تاریخ: <strong>${faDate}</strong></div>
+   576→          <div>شناسه سند: <strong>${docId}</strong></div>
+   577→        </div>
+   578→      </div>
+   579→    </section>
+   580→  `;
+   581→
+   582→  // 8. APPENDIX — alphabetical index
+   583→  const sortedAlpha = [...shows].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+   584→  const appendix = `
+   585→    <section class="content-section">
+   586→      <div class="section-header">
+   587→        <span class="section-num">۸</span>
+   588→        <h2 class="section-title">پیوست: نمایهٔ الفبایی</h2>
+   589→      </div>
+   590→      <p>
+   591→        در این پیوست، فهرست کامل <strong>${total.toLocaleString('fa-IR')}</strong> برنامه به ترتیب الفبایی ارائه می‌شود.
+   592→        برای هر برنامه، شمارهٔ داخلی و دستهٔ ژانری درج شده است تا جستجو و ارجاع سریع فراهم باشد.
+   593→      </p>
+   594→      <div class="alpha-grid">
+   595→        ${sortedAlpha.map(s => `
+   596→          <div class="alpha-item">
+   597→            <span class="alpha-name">${escapeHtml(s.name)}</span>
+   598→            <span class="alpha-cat">${escapeHtml((s.category || '').replace(/^\d+\.\s*/, '').substring(0, 30))}</span>
+   599→            <span class="alpha-num">#${(s.num || 0).toLocaleString('fa-IR')}</span>
+   600→          </div>
+   601→        `).join('')}
+   602→      </div>
+   603→    </section>
+   604→  `;
+   605→
+   606→  // ---------- Final HTML assembly ----------
+   607→  return `<!DOCTYPE html>
+   608→<html lang="fa" dir="rtl">
+   609→<head>
+   610→<meta charset="utf-8">
+   611→<title>${escapeHtml(opts.title)} — ${total.toLocaleString('fa-IR')} برنامه</title>
+   612→<style>
+   613→@font-face {
+   614→  font-family: 'Vazirmatn';
+   615→  src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Regular.woff2') format('woff2');
+   616→  font-weight: 400;
+   617→}
+   618→@font-face {
+   619→  font-family: 'Vazirmatn';
+   620→  src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Medium.woff2') format('woff2');
+   621→  font-weight: 500;
+   622→}
+   623→@font-face {
+   624→  font-family: 'Vazirmatn';
+   625→  src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Bold.woff2') format('woff2');
+   626→  font-weight: 700;
+   627→}
+   628→@font-face {
+   629→  font-family: 'Vazirmatn';
+   630→  src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Black.woff2') format('woff2');
+   631→  font-weight: 900;
+   632→}
+   633→
+   634→* { margin: 0; padding: 0; box-sizing: border-box; }
+   635→html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+   636→body {
+   637→  font-family: 'Vazirmatn', 'Tahoma', sans-serif;
+   638→  color: #1a2e22;
+   639→  background: #f5f5f5;
+   640→  font-size: 13px;
+   641→  line-height: 1.75;
+   642→}
+   643→
+   644→/* ============ COVER ============ */
+   645→.cover {
+   646→  width: 210mm;
+   647→  height: 297mm;
+   648→  margin: 0 auto;
+   649→  background:
+   650→    radial-gradient(ellipse 80% 60% at 70% 20%, rgba(54, 179, 126, 0.35) 0%, transparent 60%),
+   651→    radial-gradient(ellipse 70% 50% at 25% 80%, rgba(2, 144, 72, 0.4) 0%, transparent 60%),
+   652→    linear-gradient(160deg, #010a05 0%, #02150c 50%, #010a05 100%);
+   653→  color: white;
+   654→  position: relative;
+   655→  page-break-after: always;
+   656→  overflow: hidden;
+   657→  display: flex;
+   658→  align-items: center;
+   659→  justify-content: center;
+   660→}
+   661→.cover-bg-deco {
+   662→  position: absolute;
+   663→  inset: 0;
+   664→  background-image:
+   665→    linear-gradient(135deg, transparent 30%, rgba(74, 222, 128, 0.04) 50%, transparent 70%);
+   666→  background-size: 30px 30px;
+   667→  pointer-events: none;
+   668→}
+   669→.cover-content {
+   670→  position: relative;
+   671→  z-index: 2;
+   672→  text-align: center;
+   673→  padding: 40px;
+   674→  max-width: 80%;
+   675→}
+   676→.cover-brand {
+   677→  font-size: 18px;
+   678→  letter-spacing: 8px;
+   679→  color: rgba(168, 230, 193, 0.6);
+   680→  font-weight: 500;
+   681→  margin-bottom: 36px;
+   682→}
+   683→.cover-logo-mark {
+   684→  margin-bottom: 28px;
+   685→  display: flex;
+   686→  align-items: center;
+   687→  justify-content: center;
+   688→}
+   689→.cover-logo-img {
+   690→  max-width: 180px;
+   691→  max-height: 120px;
+   692→  width: auto;
+   693→  height: auto;
+   694→  object-fit: contain;
+   695→  filter: drop-shadow(0 0 24px rgba(74, 222, 128, 0.35)) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+   696→}
+   697→.cover-title {
+   698→  font-size: 42px;
+   699→  font-weight: 900;
+   700→  line-height: 1.4;
+   701→  margin-bottom: 16px;
+   702→  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+   703→}
+   704→.cover-subtitle {
+   705→  font-size: 18px;
+   706→  color: rgba(168, 230, 193, 0.8);
+   707→  margin-bottom: 60px;
+   708→  font-weight: 400;
+   709→}
+   710→.cover-stats {
+   711→  display: flex;
+   712→  align-items: center;
+   713→  justify-content: center;
+   714→  gap: 32px;
+   715→  margin-bottom: 56px;
+   716→  padding: 32px 24px;
+   717→  background: rgba(2, 144, 72, 0.1);
+   718→  border: 1px solid rgba(74, 222, 128, 0.25);
+   719→  border-radius: 16px;
+   720→  backdrop-filter: blur(10px);
+   721→}
+   722→.cover-stat-num {
+   723→  font-size: 36px;
+   724→  font-weight: 900;
+   725→  color: #4ade80;
+   726→  margin-bottom: 4px;
+   727→}
+   728→.cover-stat-label {
+   729→  font-size: 12px;
+   730→  color: rgba(168, 230, 193, 0.7);
+   731→}
+   732→.cover-stat-divider {
+   733→  width: 1px;
+   734→  height: 50px;
+   735→  background: rgba(74, 222, 128, 0.3);
+   736→}
+   737→.cover-meta {
+   738→  display: flex;
+   739→  flex-direction: column;
+   740→  gap: 8px;
+   741→  margin-bottom: 48px;
+   742→  font-size: 13px;
+   743→  color: rgba(168, 230, 193, 0.8);
+   744→}
+   745→.cover-meta div { display: flex; gap: 8px; justify-content: center; }
+   746→.cover-meta strong { color: white; font-weight: 700; }
+   747→.cover-footnote {
+   748→  font-size: 11px;
+   749→  color: rgba(168, 230, 193, 0.5);
+   750→  line-height: 1.8;
+   751→  border-top: 1px solid rgba(74, 222, 128, 0.2);
+   752→  padding-top: 24px;
+   753→}
+   754→
+   755→/* ============ PAGE / SECTION ============ */
+   756→.content-section, .toc-section {
+   757→  width: 210mm;
+   758→  min-height: 297mm;
+   759→  margin: 0 auto;
+   760→  background: white;
+   761→  padding: 24mm 20mm;
+   762→  page-break-after: always;
+   763→  position: relative;
+   764→}
+   765→.content-section:last-child { page-break-after: auto; }
+   766→
+   767→.section-header {
+   768→  display: flex;
+   769→  align-items: center;
+   770→  gap: 14px;
+   771→  margin-bottom: 24px;
+   772→  padding-bottom: 16px;
+   773→  border-bottom: 3px solid #029048;
+   774→}
+   775→.section-num {
+   776→  width: 36px;
+   777→  height: 36px;
+   778→  border-radius: 50%;
+   779→  background: linear-gradient(135deg, #029048 0%, #016035 100%);
+   780→  color: white;
+   781→  display: flex;
+   782→  align-items: center;
+   783→  justify-content: center;
+   784→  font-weight: 900;
+   785→  font-size: 16px;
+   786→  flex-shrink: 0;
+   787→  box-shadow: 0 4px 12px rgba(2, 144, 72, 0.3);
+   788→}
+   789→.section-title {
+   790→  font-size: 24px;
+   791→  font-weight: 700;
+   792→  color: #016035;
+   793→  flex: 1;
+   794→}
+   795→
+   796→.subsection-title {
+   797→  font-size: 16px;
+   798→  font-weight: 700;
+   799→  color: #016035;
+   800→  margin: 28px 0 14px 0;
+   801→  padding-right: 12px;
+   802→  border-right: 4px solid #029048;
+   803→}
+   804→
+   805→.content-section p {
+   806→  margin-bottom: 14px;
+   807→  text-align: justify;
+   808→  color: #2a3a30;
+   809→  font-size: 13px;
+   810→  line-height: 1.9;
+   811→}
+   812→
+   813→/* ============ TOC ============ */
+   814→.toc-list { margin-top: 24px; }
+   815→.toc-item {
+   816→  display: flex;
+   817→  align-items: baseline;
+   818→  gap: 12px;
+   819→  padding: 14px 0;
+   820→  border-bottom: 1px dashed #d4d4d4;
+   821→}
+   822→.toc-num {
+   823→  width: 28px;
+   824→  height: 28px;
+   825→  border-radius: 6px;
+   826→  background: rgba(2, 144, 72, 0.1);
+   827→  color: #016035;
+   828→  display: flex;
+   829→  align-items: center;
+   830→  justify-content: center;
+   831→  font-weight: 700;
+   832→  font-size: 12px;
+   833→  flex-shrink: 0;
+   834→}
+   835→.toc-title { font-weight: 600; color: #1a2e22; }
+   836→.toc-dots { flex: 1; border-bottom: 1px dotted #999; margin: 0 8px; transform: translateY(-4px); }
+   837→.toc-page { color: #7a8a80; font-size: 12px; }
+   838→
+   839→/* ============ STAT GRID ============ */
+   840→.stat-grid {
+   841→  display: grid;
+   842→  grid-template-columns: repeat(4, 1fr);
+   843→  gap: 12px;
+   844→  margin: 24px 0;
+   845→}
+   846→.stat-card {
+   847→  background: #f8faf9;
+   848→  border: 1px solid #e0e8e4;
+   849→  border-radius: 12px;
+   850→  padding: 16px;
+   851→  text-align: center;
+   852→}
+   853→.stat-num {
+   854→  font-size: 28px;
+   855→  font-weight: 900;
+   856→  margin-bottom: 4px;
+   857→}
+   858→.stat-label {
+   859→  font-size: 11px;
+   860→  color: #4a5d52;
+   861→}
+   862→
+   863→/* ============ BAR CHART ============ */
+   864→.bar-chart { margin: 16px 0 24px 0; }
+   865→.bar-chart.small .bar-row { font-size: 11px; padding: 4px 0; }
+   866→.bar-row {
+   867→  display: flex;
+   868→  align-items: center;
+   869→  gap: 10px;
+   870→  padding: 6px 0;
+   871→  font-size: 12px;
+   872→}
+   873→.bar-label {
+   874→  width: 130px;
+   875→  flex-shrink: 0;
+   876→  color: #2a3a30;
+   877→  font-weight: 500;
+   878→}
+   879→.bar-chart.small .bar-label { width: 100px; }
+   880→.bar-track {
+   881→  flex: 1;
+   882→  height: 18px;
+   883→  background: #f0f4f1;
+   884→  border-radius: 9px;
+   885→  overflow: hidden;
+   886→}
+   887→.bar-fill {
+   888→  height: 100%;
+   889→  border-radius: 9px;
+   890→  transition: width 0.4s ease;
+   891→  background-image: linear-gradient(90deg, rgba(255,255,255,0.2), transparent);
+   892→}
+   893→.bar-value {
+   894→  width: 80px;
+   895→  flex-shrink: 0;
+   896→  text-align: left;
+   897→  font-weight: 700;
+   898→  color: #1a2e22;
+   899→}
+   900→.bar-pct { font-weight: 400; color: #7a8a80; font-size: 11px; }
+   901→
+   902→/* ============ METHOD GRID ============ */
+   903→.method-grid {
+   904→  display: grid;
+   905→  grid-template-columns: repeat(2, 1fr);
+   906→  gap: 12px;
+   907→  margin-top: 24px;
+   908→}
+   909→.method-card {
+   910→  background: #f8faf9;
+   911→  border: 1px solid #e0e8e4;
+   912→  border-radius: 12px;
+   913→  padding: 16px;
+   914→}
+   915→.method-icon { font-size: 24px; margin-bottom: 8px; }
+   916→.method-card h4 {
+   917→  font-size: 14px;
+   918→  color: #016035;
+   919→  margin-bottom: 6px;
+   920→  font-weight: 700;
+   921→}
+   922→.method-card p { font-size: 12px; margin: 0; color: #4a5d52; }
+   923→
+   924→/* ============ GENRE BLOCK ============ */
+   925→.genre-block {
+   926→  background: #f8faf9;
+   927→  border: 1px solid #e0e8e4;
+   928→  border-radius: 12px;
+   929→  padding: 14px;
+   930→  margin-bottom: 12px;
+   931→}
+   932→.genre-block-header {
+   933→  display: flex;
+   934→  align-items: center;
+   935→  gap: 10px;
+   936→  margin-bottom: 8px;
+   937→}
+   938→.genre-block-num {
+   939→  width: 26px;
+   940→  height: 26px;
+   941→  border-radius: 6px;
+   942→  background: #029048;
+   943→  color: white;
+   944→  display: flex;
+   945→  align-items: center;
+   946→  justify-content: center;
+   947→  font-weight: 700;
+   948→  font-size: 11px;
+   949→}
+   950→.genre-block-title {
+   951→  font-size: 15px;
+   952→  font-weight: 700;
+   953→  color: #1a2e22;
+   954→  flex: 1;
+   955→}
+   956→.genre-block-count {
+   957→  background: rgba(2, 144, 72, 0.1);
+   958→  color: #016035;
+   959→  padding: 3px 10px;
+   960→  border-radius: 12px;
+   961→  font-size: 11px;
+   962→  font-weight: 700;
+   963→}
+   964→.genre-block-pct {
+   965→  color: #7a8a80;
+   966→  font-size: 11px;
+   967→  font-weight: 600;
+   968→}
+   969→.genre-block-bar {
+   970→  height: 6px;
+   971→  background: #e0e8e4;
+   972→  border-radius: 3px;
+   973→  overflow: hidden;
+   974→  margin-bottom: 8px;
+   975→}
+   976→.genre-block-bar-fill {
+   977→  height: 100%;
+   978→  background: linear-gradient(90deg, #029048, #36b37e);
+   979→  border-radius: 3px;
+   980→}
+   981→.genre-block-desc {
+   982→  font-size: 12px;
+   983→  color: #4a5d52;
+   984→  line-height: 1.7;
+   985→}
+   986→
+   987→/* ============ DECOR GRID ============ */
+   988→.decor-grid {
+   989→  display: grid;
+   990→  grid-template-columns: repeat(2, 1fr);
+   991→  gap: 16px;
+   992→  margin-top: 16px;
+   993→}
+   994→.decor-block {
+   995→  background: #f8faf9;
+   996→  border: 1px solid #e0e8e4;
+   997→  border-radius: 12px;
+   998→  padding: 14px;
+   999→}
+  1000→.decor-block-title {
+  1001→  font-size: 14px;
+  1002→  font-weight: 700;
+  1003→  color: #016035;
+  1004→  margin-bottom: 10px;
+  1005→  padding-bottom: 8px;
+  1006→  border-bottom: 1px solid #e0e8e4;
+  1007→}
+  1008→
+  1009→/* ============ HIGHLIGHT BOX ============ */
+  1010→.highlight-box {
+  1011→  background: linear-gradient(135deg, #f0f8f4 0%, #e8f4ee 100%);
+  1012→  border: 1px solid #c8e0d4;
+  1013→  border-right: 4px solid #029048;
+  1014→  border-radius: 12px;
+  1015→  padding: 16px 20px;
+  1016→  margin: 24px 0;
+  1017→}
+  1018→.highlight-title {
+  1019→  font-weight: 700;
+  1020→  color: #016035;
+  1021→  margin-bottom: 10px;
+  1022→  font-size: 14px;
+  1023→}
+  1024→.highlight-list { list-style: none; padding: 0; }
+  1025→.highlight-list li {
+  1026→  position: relative;
+  1027→  padding-right: 20px;
+  1028→  margin-bottom: 6px;
+  1029→  font-size: 12px;
+  1030→  color: #2a3a30;
+  1031→  line-height: 1.8;
+  1032→}
+  1033→.highlight-list li::before {
+  1034→  content: '✓';
+  1035→  position: absolute;
+  1036→  right: 0;
+  1037→  color: #029048;
+  1038→  font-weight: 700;
+  1039→}
+  1040→
+  1041→/* ============ PROGRAM CARD ============ */
+  1042→.program-card-print {
+  1043→  background: white;
+  1044→  border: 1px solid #e0e8e4;
+  1045→  border-radius: 12px;
+  1046→  padding: 0;
+  1047→  margin-bottom: 16px;
+  1048→  page-break-inside: avoid;
+  1049→  overflow: hidden;
+  1050→  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  1051→}
+  1052→.program-card-header {
+  1053→  background: linear-gradient(135deg, #f0f8f4 0%, #e8f4ee 100%);
+  1054→  border-bottom: 1px solid #c8e0d4;
+  1055→  padding: 12px 16px;
+  1056→  display: flex;
+  1057→  align-items: center;
+  1058→  gap: 12px;
+  1059→}
+  1060→.program-card-num {
+  1061→  width: 28px;
+  1062→  height: 28px;
+  1063→  border-radius: 6px;
+  1064→  background: #029048;
+  1065→  color: white;
+  1066→  display: flex;
+  1067→  align-items: center;
+  1068→  justify-content: center;
+  1069→  font-weight: 700;
+  1070→  font-size: 11px;
+  1071→  flex-shrink: 0;
+  1072→}
+  1073→.program-card-name {
+  1074→  font-size: 15px;
+  1075→  font-weight: 700;
+  1076→  color: #1a2e22;
+  1077→  flex: 1;
+  1078→  direction: ltr;
+  1079→  text-align: right;
+  1080→}
+  1081→.program-card-id {
+  1082→  font-size: 10px;
+  1083→  color: #7a8a80;
+  1084→  font-weight: 500;
+  1085→}
+  1086→.program-card-body {
+  1087→  display: flex;
+  1088→  gap: 14px;
+  1089→  padding: 14px 16px;
+  1090→}
+  1091→.program-card-image {
+  1092→  width: 120px;
+  1093→  height: 90px;
+  1094→  border-radius: 8px;
+  1095→  overflow: hidden;
+  1096→  flex-shrink: 0;
+  1097→  background: #f0f4f1;
+  1098→  position: relative;
+  1099→  display: flex;
+  1100→  align-items: center;
+  1101→  justify-content: center;
+  1102→}
+  1103→.program-card-image img {
+  1104→  width: 100%;
+  1105→  height: 100%;
+  1106→  object-fit: cover;
+  1107→  display: block;
+  1108→}
+  1109→.program-card-image-fallback {
+  1110→  position: absolute;
+  1111→  inset: 0;
+  1112→  display: none;  /* hidden by default — only shown via onerror */
+  1113→  align-items: center;
+  1114→  justify-content: center;
+  1115→  font-size: 10px;
+  1116→  color: #999;
+  1117→  background: #f0f4f1;
+  1118→}
+  1119→.program-card-info { flex: 1; min-width: 0; }
+  1120→.program-card-tags {
+  1121→  display: flex;
+  1122→  flex-wrap: wrap;
+  1123→  gap: 4px;
+  1124→  margin-bottom: 8px;
+  1125→}
+  1126→.tag {
+  1127→  background: rgba(2, 144, 72, 0.08);
+  1128→  color: #016035;
+  1129→  padding: 2px 8px;
+  1130→  border-radius: 10px;
+  1131→  font-size: 10px;
+  1132→  font-weight: 600;
+  1133→  border: 1px solid rgba(2, 144, 72, 0.15);
+  1134→}
+  1135→.program-card-desc {
+  1136→  font-size: 12px;
+  1137→  color: #2a3a30;
+  1138→  line-height: 1.8;
+  1139→  margin-bottom: 8px;
+  1140→  text-align: justify;
+  1141→}
+  1142→.program-card-specs {
+  1143→  background: #f8faf9;
+  1144→  border-radius: 8px;
+  1145→  padding: 8px 12px;
+  1146→  font-size: 11px;
+  1147→}
+  1148→.spec-row {
+  1149→  display: flex;
+  1150→  gap: 8px;
+  1151→  margin-bottom: 3px;
+  1152→}
+  1153→.spec-label {
+  1154→  color: #7a8a80;
+  1155→  font-weight: 600;
+  1156→  min-width: 80px;
+  1157→}
+  1158→.spec-value { color: #2a3a30; flex: 1; }
+  1159→.program-card-summary {
+  1160→  font-size: 11px;
+  1161→  color: #4a5d52;
+  1162→  margin-top: 8px;
+  1163→  padding: 6px 10px;
+  1164→  background: rgba(2, 144, 72, 0.04);
+  1165→  border-radius: 6px;
+  1166→  line-height: 1.7;
+  1167→}
+  1168→
+  1169→/* ============ SIGNATURE ============ */
+  1170→.signature-block {
+  1171→  margin-top: 60px;
+  1172→  padding-top: 24px;
+  1173→}
+  1174→.signature-line {
+  1175→  width: 200px;
+  1176→  height: 1px;
+  1177→  background: #999;
+  1178→  margin: 0 0 16px auto;
+  1179→}
+  1180→.signature-meta {
+  1181→  text-align: left;
+  1182→  font-size: 12px;
+  1183→  color: #4a5d52;
+  1184→}
+  1185→.signature-meta div { margin-bottom: 4px; }
+  1186→.signature-meta strong { color: #1a2e22; }
+  1187→
+  1188→/* ============ ALPHA INDEX ============ */
+  1189→.alpha-grid {
+  1190→  display: grid;
+  1191→  grid-template-columns: repeat(2, 1fr);
+  1192→  gap: 6px;
+  1193→  margin-top: 16px;
+  1194→}
+  1195→.alpha-item {
+  1196→  background: #f8faf9;
+  1197→  border: 1px solid #e0e8e4;
+  1198→  border-radius: 6px;
+  1199→  padding: 8px 12px;
+  1200→  display: flex;
+  1201→  align-items: center;
+  1202→  gap: 8px;
+  1203→  font-size: 11px;
+  1204→}
+  1205→.alpha-name {
+  1206→  font-weight: 600;
+  1207→  color: #1a2e22;
+  1208→  flex: 1;
+  1209→  direction: ltr;
+  1210→  text-align: right;
+  1211→}
+  1212→.alpha-cat {
+  1213→  color: #7a8a80;
+  1214→  font-size: 10px;
+  1215→}
+  1216→.alpha-num {
+  1217→  background: rgba(2, 144, 72, 0.1);
+  1218→  color: #016035;
+  1219→  padding: 2px 6px;
+  1220→  border-radius: 4px;
+  1221→  font-weight: 700;
+  1222→  font-size: 10px;
+  1223→}
+  1224→
+  1225→.empty-state {
+  1226→  text-align: center;
+  1227→  padding: 20px;
+  1228→  color: #999;
+  1229→  font-size: 12px;
+  1230→}
+  1231→
+  1232→/* ============ PRINT ============ */
+  1233→@media print {
+  1234→  body { background: white; }
+  1235→  .cover, .content-section, .toc-section {
+  1236→    margin: 0;
+  1237→    box-shadow: none;
+  1238→  }
+  1239→  @page { size: A4; margin: 0; }
+  1240→}
+  1241→@media screen {
+  1242→  body { padding: 20px 0; }
+  1243→}
+  1244→</style>
+  1245→</head>
+  1246→<body>
+  1247→${cover}
+  1248→${tocHtml}
+  1249→${execSummary}
+  1250→${methodology}
+  1251→${statistics}
+  1252→${genreAnalysis}
+  1253→${decorAnalysis}
+  1254→${detailedListings}
+  1255→${conclusion}
+  1256→${appendix}
+  1257→</body>
+  1258→</html>`;
+  1259→}
+  1260→
+  1261→function escapeHtml(str: string): string {
+  1262→  if (str === null || str === undefined) return '';
+  1263→  return String(str)
+  1264→    .replace(/&/g, '&amp;')
+  1265→    .replace(/</g, '&lt;')
+  1266→    .replace(/>/g, '&gt;')
+  1267→    .replace(/"/g, '&quot;')
+  1268→    .replace(/'/g, '&#039;');
+  1269→}
+  1270→
