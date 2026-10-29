@@ -38,3 +38,4 @@ public/program-images/
 # IDE / OS
 .DS_Store
 *.log
+tsconfig.tsbuildinfo

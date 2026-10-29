@@ -140,7 +140,10 @@ export default function VideoEditor({ onClose, onSave, showToast }: VideoEditorP
       ]);
 
       const data = await ffmpeg.readFile(outputName);
-      const blob = new Blob([data], { type: 'video/mp4' });
+      // Cast to Uint8Array<ArrayBuffer> — @ffmpeg/ffmpeg's FileData type uses
+      // ArrayBufferLike which TypeScript 5.7+ rejects for Blob constructor.
+      const bytes = data as Uint8Array<ArrayBuffer>;
+      const blob = new Blob([bytes], { type: 'video/mp4' });
       const url = URL.createObjectURL(blob);
       setOutputURL(url);
       setOutputSize(blob.size);

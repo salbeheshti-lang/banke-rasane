@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import type React from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
-import { type Lang, t as translate, STRINGS, LangProvider, useLang, LangContext, LangContextValue, TFunc } from '@/lib/i18n';
+import { type Lang, STRINGS, LangProvider, useLang, LangContext } from '@/lib/i18n';
 import { api, setApiBase, getApiBase, User } from '@/lib/api';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -6765,7 +6765,7 @@ function ProfileSheet({
     }
     const reader = new FileReader();
     reader.onload = () => {
-      const img = new Image();
+      const img = new window.Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
         canvas.width = 256;
@@ -7074,8 +7074,7 @@ function SettingsModal({
           className="flex items-center justify-between p-4 flex-shrink-0"
           style={{
             background: 'linear-gradient(180deg, #0a1f14 0%, #0d2218 100%)',
-        boxShadow: '0 2px 16px rgba(0, 0, 0, 0.3)',
-        borderBottom: '1px solid rgba(16, 185, 129, 0.3)',
+            boxShadow: '0 2px 16px rgba(0, 0, 0, 0.3)',
             borderBottom: '1px solid rgba(13, 124, 74, 0.12)',
           }}
         >

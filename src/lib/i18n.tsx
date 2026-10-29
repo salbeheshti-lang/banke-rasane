@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
 // ============================================
 // TYPES
@@ -596,7 +596,7 @@ export function makeT(lang: Lang) {
 // ============================================
 const LANG_STORAGE_KEY = 'bankresaneh_lang';
 
-export function LangProvider({ children }: { children: ReactNode }) {
+export function LangProvider({ children }: { children: ReactNode }): React.JSX.Element {
   const [lang, setLangState] = useState<Lang>('fa');
 
   // Load persisted language on mount.
