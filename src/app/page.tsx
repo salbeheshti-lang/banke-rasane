@@ -2024,11 +2024,19 @@ function ProgramsView({
       return;
     }
     let cancelled = false;
+    setServerSearchShows(null);
+    setServerSearchMeta(null);
     setServerSearchLoading(true);
     const timer = setTimeout(() => {
       api.searchShows({ query: search, page: serverSearchPage, limit: 30 })
         .then(result => {
           if (cancelled) return;
+          if (result.pagination.total === 0) {
+            // Preserve typo-tolerant local fallback when the indexed search has no hit.
+            setServerSearchShows(null);
+            setServerSearchMeta(null);
+            return;
+          }
           const localByNum = new Map(talkShows.map(show => [show.num, show]));
           setServerSearchShows(result.shows.map(show => localByNum.get(show.num) || (show as unknown as TalkShow)));
           setServerSearchMeta(result.pagination);
