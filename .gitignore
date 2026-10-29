@@ -21,3 +21,6 @@ worker/dist/
 electron/dist/
 electron/out/
 public/program-images/
+.env
+.env.local
+.env.production

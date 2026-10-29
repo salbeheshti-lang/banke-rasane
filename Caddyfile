@@ -1,9 +1,13 @@
 :81 {
-	@transform_port_query {
-		query XTransformPort=*
+	# Only allow specific internal ports through XTransformPort
+	# This prevents SSRF — users can't proxy to arbitrary ports
+	@allowed_ports {
+		query XTransformPort=3000
+		query XTransformPort=3002
+		query XTransformPort=3003
 	}
 
-	handle @transform_port_query {
+	handle @allowed_ports {
 		reverse_proxy localhost:{query.XTransformPort} {
 			header_up Host {host}
 			header_up X-Forwarded-For {remote_host}

@@ -1236,10 +1236,10 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
         </div>
 
         {/* Login form */}
-        <form onSubmit={handleSubmit} className="w-full" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <form onSubmit={handleSubmit} className="w-full" style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '340px', margin: '0 auto' }}>
           {/* Username */}
           <div>
-            <label htmlFor="login-username" className="block text-sm font-bold mb-2" style={{ color: 'rgba(134, 239, 172, 0.9)' }}>
+            <label htmlFor="login-username" className="block text-sm font-bold mb-1.5" style={{ color: 'rgba(134, 239, 172, 0.9)' }}>
               {t('login_username')}
             </label>
             <input
@@ -1255,24 +1255,26 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 width: '100%',
                 background: 'rgba(255, 255, 255, 0.95)',
                 border: '1px solid rgba(52, 211, 153, 0.5)',
-                borderRadius: '12px',
-                padding: '12px 16px',
+                borderRadius: '10px',
+                padding: '9px 14px',
                 color: '#1a2e1a',
-                fontSize: '15px',
+                fontSize: '14px',
                 fontFamily: 'inherit',
                 outline: 'none',
                 textAlign: 'left',
                 direction: 'ltr',
+                height: '38px',
+                boxSizing: 'border-box',
               }}
             />
           </div>
 
           {/* Password with show/hide */}
           <div>
-            <label htmlFor="login-password" className="block text-sm font-bold mb-2" style={{ color: 'rgba(134, 239, 172, 0.9)' }}>
+            <label htmlFor="login-password" className="block text-sm font-bold mb-1.5" style={{ color: 'rgba(134, 239, 172, 0.9)' }}>
               {t('login_password')}
             </label>
-            <div className="relative" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ position: 'relative' }}>
               <input
                 id="login-password"
                 type={showPassword ? 'text' : 'password'}
@@ -1283,17 +1285,19 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 placeholder="••••••"
                 disabled={loading}
                 style={{
-                  flex: '1',
+                  width: '100%',
                   background: 'rgba(255, 255, 255, 0.95)',
                   border: '1px solid rgba(52, 211, 153, 0.5)',
-                  borderRadius: '12px',
-                  padding: '12px 16px',
+                  borderRadius: '10px',
+                  padding: '9px 42px 9px 14px',
                   color: '#1a2e1a',
-                  fontSize: '15px',
+                  fontSize: '14px',
                   fontFamily: 'inherit',
                   outline: 'none',
                   textAlign: 'left',
                   direction: 'ltr',
+                  height: '38px',
+                  boxSizing: 'border-box',
                 }}
               />
               <button
@@ -1301,10 +1305,20 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 onClick={() => setShowPassword(!showPassword)}
                 aria-label={showPassword ? t('login_hide_password') : t('login_show_password')}
                 disabled={loading}
-                className="p-2 rounded-lg transition-colors flex-shrink-0"
-                style={{ color: '#86efac', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(52, 211, 153, 0.3)' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(13, 124, 74, 0.2)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                style={{
+                  position: 'absolute',
+                  left: '8px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#5a6b4a',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
               >
                 {showPassword ? (
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
