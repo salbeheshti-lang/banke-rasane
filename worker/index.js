@@ -59,6 +59,29 @@ function generateToken() {
   return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+async function hashRateKey(value) {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function recordFailedLogin(env, key, now) {
+  const current = await env.DB.prepare(
+    'SELECT window_start, attempt_count FROM auth_login_attempts WHERE attempt_key = ?'
+  ).bind(key).first();
+
+  if (!current || current.window_start <= now - 900) {
+    await env.DB.prepare(
+      'INSERT INTO auth_login_attempts (attempt_key, window_start, attempt_count) VALUES (?, ?, 1) ON CONFLICT(attempt_key) DO UPDATE SET window_start = excluded.window_start, attempt_count = 1'
+    ).bind(key, now).run();
+    return;
+  }
+
+  await env.DB.prepare(
+    'UPDATE auth_login_attempts SET attempt_count = attempt_count + 1 WHERE attempt_key = ?'
+  ).bind(key).run();
+}
+
 // Helper: Verify session token
 async function verifySession(env, token) {
   if (!token) return null;
@@ -105,10 +128,27 @@ export default {
       // POST /api/auth/login — Login
       if (path === '/api/auth/login' && method === 'POST') {
         const body = await request.json();
-        const { username, password } = body;
+        const username = typeof body?.username === 'string' ? body.username.trim() : '';
+        const password = typeof body?.password === 'string' ? body.password : '';
 
-        if (!username || !password) {
-          return jsonResponse({ error: 'نام کاربری و رمز عبور الزامی است' }, 400);
+        if (!username || !password || username.length > 128 || password.length > 1024) {
+          return jsonResponse({ error: 'نام کاربری و رمز عبور معتبر الزامی است' }, 400);
+        }
+
+        const now = Math.floor(Date.now() / 1000);
+        // Cleanup old rows to keep the shared rate-limit table bounded.
+        await env.DB.prepare('DELETE FROM auth_login_attempts WHERE window_start < ?').bind(now - 86400).run();
+
+        // Include the edge-provided client IP and normalized username, but only
+        // persist a one-way digest rather than raw identifiers.
+        const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
+        const attemptKey = await hashRateKey(clientIp + '\n' + username.toLocaleLowerCase('en-US'));
+        const attempt = await env.DB.prepare(
+          'SELECT window_start, attempt_count FROM auth_login_attempts WHERE attempt_key = ?'
+        ).bind(attemptKey).first();
+
+        if (attempt && attempt.window_start > now - 900 && attempt.attempt_count >= 8) {
+          return jsonResponse({ error: 'تعداد تلاش‌های ورود بیش از حد مجاز است؛ ۱۵ دقیقه دیگر تلاش کنید' }, 429);
         }
 
         const user = await env.DB.prepare(
@@ -116,13 +156,17 @@ export default {
         ).bind(username).first();
 
         if (!user) {
+          await recordFailedLogin(env, attemptKey, now);
           return jsonResponse({ error: 'نام کاربری یا رمز عبور اشتباه است' }, 401);
         }
 
         const hash = await hashPassword(password, user.salt);
         if (hash !== user.password_hash) {
+          await recordFailedLogin(env, attemptKey, now);
           return jsonResponse({ error: 'نام کاربری یا رمز عبور اشتباه است' }, 401);
         }
+
+        await env.DB.prepare('DELETE FROM auth_login_attempts WHERE attempt_key = ?').bind(attemptKey).run();
 
         // Create session (valid for 30 days)
         const token = generateToken();
