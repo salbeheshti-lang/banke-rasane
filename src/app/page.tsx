@@ -2009,9 +2009,42 @@ function ProgramsView({
   const [filterViewers, setFilterViewers] = useState('all');
   const [filterStyle, setFilterStyle] = useState('all');
   const [islamicOnly, setIslamicOnly] = useState(false);
+  const [serverSearchShows, setServerSearchShows] = useState<TalkShow[] | null>(null);
+  const [serverSearchPage, setServerSearchPage] = useState(1);
+  const [serverSearchMeta, setServerSearchMeta] = useState<{ total: number; totalPages: number; page: number } | null>(null);
+  const [serverSearchLoading, setServerSearchLoading] = useState(false);
+  const canUseServerSearch = !genre && filterSize === 'all' && filterViewers === 'all' && filterStyle === 'all' && !islamicOnly;
+
+  useEffect(() => {
+    if (!search.trim() || !canUseServerSearch) {
+      setServerSearchShows(null);
+      setServerSearchMeta(null);
+      setServerSearchPage(1);
+      setServerSearchLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setServerSearchLoading(true);
+    const timer = setTimeout(() => {
+      api.searchShows({ query: search, page: serverSearchPage, limit: 30 })
+        .then(result => {
+          if (cancelled) return;
+          const localByNum = new Map(talkShows.map(show => [show.num, show]));
+          setServerSearchShows(result.shows.map(show => localByNum.get(show.num) || (show as unknown as TalkShow)));
+          setServerSearchMeta(result.pagination);
+        })
+        .catch(() => {
+          if (!cancelled) { setServerSearchShows(null); setServerSearchMeta(null); }
+        })
+        .finally(() => { if (!cancelled) setServerSearchLoading(false); });
+    }, 250);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [search, serverSearchPage, canUseServerSearch, talkShows]);
+
+  useEffect(() => { setServerSearchPage(1); }, [search]);
 
   const filteredShows = useMemo(() => {
-    let shows = [...talkShows];
+    let shows = [...(search.trim() && canUseServerSearch && serverSearchShows !== null ? serverSearchShows : talkShows)];
     if (genre) shows = shows.filter(genre.filterFn);
     if (filterSize !== 'all') shows = shows.filter(s => s.size === filterSize);
     if (filterViewers !== 'all') shows = shows.filter(s => s.viewers === filterViewers);
@@ -2027,7 +2060,7 @@ function ProgramsView({
       );
     }
     return shows;
-  }, [talkShows, genre, search, filterSize, filterViewers, filterStyle, islamicOnly]);
+  }, [talkShows, genre, search, filterSize, filterViewers, filterStyle, islamicOnly, canUseServerSearch, serverSearchShows]);
 
   const handleUploadSelected = () => {
     const selectedShows = filteredShows.filter(s => selectedIds.includes(s.num));
@@ -2308,6 +2341,9 @@ function ProgramsView({
         )}
       </div>
 
+      {serverSearchLoading && search.trim() && canUseServerSearch && (
+        <div className="text-center py-3 text-sm" style={{ color: '#0d7c4a' }}>در حال جست‌وجو در آرشیو…</div>
+      )}
       {filteredShows.length === 0 ? (
         <div className="text-center py-20" style={{ color: '#8a8a7a' }}>
           <p>برنامه‌ای یافت نشد</p>
@@ -2350,13 +2386,25 @@ function ProgramsView({
         </div>
       )}
 
-      {filteredShows.length > 60 && (
-        <div className="text-center mt-8" style={{ color: '#8a8a7a' }}>
-          <p className="text-sm">
-            نمایش ۶۰ برنامه از {filteredShows.length.toLocaleString('fa-IR')} • برای مشاهده همه، جستجو را فیلتر کنید
-          </p>
+      {search.trim() && canUseServerSearch && serverSearchMeta && serverSearchMeta.totalPages > 1 ? (
+        <div className="mt-8 flex items-center justify-center gap-3">
+          <button type="button" disabled={serverSearchPage <= 1 || serverSearchLoading}
+            onClick={() => setServerSearchPage(page => Math.max(1, page - 1))}
+            className="px-4 py-2 rounded-xl border disabled:opacity-40"
+            style={{ borderColor: '#b7d8c2', color: '#0d7c4a' }}>قبلی</button>
+          <span className="text-sm" style={{ color: '#5a6b4a' }}>
+            صفحه {serverSearchMeta.page.toLocaleString('fa-IR')} از {serverSearchMeta.totalPages.toLocaleString('fa-IR')} • {serverSearchMeta.total.toLocaleString('fa-IR')} نتیجه
+          </span>
+          <button type="button" disabled={serverSearchPage >= serverSearchMeta.totalPages || serverSearchLoading}
+            onClick={() => setServerSearchPage(page => Math.min(serverSearchMeta.totalPages, page + 1))}
+            className="px-4 py-2 rounded-xl border disabled:opacity-40"
+            style={{ borderColor: '#b7d8c2', color: '#0d7c4a' }}>بعدی</button>
         </div>
-      )}
+      ) : filteredShows.length > 60 ? (
+        <div className="text-center mt-8" style={{ color: '#8a8a7a' }}>
+          <p className="text-sm">نمایش ۶۰ برنامه از {filteredShows.length.toLocaleString('fa-IR')} • برای مشاهده همه، جستجو را فیلتر کنید</p>
+        </div>
+      ) : null}
     </>
   );
 }
