@@ -3,7 +3,7 @@
  * Multi-user authentication + D1 database
  */
 
-const JWT_SECRET = 'bank-resaneh-jwt-secret-2025-very-secure-key-xyz';
+// Authentication uses database-backed opaque session tokens; no JWT secret is needed here.
 
 // CORS headers
 const corsHeaders = {
