@@ -167,7 +167,7 @@ export default {
         return jsonResponse({ error: 'احراز هویت نشده — لطفاً وارد شوید' }, 401);
       }
 
-      // GET /api/shows/search — Persian-normalized search with bounded pagination
+      // GET /api/shows/search — FTS5-ranked Persian search with bounded pagination
       if (path === '/api/shows/search' && method === 'GET') {
         const rawSearch = url.searchParams.get('q') || url.searchParams.get('search') || '';
         const normalize = (value) => String(value || '').normalize('NFKC').toLowerCase()
@@ -181,31 +181,60 @@ export default {
         const page = Math.max(1, Math.min(1000000, parseInt(url.searchParams.get('page') || '1', 10) || 1));
         const limit = Math.max(1, Math.min(100, parseInt(url.searchParams.get('limit') || '30', 10) || 30));
         const terms = query.split(' ').filter(Boolean).slice(0, 8);
-        const conditions = [];
-        const params = [];
+        const offset = (page - 1) * limit;
+        const categorySql = category ? ' AND LOWER(shows.category) LIKE ?' : '';
+        const categoryParams = category ? ['%' + category + '%'] : [];
+        let total = 0;
+        let rows = [];
+
         if (terms.length) {
-          conditions.push('(' + terms.map(() => "(name LIKE ? OR category LIKE ? OR summary LIKE ? OR descriptionFa LIKE ? OR source LIKE ? OR style LIKE ? OR effects LIKE ? OR layout LIKE ? OR elements LIKE ? OR materials LIKE ? OR colors LIKE ? OR lighting LIKE ?)").join(' AND ') + ')');
-          for (const term of terms) {
-            const pattern = '%' + term + '%';
-            params.push(pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern);
+          const match = terms.map(term => '"' + term.replace(/"/g, '""') + '"*').join(' AND ');
+          try {
+            const countStmt = env.DB.prepare(`SELECT COUNT(*) AS total FROM shows_fts JOIN shows ON shows.num = shows_fts.rowid WHERE shows_fts MATCH ?${categorySql}`);
+            const count = await countStmt.bind(match, ...categoryParams).first();
+            total = count?.total || 0;
+            const stmt = env.DB.prepare(`SELECT shows.* FROM shows_fts JOIN shows ON shows.num = shows_fts.rowid
+              WHERE shows_fts MATCH ?${categorySql}
+              ORDER BY bm25(shows_fts, 12, 8, 6, 5, 3, 3, 3, 3, 3, 3, 2, 2),
+                CASE WHEN LOWER(shows.name) = ? THEN 0 WHEN LOWER(shows.name) LIKE ? THEN 1 ELSE 2 END,
+                shows.num ASC LIMIT ? OFFSET ?`);
+            const result = await stmt.bind(match, ...categoryParams, query, query + '%', limit, offset).all();
+            rows = result.results;
+          } catch (error) {
+            // Fallback for deployments where the FTS migration has not yet been applied.
+            const conditions = [];
+            const params = [];
+            for (const term of terms) {
+              const pattern = '%' + term + '%';
+              conditions.push('(name LIKE ? OR category LIKE ? OR summary LIKE ? OR descriptionFa LIKE ? OR source LIKE ? OR style LIKE ? OR effects LIKE ? OR layout LIKE ? OR elements LIKE ? OR materials LIKE ? OR colors LIKE ? OR lighting LIKE ?)');
+              params.push(pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern);
+            }
+            if (category) { conditions.push('LOWER(category) LIKE ?'); params.push('%' + category + '%'); }
+            const where = ' WHERE ' + conditions.join(' AND ');
+            const count = await env.DB.prepare('SELECT COUNT(*) AS total FROM shows' + where).bind(...params).first();
+            total = count?.total || 0;
+            const result = await env.DB.prepare(`SELECT * FROM shows${where}
+              ORDER BY CASE WHEN LOWER(name) = ? THEN 0 WHEN LOWER(name) LIKE ? THEN 1 ELSE 2 END, num ASC
+              LIMIT ? OFFSET ?`).bind(...params, query, query + '%', limit, offset).all();
+            rows = result.results;
           }
+        } else {
+          const where = category ? ' WHERE LOWER(category) LIKE ?' : '';
+          const countStmt = env.DB.prepare('SELECT COUNT(*) AS total FROM shows' + where);
+          const count = category ? await countStmt.bind('%' + category + '%').first() : await countStmt.first();
+          total = count?.total || 0;
+          const stmt = env.DB.prepare(`SELECT * FROM shows${where} ORDER BY num ASC LIMIT ? OFFSET ?`);
+          const result = category
+            ? await stmt.bind('%' + category + '%', limit, offset).all()
+            : await stmt.bind(limit, offset).all();
+          rows = result.results;
         }
-        if (category) { conditions.push('LOWER(category) LIKE ?'); params.push('%' + category + '%'); }
-        const where = conditions.length ? ' WHERE ' + conditions.join(' AND ') : '';
-        const countStmt = env.DB.prepare('SELECT COUNT(*) AS total FROM shows' + where);
-        const countResult = params.length ? await countStmt.bind(...params).first() : await countStmt.first();
-        const sql = `SELECT * FROM shows${where}
-          ORDER BY CASE WHEN LOWER(name) = ? THEN 0 WHEN LOWER(name) LIKE ? THEN 1 ELSE 2 END, num ASC
-          LIMIT ? OFFSET ?`;
-        const stmt = env.DB.prepare(sql);
-        const allParams = [...params, query, query + '%', limit, (page - 1) * limit];
-        const result = await stmt.bind(...allParams).all();
-        const shows = result.results.map(s => ({
+
+        const shows = rows.map(s => ({
           ...s,
           images: s.images ? JSON.parse(s.images) : [],
           videos: s.videos ? JSON.parse(s.videos) : [],
         }));
-        const total = countResult?.total || 0;
         return jsonResponse({ shows, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }, query: rawSearch });
       }
 
