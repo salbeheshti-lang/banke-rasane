@@ -16,6 +16,9 @@ jobs:
   build-android:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      contents: write   # needed by softprops/action-gh-release to create releases
+      actions: write    # needed to upload workflow artifacts
 
     steps:
       - name: Checkout
@@ -90,12 +93,20 @@ jobs:
 
       - name: Generate app icon
         run: |
-          # Copy our icon to the Android mipmap folders
+          # Replace the Capacitor default icon with our brand icon.
+          # Capacitor's template ships adaptive-icon XML files in mipmap-anydpi-v26
+          # (referencing @mipmap/ic_launcher), so we only overwrite the PNG files
+          # named ic_launcher.png — leaving the XML descriptors untouched.
           ICON=public/banke-rasane-logo.png
           if [ -f "$ICON" ]; then
             for d in android/app/src/main/res/mipmap-*; do
-              [ -d "$d" ] && cp "$ICON" "$d/ic_launcher.png" || true
+              [ -d "$d" ] || continue
+              # Skip the anydpi-v26 folder (XML adaptive icon descriptors)
+              case "$d" in *anydpi*) continue;; esac
+              cp "$ICON" "$d/ic_launcher.png" 2>/dev/null || true
+              cp "$ICON" "$d/ic_launcher_round.png" 2>/dev/null || true
             done
+            echo "Replaced launcher icons"
           fi
 
       - name: Build APK (debug, signed with debug key for simplicity)

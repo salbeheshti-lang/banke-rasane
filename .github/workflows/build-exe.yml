@@ -16,6 +16,9 @@ jobs:
   build-windows:
     runs-on: windows-latest
     timeout-minutes: 30
+    permissions:
+      contents: write   # needed by softprops/action-gh-release to create releases
+      actions: write    # needed to upload workflow artifacts
 
     steps:
       - name: Checkout
