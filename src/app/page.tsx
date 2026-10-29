@@ -3376,20 +3376,21 @@ function ProgramsView({
                         target="_blank"
                         rel="noopener noreferrer"
                         download
-                        className="text-xs px-3 py-1.5 rounded-full font-bold transition-all flex items-center gap-1.5"
+                        className="px-4 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2 text-sm"
                         style={{
-                          background: 'rgba(85, 174, 183, 0.18)',
-                          color: '#CDEFEF',
-                          border: '1px solid rgba(85, 174, 183, 0.40)',
+                          background: 'linear-gradient(135deg, rgba(220, 38, 38, 0.20) 0%, rgba(185, 28, 28, 0.15) 100%)',
+                          color: '#fca5a5',
+                          border: '1.5px solid rgba(248, 113, 113, 0.5)',
                           textDecoration: 'none',
+                          boxShadow: '0 4px 12px rgba(220, 38, 38, 0.15)',
                         }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(85, 174, 183, 0.30)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(85, 174, 183, 0.18)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(220, 38, 38, 0.35) 0%, rgba(185, 28, 28, 0.25) 100%)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(220, 38, 38, 0.25)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(220, 38, 38, 0.20) 0%, rgba(185, 28, 28, 0.15) 100%)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(220, 38, 38, 0.15)'; }}
                       >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
-                        {lang === 'fa' ? 'دانلود فایل PDF منبع' : 'Download source PDF'}
+                        {lang === 'fa' ? '📄 دانلود فایل PDF منبع' : '📄 Download source PDF'}
                       </a>
                     );
                   }
