@@ -1307,7 +1307,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 disabled={loading}
                 style={{
                   position: 'absolute',
-                  left: '8px',
+                  right: '8px',
                   top: '50%',
                   transform: 'translateY(-50%)',
                   background: 'transparent',
@@ -7726,7 +7726,7 @@ function SettingsPasswordTab({
             <button
               type="button"
               onClick={() => setShowPw(!showPw)}
-              className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-lg"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg"
               style={{ color: '#5a6b4a', background: 'transparent' }}
               aria-label={showPw ? 'پنهان کردن رمز' : 'نمایش رمز'}
             >
