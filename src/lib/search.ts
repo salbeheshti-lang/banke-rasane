@@ -90,7 +90,7 @@ function valuesForField(record: SearchRecord, field: string): string[] {
  * Returns records in relevance order. Genre-specific fields influence ranking,
  * but common descriptive fields remain searchable so users don't miss records.
  */
-export function rankSearchShows<T extends SearchRecord>(
+export function rankSearchShows<T extends object>(
   records: T[],
   query: string,
   preferredFields: string[] = [],
@@ -112,13 +112,14 @@ export function rankSearchShows<T extends SearchRecord>(
   const ranked: Array<{ record: T; score: number; order: number }> = [];
 
   records.forEach((record, order) => {
+    const searchableRecord = record as SearchRecord;
     let score = 0;
     let matchedTokens = 0;
     let exactPhraseMatch = false;
 
     for (const field of searchableFields) {
       const weight = (FIELD_WEIGHTS[field] || 2) * (preferred.has(field) ? 1.25 : 1);
-      const values = valuesForField(record, field);
+      const values = valuesForField(searchableRecord, field);
       for (const rawValue of values) {
         const value = normalizePersianSearch(rawValue);
         if (!value) continue;
@@ -149,7 +150,7 @@ export function rankSearchShows<T extends SearchRecord>(
 
     for (const token of queryTokens) {
       const found = searchableFields.some(field =>
-        valuesForField(record, field).some(raw => {
+        valuesForField(searchableRecord, field).some(raw => {
           const normalized = normalizePersianSearch(raw);
           return normalized.split(' ').some(valueToken =>
             valueToken === token || valueToken.startsWith(token) || levenshteinAtMostOne(valueToken, token),
