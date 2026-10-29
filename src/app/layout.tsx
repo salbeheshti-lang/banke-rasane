@@ -1,10 +1,28 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { themeNoFlashScript } from "@/hooks/use-theme";
 
 export const metadata: Metadata = {
   title: "بانک رسانه",
   description: "آرشیو تخصصی برنامه‌های تلویزیونی",
+  manifest: "/manifest.json",
+  applicationName: "بانک رسانه",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "بانک رسانه",
+  },
+  icons: {
+    icon: "/banke-rasane-logo.png",
+    apple: "/banke-rasane-logo.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0d7c4a",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({

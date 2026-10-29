@@ -123,6 +123,23 @@
         ]
       },
       {
+        "from": "mini-services/api-service",
+        "to": "api-service",
+        "filter": [
+          "index.js",
+          "package.json",
+          "bankresaneh.sqlite",
+          "talk-shows-data.json"
+        ]
+      },
+      {
+        "from": "public",
+        "to": "next-service-dist/public",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
         "from": "electron/icons",
         "to": "icons",
         "filter": [

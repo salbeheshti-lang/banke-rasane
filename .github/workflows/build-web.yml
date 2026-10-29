@@ -1,0 +1,116 @@
+name: Build Web Bundle
+
+# Builds the بانک رسانه web bundle (static export) that can be hosted on
+# any static hosting (Netlify, Vercel, GitHub Pages, etc.)
+#
+# Triggers:
+#   - Push of a tag like v1.0.0  → builds + attaches ZIP to the same Release
+#   - Manual dispatch via Actions tab → builds + uploads as workflow artifact
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          bun install
+          cd mini-services/api-service && bun install && cd ../..
+
+      - name: Configure Next.js for static export
+        run: |
+          node -e "
+            const fs = require('fs');
+            const p = 'next.config.ts';
+            let s = fs.readFileSync(p, 'utf8');
+            if (!s.includes(\"output: \\\"export\\\"\")) {
+              s = s.replace('output: \"standalone\"', 'output: \"export\"');
+              s = s.replace(/experimental:[^}]*},?/m, '');
+              fs.writeFileSync(p, s);
+            }
+          "
+          cat next.config.ts
+
+      - name: Build Next.js (static export)
+        run: bun run next build || npx next build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+
+      - name: Verify export output
+        run: ls -la out/
+
+      - name: Bundle API service into the export
+        run: |
+          # Include the Bun API service so users can run the full stack
+          # locally without needing the dev sandbox.
+          mkdir -p out/api-service
+          cp mini-services/api-service/index.js out/api-service/
+          cp mini-services/api-service/package.json out/api-service/
+          cp mini-services/api-service/bankresaneh.sqlite out/api-service/ 2>/dev/null || true
+          cp public/talk-shows-data.json out/api-service/ 2>/dev/null || true
+
+          # Add a README explaining how to run
+          cat > out/README.md <<EOF
+          # بانک رسانه — نسخهٔ وب
+
+          ## اجرا
+
+          ۱. نصب Bun:  \`curl -fsSL https://bun.sh/install | bash\`
+          ۲. اجرای API service:
+             \`\`\`
+             cd api-service
+             bun install
+             bun --hot index.js
+             \`\`\`
+          ۳. اجرای وب‌سرور استاتیک روی پورت ۸۰۸۰:
+             \`\`\`
+             cd ..
+             bunx serve -s . -l 8800
+             \`\`\`
+          ۴. مرورگر را روی http://localhost:8080 باز کنید.
+
+          ## ورود
+          - نام کاربری: \`admin\`
+          - رمز عبور: \`admin\`
+          EOF
+
+      - name: Create ZIP archive
+        run: |
+          cd out && zip -r ../BankResaneh-Web.zip . && cd ..
+          ls -la BankResaneh-Web.zip
+
+      - name: Upload as workflow artifact (always)
+        uses: actions/upload-artifact@v4
+        with:
+          name: BankResaneh-Web-Bundle
+          path: BankResaneh-Web.zip
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Attach to GitHub Release (on tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: BankResaneh-Web.zip
+          name: بانک رسانه ${{ github.ref_name }}
+          draft: false
+          prerelease: false

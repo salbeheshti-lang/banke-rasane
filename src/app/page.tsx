@@ -1249,7 +1249,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
               dir="ltr"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="admin"
+              placeholder=""
               disabled={loading}
               style={{
                 width: '100%',
@@ -1282,7 +1282,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 dir="ltr"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••"
+                placeholder=""
                 disabled={loading}
                 style={{
                   width: '100%',
@@ -1382,9 +1382,6 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
         <div className="mt-10 text-center">
           <p style={{ color: 'rgba(134, 239, 172, 0.6)' }} className="text-xs tracking-wider">
             {t('login_version')}
-          </p>
-          <p style={{ color: 'rgba(134, 239, 172, 0.45)' }} className="text-xs mt-2">
-            {t('login_default_label')}: <span dir="ltr">admin</span> / {t('login_password_label')}: <span dir="ltr">admin</span>
           </p>
         </div>
         {/* Language toggle */}

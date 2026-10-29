@@ -1,0 +1,17 @@
+{
+  "name": "بانک رسانه",
+  "short_name": "بانک رسانه",
+  "description": "آرشیو تخصصی برنامه‌های تلویزیونی",
+  "lang": "fa",
+  "dir": "rtl",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#010a05",
+  "theme_color": "#0d7c4a",
+  "categories": ["education", "news", "entertainment"],
+  "icons": [
+    { "src": "/banke-rasane-logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/banke-rasane-logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

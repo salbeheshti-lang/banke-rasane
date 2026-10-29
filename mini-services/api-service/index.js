@@ -10,15 +10,41 @@
 // ============================================================================
 import { Database } from 'bun:sqlite';
 import { createHash, randomBytes } from 'node:crypto';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 
 const PORT = 3002;
 
 // ---------------------------------------------------------------------------
 // DB setup
+//   - In dev: writes to ./bankresaneh.sqlite next to index.js
+//   - In Electron (bundled): writes to DB_PATH env (user data dir)
+//     so user-added shows/edits persist across reinstalls.
 // ---------------------------------------------------------------------------
-const DB_PATH = resolve(import.meta.dir, 'bankresaneh.sqlite');
+const DB_PATH = process.env.DB_PATH
+  ? resolve(process.env.DB_PATH)
+  : resolve(import.meta.dir, 'bankresaneh.sqlite');
+
+// Ensure parent dir exists (Electron userData/db)
+try {
+  const dir = resolve(DB_PATH, '..');
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+} catch (e) { /* ignore */ }
+
+// On first run inside Electron, copy the bundled seed DB so the app starts
+// with the 2088 shows + admin/admin user already populated.
+if (process.env.DB_PATH && !existsSync(DB_PATH)) {
+  const candidates = [
+    resolve(import.meta.dir, 'bankresaneh.sqlite'),
+    resolve(process.resourcesPath || '', 'api-service', 'bankresaneh.sqlite'),
+  ];
+  for (const src of candidates) {
+    if (existsSync(src)) {
+      try { copyFileSync(src, DB_PATH); console.log('[seed] copied bundled DB'); break; } catch (e) {}
+    }
+  }
+}
+
 const db = new Database(DB_PATH, { create: true });
 db.exec('PRAGMA journal_mode = WAL;');
 
@@ -407,6 +433,10 @@ function seedShows() {
   const candidates = [
     resolve(import.meta.dir, '../../public/talk-shows-data.json'),
     resolve(import.meta.dir, '../../../public/talk-shows-data.json'),
+    resolve(import.meta.dir, '../public/talk-shows-data.json'),
+    resolve(import.meta.dir, 'talk-shows-data.json'),
+    resolve(process.resourcesPath || '', 'next-service-dist', 'public', 'talk-shows-data.json'),
+    resolve(process.resourcesPath || '', 'api-service', 'talk-shows-data.json'),
     '/home/z/my-project/public/talk-shows-data.json',
   ];
   let path = null;
