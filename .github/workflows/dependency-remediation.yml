@@ -41,8 +41,9 @@ jobs:
           fi
           bun install --frozen-lockfile
           if ! bun audit fix --latest; then
-            echo "Audit reported remaining issues after in-range fixes; continue with targeted package upgrades and final audit."
+            echo "Audit reported remaining issues after automated fixes; continue with targeted package upgrades and final audit."
           fi
+          bun update --latest deepmerge-ts effect js-yaml
           bun add sharp@^0.35.5
           bun install
           bun run lint
