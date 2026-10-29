@@ -1,0 +1,59 @@
+name: Remediate vulnerable dependencies
+
+on:
+  push:
+    branches:
+      - fix/audit-ui-preserving
+    paths:
+      - .trigger-dependency-remediation
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .trigger-dependency-remediation
+
+permissions:
+  contents: write
+
+jobs:
+  remediate:
+    name: Update vulnerable packages and validate before committing
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Update vulnerable dependencies and run full checks
+        env:
+          DATABASE_URL: file:./ci.db
+          ADMIN_INITIAL_PASSWORD: ci-only-not-for-production
+        run: |
+          set -euo pipefail
+          if [ ! -f .trigger-dependency-remediation ]; then
+            echo "No dependency-remediation trigger present; nothing to do."
+            exit 0
+          fi
+          bun install --frozen-lockfile
+          bun audit fix
+          bun add sharp@^0.35.5
+          bun install
+          bun run lint
+          bun x prisma generate
+          bun x tsc --noEmit
+          bun run build
+          bun audit --audit-level high
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json bun.lock
+          if ! git diff --cached --quiet; then
+            git commit -m "security(deps): update vulnerable packages"
+            git push origin "HEAD:${{ github.event.pull_request.head.ref || github.ref_name }}"
+          else
+            echo "Dependency metadata is already up to date."
+          fi
