@@ -60,6 +60,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Worker auth and migration regression tests
+        run: node --test security.test.mjs
+        working-directory: worker
       - name: Validate Worker bundle without deploying
         run: npx --yes wrangler@4 deploy --dry-run --outdir=/tmp/banke-rasane-worker-dist
         working-directory: worker
