@@ -335,6 +335,14 @@ const GENRES: Genre[] = [
     searchFields: ['name', 'summary', 'category', 'descriptionFa'],
   },
   {
+    id: 'sarfjooyi', key: 'sarfjooyi', nameFa: 'صرفه‌جویی در مصرف انرژی', name: 'Energy Saving',
+    color: '#FFD34E', description: 'برنامه‌های مرتبط با صرفه‌جویی در مصرف انرژی',
+    filterFn: s => s.category.includes('صرفه‌جویی') || s.category.includes('انرژی') || s.category.includes('Energy'),
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.materials],
+    presetTags: ['صرفه‌جویی', 'انرژی', 'محیط زیست', 'برق', 'آب'],
+    searchFields: ['name', 'summary', 'category', 'descriptionFa'],
+  },
+  {
     id: 'school-opening', key: 'school-opening', nameFa: 'مدرسه و دانش‌آموز', name: 'School & Student',
     color: '#FFD34E', description: 'برنامه‌های مرتبط با مدرسه، دانش‌آموز و بازگشایی مدارس',
     filterFn: s => s.category.includes('مدرسه') || s.category.includes('School') || s.category.includes('بازگشایی'),
