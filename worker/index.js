@@ -97,7 +97,7 @@ async function recordFailedLogin(env, key, now) {
 async function verifySession(env, token) {
   if (!token) return null;
   const result = await env.DB.prepare(
-    'SELECT u.id, u.username, u.role, u.name, s.expires_at FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.token = ? AND julianday(s.expires_at) > julianday('now')'
+    'SELECT u.id, u.username, u.role, u.name, s.expires_at FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.token = ? AND julianday(s.expires_at) > julianday(\'now\')'
   ).bind(token).first();
   return result;
 }
