@@ -50,6 +50,13 @@ jobs:
           "
           cat next.config.ts
 
+      - name: Remove Next.js API routes (not compatible with static export)
+        run: |
+          # The Bun API service (port 3002) handles all /api/* requests at runtime,
+          # so the Next.js API routes are unused in the static export.
+          rm -rf src/app/api
+          echo "Removed src/app/api (replaced by bundled Bun API service)"
+
       - name: Build Next.js (static export)
         run: bun run next build || npx next build
         env:
