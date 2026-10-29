@@ -162,6 +162,20 @@ export const api = {
     return data.shows;
   },
 
+  // Search the archive on the server; results are bounded and paginated.
+  async searchShows(params: { query?: string; category?: string; page?: number; limit?: number }): Promise<{
+    shows: Show[];
+    pagination: { page: number; limit: number; total: number; totalPages: number };
+    query: string;
+  }> {
+    const query = new URLSearchParams();
+    if (params.query) query.set('q', params.query);
+    if (params.category) query.set('category', params.category);
+    query.set('page', String(Math.max(1, params.page || 1)));
+    query.set('limit', String(Math.min(100, Math.max(1, params.limit || 30))));
+    return apiRequest(`/api/shows/search?${query.toString()}`);
+  },
+
   async getShow(num: number): Promise<Show> {
     const data = await apiRequest(`/api/shows/${num}`);
     return data.show;
