@@ -13,7 +13,7 @@ import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypt
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 
-const PORT = 3002;
+const PORT = Number(process.env.PORT || 3002);
 
 // ---------------------------------------------------------------------------
 // DB setup
