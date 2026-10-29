@@ -5101,7 +5101,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
     total: talkShows.length,
     text: talkShows.filter(s => s.source === 'متن').length,
     uploaded: uploadedShows.length,
-    genres: genres.length,
+    genres: new Set(talkShows.map(s => s.category)).size,
     withImages: talkShows.filter(s => s.images && s.images.length > 0).length,
   };
 
