@@ -11,20 +11,22 @@ This information is used to shape Next.js' roadmap and prioritize features.
 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
 https://nextjs.org/telemetry
 
-✓ Ready in 691ms
+✓ Ready in 621ms
 ○ Compiling / ...
- GET / 200 in 3.6s (compile: 3.4s, render: 132ms)
- GET /program-images/p5_img1.png 404 in 447ms (compile: 342ms, render: 105ms)
- GET /program-images/p4_img1.png 404 in 455ms (compile: 381ms, render: 75ms)
- GET /program-images/p6_img1.png 404 in 31ms (compile: 5ms, render: 26ms)
- GET /program-images/p8_img1.png 404 in 28ms (compile: 5ms, render: 23ms)
- GET /program-images/p10_img1.png 404 in 33ms (compile: 9ms, render: 24ms)
- GET /program-images/p11_img1.png 404 in 104ms (compile: 3ms, render: 101ms)
- GET /program-images/p9_img1.png 404 in 95ms (compile: 5ms, render: 90ms)
- GET /program-images/p12_img1.png 404 in 67ms (compile: 6ms, render: 60ms)
- GET /program-images/p14_img1.png 404 in 66ms (compile: 22ms, render: 44ms)
- GET /program-images/p19_img1.png 404 in 28ms (compile: 6ms, render: 22ms)
- GET /program-images/p17_img1.png 404 in 25ms (compile: 5ms, render: 20ms)
- GET /program-images/p18_img1.png 404 in 26ms (compile: 5ms, render: 21ms)
- GET / 200 in 27ms (compile: 3ms, render: 24ms)
- in 27ms (compile: 3ms, render: 24ms)
+ GET / 200 in 2.4s (compile: 2.2s, render: 170ms)
+ GET / 200 in 3.6s (compile: 3.5s, render: 129ms)
+ GET / 200 in 1689ms (compile: 1642ms, render: 47ms)
+ GET /program-images/p5_img1.png 404 in 457ms (compile: 358ms, render: 98ms)
+ GET /program-images/p8_img1.png 404 in 455ms (compile: 366ms, render: 89ms)
+ GET /program-images/p6_img1.png 404 in 469ms (compile: 388ms, render: 80ms)
+ GET /program-images/p9_img1.png 404 in 419ms (compile: 279ms, render: 140ms)
+ GET /program-images/p4_img1.png 404 in 471ms (compile: 344ms, render: 127ms)
+ GET /program-images/p10_img1.png 404 in 78ms (compile: 8ms, render: 70ms)
+ GET /program-images/p11_img1.png 404 in 46ms (compile: 4ms, render: 42ms)
+ GET /program-images/p12_img1.png 404 in 45ms (compile: 21ms, render: 25ms)
+ GET /program-images/p14_img1.png 404 in 45ms (compile: 4ms, render: 42ms)
+ GET /program-images/p17_img1.png 404 in 45ms (compile: 22ms, render: 24ms)
+ GET /program-images/p18_img1.png 404 in 30ms (compile: 7ms, render: 22ms)
+ GET / 200 in 27ms (compile: 4ms, render: 24ms)
+ GET / 200 in 27ms (compile: 1752µs, render: 25ms)
+27ms (compile: 1752µs, render: 25ms)
