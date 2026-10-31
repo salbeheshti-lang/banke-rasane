@@ -4557,7 +4557,13 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
     }
     setFetching(true);
     try {
-      const res = await fetch('/api/fetch-show-info', {
+      // Build URL — works in all modes: dev (localhost:3000), gateway (port 81), exe
+      const apiBase = getApiBase();
+      const isGateway = typeof window !== 'undefined' && (window.location.port === '81' || window.location.port === '');
+      const fetchUrl2 = isGateway
+        ? `${window.location.origin}/api/fetch-show-info?XTransformPort=3000`
+        : '/api/fetch-show-info';
+      const res = await fetch(fetchUrl2, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: fetchUrl }),
@@ -5191,7 +5197,7 @@ function ImdbWikiEditor({ form, setForm, editingShow, showToast }: {
   const [fetchingImage, setFetchingImage] = useState(false);
   const { getApiBase } = require('@/lib/api');
   const apiBase = getApiBase();
-  const isGateway = typeof window !== 'undefined' && apiBase === window.location.origin + '/';
+  const isGateway = typeof window !== 'undefined' && (window.location.port === '81' || window.location.port === '' || apiBase === window.location.origin + '/');
 
   const handleFetchImage = async () => {
     if (!editingShow) {
@@ -5201,7 +5207,7 @@ function ImdbWikiEditor({ form, setForm, editingShow, showToast }: {
     setFetchingImage(true);
     try {
       const url = isGateway
-        ? `${apiBase}api/fetch-image?XTransformPort=3002`
+        ? `${window.location.origin}/api/fetch-image?XTransformPort=3002`
         : `${apiBase.replace(/\/+$/, '')}/api/fetch-image`;
       const res = await fetch(url, {
         method: 'POST',
