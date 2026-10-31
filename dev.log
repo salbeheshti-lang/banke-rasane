@@ -11,10 +11,10 @@ This information is used to shape Next.js' roadmap and prioritize features.
 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
 https://nextjs.org/telemetry
 
-✓ Ready in 589ms
+✓ Ready in 612ms
 ○ Compiling / ...
- GET / 200 in 1343ms (compile: 1202ms, render: 141ms)
- GET / 200 in 3.7s (compile: 3.6s, render: 104ms)
- GET /[ 404 in 483ms (compile: 427ms, render: 56ms)
- GET / 200 in 30ms (compile: 4ms, render: 26ms)
- in 30ms (compile: 4ms, render: 26ms)
+ GET / 200 in 3.5s (compile: 3.4s, render: 121ms)
+ POST /api/fetch-show-info 200 in 752ms (compile: 494ms, render: 258ms)
+ POST /api/fetch-show-info 200 in 945ms (compile: 3ms, render: 942ms)
+ POST /api/fetch-show-info 200 in 139ms (compile: 5ms, render: 135ms)
+n 139ms (compile: 5ms, render: 135ms)
