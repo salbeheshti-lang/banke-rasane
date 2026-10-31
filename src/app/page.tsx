@@ -5322,7 +5322,7 @@ function ImdbWikiEditor({ form, setForm, editingShow, showToast }: {
 // ============================================
 // VIDEO LINKS EDITOR — multiple video URLs per show
 // ============================================
-function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange, canEdit, onOpenVideoEditor }: {
+function VideoLinksEditor({ videos: videosProp, youtube, onVideosChange, onYoutubeChange, canEdit, onOpenVideoEditor }: {
   videos: string[];
   youtube: string;
   onVideosChange: (vids: string[]) => void;
@@ -5332,6 +5332,10 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange, ca
 }) {
   const { t } = useLang();
   const [urlInput, setUrlInput] = useState('');
+  // Ensure videos is always an array (DB may return it as a JSON string)
+  const videos = Array.isArray(videosProp) ? videosProp : (() => {
+    try { return JSON.parse(videosProp as any || '[]'); } catch { return []; }
+  })();
 
   const addVideo = () => {
     if (!urlInput.trim()) return;
