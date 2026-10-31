@@ -618,7 +618,11 @@ function ShowImageGallery({ images, showNum, showName }: { images: string[]; sho
   // The API-served image is always available (when stored in the DB).
   // Local file paths (legacy /program-images/...) are shown alongside.
   const apiImage = getShowImageUrl(showNum);
-  const allImages = [apiImage, ...images].filter(Boolean);
+  // Ensure images is always an array (DB may return it as a JSON string)
+  const imageArray = Array.isArray(images) ? images : (() => {
+    try { return JSON.parse(images as any || '[]'); } catch { return []; }
+  })();
+  const allImages = [apiImage, ...imageArray].filter(Boolean);
 
   return (
     <div className="mb-6">
@@ -4202,16 +4206,22 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
           </div>
 
           {/* Video links gallery */}
-          {show.videos && show.videos.length > 0 && (
-            <div className="mb-6">
-              <h4 className="font-bold mb-3" style={{ color: '#F4FFFF' }}>
-                {t('program_videos')}
-                <span className="text-xs font-normal mr-2" style={{ color: '#9EC9C9' }}>
-                  ({show.videos.length.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US')} {t('videos_count_short')})
-                </span>
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {show.videos.map((url, idx) => {
+          {(() => {
+            // Ensure videos is always an array (DB stores it as JSON string)
+            const videos = Array.isArray(show.videos) ? show.videos : (() => {
+              try { return JSON.parse(show.videos || '[]'); } catch { return []; }
+            })();
+            if (!videos || videos.length === 0) return null;
+            return (
+              <div className="mb-6">
+                <h4 className="font-bold mb-3" style={{ color: '#F4FFFF' }}>
+                  {t('program_videos')}
+                  <span className="text-xs font-normal mr-2" style={{ color: '#9EC9C9' }}>
+                    ({videos.length.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US')} {t('videos_count_short')})
+                  </span>
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {videos.map((url: string, idx: number) => {
                   const platform = getVideoPlatformInfo(url);
                   const thumbUrl = getYoutubeThumbnail(url);
                   return (
@@ -4265,7 +4275,8 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                 })}
               </div>
             </div>
-          )}
+            );
+          })()}
 
           {/* Access links */}
           <div className="mb-6">
