@@ -1,2 +1,40 @@
 skills/
 node_modules/
+.next/dev/logs/
+dev.log
+
+# Build cache & runtime — don't push these
+.next/
+download/
+upload/
+agent-ctx/
+
+# Large image sets — too heavy for git, use cloud storage instead
+public/program-images/new/
+
+# Worker build artifacts
+worker/dist/
+
+# Electron build outputs
+electron/dist/
+electron/out/
+release/
+
+# SQLite WAL/SHM files (transient, don't commit)
+*.sqlite-shm
+*.sqlite-wal
+
+# Public images & PDFs (large assets)
+public/program-images/
+
+# Env files
+.env
+.env.local
+.env.production
+
+# IDE / OS
+.DS_Store
+*.log
+tsconfig.tsbuildinfo
+tool-results/
+tool-results/

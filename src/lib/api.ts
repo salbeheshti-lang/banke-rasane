@@ -20,6 +20,31 @@ export function getApiBase(): string {
   return 'http://localhost:3002';
 }
 
+// Build the URL for a show's poster image, served by the API service.
+// The API stores images as BLOBs in SQLite, so this URL works in all
+// deployment modes (preview gateway, static export, .exe, .apk).
+//
+//   getApiBase() returns either:
+//     - 'http://localhost:3002'                       (direct, dev/static export)
+//     - 'https://preview...space-z.ai/'               (gateway mode, after regex)
+//
+// In gateway mode we have to add the XTransformPort query param to the
+// image path too, otherwise Caddy won't route it to port 3002.
+export function getShowImageUrl(showNum: number): string {
+  const base = getApiBase();
+  // Gateway mode: base ends with '/' and has no host:port for the API.
+  // We detect it by checking if the base points at the current origin
+  // (not at localhost:3002 directly).
+  if (typeof window !== 'undefined') {
+    const isGateway = base === window.location.origin + '/' || base === window.location.origin;
+    if (isGateway) {
+      return `${base}api/image/${showNum}?XTransformPort=3002`;
+    }
+  }
+  // Direct mode: base is like 'http://localhost:3002'
+  return `${base.replace(/\/+$/, '')}/api/image/${showNum}`;
+}
+
 export function setApiBase(url: string): void {
   if (typeof window !== 'undefined') {
     const cleaned = (url || '').trim().replace(/\/+$/, '');
@@ -40,6 +65,14 @@ export interface User {
   username: string;
   role: 'admin' | 'editor' | 'viewer';
   name: string;
+  // Extended profile fields (returned by /api/auth/me and /api/profile)
+  jobTitle?: string;
+  deputy?: string;    // معاونت و سمت
+  avatar?: string;
+  phone?: string;     // شماره تماس — فقط admin می‌بیند (یا خود کاربر برای ویرایش)
+  createdAt?: number;
+  lastSeen?: number;   // unix seconds (0 if never seen)
+  online?: boolean;    // true if seen in the last 2 minutes
 }
 
 export interface Show {
@@ -214,6 +247,24 @@ export const api = {
     await apiRequest('/api/auth/change-password', {
       method: 'PUT',
       body: JSON.stringify({ oldPassword, newPassword }),
+    });
+  },
+
+  // Profile — any logged-in user can read/update their own profile
+  async getProfile(): Promise<User> {
+    return await apiRequest('/api/profile');
+  },
+
+  async updateProfile(patch: {
+    name?: string;
+    jobTitle?: string;
+    deputy?: string;
+    phone?: string;
+    avatar?: string;
+  }): Promise<User> {
+    return await apiRequest('/api/profile', {
+      method: 'PUT',
+      body: JSON.stringify(patch),
     });
   },
 
