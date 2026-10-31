@@ -11,12 +11,19 @@ This information is used to shape Next.js' roadmap and prioritize features.
 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
 https://nextjs.org/telemetry
 
-✓ Ready in 598ms
+✓ Ready in 1509ms
 ○ Compiling / ...
- GET / 200 in 3.8s (compile: 3.6s, render: 263ms)
- GET / 200 in 2.4s (compile: 2.2s, render: 160ms)
- GET / 200 in 3.1s (compile: 2.9s, render: 151ms)
- GET /manifest.json 404 in 1127ms (compile: 902ms, render: 225ms)
- GET /[ 404 in 95ms (compile: 8ms, render: 87ms)
- GET / 200 in 39ms (compile: 3ms, render: 36ms)
- in 39ms (compile: 3ms, render: 36ms)
+ GET / 200 in 9.3s (compile: 8.3s, render: 946ms)
+ GET / 200 in 5.9s (compile: 5.2s, render: 667ms)
+ GET / 200 in 7.4s (compile: 6.8s, render: 615ms)
+ GET / 200 in 9.3s (compile: 8.7s, render: 627ms)
+ GET / 200 in 579ms (compile: 66ms, render: 512ms)
+○ Compiling /_not-found/page ...
+ GET /[ 404 in 285ms (compile: 92ms, render: 193ms)
+ GET /manifest.json 404 in 4.1s (compile: 3.1s, render: 1022ms)
+ GET /manifest.json 404 in 4.3s (compile: 3.4s, render: 917ms)
+ GET /manifest.json 404 in 4.4s (compile: 3.5s, render: 838ms)
+ GET / 200 in 119ms (compile: 3ms, render: 115ms)
+ GET /[ 404 in 220ms (compile: 32ms, render: 188ms)
+ GET / 200 in 119ms (compile: 3ms, render: 116ms)
+n 119ms (compile: 3ms, render: 116ms)
