@@ -1,0 +1,41 @@
+name: Build Windows .exe
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: latest }
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Install dependencies
+        run: bun install && cd mini-services/api-service && bun install && cd ../..
+      - name: Build Next.js
+        run: bun run build
+      - name: Build Electron installer
+        env: { GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
+        run: bun run electron:dist
+      - name: Verify and rename
+        shell: bash
+        run: |
+          SETUP=$(find release -maxdepth 1 -name "*Setup*.exe" -type f | head -1)
+          if [ -z "$SETUP" ]; then echo "No Setup.exe"; exit 1; fi
+          cp "$SETUP" release/BankResaneh-Setup.exe
+      - uses: actions/upload-artifact@v4
+        with: { name: BankResaneh-Windows-Setup, path: release/BankResaneh-Setup.exe, if-no-files-found: error }
+      - name: Attach to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/BankResaneh-Setup.exe
+          name: بانک رسانه ${{ github.ref_name }}
+          draft: false
+          prerelease: false
