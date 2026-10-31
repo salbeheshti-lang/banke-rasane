@@ -13,8 +13,10 @@ https://nextjs.org/telemetry
 
 ✓ Ready in 589ms
 ○ Compiling / ...
- GET / 200 in 3.6s (compile: 3.5s, render: 135ms)
- GET / 200 in 31ms (compile: 3ms, render: 27ms)
- GET /[ 404 in 460ms (compile: 400ms, render: 59ms)
- GET / 200 in 27ms (compile: 4ms, render: 23ms)
- in 27ms (compile: 4ms, render: 23ms)
+ GET / 200 in 3.6s (compile: 3.5s, render: 121ms)
+ GET / 200 in 33ms (compile: 3ms, render: 30ms)
+ GET /[ 404 in 457ms (compile: 406ms, render: 51ms)
+ POST /api/fetch-show-info?XTransformPort=3000 200 in 634ms (compile: 377ms, render: 257ms)
+ POST /api/fetch-show-info 200 in 238ms (compile: 3ms, render: 235ms)
+ POST /api/fetch-show-info?XTransformPort=3000 200 in 244ms (compile: 2ms, render: 242ms)
+n 244ms (compile: 2ms, render: 242ms)

@@ -4557,9 +4557,13 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
     }
     setFetching(true);
     try {
-      // Build URL — works in all modes: dev (localhost:3000), gateway (port 81), exe
-      const apiBase = getApiBase();
-      const isGateway = typeof window !== 'undefined' && (window.location.port === '81' || window.location.port === '');
+      // Build URL — works in all modes: dev (localhost:3000), gateway (port 81), exe, space-z.ai
+      const isGateway = typeof window !== 'undefined' && (
+        window.location.port === '81' ||
+        window.location.port === '' ||
+        window.location.hostname.includes('space-z.ai') ||
+        window.location.port === '443'
+      );
       const fetchUrl2 = isGateway
         ? `${window.location.origin}/api/fetch-show-info?XTransformPort=3000`
         : '/api/fetch-show-info';
@@ -5197,7 +5201,13 @@ function ImdbWikiEditor({ form, setForm, editingShow, showToast }: {
   const [fetchingImage, setFetchingImage] = useState(false);
   const { getApiBase } = require('@/lib/api');
   const apiBase = getApiBase();
-  const isGateway = typeof window !== 'undefined' && (window.location.port === '81' || window.location.port === '' || apiBase === window.location.origin + '/');
+  const isGateway = typeof window !== 'undefined' && (
+    window.location.port === '81' ||
+    window.location.port === '' ||
+    window.location.hostname.includes('space-z.ai') ||
+    window.location.port === '443' ||
+    apiBase === window.location.origin + '/'
+  );
 
   const handleFetchImage = async () => {
     if (!editingShow) {
