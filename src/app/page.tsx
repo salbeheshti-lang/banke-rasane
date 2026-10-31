@@ -4913,7 +4913,7 @@ function FormSelect({ label, value, onChange, options }: {
 // IMAGE GALLERY EDITOR — up to 8 images per show
 // Supports both URL paste and file upload (base64 for offline storage)
 // ============================================
-function ImageGalleryEditor({ images, onChange, showToast }: {
+function ImageGalleryEditor({ images: imagesProp, onChange, showToast }: {
   images: string[];
   onChange: (imgs: string[]) => void;
   showToast: (msg: string) => void;
@@ -4921,6 +4921,10 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
   const { t } = useLang();
   const [urlInput, setUrlInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Ensure images is always an array (DB may return it as a JSON string)
+  const images = Array.isArray(imagesProp) ? imagesProp : (() => {
+    try { return JSON.parse(imagesProp as any || '[]'); } catch { return []; }
+  })();
   // Keep a ref to the latest images array so async FileReader callbacks always see current state
   const imagesRef = useRef<string[]>(images);
   imagesRef.current = images;
