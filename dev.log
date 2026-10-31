@@ -11,11 +11,20 @@ This information is used to shape Next.js' roadmap and prioritize features.
 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
 https://nextjs.org/telemetry
 
-✓ Ready in 575ms
+✓ Ready in 691ms
 ○ Compiling / ...
- GET / 200 in 3.8s (compile: 3.7s, render: 123ms)
- GET / 200 in 32ms (compile: 4ms, render: 28ms)
- GET / 200 in 68ms (compile: 3ms, render: 65ms)
- GET / 200 in 33ms (compile: 3ms, render: 30ms)
+ GET / 200 in 3.6s (compile: 3.4s, render: 132ms)
+ GET /program-images/p5_img1.png 404 in 447ms (compile: 342ms, render: 105ms)
+ GET /program-images/p4_img1.png 404 in 455ms (compile: 381ms, render: 75ms)
+ GET /program-images/p6_img1.png 404 in 31ms (compile: 5ms, render: 26ms)
+ GET /program-images/p8_img1.png 404 in 28ms (compile: 5ms, render: 23ms)
+ GET /program-images/p10_img1.png 404 in 33ms (compile: 9ms, render: 24ms)
+ GET /program-images/p11_img1.png 404 in 104ms (compile: 3ms, render: 101ms)
+ GET /program-images/p9_img1.png 404 in 95ms (compile: 5ms, render: 90ms)
+ GET /program-images/p12_img1.png 404 in 67ms (compile: 6ms, render: 60ms)
+ GET /program-images/p14_img1.png 404 in 66ms (compile: 22ms, render: 44ms)
+ GET /program-images/p19_img1.png 404 in 28ms (compile: 6ms, render: 22ms)
+ GET /program-images/p17_img1.png 404 in 25ms (compile: 5ms, render: 20ms)
+ GET /program-images/p18_img1.png 404 in 26ms (compile: 5ms, render: 21ms)
  GET / 200 in 27ms (compile: 3ms, render: 24ms)
  in 27ms (compile: 3ms, render: 24ms)
