@@ -15,15 +15,18 @@ export function useTheme() {
 
 
   useEffect(() => {
+    let frame = 0;
     try {
       const saved = typeof window !== 'undefined' ? localStorage.getItem('bankresaneh_theme') : null;
-      if (saved === 'dark' || saved === 'light') {
-        setThemeState(saved);
-        applyTheme(saved);
-      } else {
-        applyTheme('light');
-      }
-    } catch {}
+      const initialTheme: Theme = saved === 'dark' || saved === 'light' ? saved : 'light';
+      applyTheme(initialTheme);
+      frame = window.requestAnimationFrame(() => setThemeState(initialTheme));
+    } catch {
+      applyTheme('light');
+    }
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+    };
   }, []);
 
   const setTheme = (t: Theme) => {
