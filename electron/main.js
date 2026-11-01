@@ -1,7 +1,8 @@
 // Electron Main Process — بانک رسانه
 // Starts the Bun API service (port 3002) and the Next.js standalone server
 // (port 3000), then opens a window pointed at the Next.js UI.
-const { app, BrowserWindow, shell, dialog } = require('electron');
+const { app, BrowserWindow, shell, dialog, ipcMain } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const { spawn } = require('child_process');
 const path = require('path');
 const http = require('http');
@@ -226,6 +227,55 @@ app.whenReady().then(async () => {
   log('Exec: ' + process.execPath);
   log('Resources: ' + process.resourcesPath);
 
+  // === Auto-updater ===
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('update-available', (info) => {
+    log('Update available: ' + info.version);
+    if (mainWindow) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'به‌روزرسانی موجود است',
+        message: `نسخه جدید ${info.version} در دسترس است.`,
+        detail: 'آیا می‌خواهید هم‌اکنون دانلود کنید؟',
+        buttons: ['دانلود و نصب', 'بعداً'],
+        defaultId: 0,
+        cancelId: 1,
+      }).then(({ response }) => {
+        if (response === 0) { log('User accepted update download'); autoUpdater.downloadUpdate(); }
+      });
+    }
+  });
+
+  autoUpdater.on('update-not-available', (info) => {
+    log('No update available (current: ' + app.getVersion() + ')');
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    log('Download progress: ' + Math.round(progress.percent) + '%');
+    if (mainWindow) mainWindow.setProgressBar(progress.percent / 100);
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    log('Update downloaded: ' + info.version);
+    if (mainWindow) mainWindow.setProgressBar(-1);
+    dialog.showMessageBox(mainWindow, {
+      type: 'info', title: 'آماده نصب',
+      message: 'نسخه جدید دانلود شد.',
+      detail: 'برنامه برای نصب مجدداً راه‌اندازی می‌شود.',
+      buttons: ['نصب و راه‌اندازی مجدد'],
+    }).then(() => { autoUpdater.quitAndInstall(); });
+  });
+
+  autoUpdater.on('error', (err) => {
+    log('Auto-updater error: ' + err.message);
+  });
+
+  // Check for updates (non-blocking)
+  try { autoUpdater.checkForUpdates().catch(err => log('Update check failed: ' + err.message)); }
+  catch(e) { log('Update check skipped: ' + e.message); }
+
   try {
     await startApiService().catch(e => log('API service warning: ' + e.message));
     await startNextServer();
@@ -235,6 +285,13 @@ app.whenReady().then(async () => {
     dialog.showErrorBox('خطا در راه‌اندازی', 'خطا: ' + err.message + '\n\nفایل لاگ: ' + getLogPath());
     app.quit();
   }
+});
+
+ipcMain.handle('check-for-updates', async () => {
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    return { hasUpdate: !!result, version: result?.updateInfo?.version || null };
+  } catch(e) { return { hasUpdate: false, error: e.message }; }
 });
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });

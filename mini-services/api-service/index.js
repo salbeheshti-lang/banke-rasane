@@ -54,6 +54,7 @@ db.exec(`
     username      TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     role          TEXT NOT NULL DEFAULT 'viewer',
+    name          TEXT NOT NULL DEFAULT '',
     created_at    INTEGER NOT NULL DEFAULT 0,
     last_seen     INTEGER NOT NULL DEFAULT 0,
     job_title     TEXT NOT NULL DEFAULT '',
@@ -105,6 +106,7 @@ function addColumnIfMissing(table, column, definition) {
     console.warn(`[migration] failed to add ${table}.${column}:`, e.message);
   }
 }
+addColumnIfMissing('users', 'name', "TEXT NOT NULL DEFAULT ''");
 addColumnIfMissing('users', 'last_seen', 'INTEGER NOT NULL DEFAULT 0');
 addColumnIfMissing('users', 'job_title', "TEXT NOT NULL DEFAULT ''");
 addColumnIfMissing('users', 'avatar', "TEXT NOT NULL DEFAULT ''");
@@ -516,7 +518,7 @@ const server = Bun.serve({
       const oldPassword = String(body?.oldPassword || '');
       const newPassword = String(body?.newPassword || '');
       if (!oldPassword || !newPassword) return json({ error: 'رمز قدیمی و جدید را وارد کنید' }, 400, req);
-      if (newPassword.length < 4) return json({ error: 'رمز جدید باید حداقل ۴ کاراکتر باشد' }, 400, req);
+      if (newPassword.length < 8) return json({ error: 'رمز جدید باید حداقل ۸ کاراکتر باشد' }, 400, req);
       if (!verifyPassword(oldPassword, user.password_hash)) return json({ error: 'رمز فعلی نادرست است' }, 401, req);
       db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashPassword(newPassword), user.id);
       db.prepare('DELETE FROM sessions WHERE user_id = ?').run(user.id);

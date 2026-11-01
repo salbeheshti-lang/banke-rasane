@@ -3396,6 +3396,14 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
           presetTags={presetGenre?.presetTags}
         />
 
+        {/* IMDb/Wikipedia links + Fetch image into DB */}
+        <ImdbWikiEditor
+          form={form}
+          setForm={setForm}
+          editingShow={editingShow}
+          showToast={showToast}
+        />
+
         {/* Video links section — multiple URLs */}
         <VideoLinksEditor
           videos={form.videos || []}
@@ -3750,6 +3758,63 @@ function ImageGalleryEditor({ images: imagesProp, onChange, showToast }: {
 }
 
 // ============================================
+// ============================================
+// IMDB/WIKIPEDIA EDITOR — links + fetch image button
+// ============================================
+function ImdbWikiEditor({ form, setForm, editingShow, showToast }: {
+  form: any;
+  setForm: (f: any) => void;
+  editingShow: TalkShow | null;
+  showToast: (msg: string) => void;
+}) {
+  const [fetchingImage, setFetchingImage] = useState(false);
+
+  const handleFetchImage = async () => {
+    if (!editingShow) { showToast('ابتدا برنامه را ذخیره کنید'); return; }
+    setFetchingImage(true);
+    try {
+      const isGateway = typeof window !== 'undefined' && (window.location.port === '81' || window.location.port === '' || window.location.hostname.includes('space-z.ai') || window.location.port === '443');
+      const url = isGateway ? window.location.origin + '/api/fetch-image?XTransformPort=3002' : 'http://localhost:3002/api/fetch-image';
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ num: editingShow.num, imdb: form.imdb || '', wikipedia: form.wikipedia || '', name: form.name || '' }),
+      });
+      const data = await res.json();
+      if (data.error) showToast('خطا: ' + data.error);
+      else showToast('عکس دریافت شد (' + data.source + ', ' + (data.size/1024).toFixed(1) + ' KB)');
+    } catch (e: any) { showToast('خطا: ' + (e.message || 'نامشخص')); }
+    finally { setFetchingImage(false); }
+  };
+
+  return (
+    <div className="p-4 rounded-xl" style={{ background: 'rgba(99, 87, 255, 0.06)', border: '1px solid rgba(99, 87, 255, 0.2)' }}>
+      <h4 className="font-bold mb-3" style={{ color: '#1a2e1a' }}>🔗 لینک‌های IMDb و Wikipedia</h4>
+      <div className="space-y-3">
+        <div>
+          <label className="block text-sm font-bold mb-1.5" style={{ color: '#1a2e1a' }}>لینک IMDb</label>
+          <input type="text" dir="ltr" value={form.imdb || ''} onChange={(e) => setForm({ ...form, imdb: e.target.value })}
+            placeholder="https://www.imdb.com/title/tt1234567/"
+            style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(99, 87, 255, 0.2)', background: 'rgba(255, 255, 255, 0.8)', color: '#1a2e1a', fontSize: '14px', outline: 'none', textAlign: 'left', direction: 'ltr' }} />
+        </div>
+        <div>
+          <label className="block text-sm font-bold mb-1.5" style={{ color: '#1a2e1a' }}>لینک Wikipedia</label>
+          <input type="text" dir="ltr" value={form.wikipedia || ''} onChange={(e) => setForm({ ...form, wikipedia: e.target.value })}
+            placeholder="https://en.wikipedia.org/wiki/Silicon_Valley"
+            style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(99, 87, 255, 0.2)', background: 'rgba(255, 255, 255, 0.8)', color: '#1a2e1a', fontSize: '14px', outline: 'none', textAlign: 'left', direction: 'ltr' }} />
+        </div>
+        <button onClick={handleFetchImage} disabled={fetchingImage || !editingShow}
+          className="w-full py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
+          style={{ background: fetchingImage || !editingShow ? 'rgba(107, 143, 122, 0.3)' : 'linear-gradient(135deg, #9957FF 0%, #7C3AED 100%)', color: 'white', cursor: fetchingImage || !editingShow ? 'not-allowed' : 'pointer', boxShadow: fetchingImage || !editingShow ? 'none' : '0 4px 12px rgba(99, 87, 255, 0.3)' }}>
+          {fetchingImage ? (<><div className="w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(255,255,255,0.3)', borderTopColor: 'white' }}></div>در حال دریافت...</>) : (<>📥 دریافت عکس از IMDb/Wikipedia</>)}
+        </button>
+        {!editingShow && <p className="text-xs text-center" style={{ color: '#8a8a7a' }}>برای دریافت عکس، ابتدا برنامه را ذخیره کنید</p>}
+      </div>
+    </div>
+  );
+}
+
+
 function VideoLinksEditor({ videos: videosProp, youtube, onVideosChange, onYoutubeChange, canEdit, onOpenVideoEditor }: {
   videos: string[];
   youtube: string;

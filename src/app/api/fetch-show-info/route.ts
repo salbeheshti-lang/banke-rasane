@@ -73,7 +73,9 @@ export async function POST(request: NextRequest) {
     }
 
     if (url.includes('wikipedia.org')) {
+      // Handle both /wiki/Page_Title and /w/index.php?search=query URLs
       const wikiMatch = url.match(/\/wiki\/(.+?)(?:\?|#|$)/);
+      const searchMatch = url.match(/[?&]search=([^&]+)/);
       if (wikiMatch) {
         const pageTitle = decodeURIComponent(wikiMatch[1].replace(/_/g,' '));
         const lang = url.match(/\/\/([a-z]{2})\.wikipedia/)?.[1] || 'en';
