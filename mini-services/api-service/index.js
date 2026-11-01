@@ -116,16 +116,22 @@ function isAllowedOrigin(origin) {
 }
 
 function corsHeaders(req) {
+  const configuredOrigin = process.env.APP_ORIGIN || 'http://127.0.0.1:3000';
+  const origin = req?.headers.get('origin');
   const headers = {
     'Vary': 'Origin',
-    'Access-Control-Allow-Origin': process.env.APP_ORIGIN || 'http://127.0.0.1:3000',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   };
-  const origin = req?.headers.get('origin');
-  if (origin && origin !== (process.env.APP_ORIGIN || 'http://127.0.0.1:3000') && !isAllowedOrigin(origin)) {
-    delete headers['Access-Control-Allow-Origin'];
+
+  // Reflect only explicitly trusted origins. This supports localhost and
+  // 127.0.0.1 development URLs without returning a mismatched ACAO header.
+  if (!origin) {
+    headers['Access-Control-Allow-Origin'] = configuredOrigin;
+  } else if (origin === configuredOrigin || isAllowedOrigin(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin;
   }
+
   return headers;
 }
 
@@ -351,7 +357,7 @@ const server = Bun.serve({
 
     // ----- Health -----
     if (pathname === '/api/health' && method === 'GET') {
-      return json({ status: 'ok', time: nowSec() });
+      return json({ status: 'ok', time: nowSec() }, req);
     }
 
 
@@ -441,22 +447,22 @@ const server = Bun.serve({
       db.prepare('UPDATE shows SET image_data = ?, image_mime = ?, image_source = ? WHERE num = ?').run(new Uint8Array(processed), 'image/jpeg', source, num);
       if (imdbUrl) db.prepare('UPDATE shows SET imdb = ? WHERE num = ?').run(imdbUrl, num);
       if (wikiUrl) db.prepare('UPDATE shows SET wikipedia = ? WHERE num = ?').run(wikiUrl, num);
-      return json({ success: true, source, size: processed.length });
+      return json({ success: true, source, size: processed.length }, req);
     }
 
     // ----- Auth: login -----
     if (pathname === '/api/auth/login' && method === 'POST') {
       let body;
-      try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400); }
+      try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400, req); }
       const username = String(body?.username || '').trim();
       const password = String(body?.password || '');
-      if (!username || !password) return json({ error: 'نام کاربری و رمز عبور را وارد کنید' }, 400);
+      if (!username || !password) return json({ error: 'نام کاربری و رمز عبور را وارد کنید' }, 400, req);
       const user = getUserByUsername(username);
       if (!user || user.password_hash !== sha256(password)) {
-        return json({ error: 'نام کاربری یا رمز عبور نادرست است' }, 401);
+        return json({ error: 'نام کاربری یا رمز عبور نادرست است' }, 401, req);
       }
       const token = createSession(user.id);
-      return json({ token, user: publicUser(user) });
+      return json({ token, user: publicUser(user) }, req);
     }
 
     // ----- Auth: logout -----
@@ -468,47 +474,47 @@ const server = Bun.serve({
       const m = auth.match(/^Bearer\s+(.+)$/i);
       const t = token || (m ? m[1].trim() : '');
       if (t) destroySession(t);
-      return json({ success: true });
+      return json({ success: true }, req);
     }
 
     // ----- Auth: me -----
     if (pathname === '/api/auth/me' && method === 'GET') {
       const user = requireUser(req);
-      if (!user) return json({ error: 'Unauthorized' }, 401);
-      return json(publicUser(user));
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+      return json(publicUser(user), req);
     }
 
     // ----- Auth: change password -----
     if (pathname === '/api/auth/change-password' && method === 'PUT') {
       const user = requireUser(req);
-      if (!user) return json({ error: 'Unauthorized' }, 401);
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
       let body;
-      try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400); }
+      try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400, req); }
       const oldPassword = String(body?.oldPassword || '');
       const newPassword = String(body?.newPassword || '');
-      if (!oldPassword || !newPassword) return json({ error: 'رمز قدیمی و جدید را وارد کنید' }, 400);
-      if (newPassword.length < 4) return json({ error: 'رمز جدید باید حداقل ۴ کاراکتر باشد' }, 400);
+      if (!oldPassword || !newPassword) return json({ error: 'رمز قدیمی و جدید را وارد کنید' }, 400, req);
+      if (newPassword.length < 4) return json({ error: 'رمز جدید باید حداقل ۴ کاراکتر باشد' }, 400, req);
       if (user.password_hash !== sha256(oldPassword)) {
-        return json({ error: 'رمز فعلی نادرست است' }, 401);
+        return json({ error: 'رمز فعلی نادرست است' }, 401, req);
       }
       db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(sha256(newPassword), user.id);
       // Invalidate all sessions for this user, force re-login
       db.prepare('DELETE FROM sessions WHERE user_id = ?').run(user.id);
-      return json({ success: true });
+      return json({ success: true }, req);
     }
 
     // ----- Shows: list -----
     if (pathname === '/api/shows' && method === 'GET') {
       const rows = db.prepare('SELECT * FROM shows ORDER BY num ASC').all();
-      return json({ shows: rows.map(rowToShow) });
+      return json({ shows: rows.map(rowToShow) }, req);
     }
 
     // ----- Shows: create -----
     if (pathname === '/api/shows' && method === 'POST') {
       const { user, ok, status, error } = requireRole(req, ['admin', 'editor']);
-      if (!ok) return json({ error }, status);
+      if (!ok) return json({ error }, status, req);
       let body;
-      try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400); }
+      try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400, req); }
       if (typeof body?.num !== 'number') {
         // Auto-assign next num
         const max = db.prepare('SELECT MAX(num) AS m FROM shows').get();
@@ -524,9 +530,9 @@ const server = Bun.serve({
            ?, ?, ?, ?, ?, ?,
            ?, ?, ?, ?, ?, ?)`).run(...row);
       } catch (e) {
-        return json({ error: 'خطا در ایجاد برنامه: ' + e.message }, 500);
+        return json({ error: 'خطا در ایجاد برنامه: ' + e.message }, 500, req);
       }
-      return json({ num: body.num });
+      return json({ num: body.num }, req);
     }
 
     // ----- Shows: get by num / update / delete -----
@@ -536,17 +542,17 @@ const server = Bun.serve({
 
       if (method === 'GET') {
         const r = db.prepare('SELECT * FROM shows WHERE num = ?').get(num);
-        if (!r) return json({ error: 'برنامه یافت نشد' }, 404);
-        return json({ show: rowToShow(r) });
+        if (!r) return json({ error: 'برنامه یافت نشد' }, 404, req);
+        return json({ show: rowToShow(r) }, req);
       }
 
       if (method === 'PUT') {
         const { user, ok, status, error } = requireRole(req, ['admin', 'editor']);
-        if (!ok) return json({ error }, status);
+        if (!ok) return json({ error }, status, req);
         let body;
-        try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400); }
+        try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400, req); }
         const existing = db.prepare('SELECT * FROM shows WHERE num = ?').get(num);
-        if (!existing) return json({ error: 'برنامه یافت نشد' }, 404);
+        if (!existing) return json({ error: 'برنامه یافت نشد' }, 404, req);
         const merged = { ...rowToShow(existing), ...body, num };
         try {
           db.prepare(`UPDATE shows SET
@@ -557,47 +563,47 @@ const server = Bun.serve({
             images=?, videos=?
             WHERE num=?`).run(...showToValues(merged).slice(1), num);
         } catch (e) {
-          return json({ error: 'خطا در بروزرسانی: ' + e.message }, 500);
+          return json({ error: 'خطا در بروزرسانی: ' + e.message }, 500, req);
         }
-        return json({ success: true });
+        return json({ success: true }, req);
       }
 
       if (method === 'DELETE') {
         const { user, ok, status, error } = requireRole(req, ['admin']);
-        if (!ok) return json({ error }, status);
+        if (!ok) return json({ error }, status, req);
         const r = db.prepare('DELETE FROM shows WHERE num = ?').run(num);
-        if (r.changes === 0) return json({ error: 'برنامه یافت نشد' }, 404);
-        return json({ success: true });
+        if (r.changes === 0) return json({ error: 'برنامه یافت نشد' }, 404, req);
+        return json({ success: true }, req);
       }
     }
 
     // ----- Users: list / create / delete / update -----
     if (pathname === '/api/users' && method === 'GET') {
       const { user, ok, status, error } = requireRole(req, ['admin']);
-      if (!ok) return json({ error }, status);
+      if (!ok) return json({ error }, status, req);
       const rows = db.prepare('SELECT * FROM users ORDER BY id ASC').all();
-      return json({ users: rows.map(publicUser) });
+      return json({ users: rows.map(publicUser) }, req);
     }
 
     if (pathname === '/api/users' && method === 'POST') {
       const { user, ok, status, error } = requireRole(req, ['admin']);
-      if (!ok) return json({ error }, status);
+      if (!ok) return json({ error }, status, req);
       let body;
-      try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400); }
+      try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400, req); }
       const username = String(body?.username || '').trim();
       const password = String(body?.password || '');
       const role = ['admin', 'editor', 'viewer'].includes(body?.role) ? body.role : 'viewer';
       const name = String(body?.name || '');
-      if (!username || !password) return json({ error: 'نام کاربری و رمز عبور را وارد کنید' }, 400);
-      if (password.length < 4) return json({ error: 'رمز باید حداقل ۴ کاراکتر باشد' }, 400);
+      if (!username || !password) return json({ error: 'نام کاربری و رمز عبور را وارد کنید' }, 400, req);
+      if (password.length < 4) return json({ error: 'رمز باید حداقل ۴ کاراکتر باشد' }, 400, req);
       const exists = getUserByUsername(username);
-      if (exists) return json({ error: 'این نام کاربری قبلاً ثبت شده است' }, 409);
+      if (exists) return json({ error: 'این نام کاربری قبلاً ثبت شده است' }, 409, req);
       try {
         const r = db.prepare('INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)')
           .run(username, sha256(password), role, name);
-        return json({ id: Number(r.lastInsertRowid) });
+        return json({ id: Number(r.lastInsertRowid) }, req);
       } catch (e) {
-        return json({ error: 'خطا در ایجاد کاربر: ' + e.message }, 500);
+        return json({ error: 'خطا در ایجاد کاربر: ' + e.message }, 500, req);
       }
     }
 
@@ -607,37 +613,37 @@ const server = Bun.serve({
 
       if (method === 'DELETE') {
         const { user, ok, status, error } = requireRole(req, ['admin']);
-        if (!ok) return json({ error }, status);
-        if (user.id === id) return json({ error: 'نمی‌توانید حساب خودتان را حذف کنید' }, 400);
+        if (!ok) return json({ error }, status, req);
+        if (user.id === id) return json({ error: 'نمی‌توانید حساب خودتان را حذف کنید' }, 400, req);
         const r = db.prepare('DELETE FROM users WHERE id = ?').run(id);
-        if (r.changes === 0) return json({ error: 'کاربر یافت نشد' }, 404);
+        if (r.changes === 0) return json({ error: 'کاربر یافت نشد' }, 404, req);
         db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id);
-        return json({ success: true });
+        return json({ success: true }, req);
       }
 
       if (method === 'PUT') {
         const { user, ok, status, error } = requireRole(req, ['admin']);
-        if (!ok) return json({ error }, status);
+        if (!ok) return json({ error }, status, req);
         let body;
-        try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400); }
+        try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400, req); }
         const target = getUserById(id);
-        if (!target) return json({ error: 'کاربر یافت نشد' }, 404);
+        if (!target) return json({ error: 'کاربر یافت نشد' }, 404, req);
         const role = ['admin', 'editor', 'viewer'].includes(body?.role) ? body.role : target.role;
         const name = body?.name !== undefined ? String(body.name) : target.name;
         if (body?.password) {
-          if (String(body.password).length < 4) return json({ error: 'رمز باید حداقل ۴ کاراکتر باشد' }, 400);
+          if (String(body.password).length < 4) return json({ error: 'رمز باید حداقل ۴ کاراکتر باشد' }, 400, req);
           db.prepare('UPDATE users SET password_hash = ?, role = ?, name = ? WHERE id = ?')
             .run(sha256(String(body.password)), role, name, id);
         } else {
           db.prepare('UPDATE users SET role = ?, name = ? WHERE id = ?')
             .run(role, name, id);
         }
-        return json({ success: true });
+        return json({ success: true }, req);
       }
     }
 
     // 404
-    return json({ error: 'Not Found', path: pathname }, 404);
+    return json({ error: 'Not Found', path: pathname }, 404, req);
   },
 });
 
