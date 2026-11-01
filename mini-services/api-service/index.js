@@ -97,36 +97,47 @@ function nowSec() {
 
 const SESSION_TTL = 7 * 24 * 60 * 60; // 7 days
 
-function json(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
+function allowedOrigins() {
+  return new Set((process.env.CORS_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean));
 }
 
 function isAllowedOrigin(origin) {
   if (!origin) return false;
+  if (allowedOrigins().has(origin)) return true;
   try {
     const parsed = new URL(origin);
     return parsed.protocol === 'http:' &&
-      (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1');
+      (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') &&
+      [3000, 3001, 3002].includes(Number(parsed.port || 80));
   } catch { return false; }
 }
 
-function corsOptions() {
-  return new Response(null, {
-    status: 204,
+function corsHeaders(req) {
+  const headers = {
+    'Vary': 'Origin',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+  const origin = req?.headers.get('origin');
+  if (isAllowedOrigin(origin)) headers['Access-Control-Allow-Origin'] = origin;
+  return headers;
+}
+
+function json(body, status = 200, req = null) {
+  return new Response(JSON.stringify(body), {
+    status,
     headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Content-Type': 'application/json; charset=utf-8',
+      ...corsHeaders(req),
     },
   });
+}
+
+function corsOptions(req) {
+  return new Response(null, { status: 204, headers: corsHeaders(req) });
 }
 
 function publicUser(u) {
@@ -326,13 +337,14 @@ seedShows();
 // Router
 // ---------------------------------------------------------------------------
 const server = Bun.serve({
+  hostname: '127.0.0.1',
   port: PORT,
   async fetch(req) {
     const url = new URL(req.url);
     const { pathname } = url;
     const method = req.method.toUpperCase();
 
-    if (method === 'OPTIONS') return corsOptions();
+    if (method === 'OPTIONS') return corsOptions(req);
 
     // ----- Health -----
     if (pathname === '/api/health' && method === 'GET') {
