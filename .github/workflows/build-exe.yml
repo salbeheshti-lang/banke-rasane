@@ -24,7 +24,7 @@ jobs:
       - name: Install API service dependencies
         run: cd mini-services/api-service && bun install && cd ../..
       - name: Build Next.js
-        run: bun run build
+        run: npx next build && node scripts/copy-standalone.cjs
       - name: Build Electron installer
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -9,7 +9,7 @@
     "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
     "lint": "eslint .",
     "electron:dev": "electron electron/main.js",
-    "electron:build": "next build && node scripts/copy-standalone.cjs && electron-builder --win --x64 --publish never",
+    "electron:build": "npx next build && node scripts/copy-standalone.cjs && electron-builder --win --x64 --publish never",
     "electron:dist": "electron-builder --win --x64 --publish never"
   },
   "dependencies": {
