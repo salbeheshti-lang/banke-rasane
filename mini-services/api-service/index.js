@@ -94,7 +94,16 @@ function json(body, status = 200) {
   });
 }
 
-function isAllowedOrigin(origin) {\n  if (!origin) return false;\n  try {\n    const parsed = new URL(origin);\n    return parsed.protocol === 'http:' &&\n      (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1');\n  } catch { return false; }\n}\n\nfunction corsOptions() {
+function isAllowedOrigin(origin) {
+  if (!origin) return false;
+  try {
+    const parsed = new URL(origin);
+    return parsed.protocol === 'http:' &&
+      (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1');
+  } catch { return false; }
+}
+
+function corsOptions() {
   return new Response(null, {
     status: 204,
     headers: {
