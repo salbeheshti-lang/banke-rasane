@@ -16,10 +16,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Install dependencies
+      - name: Install dependencies (npm)
         run: npm install
-      - name: Install API service dependencies
+      - name: Install API service dependencies (npm)
         run: cd mini-services/api-service && npm install && cd ../..
+      - name: Download Bun binary for Windows
+        shell: powershell
+        run: |
+          $url = "https://github.com/oven-sh/bun/releases/latest/download/bun-windows-x64.zip"
+          $output = "bun.zip"
+          Invoke-WebRequest -Uri $url -OutFile $output
+          Expand-Archive -Path $output -DestinationPath bun-temp -Force
+          New-Item -ItemType Directory -Force -Path electron/bun
+          Copy-Item bun-temp\bun-windows-x64\bun.exe electron/bun\bun.exe
+          Remove-Item -Recurse -Force bun-temp
+          Remove-Item bun.zip
+          Write-Host "Bun binary downloaded to electron/bun/bun.exe"
       - name: Build Next.js
         run: npx next build && node scripts/copy-standalone.cjs
       - name: Build Electron installer

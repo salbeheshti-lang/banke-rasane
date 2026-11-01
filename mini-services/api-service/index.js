@@ -2,23 +2,49 @@
 //  BankResaneh local API service — Bun + bun:sqlite
 //  Port: 3002
 //
+//  IMPORTANT: This service requires Bun (bun:sqlite is Bun-only).
+//  When packaged with Electron, a bundled Bun binary is used.
+//
 //  Tables: users, sessions, shows
 //  Default admin: admin / admin (SHA-256 hashed)
-//  Seeds 560 shows from ../public/talk-shows-data.json on first run
-//  Session tokens: random hex, 7-day TTL
 //  All endpoints under /api/*
 // ============================================================================
 import { Database } from 'bun:sqlite';
 import { createHash, randomBytes } from 'node:crypto';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 
 const PORT = 3002;
 
 // ---------------------------------------------------------------------------
 // DB setup
+//   - In dev: writes to ./bankresaneh.sqlite next to index.js
+//   - In Electron (bundled): writes to DB_PATH env (user data dir)
+//     so user-added shows/edits persist across reinstalls.
 // ---------------------------------------------------------------------------
-const DB_PATH = resolve(import.meta.dir, 'bankresaneh.sqlite');
+const DB_PATH = process.env.DB_PATH
+  ? resolve(process.env.DB_PATH)
+  : resolve(import.meta.dir, 'bankresaneh.sqlite');
+
+// Ensure parent dir exists
+try {
+  const dir = resolve(DB_PATH, '..');
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+} catch (e) { /* ignore */ }
+
+// On first run inside Electron, copy the bundled seed DB
+if (process.env.DB_PATH && !existsSync(DB_PATH)) {
+  const candidates = [
+    resolve(import.meta.dir, 'bankresaneh.sqlite'),
+    resolve(process.resourcesPath || '', 'api-service', 'bankresaneh.sqlite'),
+  ];
+  for (const src of candidates) {
+    if (existsSync(src)) {
+      try { copyFileSync(src, DB_PATH); console.log('[seed] copied bundled DB'); break; } catch (e) {}
+    }
+  }
+}
+
 const db = new Database(DB_PATH, { create: true });
 db.exec('PRAGMA journal_mode = WAL;');
 
@@ -27,19 +53,21 @@ db.exec(`
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     username      TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
-    role          TEXT NOT NULL DEFAULT 'viewer', -- admin | editor | viewer
-    name          TEXT NOT NULL DEFAULT '',
-    created_at    INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+    role          TEXT NOT NULL DEFAULT 'viewer',
+    created_at    INTEGER NOT NULL DEFAULT 0,
+    last_seen     INTEGER NOT NULL DEFAULT 0,
+    job_title     TEXT NOT NULL DEFAULT '',
+    avatar        TEXT NOT NULL DEFAULT '',
+    deputy        TEXT NOT NULL DEFAULT '',
+    phone         TEXT NOT NULL DEFAULT ''
   );
-
   CREATE TABLE IF NOT EXISTS sessions (
-    token       TEXT PRIMARY KEY,
-    user_id     INTEGER NOT NULL,
-    created_at  INTEGER NOT NULL DEFAULT (strftime('%s','now')),
-    expires_at  INTEGER NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    token    TEXT PRIMARY KEY,
+    user_id  INTEGER NOT NULL,
+    created  INTEGER NOT NULL,
+    expires  INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id)
   );
-
   CREATE TABLE IF NOT EXISTS shows (
     num          INTEGER PRIMARY KEY,
     name         TEXT NOT NULL DEFAULT '',
@@ -60,170 +88,186 @@ db.exec(`
     imdb         TEXT NOT NULL DEFAULT '',
     wikipedia    TEXT NOT NULL DEFAULT '',
     socialPost   TEXT NOT NULL DEFAULT '',
-    images       TEXT NOT NULL DEFAULT '[]',  -- JSON array of URLs
-    videos       TEXT NOT NULL DEFAULT '[]'   -- JSON array of URLs
+    images       TEXT NOT NULL DEFAULT '[]',
+    videos       TEXT NOT NULL DEFAULT '[]'
   );
 `);
+
+// --- Add columns that may not exist in older bundled DBs ---
+function addColumnIfMissing(table, column, definition) {
+  try {
+    const cols = db.prepare(`PRAGMA table_info(${table})`).all();
+    if (!cols.some(c => c.name === column)) {
+      db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+      console.log(`[migration] added ${table}.${column}`);
+    }
+  } catch (e) {
+    console.warn(`[migration] failed to add ${table}.${column}:`, e.message);
+  }
+}
+addColumnIfMissing('shows', 'image_data', 'BLOB');
+addColumnIfMissing('shows', 'image_mime', "TEXT NOT NULL DEFAULT 'image/jpeg'");
+addColumnIfMissing('shows', 'image_source', "TEXT NOT NULL DEFAULT ''");
+addColumnIfMissing('shows', 'is_film', 'INTEGER NOT NULL DEFAULT 0');
+addColumnIfMissing('shows', 'tags', "TEXT NOT NULL DEFAULT '[]'");
+
+// ---------------------------------------------------------------------------
+// CORS — allow any localhost/127.0.0.1 port + space-z.ai preview gateway
+// ---------------------------------------------------------------------------
+function isAllowedOrigin(origin) {
+  if (!origin) return false;
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true;
+  if (/^https?:\/\/[^/]*\.space-z\.ai(:\d+)?$/.test(origin)) return true;
+  if (/^https?:\/\/[^/]*\.(lan|local)(:\d+)?$/.test(origin)) return true;
+  return false;
+}
+function getCorsHeader(req) {
+  const origin = req.headers.get('origin') || '';
+  return isAllowedOrigin(origin) ? origin : '';
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-function sha256(s) {
-  return createHash('sha256').update(s, 'utf8').digest('hex');
-}
-
-function genToken() {
-  return randomBytes(32).toString('hex');
-}
-
-function nowSec() {
-  return Math.floor(Date.now() / 1000);
-}
-
-const SESSION_TTL = 7 * 24 * 60 * 60; // 7 days
-
-function json(body, status = 200) {
+function json(body, statusOrReq, maybeReq) {
+  let status = 200, req = null;
+  if (typeof statusOrReq === 'number') { status = statusOrReq; req = maybeReq; }
+  else { req = statusOrReq; }
+  const corsOrigin = req ? getCorsHeader(req) : '*';
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': corsOrigin,
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Credentials': 'true',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
     },
   });
 }
-
-function corsOptions() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
+function corsOptions(req) {
+  const corsOrigin = req ? getCorsHeader(req) : '*';
+  return new Response(null, { status: 204, headers: {
+    'Access-Control-Allow-Origin': corsOrigin,
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Credentials': 'true',
+  }});
 }
 
-function publicUser(u) {
+function publicUser(u, viewer) {
   if (!u) return null;
-  return { id: u.id, username: u.username, role: u.role, name: u.name };
+  const base = {
+    id: u.id, username: u.username, role: u.role, name: u.name,
+    createdAt: u.created_at, lastSeen: u.last_seen,
+    online: u.last_seen && (nowSec() - u.last_seen) < 120,
+    jobTitle: u.job_title || '', deputy: u.deputy || '', avatar: u.avatar || '',
+  };
+  // Phone visible only to admins (or self)
+  if (viewer && viewer.role === 'admin') base.phone = u.phone || '';
+  return base;
 }
 
 function rowToShow(r) {
   if (!r) return null;
-  let images = [];
-  let videos = [];
+  let images = [], videos = [];
   try { images = JSON.parse(r.images || '[]'); } catch {}
   try { videos = JSON.parse(r.videos || '[]'); } catch {}
+  let tags = [];
+  try { tags = JSON.parse(r.tags || '[]'); } catch {}
   return {
-    num: r.num,
-    name: r.name,
-    category: r.category,
-    source: r.source,
-    size: r.size,
-    viewers: r.viewers,
-    style: r.style,
-    effects: r.effects,
-    layout: r.layout,
-    elements: r.elements,
-    materials: r.materials,
-    colors: r.colors,
-    lighting: r.lighting,
-    summary: r.summary,
-    descriptionFa: r.descriptionFa,
-    youtube: r.youtube,
-    imdb: r.imdb,
-    wikipedia: r.wikipedia,
-    socialPost: r.socialPost,
-    images,
-    videos,
+    num: r.num, name: r.name, category: r.category, source: r.source,
+    size: r.size, viewers: r.viewers, style: r.style, effects: r.effects,
+    layout: r.layout, elements: r.elements, materials: r.materials,
+    colors: r.colors, lighting: r.lighting, summary: r.summary,
+    descriptionFa: r.descriptionFa, youtube: r.youtube, imdb: r.imdb,
+    wikipedia: r.wikipedia, socialPost: r.socialPost,
+    images, videos, tags,
     isFilm: !!(r.is_film),
   };
 }
 
-// Ordered column list — used for positional placeholders.
 const SHOW_COLUMNS = [
   'num', 'name', 'category', 'source', 'size', 'viewers', 'style', 'effects', 'layout',
   'elements', 'materials', 'colors', 'lighting', 'summary', 'descriptionFa',
   'youtube', 'imdb', 'wikipedia', 'socialPost', 'images', 'videos',
 ];
-
 function showToValues(s) {
   return [
-    s.num,
-    s.name || '',
-    s.category || '',
-    s.source || '',
-    s.size || '',
-    s.viewers || '',
-    s.style || '',
-    s.effects || '',
-    s.layout || '',
-    s.elements || '',
-    s.materials || '',
-    s.colors || '',
-    s.lighting || '',
-    s.summary || '',
-    s.descriptionFa || '',
-    s.youtube || '',
-    s.imdb || '',
-    s.wikipedia || '',
-    s.socialPost || '',
+    s.num, s.name || '', s.category || '', s.source || '', s.size || '', s.viewers || '',
+    s.style || '', s.effects || '', s.layout || '', s.elements || '', s.materials || '',
+    s.colors || '', s.lighting || '', s.summary || '', s.descriptionFa || '',
+    s.youtube || '', s.imdb || '', s.wikipedia || '', s.socialPost || '',
     JSON.stringify(Array.isArray(s.images) ? s.images : []),
     JSON.stringify(Array.isArray(s.videos) ? s.videos : []),
   ];
 }
 
-// ---------------------------------------------------------------------------
-// Auth helpers
-// ---------------------------------------------------------------------------
-function getUserById(id) {
-  return db.prepare('SELECT * FROM users WHERE id = ?').get(id);
-}
-
-function getUserByUsername(username) {
-  return db.prepare('SELECT * FROM users WHERE username = ?').get(username);
-}
-
+function getUserById(id) { return db.prepare('SELECT * FROM users WHERE id = ?').get(id); }
+function getUserByUsername(username) { return db.prepare('SELECT * FROM users WHERE username = ?').get(username); }
 function getUserByToken(token) {
-  if (!token) return null;
-  const row = db.prepare('SELECT * FROM sessions WHERE token = ?').get(token);
-  if (!row) return null;
-  // Expired?
-  if (row.expires_at && row.expires_at < nowSec()) {
-    db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
-    return null;
-  }
-  return getUserById(row.user_id);
+  const row = db.prepare('SELECT user_id FROM sessions WHERE token = ? AND expires > ?').get(token, nowSec());
+  return row ? getUserById(row.user_id) : null;
 }
-
 function createSession(userId) {
   const token = genToken();
-  const exp = nowSec() + SESSION_TTL;
-  db.prepare('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)').run(token, userId, exp);
+  db.prepare('INSERT INTO sessions (token, user_id, created, expires) VALUES (?, ?, ?, ?)').run(token, userId, nowSec(), nowSec() + 7 * 86400);
   return token;
 }
-
-function destroySession(token) {
-  db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
-}
-
+function destroySession(token) { db.prepare('DELETE FROM sessions WHERE token = ?').run(token); }
 function requireUser(req) {
   const auth = req.headers.get('Authorization') || '';
-  const m = auth.match(/^Bearer\s+(.+)$/i);
-  if (!m) return null;
-  return getUserByToken(m[1].trim());
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  return token ? getUserByToken(token) : null;
 }
-
 function requireRole(req, roles) {
   const user = requireUser(req);
-  if (!user) return { user: null, ok: false, status: 401, error: 'Unauthorized' };
-  if (roles && !roles.includes(user.role)) {
-    return { user, ok: false, status: 403, error: 'Forbidden' };
-  }
-  return { user, ok: true };
+  if (!user || !roles.includes(user.role)) return null;
+  return user;
 }
+
+function sha256(s) { return createHash('sha256').update(s, 'utf8').digest('hex'); }
+function hashPassword(password) {
+  const salt = randomBytes(16).toString('hex');
+  const hash = createHash('sha256').update(salt + password, 'utf8').digest('hex');
+  return salt + '$' + hash;
+}
+function verifyPassword(password, stored) {
+  if (!stored.includes('$')) return stored === sha256(password);
+  const [salt, hash] = stored.split('$');
+  return hash === createHash('sha256').update(salt + password, 'utf8').digest('hex');
+}
+function genToken() { return randomBytes(32).toString('hex'); }
+function nowSec() { return Math.floor(Date.now() / 1000); }
+function getClientIP(req) {
+  const fwd = req.headers.get('x-forwarded-for');
+  if (fwd) return fwd.split(',')[0].trim();
+  return req.headers.get('x-real-ip') || 'unknown';
+}
+
+// ---------------------------------------------------------------------------
+// Login rate limiting
+// ---------------------------------------------------------------------------
+const loginAttempts = new Map();
+function checkRateLimit(ip) {
+  const entry = loginAttempts.get(ip);
+  const now = nowSec();
+  if (!entry || now > entry.blockedUntil) {
+    if (entry && now > entry.blockedUntil) loginAttempts.delete(ip);
+    return { ok: true };
+  }
+  return { ok: false, retryAfter: entry.blockedUntil - now };
+}
+function recordFailedAttempt(ip) {
+  const now = nowSec();
+  let entry = loginAttempts.get(ip) || { count: 0, firstAttempt: now, blockedUntil: 0 };
+  entry.count++;
+  if (entry.count >= 5) entry.blockedUntil = now + 900;
+  loginAttempts.set(ip, entry);
+}
+function clearRateLimit(ip) { loginAttempts.delete(ip); }
 
 // ---------------------------------------------------------------------------
 // Seed default admin + shows
@@ -231,90 +275,78 @@ function requireRole(req, roles) {
 function seedDefaultAdmin() {
   const existing = db.prepare('SELECT COUNT(*) AS c FROM users').get();
   if (existing.c === 0) {
-    db.prepare('INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)')
-      .run('admin', sha256('admin'), 'admin', 'مدیر سیستم');
+    db.prepare('INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)').run('admin', sha256('admin'), 'admin', 'مدیر سیستم');
     console.log('[seed] created default admin: admin / admin');
   }
 }
 
 function seedShows() {
-  const existing = db.prepare('SELECT COUNT(*) AS c FROM shows').get();
-  if (existing.c > 0) {
-    console.log(`[seed] shows table already has ${existing.c} rows — skipping seed`);
-    return;
-  }
-  // Try several candidate paths for the talk-shows JSON
   const candidates = [
+    resolve(import.meta.dir, 'talk-shows-data.json'),
     resolve(import.meta.dir, '../../public/talk-shows-data.json'),
     resolve(import.meta.dir, '../../../public/talk-shows-data.json'),
-    '/home/z/my-project/public/talk-shows-data.json',
+    resolve(process.resourcesPath || '', 'api-service', 'talk-shows-data.json'),
+    resolve(process.resourcesPath || '', 'next-service-dist', 'public', 'talk-shows-data.json'),
   ];
-  let path = null;
+  let jsonPath = null;
   for (const p of candidates) {
-    if (existsSync(p)) { path = p; break; }
+    if (existsSync(p)) { jsonPath = p; break; }
   }
-  if (!path) {
+  if (!jsonPath) {
     console.warn('[seed] talk-shows-data.json not found — skipping shows seed');
     return;
   }
-  console.log(`[seed] loading shows from ${path}`);
+  console.log(`[seed] loading shows from ${jsonPath}`);
   let shows;
-  try {
-    shows = JSON.parse(readFileSync(path, 'utf8'));
-  } catch (e) {
-    console.warn('[seed] failed to parse talk-shows-data.json:', e.message);
+  try { shows = JSON.parse(readFileSync(jsonPath, 'utf8')); } catch (e) {
+    console.warn('[seed] failed to parse:', e.message); return;
+  }
+  if (!Array.isArray(shows)) { console.warn('[seed] expected array'); return; }
+  const existing = db.prepare('SELECT COUNT(*) AS c FROM shows').get();
+  if (existing.c >= shows.length) {
+    console.log(`[seed] DB has ${existing.c} shows, JSON has ${shows.length} — up to date, skipping`);
     return;
   }
-  if (!Array.isArray(shows)) {
-    console.warn('[seed] expected array, got', typeof shows);
-    return;
-  }
+  console.log(`[seed] DB has ${existing.c} shows, JSON has ${shows.length} — inserting new entries`);
   const stmt = db.prepare(`
     INSERT OR IGNORE INTO shows
       (num, name, category, source, size, viewers, style, effects, layout,
        elements, materials, colors, lighting, summary, descriptionFa,
        youtube, imdb, wikipedia, socialPost, images, videos)
-    VALUES
-      (?, ?, ?, ?, ?, ?, ?, ?, ?,
-       ?, ?, ?, ?, ?, ?,
-       ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   let inserted = 0;
   const tx = db.transaction(() => {
     for (const s of shows) {
       if (typeof s.num !== 'number') continue;
-      try {
-        stmt.run(...showToValues(s));
-        inserted++;
-      } catch (e) {
+      try { stmt.run(...showToValues(s)); inserted++; } catch (e) {
         console.warn(`[seed] failed to insert show num=${s.num}:`, e.message);
       }
     }
   });
   tx();
-  console.log(`[seed] inserted ${inserted} shows`);
+  console.log(`[seed] inserted ${inserted} shows (now ${shows.length} total)`);
 }
 
 seedDefaultAdmin();
 seedShows();
 
 // ---------------------------------------------------------------------------
-// Router
+// Bun server
 // ---------------------------------------------------------------------------
 const server = Bun.serve({
   port: PORT,
   async fetch(req) {
     const url = new URL(req.url);
-    const { pathname } = url;
-    const method = req.method.toUpperCase();
+    const pathname = url.pathname;
+    const method = req.method;
 
-    if (method === 'OPTIONS') return corsOptions();
+    if (method === 'OPTIONS') return corsOptions(req);
 
     // ----- Health -----
     if (pathname === '/api/health' && method === 'GET') {
-      return json({ status: 'ok', time: nowSec() });
+      return json({ status: 'ok', time: nowSec() }, req);
     }
-
 
     // ----- Image serving -----
     if (pathname.startsWith('/api/image/') && method === 'GET') {
@@ -361,7 +393,6 @@ const server = Bun.serve({
       function cleanQ(s) { return (s||'').replace(/[?!]+$/,'').replace(/\(.*?\)/g,' ').replace(/[\u2013\u2014-]/g,' ').replace(/\s+/g,' ').trim(); }
 
       let imageUrl = null, source = '';
-      // Try OMDb
       const direct = imdbUrl?.match(/tt(\d+)/);
       if (direct) {
         const r = await fetchRetry(`https://www.omdbapi.com/?i=tt${direct[1]}&apikey=${OMDB_API_KEY}`,{},1);
@@ -374,7 +405,6 @@ const server = Bun.serve({
           if (r && r.ok) { const d = await r.json(); if (d.Search) for (const item of d.Search) if (item.Poster && item.Poster!=='N/A') { imageUrl=item.Poster; source='omdb'; break; } }
         }
       }
-      // Try Wikipedia
       if (!imageUrl && showName) {
         for (const lang of ['en','fa']) {
           for (const suffix of [' (TV series)',' (TV program)',' (film)','']) {
@@ -407,17 +437,24 @@ const server = Bun.serve({
 
     // ----- Auth: login -----
     if (pathname === '/api/auth/login' && method === 'POST') {
+      const ip = getClientIP(req);
+      const rl = checkRateLimit(ip);
+      if (!rl.ok) return json({ error: `تلاش‌های ناموفق زیاد. لطفاً ${rl.retryAfter} ثانیه صبر کنید.` }, 429, req);
       let body;
-      try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400); }
+      try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400, req); }
       const username = String(body?.username || '').trim();
       const password = String(body?.password || '');
-      if (!username || !password) return json({ error: 'نام کاربری و رمز عبور را وارد کنید' }, 400);
+      if (!username || !password) return json({ error: 'نام کاربری و رمز عبور را وارد کنید' }, 400, req);
       const user = getUserByUsername(username);
-      if (!user || user.password_hash !== sha256(password)) {
-        return json({ error: 'نام کاربری یا رمز عبور نادرست است' }, 401);
+      if (!user || !verifyPassword(password, user.password_hash)) {
+        recordFailedAttempt(ip);
+        return json({ error: 'نام کاربری یا رمز عبور نادرست است' }, 401, req);
       }
+      clearRateLimit(ip);
+      db.prepare('UPDATE users SET last_seen = ? WHERE id = ?').run(nowSec(), user.id);
+      user.last_seen = nowSec();
       const token = createSession(user.id);
-      return json({ token, user: publicUser(user) });
+      return json({ token, user: publicUser(user, user) }, req);
     }
 
     // ----- Auth: logout -----
@@ -426,180 +463,152 @@ const server = Bun.serve({
       try { body = await req.json(); } catch {}
       const token = String(body?.token || '');
       const auth = req.headers.get('Authorization') || '';
-      const m = auth.match(/^Bearer\s+(.+)$/i);
-      const t = token || (m ? m[1].trim() : '');
+      const t = auth.startsWith('Bearer ') ? auth.slice(7) : token;
       if (t) destroySession(t);
-      return json({ success: true });
+      return json({ success: true }, req);
     }
 
     // ----- Auth: me -----
     if (pathname === '/api/auth/me' && method === 'GET') {
       const user = requireUser(req);
-      if (!user) return json({ error: 'Unauthorized' }, 401);
-      return json(publicUser(user));
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+      return json(publicUser(user, user), req);
     }
 
-    // ----- Auth: change password -----
+    // ----- Profile -----
+    if (pathname === '/api/profile' && method === 'GET') {
+      const user = requireUser(req);
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+      return json(publicUser(user, user), req);
+    }
+    if (pathname === '/api/profile' && method === 'PUT') {
+      const user = requireUser(req);
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+      let body;
+      try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
+      const updated = db.prepare(`
+        UPDATE users SET name = ?, job_title = ?, deputy = ?, avatar = ?, phone = ?
+        WHERE id = ?
+      `).run(
+        body.name ?? user.name,
+        body.jobTitle ?? user.job_title,
+        body.deputy ?? user.deputy,
+        body.avatar ?? user.avatar,
+        body.phone ?? user.phone,
+        user.id
+      );
+      return json(publicUser(getUserById(user.id), user), req);
+    }
+
+    // ----- Change password -----
     if (pathname === '/api/auth/change-password' && method === 'PUT') {
       const user = requireUser(req);
-      if (!user) return json({ error: 'Unauthorized' }, 401);
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
       let body;
-      try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400); }
+      try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
       const oldPassword = String(body?.oldPassword || '');
       const newPassword = String(body?.newPassword || '');
-      if (!oldPassword || !newPassword) return json({ error: 'رمز قدیمی و جدید را وارد کنید' }, 400);
-      if (newPassword.length < 4) return json({ error: 'رمز جدید باید حداقل ۴ کاراکتر باشد' }, 400);
-      if (user.password_hash !== sha256(oldPassword)) {
-        return json({ error: 'رمز فعلی نادرست است' }, 401);
-      }
-      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(sha256(newPassword), user.id);
-      // Invalidate all sessions for this user, force re-login
+      if (!oldPassword || !newPassword) return json({ error: 'رمز قدیمی و جدید را وارد کنید' }, 400, req);
+      if (newPassword.length < 4) return json({ error: 'رمز جدید باید حداقل ۴ کاراکتر باشد' }, 400, req);
+      if (!verifyPassword(oldPassword, user.password_hash)) return json({ error: 'رمز فعلی نادرست است' }, 401, req);
+      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashPassword(newPassword), user.id);
       db.prepare('DELETE FROM sessions WHERE user_id = ?').run(user.id);
-      return json({ success: true });
+      return json({ success: true }, req);
     }
 
     // ----- Shows: list -----
     if (pathname === '/api/shows' && method === 'GET') {
-      const rows = db.prepare('SELECT * FROM shows ORDER BY num ASC').all();
-      return json({ shows: rows.map(rowToShow) });
+      const rows = db.prepare('SELECT * FROM shows ORDER BY num').all();
+      return json({ shows: rows.map(rowToShow) }, req);
     }
 
     // ----- Shows: create -----
     if (pathname === '/api/shows' && method === 'POST') {
-      const { user, ok, status, error } = requireRole(req, ['admin', 'editor']);
-      if (!ok) return json({ error }, status);
+      const user = requireUser(req);
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
       let body;
-      try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400); }
-      if (typeof body?.num !== 'number') {
-        // Auto-assign next num
+      try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
+      if (!body.num) {
         const max = db.prepare('SELECT MAX(num) AS m FROM shows').get();
         body.num = (max?.m || 0) + 1;
       }
-      const row = showToValues(body);
-      try {
-        db.prepare(`INSERT OR IGNORE INTO shows
-          (num, name, category, source, size, viewers, style, effects, layout,
-           elements, materials, colors, lighting, summary, descriptionFa,
-           youtube, imdb, wikipedia, socialPost, images, videos)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,
-           ?, ?, ?, ?, ?, ?,
-           ?, ?, ?, ?, ?, ?)`).run(...row);
-      } catch (e) {
-        return json({ error: 'خطا در ایجاد برنامه: ' + e.message }, 500);
-      }
-      return json({ num: body.num });
+      db.prepare(`INSERT OR REPLACE INTO shows (${SHOW_COLUMNS.join(', ')}) VALUES (${SHOW_COLUMNS.map(() => '?').join(', ')})`).run(...showToValues(body));
+      return json(rowToShow(db.prepare('SELECT * FROM shows WHERE num = ?').get(body.num)), req);
     }
 
-    // ----- Shows: get by num / update / delete -----
-    const showMatch = pathname.match(/^\/api\/shows\/(\d+)$/);
-    if (showMatch) {
-      const num = Number(showMatch[1]);
-
-      if (method === 'GET') {
-        const r = db.prepare('SELECT * FROM shows WHERE num = ?').get(num);
-        if (!r) return json({ error: 'برنامه یافت نشد' }, 404);
-        return json({ show: rowToShow(r) });
-      }
-
-      if (method === 'PUT') {
-        const { user, ok, status, error } = requireRole(req, ['admin', 'editor']);
-        if (!ok) return json({ error }, status);
-        let body;
-        try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400); }
-        const existing = db.prepare('SELECT * FROM shows WHERE num = ?').get(num);
-        if (!existing) return json({ error: 'برنامه یافت نشد' }, 404);
-        const merged = { ...rowToShow(existing), ...body, num };
-        try {
-          db.prepare(`UPDATE shows SET
-            name=?, category=?, source=?, size=?, viewers=?,
-            style=?, effects=?, layout=?, elements=?, materials=?,
-            colors=?, lighting=?, summary=?, descriptionFa=?,
-            youtube=?, imdb=?, wikipedia=?, socialPost=?,
-            images=?, videos=?
-            WHERE num=?`).run(...showToValues(merged).slice(1), num);
-        } catch (e) {
-          return json({ error: 'خطا در بروزرسانی: ' + e.message }, 500);
-        }
-        return json({ success: true });
-      }
-
-      if (method === 'DELETE') {
-        const { user, ok, status, error } = requireRole(req, ['admin']);
-        if (!ok) return json({ error }, status);
-        const r = db.prepare('DELETE FROM shows WHERE num = ?').run(num);
-        if (r.changes === 0) return json({ error: 'برنامه یافت نشد' }, 404);
-        return json({ success: true });
-      }
-    }
-
-    // ----- Users: list / create / delete / update -----
-    if (pathname === '/api/users' && method === 'GET') {
-      const { user, ok, status, error } = requireRole(req, ['admin']);
-      if (!ok) return json({ error }, status);
-      const rows = db.prepare('SELECT * FROM users ORDER BY id ASC').all();
-      return json({ users: rows.map(publicUser) });
-    }
-
-    if (pathname === '/api/users' && method === 'POST') {
-      const { user, ok, status, error } = requireRole(req, ['admin']);
-      if (!ok) return json({ error }, status);
+    // ----- Shows: update -----
+    if (pathname.startsWith('/api/shows/') && method === 'PUT') {
+      const user = requireUser(req);
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+      const num = parseInt(pathname.slice('/api/shows/'.length));
       let body;
-      try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400); }
+      try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
+      body.num = num;
+      const existing = db.prepare('SELECT * FROM shows WHERE num = ?').get(num);
+      if (!existing) return json({ error: 'show not found' }, 404, req);
+      const merged = { ...rowToShow(existing), ...body, num };
+      db.prepare(`INSERT OR REPLACE INTO shows (${SHOW_COLUMNS.join(', ')}) VALUES (${SHOW_COLUMNS.map(() => '?').join(', ')})`).run(...showToValues(merged));
+      return json(rowToShow(db.prepare('SELECT * FROM shows WHERE num = ?').get(num)), req);
+    }
+
+    // ----- Shows: delete -----
+    if (pathname.startsWith('/api/shows') && method === 'DELETE') {
+      const user = requireRole(req, ['admin', 'editor']);
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+      const num = parseInt(url.searchParams.get('num') || '0');
+      if (!num) return json({ error: 'num required' }, 400, req);
+      db.prepare('DELETE FROM shows WHERE num = ?').run(num);
+      return json({ success: true }, req);
+    }
+
+    // ----- Users: list -----
+    if (pathname === '/api/users' && method === 'GET') {
+      const user = requireRole(req, ['admin']);
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+      const rows = db.prepare('SELECT * FROM users ORDER BY id').all();
+      return json({ users: rows.map(u => publicUser(u, user)) }, req);
+    }
+
+    // ----- Users: create -----
+    if (pathname === '/api/users' && method === 'POST') {
+      const admin = requireRole(req, ['admin']);
+      if (!admin) return json({ error: 'Unauthorized' }, 401, req);
+      let body;
+      try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
       const username = String(body?.username || '').trim();
       const password = String(body?.password || '');
-      const role = ['admin', 'editor', 'viewer'].includes(body?.role) ? body.role : 'viewer';
-      const name = String(body?.name || '');
-      if (!username || !password) return json({ error: 'نام کاربری و رمز عبور را وارد کنید' }, 400);
-      if (password.length < 4) return json({ error: 'رمز باید حداقل ۴ کاراکتر باشد' }, 400);
-      const exists = getUserByUsername(username);
-      if (exists) return json({ error: 'این نام کاربری قبلاً ثبت شده است' }, 409);
-      try {
-        const r = db.prepare('INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)')
-          .run(username, sha256(password), role, name);
-        return json({ id: Number(r.lastInsertRowid) });
-      } catch (e) {
-        return json({ error: 'خطا در ایجاد کاربر: ' + e.message }, 500);
-      }
+      if (!username || !password) return json({ error: 'نام کاربری و رمز required' }, 400, req);
+      const existing = getUserByUsername(username);
+      if (existing) return json({ error: 'نام کاربری تکراری' }, 409, req);
+      const result = db.prepare('INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)').run(username, hashPassword(password), body.role || 'viewer', body.name || '');
+      return json(publicUser(getUserById(result.lastInsertRowid), admin), req);
     }
 
-    const userMatch = pathname.match(/^\/api\/users\/(\d+)$/);
-    if (userMatch) {
-      const id = Number(userMatch[1]);
-
-      if (method === 'DELETE') {
-        const { user, ok, status, error } = requireRole(req, ['admin']);
-        if (!ok) return json({ error }, status);
-        if (user.id === id) return json({ error: 'نمی‌توانید حساب خودتان را حذف کنید' }, 400);
-        const r = db.prepare('DELETE FROM users WHERE id = ?').run(id);
-        if (r.changes === 0) return json({ error: 'کاربر یافت نشد' }, 404);
-        db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id);
-        return json({ success: true });
-      }
-
-      if (method === 'PUT') {
-        const { user, ok, status, error } = requireRole(req, ['admin']);
-        if (!ok) return json({ error }, status);
-        let body;
-        try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400); }
-        const target = getUserById(id);
-        if (!target) return json({ error: 'کاربر یافت نشد' }, 404);
-        const role = ['admin', 'editor', 'viewer'].includes(body?.role) ? body.role : target.role;
-        const name = body?.name !== undefined ? String(body.name) : target.name;
-        if (body?.password) {
-          if (String(body.password).length < 4) return json({ error: 'رمز باید حداقل ۴ کاراکتر باشد' }, 400);
-          db.prepare('UPDATE users SET password_hash = ?, role = ?, name = ? WHERE id = ?')
-            .run(sha256(String(body.password)), role, name, id);
-        } else {
-          db.prepare('UPDATE users SET role = ?, name = ? WHERE id = ?')
-            .run(role, name, id);
-        }
-        return json({ success: true });
-      }
+    // ----- Users: update -----
+    if (pathname.startsWith('/api/users') && method === 'PUT') {
+      const admin = requireRole(req, ['admin']);
+      if (!admin) return json({ error: 'Unauthorized' }, 401, req);
+      const id = parseInt(url.searchParams.get('id') || '0');
+      let body;
+      try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
+      const target = getUserById(id);
+      if (!target) return json({ error: 'user not found' }, 404, req);
+      db.prepare('UPDATE users SET name = ?, role = ? WHERE id = ?').run(body.name ?? target.name, body.role ?? target.role, id);
+      return json(publicUser(getUserById(id), admin), req);
     }
 
-    // 404
-    return json({ error: 'Not Found', path: pathname }, 404);
+    // ----- Users: delete -----
+    if (pathname.startsWith('/api/users') && method === 'DELETE') {
+      const admin = requireRole(req, ['admin']);
+      if (!admin) return json({ error: 'Unauthorized' }, 401, req);
+      const id = parseInt(url.searchParams.get('id') || '0');
+      if (id === admin.id) return json({ error: 'cannot delete self' }, 400, req);
+      db.prepare('DELETE FROM users WHERE id = ?').run(id);
+      return json({ success: true }, req);
+    }
+
+    return json({ error: 'Not Found', path: pathname }, 404, req);
   },
 });
 
-console.log(`[bankresaneh-api] listening on http://localhost:${server.port}`);
+console.log(`[bankresaneh-api] listening on http://localhost:${PORT}`);

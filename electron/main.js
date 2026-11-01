@@ -1,7 +1,7 @@
 // Electron Main Process — بانک رسانه
 // Starts the Bun API service (port 3002) and the Next.js standalone server
 // (port 3000), then opens a window pointed at the Next.js UI.
-const { app, BrowserWindow, shell, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, shell, dialog } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 const http = require('http');
@@ -24,19 +24,41 @@ function log(msg) {
   try { fs.appendFileSync(getLogPath(), line); } catch(e) {}
 }
 
+// === Find the bundled Bun binary ===
+function getBunPath() {
+  // Check if bun is on PATH (dev mode)
+  try {
+    require('child_process').execSync('bun --version', { stdio: 'ignore' });
+    return 'bun';
+  } catch {}
+
+  // Check bundled bun binary in resources
+  const candidates = [
+    path.join(process.resourcesPath || '', 'bun', process.platform === 'win32' ? 'bun.exe' : 'bun'),
+    path.join(process.resourcesPath || '', 'bun-win-x64', 'bun.exe'),
+    path.join(process.resourcesPath || '', 'bun', 'bun.exe'),
+    path.join(__dirname, '..', 'node_modules', '.bin', process.platform === 'win32' ? 'bun.exe' : 'bun'),
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) {
+      log('Found bundled Bun: ' + p);
+      return p;
+    }
+  }
+  log('Bun not found. API service will not start.');
+  return null;
+}
+
 // === Locate the Next.js standalone server.js ===
 function getNextServerPath() {
   const paths = [
     path.join(process.resourcesPath || '', 'next-service-dist', 'server.js'),
     path.join(__dirname, '..', '.next', 'standalone', 'server.js'),
-    path.join(__dirname, '..', 'next-service-dist', 'server.js'),
   ];
   for (const p of paths) {
     if (fs.existsSync(p)) { log('Found Next server: ' + p); return p; }
   }
-  log('Next server NOT FOUND. Paths checked: ' + JSON.stringify(paths));
-  log('resourcesPath: ' + process.resourcesPath);
-  log('__dirname: ' + __dirname);
+  log('Next server NOT FOUND.');
   return null;
 }
 
@@ -44,15 +66,14 @@ function getStaticDir() {
   const paths = [
     path.join(process.resourcesPath || '', 'next-service-dist'),
     path.join(__dirname, '..', '.next', 'standalone'),
-    path.join(__dirname, '..', 'next-service-dist'),
   ];
   for (const p of paths) {
-    if (fs.existsSync(path.join(p, 'server.js'))) { log('Static dir: ' + p); return p; }
+    if (fs.existsSync(path.join(p, 'server.js'))) return p;
   }
   return paths[0];
 }
 
-// === Locate the Bun API service ===
+// === Locate the API service ===
 function getApiServicePath() {
   const paths = [
     path.join(process.resourcesPath || '', 'api-service', 'index.js'),
@@ -61,7 +82,7 @@ function getApiServicePath() {
   for (const p of paths) {
     if (fs.existsSync(p)) { log('Found API service: ' + p); return p; }
   }
-  log('API service NOT FOUND — skipping');
+  log('API service NOT FOUND.');
   return null;
 }
 
@@ -81,12 +102,16 @@ function startApiService() {
   return new Promise((resolve, reject) => {
     const apiPath = getApiServicePath();
     if (!apiPath) { log('API service not found — skipping'); resolve(); return; }
+
+    const bunPath = getBunPath();
+    if (!bunPath) { log('Bun not found — API service cannot start'); resolve(); return; }
+
     const apiDir = getApiStaticDir();
     const userData = app.getPath('userData');
     const dbDir = path.join(userData, 'db');
     const dbPath = path.join(dbDir, 'bankresaneh.sqlite');
 
-    try { if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, {recursive: true}); } catch(e) {}
+    try { if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true }); } catch(e) {}
 
     // Copy bundled DB on first run
     const bundledDb = path.join(apiDir, 'bankresaneh.sqlite');
@@ -94,21 +119,11 @@ function startApiService() {
       try { fs.copyFileSync(bundledDb, dbPath); log('Copied initial API db'); } catch(e) {}
     }
 
-    log('Starting API service: ' + apiPath);
+    log('Starting API service with: ' + bunPath + ' ' + apiPath);
     log('API cwd: ' + apiDir);
     log('API db: ' + dbPath);
 
-    // Try bun first; fall back to node
-    let cmd = 'bun';
-    let args = [apiPath];
-    try { require('child_process').execSync('bun --version', { stdio: 'ignore' }); }
-    catch {
-      cmd = process.execPath;
-      args = [apiPath];
-      log('WARNING: bun not found; API service requires bun:sqlite.');
-    }
-
-    apiServer = spawn(cmd, args, {
+    apiServer = spawn(bunPath, [apiPath], {
       cwd: apiDir,
       env: {
         ...process.env,
@@ -151,7 +166,6 @@ function startNextServer() {
     log('Starting Next server: ' + serverPath);
     log('Next cwd: ' + staticDir);
 
-    // ELECTRON_RUN_AS_NODE=1 makes the Electron binary behave like Node.js
     const env = {
       ...process.env,
       ELECTRON_RUN_AS_NODE: '1',
@@ -211,7 +225,6 @@ app.whenReady().then(async () => {
   log('UserData: ' + app.getPath('userData'));
   log('Exec: ' + process.execPath);
   log('Resources: ' + process.resourcesPath);
-  log('Version: ' + app.getVersion());
 
   try {
     await startApiService().catch(e => log('API service warning: ' + e.message));

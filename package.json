@@ -1,6 +1,6 @@
 {
   "name": "banke-rasane",
-  "version": "3.5.0",
+  "version": "5.0.0",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
@@ -125,6 +125,13 @@
       {
         "from": "electron/icons",
         "to": "icons",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "electron/bun",
+        "to": "bun",
         "filter": [
           "**/*"
         ]
