@@ -6,6 +6,14 @@ type Theme = 'light' | 'dark';
 export function useTheme() {
   const [theme, setThemeState] = useState<Theme>('light');
 
+  const applyTheme = (t: Theme) => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', t);
+      document.documentElement.className = t === 'dark' ? 'theme-dark' : '';
+    }
+  };
+
+
   useEffect(() => {
     try {
       const saved = typeof window !== 'undefined' ? localStorage.getItem('bankresaneh_theme') : null;
@@ -17,13 +25,6 @@ export function useTheme() {
       }
     } catch {}
   }, []);
-
-  const applyTheme = (t: Theme) => {
-    if (typeof document !== 'undefined') {
-      document.documentElement.setAttribute('data-theme', t);
-      document.documentElement.className = t === 'dark' ? 'theme-dark' : '';
-    }
-  };
 
   const setTheme = (t: Theme) => {
     setThemeState(t);
