@@ -5535,7 +5535,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
         style={{ background: 'rgba(2, 144, 72, 0.05)', border: '1px solid rgba(2, 144, 72, 0.15)', color: '#4a5d52', lineHeight: 1.7 }}
       >
         <strong>راهنما:</strong> آدرس وارد شده باید ریشهٔ سرویس API باشد (بدون مسیرهای <code dir="ltr">/api/...</code>).
-        اگر از گیتوی Caddy استفاده می‌کنید، می‌توانید آدرس نسبی وارد کنید. پس از ذخیره، توکن فعلی شما معتبر می‌ماند.
+        اگر از گیتوی Caddy استفاده می‌کنید، می‌توانید آدرس نسبی وارد کنید. برای امنیت، پس از تغییر سرور باید دوباره وارد شوید.
       </div>
     </div>
   );

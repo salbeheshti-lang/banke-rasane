@@ -271,7 +271,7 @@ function requireUser(req) {
 }
 function requireRole(req, roles) {
   const user = requireUser(req);
-  if (!user || !roles.includes(user.role)) return null;
+  if (!user || user.must_change_password || !roles.includes(user.role)) return null;
   return user;
 }
 
@@ -571,7 +571,7 @@ const server = Bun.serve({
 
     // ----- Shows: list -----
     if (pathname === '/api/shows' && method === 'GET') {
-      const user = requireUser(req);
+      const user = requireRole(req, ['admin', 'editor', 'viewer']);
       if (!user) return json({ error: 'Unauthorized' }, 401, req);
       const rows = db.prepare('SELECT * FROM shows ORDER BY num').all();
       return json({ shows: rows.map(rowToShow) }, req);

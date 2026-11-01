@@ -108,7 +108,7 @@ export const api = {
   async changePassword(oldPassword: string, newPassword: string) {
     return request(getApiUrl('api/auth/change-password'), { method: 'PUT', body: JSON.stringify({ oldPassword, newPassword }) });
   },
-  async getUsers() { return request<User[]>(getApiUrl('api/users')); },
+  async getUsers() { const data = await request<{ users: User[] }>(getApiUrl('api/users')); return data.users || []; },
   async getCurrentUser(): Promise<User | null> {
     if (typeof window === 'undefined' || !localStorage.getItem(TOKEN_KEY)) return null;
     try { return await request<User>(getApiUrl('api/auth/me')); } catch { return null; }
