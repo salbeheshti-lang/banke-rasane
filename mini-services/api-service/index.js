@@ -118,11 +118,14 @@ function isAllowedOrigin(origin) {
 function corsHeaders(req) {
   const headers = {
     'Vary': 'Origin',
+    'Access-Control-Allow-Origin': process.env.APP_ORIGIN || 'http://127.0.0.1:3000',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   };
   const origin = req?.headers.get('origin');
-  if (isAllowedOrigin(origin)) headers['Access-Control-Allow-Origin'] = origin;
+  if (origin && origin !== (process.env.APP_ORIGIN || 'http://127.0.0.1:3000') && !isAllowedOrigin(origin)) {
+    delete headers['Access-Control-Allow-Origin'];
+  }
   return headers;
 }
 
