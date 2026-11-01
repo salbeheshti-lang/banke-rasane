@@ -65,6 +65,21 @@ db.exec(`
   );
 `);
 
+// Backward-compatible schema migrations for databases created by older builds.
+// Keep these additive so existing show records and user sessions are preserved.
+const SHOW_MIGRATIONS = [
+  ['image_data', 'BLOB'],
+  ['image_mime', "TEXT NOT NULL DEFAULT 'image/jpeg'"],
+  ['image_source', "TEXT NOT NULL DEFAULT ''"],
+  ['is_film', 'INTEGER NOT NULL DEFAULT 0'],
+];
+const existingShowColumns = new Set(db.query('PRAGMA table_info(shows)').all().map((column) => column.name));
+for (const [column, definition] of SHOW_MIGRATIONS) {
+  if (!existingShowColumns.has(column)) {
+    db.exec(`ALTER TABLE shows ADD COLUMN ${column} ${definition}`);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
