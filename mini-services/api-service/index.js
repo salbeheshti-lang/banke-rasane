@@ -357,7 +357,7 @@ const server = Bun.serve({
 
     // ----- Health -----
     if (pathname === '/api/health' && method === 'GET') {
-      return json({ status: 'ok', time: nowSec() }, req);
+      return json({ status: 'ok', time: nowSec() }, 200, req);
     }
 
 
@@ -447,7 +447,7 @@ const server = Bun.serve({
       db.prepare('UPDATE shows SET image_data = ?, image_mime = ?, image_source = ? WHERE num = ?').run(new Uint8Array(processed), 'image/jpeg', source, num);
       if (imdbUrl) db.prepare('UPDATE shows SET imdb = ? WHERE num = ?').run(imdbUrl, num);
       if (wikiUrl) db.prepare('UPDATE shows SET wikipedia = ? WHERE num = ?').run(wikiUrl, num);
-      return json({ success: true, source, size: processed.length }, req);
+      return json({ success: true, source, size: processed.length }, 200, req);
     }
 
     // ----- Auth: login -----
@@ -462,7 +462,7 @@ const server = Bun.serve({
         return json({ error: 'نام کاربری یا رمز عبور نادرست است' }, 401, req);
       }
       const token = createSession(user.id);
-      return json({ token, user: publicUser(user) }, req);
+      return json({ token, user: publicUser(user) }, 200, req);
     }
 
     // ----- Auth: logout -----
@@ -474,14 +474,14 @@ const server = Bun.serve({
       const m = auth.match(/^Bearer\s+(.+)$/i);
       const t = token || (m ? m[1].trim() : '');
       if (t) destroySession(t);
-      return json({ success: true }, req);
+      return json({ success: true }, 200, req);
     }
 
     // ----- Auth: me -----
     if (pathname === '/api/auth/me' && method === 'GET') {
       const user = requireUser(req);
       if (!user) return json({ error: 'Unauthorized' }, 401, req);
-      return json(publicUser(user), req);
+      return json(publicUser(user), 200, req);
     }
 
     // ----- Auth: change password -----
@@ -500,13 +500,13 @@ const server = Bun.serve({
       db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(sha256(newPassword), user.id);
       // Invalidate all sessions for this user, force re-login
       db.prepare('DELETE FROM sessions WHERE user_id = ?').run(user.id);
-      return json({ success: true }, req);
+      return json({ success: true }, 200, req);
     }
 
     // ----- Shows: list -----
     if (pathname === '/api/shows' && method === 'GET') {
       const rows = db.prepare('SELECT * FROM shows ORDER BY num ASC').all();
-      return json({ shows: rows.map(rowToShow) }, req);
+      return json({ shows: rows.map(rowToShow) }, 200, req);
     }
 
     // ----- Shows: create -----
@@ -532,7 +532,7 @@ const server = Bun.serve({
       } catch (e) {
         return json({ error: 'خطا در ایجاد برنامه: ' + e.message }, 500, req);
       }
-      return json({ num: body.num }, req);
+      return json({ num: body.num }, 200, req);
     }
 
     // ----- Shows: get by num / update / delete -----
@@ -543,7 +543,7 @@ const server = Bun.serve({
       if (method === 'GET') {
         const r = db.prepare('SELECT * FROM shows WHERE num = ?').get(num);
         if (!r) return json({ error: 'برنامه یافت نشد' }, 404, req);
-        return json({ show: rowToShow(r) }, req);
+        return json({ show: rowToShow(r) }, 200, req);
       }
 
       if (method === 'PUT') {
@@ -565,7 +565,7 @@ const server = Bun.serve({
         } catch (e) {
           return json({ error: 'خطا در بروزرسانی: ' + e.message }, 500, req);
         }
-        return json({ success: true }, req);
+        return json({ success: true }, 200, req);
       }
 
       if (method === 'DELETE') {
@@ -573,7 +573,7 @@ const server = Bun.serve({
         if (!ok) return json({ error }, status, req);
         const r = db.prepare('DELETE FROM shows WHERE num = ?').run(num);
         if (r.changes === 0) return json({ error: 'برنامه یافت نشد' }, 404, req);
-        return json({ success: true }, req);
+        return json({ success: true }, 200, req);
       }
     }
 
@@ -582,7 +582,7 @@ const server = Bun.serve({
       const { user, ok, status, error } = requireRole(req, ['admin']);
       if (!ok) return json({ error }, status, req);
       const rows = db.prepare('SELECT * FROM users ORDER BY id ASC').all();
-      return json({ users: rows.map(publicUser) }, req);
+      return json({ users: rows.map(publicUser) }, 200, req);
     }
 
     if (pathname === '/api/users' && method === 'POST') {
@@ -601,7 +601,7 @@ const server = Bun.serve({
       try {
         const r = db.prepare('INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)')
           .run(username, sha256(password), role, name);
-        return json({ id: Number(r.lastInsertRowid) }, req);
+        return json({ id: Number(r.lastInsertRowid) }, 200, req);
       } catch (e) {
         return json({ error: 'خطا در ایجاد کاربر: ' + e.message }, 500, req);
       }
@@ -618,7 +618,7 @@ const server = Bun.serve({
         const r = db.prepare('DELETE FROM users WHERE id = ?').run(id);
         if (r.changes === 0) return json({ error: 'کاربر یافت نشد' }, 404, req);
         db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id);
-        return json({ success: true }, req);
+        return json({ success: true }, 200, req);
       }
 
       if (method === 'PUT') {
@@ -638,7 +638,7 @@ const server = Bun.serve({
           db.prepare('UPDATE users SET role = ?, name = ? WHERE id = ?')
             .run(role, name, id);
         }
-        return json({ success: true }, req);
+        return json({ success: true }, 200, req);
       }
     }
 
