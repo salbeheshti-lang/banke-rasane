@@ -138,6 +138,7 @@ function rowToShow(r) {
     socialPost: r.socialPost,
     images,
     videos,
+    isFilm: !!(r.is_film),
   };
 }
 
@@ -269,7 +270,7 @@ function seedShows() {
     return;
   }
   const stmt = db.prepare(`
-    INSERT OR REPLACE INTO shows
+    INSERT OR IGNORE INTO shows
       (num, name, category, source, size, viewers, style, effects, layout,
        elements, materials, colors, lighting, summary, descriptionFa,
        youtube, imdb, wikipedia, socialPost, images, videos)
@@ -312,6 +313,96 @@ const server = Bun.serve({
     // ----- Health -----
     if (pathname === '/api/health' && method === 'GET') {
       return json({ status: 'ok', time: nowSec() });
+    }
+
+
+    // ----- Image serving -----
+    if (pathname.startsWith('/api/image/') && method === 'GET') {
+      const numStr = pathname.slice('/api/image/'.length).split('/')[0];
+      const num = parseInt(numStr, 10);
+      if (!Number.isFinite(num) || num < 1) return json({ error: 'invalid show number' }, 400, req);
+      const row = db.prepare('SELECT image_data, image_mime FROM shows WHERE num = ?').get(num);
+      if (!row || !row.image_data) return json({ error: 'no image for show ' + num }, 404, req);
+      const origin = req.headers.get('origin') || '';
+      const corsOrigin = isAllowedOrigin(origin) ? origin : '*';
+      return new Response(new Uint8Array(row.image_data), {
+        status: 200,
+        headers: {
+          'Content-Type': row.image_mime || 'image/jpeg',
+          'Cache-Control': 'public, max-age=86400, immutable',
+          'Access-Control-Allow-Origin': corsOrigin,
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'X-Content-Type-Options': 'nosniff',
+        },
+      });
+    }
+
+    // ----- Fetch image from IMDb/Wikipedia -----
+    if (pathname === '/api/fetch-image' && method === 'POST') {
+      let body;
+      try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
+      const num = parseInt(body?.num, 10);
+      const imdbUrl = String(body?.imdb || '');
+      const wikiUrl = String(body?.wikipedia || '');
+      const showName = String(body?.name || '');
+      if (!Number.isFinite(num) || num < 1) return json({ error: 'invalid show number' }, 400, req);
+
+      const OMDB_API_KEY = 'thewdb';
+      const UA = 'BankResaneh/2.0 (contact@bankrasaneh.ir)';
+      const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+      async function fetchRetry(url, opts = {}, retries = 2) {
+        for (let i = 0; i <= retries; i++) {
+          try { const r = await fetch(url, opts); if (r.ok) return r; if (r.status === 429) { await new Promise(x=>setTimeout(x,3000*(i+1))); continue; } if (r.status === 404) return r; }
+          catch(e) { if (i === retries) throw e; await new Promise(x=>setTimeout(x,1500)); }
+        }
+        return null;
+      }
+      function cleanQ(s) { return (s||'').replace(/[?!]+$/,'').replace(/\(.*?\)/g,' ').replace(/[\u2013\u2014-]/g,' ').replace(/\s+/g,' ').trim(); }
+
+      let imageUrl = null, source = '';
+      // Try OMDb
+      const direct = imdbUrl?.match(/tt(\d+)/);
+      if (direct) {
+        const r = await fetchRetry(`https://www.omdbapi.com/?i=tt${direct[1]}&apikey=${OMDB_API_KEY}`,{},1);
+        if (r && r.ok) { const d = await r.json(); if (d.Response==='True' && d.Poster && d.Poster!=='N/A') { imageUrl=d.Poster; source='omdb'; } }
+      }
+      if (!imageUrl && showName) {
+        const q = cleanQ(showName);
+        if (q) {
+          const r = await fetchRetry(`https://www.omdbapi.com/?s=${encodeURIComponent(q)}&apikey=${OMDB_API_KEY}`,{},1);
+          if (r && r.ok) { const d = await r.json(); if (d.Search) for (const item of d.Search) if (item.Poster && item.Poster!=='N/A') { imageUrl=item.Poster; source='omdb'; break; } }
+        }
+      }
+      // Try Wikipedia
+      if (!imageUrl && showName) {
+        for (const lang of ['en','fa']) {
+          for (const suffix of [' (TV series)',' (TV program)',' (film)','']) {
+            const r = await fetchRetry(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cleanQ(showName)+suffix)}`,{headers:{'User-Agent':UA}},1);
+            if (r && r.ok) { const d = await r.json(); const img = d.originalimage?.source || d.thumbnail?.source; if (img) { imageUrl=img; source='wikipedia-'+lang; break; } }
+          }
+          if (imageUrl) break;
+        }
+      }
+      if (!imageUrl) return json({ error: 'no image found' }, 404, req);
+
+      const isWiki = imageUrl.includes('wikimedia.org') || imageUrl.includes('wikipedia.org');
+      const ires = await fetchRetry(imageUrl, { headers: isWiki ? {'User-Agent':UA} : {'User-Agent':BROWSER_UA,'Referer':'https://www.imdb.com/'} }, 3);
+      if (!ires || !ires.ok) return json({ error: 'download failed' }, 500, req);
+      const buf = await ires.arrayBuffer();
+      const raw = new Uint8Array(buf);
+      if (raw.length < 200) return json({ error: 'image too small' }, 500, req);
+
+      let processed;
+      try {
+        const sharp = (await import('sharp')).default;
+        processed = await sharp(Buffer.from(raw)).resize(400, 600, { fit:'inside', withoutEnlargement:true }).jpeg({ quality:85, mozjpeg:true }).toBuffer();
+      } catch(e) { processed = Buffer.from(raw); }
+
+      db.prepare('UPDATE shows SET image_data = ?, image_mime = ?, image_source = ? WHERE num = ?').run(new Uint8Array(processed), 'image/jpeg', source, num);
+      if (imdbUrl) db.prepare('UPDATE shows SET imdb = ? WHERE num = ?').run(imdbUrl, num);
+      if (wikiUrl) db.prepare('UPDATE shows SET wikipedia = ? WHERE num = ?').run(wikiUrl, num);
+      return json({ success: true, source, size: processed.length }, req);
     }
 
     // ----- Auth: login -----
@@ -386,7 +477,7 @@ const server = Bun.serve({
       }
       const row = showToValues(body);
       try {
-        db.prepare(`INSERT OR REPLACE INTO shows
+        db.prepare(`INSERT OR IGNORE INTO shows
           (num, name, category, source, size, viewers, style, effects, layout,
            elements, materials, colors, lighting, summary, descriptionFa,
            youtube, imdb, wikipedia, socialPost, images, videos)

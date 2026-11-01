@@ -1,18 +1,12 @@
 // API client for BankResaneh API
 
-// The API base URL is configurable so admins can point the app at any
-// reachable instance of the API service (default: local Bun service on :3002).
 export function getApiBase(): string {
   if (typeof window !== 'undefined') {
-    // If user set a custom server URL, use it
     const custom = localStorage.getItem('server_url');
     if (custom) return custom;
-    // Auto-detect: if we're behind the preview gateway (port 81),
-    // route API requests through the gateway with XTransformPort
     const currentPort = window.location.port;
     const currentHost = window.location.hostname;
-    if (currentPort === '81' || currentPort === '') {
-      // Behind gateway — use relative path with XTransformPort
+    if (currentPort === '81' || currentPort === '' || currentHost.includes('space-z.ai')) {
       return `${window.location.origin}/?XTransformPort=3002`.replace(/\?.*/, '');
     }
     return 'http://localhost:3002';
@@ -23,16 +17,20 @@ export function getApiBase(): string {
 export function setApiBase(url: string): void {
   if (typeof window !== 'undefined') {
     const cleaned = (url || '').trim().replace(/\/+$/, '');
-    if (cleaned) {
-      localStorage.setItem('server_url', cleaned);
-    } else {
-      localStorage.removeItem('server_url');
-    }
+    if (cleaned) localStorage.setItem('server_url', cleaned);
+    else localStorage.removeItem('server_url');
   }
 }
 
-export function getApiBaseUrl(): string {
-  return getApiBase();
+export function getApiBaseUrl(): string { return getApiBase(); }
+
+export function getShowImageUrl(showNum: number): string {
+  const base = getApiBase();
+  if (typeof window !== 'undefined') {
+    const isGateway = base === window.location.origin + '/' || base === window.location.origin;
+    if (isGateway) return `${base}api/image/${showNum}?XTransformPort=3002`;
+  }
+  return `${base.replace(/\/+$/, '')}/api/image/${showNum}`;
 }
 
 export interface User {
@@ -40,190 +38,129 @@ export interface User {
   username: string;
   role: 'admin' | 'editor' | 'viewer';
   name: string;
+  jobTitle?: string;
+  deputy?: string;
+  avatar?: string;
+  phone?: string;
+  createdAt?: number;
+  lastSeen?: number;
+  online?: boolean;
 }
 
-export interface Show {
-  num: number;
-  name: string;
-  category: string;
-  source: string;
-  size: string;
-  viewers: string;
-  style: string;
-  effects: string;
-  layout: string;
-  elements: string;
-  materials: string;
-  colors: string;
-  lighting: string;
-  summary: string;
-  descriptionFa: string;
-  youtube: string;
-  imdb: string;
-  wikipedia: string;
-  socialPost: string;
-  images: string[];
-  videos: string[];
+const TOKEN_KEY = 'bankresaneh_token';
+
+function authHeaders(): Record<string, string> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-// Token management
-let authToken: string | null = null;
-
-export function setToken(token: string | null) {
-  authToken = token;
-  if (typeof window !== 'undefined') {
-    if (token) {
-      localStorage.setItem('bankresaneh_token', token);
-    } else {
-      localStorage.removeItem('bankresaneh_token');
-    }
-  }
-}
-
-export function getToken(): string | null {
-  if (authToken) return authToken;
-  if (typeof window !== 'undefined') {
-    authToken = localStorage.getItem('bankresaneh_token');
-  }
-  return authToken;
-}
-
-export function isLoggedIn(): boolean {
-  return !!getToken();
-}
-
-// Helper: API request
-async function apiRequest(path: string, options: RequestInit = {}): Promise<any> {
-  const token = getToken();
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...((options.headers as Record<string, string>) || {}),
-  };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  // Detect if behind gateway — if so, append XTransformPort to query
-  let url = `${getApiBase()}${path}`;
-  if (typeof window !== 'undefined') {
-    const port = window.location.port;
-    if (port === '81' || port === '') {
-      // Behind gateway — use relative path with XTransformPort
-      const sep = path.includes('?') ? '&' : '?';
-      url = `${path}${sep}XTransformPort=3002`;
-    }
-  }
-
-  const response = await fetch(url, {
+async function request<T = any>(url: string, options: RequestInit = {}): Promise<T> {
+  const res = await fetch(url, {
     ...options,
-    headers,
+    headers: { 'Content-Type': 'application/json', ...authHeaders(), ...options.headers },
   });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'خطای شبکه' }));
-    throw new Error(error.error || `HTTP ${response.status}`);
-  }
-
-  return response.json();
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
 }
 
-// Auth
 export const api = {
-  async login(username: string, password: string): Promise<{ token: string; user: User }> {
-    const data = await apiRequest('/api/auth/login', {
+  async login(username: string, password: string) {
+    const base = getApiBase();
+    const isGateway = typeof window !== 'undefined' && (window.location.port === '81' || window.location.port === '' || window.location.hostname.includes('space-z.ai'));
+    const url = isGateway ? `${window.location.origin}/api/auth/login?XTransformPort=3002` : `${base.replace(/\/+$/,'')}/api/auth/login`;
+    const res = await fetch(url, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
     });
-    setToken(data.token);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Login failed');
+    if (typeof window !== 'undefined') localStorage.setItem(TOKEN_KEY, data.token);
     return data;
   },
 
-  async logout(): Promise<void> {
+  logout() {
+    if (typeof window !== 'undefined') localStorage.removeItem(TOKEN_KEY);
+  },
+
+  async getShows() {
+    const base = getApiBase();
+    const isGateway = typeof window !== 'undefined' && (window.location.port === '81' || window.location.port === '' || window.location.hostname.includes('space-z.ai'));
+    const url = isGateway ? `${window.location.origin}/api/shows?XTransformPort=3002` : `${base.replace(/\/+$/,'')}/api/shows`;
+    return request(url);
+  },
+
+  async saveShow(show: any) {
+    const base = getApiBase();
+    const isGateway = typeof window !== 'undefined' && (window.location.port === '81' || window.location.port === '' || window.location.hostname.includes('space-z.ai'));
+    const url = isGateway ? `${window.location.origin}/api/shows?XTransformPort=3002` : `${base.replace(/\/+$/,'')}/api/shows`;
+    return request(url, { method: 'POST', body: JSON.stringify(show) });
+  },
+
+  async deleteShow(num: number) {
+    const base = getApiBase();
+    const isGateway = typeof window !== 'undefined' && (window.location.port === '81' || window.location.port === '' || window.location.hostname.includes('space-z.ai'));
+    const url = isGateway ? `${window.location.origin}/api/shows?num=${num}&XTransformPort=3002` : `${base.replace(/\/+$/,'')}/api/shows?num=${num}`;
+    return request(url, { method: 'DELETE' });
+  },
+
+  async getProfile() {
+    const base = getApiBase();
+    const isGateway = typeof window !== 'undefined' && (window.location.port === '81' || window.location.port === '' || window.location.hostname.includes('space-z.ai'));
+    const url = isGateway ? `${window.location.origin}/api/profile?XTransformPort=3002` : `${base.replace(/\/+$/,'')}/api/profile`;
+    return request(url);
+  },
+
+  async updateProfile(data: any) {
+    const base = getApiBase();
+    const isGateway = typeof window !== 'undefined' && (window.location.port === '81' || window.location.port === '' || window.location.hostname.includes('space-z.ai'));
+    const url = isGateway ? `${window.location.origin}/api/profile?XTransformPort=3002` : `${base.replace(/\/+$/,'')}/api/profile`;
+    return request(url, { method: 'PUT', body: JSON.stringify(data) });
+  },
+
+  async changePassword(oldPassword: string, newPassword: string) {
+    const base = getApiBase();
+    const isGateway = typeof window !== 'undefined' && (window.location.port === '81' || window.location.port === '' || window.location.hostname.includes('space-z.ai'));
+    const url = isGateway ? `${window.location.origin}/api/auth/change-password?XTransformPort=3002` : `${base.replace(/\/+$/,'')}/api/auth/change-password`;
+    return request(url, { method: 'PUT', body: JSON.stringify({ oldPassword, newPassword }) });
+  },
+
+  async getUsers() {
+    const base = getApiBase();
+    const isGateway = typeof window !== 'undefined' && (window.location.port === '81' || window.location.port === '' || window.location.hostname.includes('space-z.ai'));
+    const url = isGateway ? `${window.location.origin}/api/users?XTransformPort=3002` : `${base.replace(/\/+$/,'')}/api/users`;
+    return request(url);
+  },
+
+  async getCurrentUser(): Promise<User | null> {
+    if (typeof window === 'undefined' || !localStorage.getItem(TOKEN_KEY)) return null;
     try {
-      await apiRequest('/api/auth/logout', { method: 'POST' });
-    } catch (e) {
-      // Ignore errors on logout
-    }
-    setToken(null);
+      const base = getApiBase();
+      const isGateway = typeof window !== 'undefined' && (window.location.port === '81' || window.location.port === '' || window.location.hostname.includes('space-z.ai'));
+      const url = isGateway ? window.location.origin + '/api/auth/me?XTransformPort=3002' : base.replace(/\/+$/, '') + '/api/auth/me';
+      return await request(url);
+    } catch { return null; }
   },
 
-  async getCurrentUser(): Promise<User> {
-    const data = await apiRequest('/api/auth/me');
-    return data;
+  async updateUser(id: number, data: any) {
+    const base = getApiBase();
+    const isGateway = typeof window !== 'undefined' && (window.location.port === '81' || window.location.port === '' || window.location.hostname.includes('space-z.ai'));
+    const url = isGateway ? window.location.origin + '/api/users?id=' + id + '&XTransformPort=3002' : base.replace(/\/+$/, '') + '/api/users?id=' + id;
+    return request(url, { method: 'PUT', body: JSON.stringify(data) });
   },
 
-  // Shows
-  async getShows(params?: { search?: string; category?: string; limit?: number }): Promise<Show[]> {
-    const query = new URLSearchParams();
-    if (params?.search) query.set('search', params.search);
-    if (params?.category) query.set('category', params.category);
-    if (params?.limit) query.set('limit', String(params.limit));
-    const data = await apiRequest(`/api/shows?${query.toString()}`);
-    return data.shows;
+  async deleteUser(id: number) {
+    const base = getApiBase();
+    const isGateway = typeof window !== 'undefined' && (window.location.port === '81' || window.location.port === '' || window.location.hostname.includes('space-z.ai'));
+    const url = isGateway ? window.location.origin + '/api/users?id=' + id + '&XTransformPort=3002' : base.replace(/\/+$/, '') + '/api/users?id=' + id;
+    return request(url, { method: 'DELETE' });
   },
 
-  async getShow(num: number): Promise<Show> {
-    const data = await apiRequest(`/api/shows/${num}`);
-    return data.show;
-  },
-
-  async createShow(show: Partial<Show>): Promise<{ num: number }> {
-    const data = await apiRequest('/api/shows', {
-      method: 'POST',
-      body: JSON.stringify(show),
-    });
-    return data;
-  },
-
-  async updateShow(num: number, show: Partial<Show>): Promise<void> {
-    await apiRequest(`/api/shows/${num}`, {
-      method: 'PUT',
-      body: JSON.stringify(show),
-    });
-  },
-
-  async deleteShow(num: number): Promise<void> {
-    await apiRequest(`/api/shows/${num}`, { method: 'DELETE' });
-  },
-
-  // Users (admin only)
-  async getUsers(): Promise<User[]> {
-    const data = await apiRequest('/api/users');
-    return data.users;
-  },
-
-  async createUser(user: { username: string; password: string; role: string; name?: string }): Promise<void> {
-    await apiRequest('/api/users', {
-      method: 'POST',
-      body: JSON.stringify(user),
-    });
-  },
-
-  async deleteUser(id: number): Promise<void> {
-    await apiRequest(`/api/users/${id}`, { method: 'DELETE' });
-  },
-
-  async updateUser(id: number, patch: { role?: string; name?: string; password?: string }): Promise<void> {
-    await apiRequest(`/api/users/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(patch),
-    });
-  },
-
-  async changePassword(oldPassword: string, newPassword: string): Promise<void> {
-    await apiRequest('/api/auth/change-password', {
-      method: 'PUT',
-      body: JSON.stringify({ oldPassword, newPassword }),
-    });
-  },
-
-  async getHealth(): Promise<{ status: string }> {
-    const data = await apiRequest('/api/health');
-    return data;
-  },
-
-  // Stats
-  async getStats(): Promise<{ total: number; categories: Array<{ category: string; count: number }> }> {
-    return await apiRequest('/api/stats');
+  async createUser(data: any) {
+    const base = getApiBase();
+    const isGateway = typeof window !== 'undefined' && (window.location.port === '81' || window.location.port === '' || window.location.hostname.includes('space-z.ai'));
+    const url = isGateway ? `${window.location.origin}/api/users?XTransformPort=3002` : `${base.replace(/\/+$/,'')}/api/users`;
+    return request(url, { method: 'POST', body: JSON.stringify(data) });
   },
 };

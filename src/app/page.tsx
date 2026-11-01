@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
-import { api, setApiBase, getApiBase, User } from '@/lib/api';
+import { api, setApiBase, getApiBase, getShowImageUrl, User } from '@/lib/api';
 
 // ============================================
 // TYPES
@@ -31,6 +31,7 @@ interface TalkShow {
   tags?: string[];
   images?: string[];
   videos?: string[];
+  isFilm?: boolean;
 }
 
 // A "section-specific tag" — derives a small badge label from a TalkShow field
@@ -66,6 +67,7 @@ const TAG_LIBRARY: Record<string, TagSpec> = {
   materials: { id: 'materials', label: s => s.materials || null },
   colors: { id: 'colors', label: s => s.colors || null },
   lighting: { id: 'lighting', label: s => s.lighting || null },
+  film: { id: 'film', label: s => s.isFilm ? 'سریال' : null },
 };
 
 // Default tag set for the "decor" view (or any genre without its own tags).
@@ -75,7 +77,7 @@ const DEFAULT_GENRE_TAGS: TagSpec[] = [TAG_LIBRARY.style, TAG_LIBRARY.size, TAG_
 const GENRES: Genre[] = [
   {
     id: 'decor', key: 'decor', nameFa: 'دکور برنامه‌ها', name: 'Decor Analysis',
-    color: '#029048', description: 'همهٔ ۵۶۰ برنامه با تحلیل دکور و صحنه', filterFn: () => true,
+    color: '#029048', description: 'همهٔ ۵۶۰ برنامه با تحلیل دکور و صحنه', filterFn: s => !s.isFilm,
     tags: DEFAULT_GENRE_TAGS,
     presetTags: ['مدرن', 'مینیمال', 'چوب', 'تکنولوژی', 'گرم', 'لوکس', 'تاریک', 'روشن'],
     searchFields: ['name', 'summary', 'materials', 'colors'],
@@ -423,7 +425,7 @@ function getVideoPlatformInfo(url: string): { name: string; icon: string; color:
 // ============================================
 // SHOW IMAGE GALLERY — displays all images for a show in modal
 // ============================================
-function ShowImageGallery({ images, showName }: { images: string[]; showName: string }) {
+function ShowImageGallery({ images, showNum, showName }: { images: string[]; showNum: number; showName: string }) {
   const [activeIdx, setActiveIdx] = useState(0);
   const [lightbox, setLightbox] = useState<string | null>(null);
 
@@ -1590,7 +1592,7 @@ function DrawerMenu({
 }
 
 function NavIcon({ name }: { name: string }) {
-  const icons: Record<string, JSX.Element> = {
+  const icons: Record<string, React.JSX.Element> = {
     home: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />,
     grid: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />,
     plus: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />,
@@ -1943,7 +1945,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
 }
 
 function StatIcon({ name }: { name: string }) {
-  const icons: Record<string, JSX.Element> = {
+  const icons: Record<string, React.JSX.Element> = {
     film: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />,
     tag: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />,
     cloud: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />,
@@ -2791,7 +2793,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
         <div className="p-6">
           {/* Image gallery — all images, not just the cover */}
           {show.images && show.images.length > 0 && (
-            <ShowImageGallery images={show.images} showName={show.name} />
+            <ShowImageGallery images={show.images} showNum={show.num} showName={show.name} />
           )}
 
           {/* Persian description */}
@@ -2972,6 +2974,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
           )}
 
           {/* Decor details */}
+          {!show.isFilm && (
           <div>
             <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>مشخصات دکور و صحنه</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -2990,9 +2993,10 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
               </div>
             </div>
           </div>
+          )}
 
           {/* Decor summary */}
-          {show.summary && show.summary !== '—' && (
+          {!show.isFilm && show.summary && show.summary !== '—' && (
             <div className="mt-6 p-4 rounded-xl" style={{ background: `${thumb.accent}10`, border: `1px solid ${thumb.accent}25` }}>
               <h4 className="font-bold mb-2" style={{ color: '#1a2e22' }}>خلاصهٔ دکور</h4>
               <p style={{ color: '#4a5d52', lineHeight: 1.7 }}>{show.summary}</p>
@@ -3140,7 +3144,9 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
     }
     setFetching(true);
     try {
-      const res = await fetch('/api/fetch-show-info', {
+      const isGateway = typeof window !== 'undefined' && (window.location.port === '81' || window.location.port === '' || window.location.hostname.includes('space-z.ai') || window.location.port === '443');
+      const fetchUrl2 = isGateway ? `${window.location.origin}/api/fetch-show-info?XTransformPort=3000` : '/api/fetch-show-info';
+      const res = await fetch(fetchUrl2, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: fetchUrl }),
@@ -3483,7 +3489,7 @@ function FormSelect({ label, value, onChange, options }: {
 // IMAGE GALLERY EDITOR — up to 8 images per show
 // Supports both URL paste and file upload (base64 for offline storage)
 // ============================================
-function ImageGalleryEditor({ images, onChange, showToast }: {
+function ImageGalleryEditor({ images: imagesProp, onChange, showToast }: {
   images: string[];
   onChange: (imgs: string[]) => void;
   showToast: (msg: string) => void;
@@ -3491,6 +3497,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
   const [urlInput, setUrlInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Keep a ref to the latest images array so async FileReader callbacks always see current state
+  const images = Array.isArray(imagesProp) ? imagesProp : (() => { try { return JSON.parse(imagesProp as any || '[]'); } catch { return []; } })();
   const imagesRef = useRef<string[]>(images);
   imagesRef.current = images;
   const MAX_IMAGES = 8;
@@ -3743,15 +3750,16 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
 }
 
 // ============================================
-// VIDEO LINKS EDITOR — multiple video URLs per show
-// ============================================
-function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: {
+function VideoLinksEditor({ videos: videosProp, youtube, onVideosChange, onYoutubeChange, canEdit, onOpenVideoEditor }: {
   videos: string[];
   youtube: string;
   onVideosChange: (vids: string[]) => void;
   onYoutubeChange: (url: string) => void;
+  canEdit?: boolean;
+  onOpenVideoEditor?: () => void;
 }) {
   const [urlInput, setUrlInput] = useState('');
+  const videos = Array.isArray(videosProp) ? videosProp : (() => { try { return JSON.parse(videosProp as any || '[]'); } catch { return []; } })();
 
   const addVideo = () => {
     if (!urlInput.trim()) return;

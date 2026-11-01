@@ -1,100 +1,99 @@
 import { NextRequest, NextResponse } from 'next/server';
-
 export const runtime = 'nodejs';
+const OMDB_API_KEY = 'thewdb';
+const UA = 'BankResaneh/2.0 (contact@bankrasaneh.ir)';
+
+function decodeHtml(s: string): string {
+  return s.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+}
+function cleanQuery(s: string): string {
+  return (s||'').replace(/[?!]+$/,'').replace(/\(.*?\)/g,' ').replace(/[–—-]/g,' ').replace(/\s+/g,' ').trim();
+}
+async function fetchRetry(url: string, opts: any = {}, retries = 2) {
+  for (let i=0; i<=retries; i++) {
+    try { const r = await fetch(url, opts); if (r.ok) return r; if (r.status===429) { await new Promise(x=>setTimeout(x,3000*(i+1))); continue; } }
+    catch(e) { if (i===retries) throw e; await new Promise(x=>setTimeout(x,1500)); }
+  }
+  return null;
+}
 
 export async function POST(request: NextRequest) {
   try {
     const { url } = await request.json();
+    if (!url) return NextResponse.json({ error: 'URL الزامی است' }, { status: 400 });
+    const info: Record<string,string> = {};
 
-    if (!url) {
-      return NextResponse.json({ error: 'URL الزامی است' }, { status: 400 });
-    }
-
-    // Fetch the page
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept-Language': 'en-US,en;q=0.9,fa;q=0.8',
-      },
-    });
-
-    if (!res.ok) {
-      return NextResponse.json({ error: 'صفحه یافت نشد' }, { status: 404 });
-    }
-
-    const html = await res.text();
-
-    // Extract metadata from the page
-    const info: Record<string, string> = {};
-
-    // Try to get og:title
-    const ogTitle = html.match(/<meta\s+property="og:title"\s+content="([^"]+)"/i);
-    if (ogTitle) info.title = decodeHtml(ogTitle[1]);
-
-    // Try to get og:description
-    const ogDesc = html.match(/<meta\s+property="og:description"\s+content="([^"]+)"/i);
-    if (ogDesc) info.description = decodeHtml(ogDesc[1]);
-
-    // Try to get og:image
-    const ogImage = html.match(/<meta\s+property="og:image"\s+content="([^"]+)"/i);
-    if (ogImage) info.image = ogImage[1];
-
-    // Try to get page title
-    const pageTitle = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-    if (pageTitle && !info.title) info.title = decodeHtml(pageTitle[1].trim());
-
-    // For IMDb - extract more details
     if (url.includes('imdb.com')) {
-      // Rating
-      const rating = html.match(/"ratingValue"\s*:\s*"([\d.]+)"/);
-      if (rating) info.rating = rating[1];
-
-      // Genre
-      const genres = html.match(/"genre"\s*:\s*\[([^\]]+)\]/);
-      if (genres) {
-        info.genres = genres[1].replace(/"/g, '').split(',').map((g: string) => g.trim()).join('، ');
+      const imdbMatch = url.match(/tt(\d+)/);
+      if (imdbMatch) {
+        const r = await fetchRetry(`https://www.omdbapi.com/?i=tt${imdbMatch[1]}&apikey=${OMDB_API_KEY}&plot=full`, {}, 1);
+        if (r && r.ok) {
+          const d = await r.json();
+          if (d.Response==='True') {
+            if (d.Title) info.title = d.Title;
+            if (d.Plot) info.description = d.Plot;
+            if (d.Poster && d.Poster!=='N/A') info.image = d.Poster;
+            if (d.imdbRating && d.imdbRating!=='N/A') info.rating = d.imdbRating;
+            if (d.Genre) info.genres = d.Genre;
+            if (d.Year) info.year = d.Year;
+            if (d.Runtime && d.Runtime!=='N/A') info.duration = d.Runtime;
+            if (d.Director && d.Director!=='N/A') info.director = d.Director;
+            if (d.Actors && d.Actors!=='N/A') info.actors = d.Actors;
+            if (d.Country) info.country = d.Country;
+            info.imdbUrl = url;
+          }
+        }
       }
-
-      // Year
-      const year = html.match(/"datePublished"\s*:\s*"(\d{4})/);
-      if (year) info.year = year[1];
-
-      // Runtime
-      const runtime = html.match(/"duration"\s*:\s*"PT(\d+)M"/);
-      if (runtime) info.duration = `${runtime[1]} دقیقه`;
-    }
-
-    // For Wikipedia - extract first paragraph
-    if (url.includes('wikipedia.org')) {
-      const firstPara = html.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
-      if (firstPara) {
-        // Clean HTML tags
-        const cleanText = firstPara[1].replace(/<[^>]+>/g, '').replace(/\[[^\]]+\]/g, '').trim();
-        if (cleanText.length > 20) {
-          info.description = cleanText.substring(0, 500);
+      if (!info.title) {
+        const searchMatch = url.match(/[?&]q=([^&]+)/);
+        if (searchMatch) {
+          const query = cleanQuery(decodeURIComponent(searchMatch[1].replace(/\+/g,' ')));
+          if (query) {
+            const r = await fetchRetry(`https://www.omdbapi.com/?s=${encodeURIComponent(query)}&apikey=${OMDB_API_KEY}`, {}, 1);
+            if (r && r.ok) {
+              const d = await r.json();
+              if (d.Search && d.Search.length > 0) {
+                const dr = await fetchRetry(`https://www.omdbapi.com/?i=${d.Search[0].imdbID}&apikey=${OMDB_API_KEY}&plot=full`, {}, 1);
+                if (dr && dr.ok) {
+                  const dd = await dr.json();
+                  if (dd.Response==='True') {
+                    if (dd.Title) info.title = dd.Title;
+                    if (dd.Plot) info.description = dd.Plot;
+                    if (dd.Poster && dd.Poster!=='N/A') info.image = dd.Poster;
+                    if (dd.imdbRating && dd.imdbRating!=='N/A') info.rating = dd.imdbRating;
+                    if (dd.Genre) info.genres = dd.Genre;
+                    if (dd.Year) info.year = dd.Year;
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }
 
-    if (!info.title && !info.description) {
-      return NextResponse.json({ error: 'اطلاعات قابل استخراج نیست' }, { status: 404 });
+    if (url.includes('wikipedia.org')) {
+      const wikiMatch = url.match(/\/wiki\/(.+?)(?:\?|#|$)/);
+      if (wikiMatch) {
+        const pageTitle = decodeURIComponent(wikiMatch[1].replace(/_/g,' '));
+        const lang = url.match(/\/\/([a-z]{2})\.wikipedia/)?.[1] || 'en';
+        const r = await fetchRetry(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(pageTitle)}`, { headers: { 'User-Agent': UA } }, 1);
+        if (r && r.ok) {
+          const d = await r.json();
+          if (d.title) info.title = d.title;
+          if (d.extract) info.description = d.extract;
+          if (d.originalimage?.source) info.image = d.originalimage.source;
+          else if (d.thumbnail?.source) info.image = d.thumbnail.source;
+          info.wikiUrl = url;
+        }
+      }
     }
 
+    if (!info.title && !info.description && !info.image) {
+      return NextResponse.json({ error: 'اطلاعات قابل استخراج نیست' }, { status: 404 });
+    }
     return NextResponse.json({ info });
   } catch (e) {
-    console.error('Fetch error:', e);
     return NextResponse.json({ error: 'خطا در دریافت اطلاعات' }, { status: 500 });
   }
-}
-
-function decodeHtml(str: string): string {
-  return str
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
-    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)));
 }
