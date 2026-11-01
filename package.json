@@ -110,10 +110,7 @@
     "extraResources": [
       {
         "from": ".next/standalone",
-        "to": "next-service-dist",
-        "filter": [
-          "**/*"
-        ]
+        "to": "next-service-dist"
       },
       {
         "from": "mini-services/api-service",
@@ -123,13 +120,6 @@
           "package.json",
           "bankresaneh.sqlite",
           "talk-shows-data.json"
-        ]
-      },
-      {
-        "from": "public",
-        "to": "next-service-dist/public",
-        "filter": [
-          "**/*"
         ]
       },
       {
