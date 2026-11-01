@@ -1,0 +1,6 @@
+[00:00:01.054] Server  LOG     ✓ Ready in 871ms
+[00:00:04.073] Server  LOG     ○ Compiling / ...
+[00:00:10.555] Browser WARN    Image with src "/banke-rasane-logo.png" has either width or height modified, but not the other. If you use CSS to change the size of your image, also include the styles 'width: "auto"' or 'height: "auto"' to maintain the aspect ratio.
+[00:00:20.436] Browser WARN    Image with src "/banke-rasane-logo.png" has either width or height modified, but not the other. If you use CSS to change the size of your image, also include the styles 'width: "auto"' or 'height: "auto"' to maintain the aspect ratio.
+[00:00:34.224] Browser WARN    Image with src "/banke-rasane-logo.png" has either width or height modified, but not the other. If you use CSS to change the size of your image, also include the styles 'width: "auto"' or 'height: "auto"' to maintain the aspect ratio.
+[00:00:55.666] Browser WARN    Image with src "/banke-rasane-logo.png" has either width or height modified, but not the other. If you use CSS to change the size of your image, also include the styles 'width: "auto"' or 'height: "auto"' to maintain the aspect ratio.
