@@ -105,6 +105,12 @@ function addColumnIfMissing(table, column, definition) {
     console.warn(`[migration] failed to add ${table}.${column}:`, e.message);
   }
 }
+addColumnIfMissing('users', 'last_seen', 'INTEGER NOT NULL DEFAULT 0');
+addColumnIfMissing('users', 'job_title', "TEXT NOT NULL DEFAULT ''");
+addColumnIfMissing('users', 'avatar', "TEXT NOT NULL DEFAULT ''");
+addColumnIfMissing('users', 'deputy', "TEXT NOT NULL DEFAULT ''");
+addColumnIfMissing('users', 'phone', "TEXT NOT NULL DEFAULT ''");
+addColumnIfMissing('users', 'created_at', 'INTEGER NOT NULL DEFAULT 0');
 addColumnIfMissing('shows', 'image_data', 'BLOB');
 addColumnIfMissing('shows', 'image_mime', "TEXT NOT NULL DEFAULT 'image/jpeg'");
 addColumnIfMissing('shows', 'image_source', "TEXT NOT NULL DEFAULT ''");
@@ -192,7 +198,7 @@ function rowToShow(r) {
 const SHOW_COLUMNS = [
   'num', 'name', 'category', 'source', 'size', 'viewers', 'style', 'effects', 'layout',
   'elements', 'materials', 'colors', 'lighting', 'summary', 'descriptionFa',
-  'youtube', 'imdb', 'wikipedia', 'socialPost', 'images', 'videos',
+  'youtube', 'imdb', 'wikipedia', 'socialPost', 'images', 'videos', 'tags',
 ];
 function showToValues(s) {
   return [
@@ -202,6 +208,7 @@ function showToValues(s) {
     s.youtube || '', s.imdb || '', s.wikipedia || '', s.socialPost || '',
     JSON.stringify(Array.isArray(s.images) ? s.images : []),
     JSON.stringify(Array.isArray(s.videos) ? s.videos : []),
+    JSON.stringify(Array.isArray(s.tags) ? s.tags : []),
   ];
 }
 
@@ -524,7 +531,7 @@ const server = Bun.serve({
 
     // ----- Shows: create -----
     if (pathname === '/api/shows' && method === 'POST') {
-      const user = requireUser(req);
+      const user = requireRole(req, ['admin', 'editor']);
       if (!user) return json({ error: 'Unauthorized' }, 401, req);
       let body;
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
@@ -538,7 +545,7 @@ const server = Bun.serve({
 
     // ----- Shows: update -----
     if (pathname.startsWith('/api/shows/') && method === 'PUT') {
-      const user = requireUser(req);
+      const user = requireRole(req, ['admin', 'editor']);
       if (!user) return json({ error: 'Unauthorized' }, 401, req);
       const num = parseInt(pathname.slice('/api/shows/'.length));
       let body;
