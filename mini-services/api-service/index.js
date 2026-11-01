@@ -384,6 +384,9 @@ const server = Bun.serve({
 
     // ----- Fetch image from IMDb/Wikipedia -----
     if (pathname === '/api/fetch-image' && method === 'POST') {
+      const { ok, status, error } = requireRole(req, ['admin', 'editor']);
+      if (!ok) return json({ error }, status, req);
+
       let body;
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
       const num = parseInt(body?.num, 10);
