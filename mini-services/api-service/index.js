@@ -18,7 +18,7 @@ const PORT = 3002;
 // ---------------------------------------------------------------------------
 // DB setup
 // ---------------------------------------------------------------------------
-const DB_PATH = resolve(import.meta.dir, 'bankresaneh.sqlite');
+const DB_PATH = resolve(process.env.DB_PATH || join(import.meta.dir, 'bankresaneh.sqlite'));
 const db = new Database(DB_PATH, { create: true });
 db.exec('PRAGMA journal_mode = WAL;');
 
@@ -94,7 +94,7 @@ function json(body, status = 200) {
   });
 }
 
-function corsOptions() {
+function isAllowedOrigin(origin) {\n  if (!origin) return false;\n  try {\n    const parsed = new URL(origin);\n    return parsed.protocol === 'http:' &&\n      (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1');\n  } catch { return false; }\n}\n\nfunction corsOptions() {
   return new Response(null, {
     status: 204,
     headers: {
@@ -324,7 +324,7 @@ const server = Bun.serve({
       const row = db.prepare('SELECT image_data, image_mime FROM shows WHERE num = ?').get(num);
       if (!row || !row.image_data) return json({ error: 'no image for show ' + num }, 404, req);
       const origin = req.headers.get('origin') || '';
-      const corsOrigin = isAllowedOrigin(origin) ? origin : '*';
+      const corsOrigin = isAllowedOrigin(origin) ? origin : 'http://127.0.0.1:3000';
       return new Response(new Uint8Array(row.image_data), {
         status: 200,
         headers: {
@@ -402,7 +402,7 @@ const server = Bun.serve({
       db.prepare('UPDATE shows SET image_data = ?, image_mime = ?, image_source = ? WHERE num = ?').run(new Uint8Array(processed), 'image/jpeg', source, num);
       if (imdbUrl) db.prepare('UPDATE shows SET imdb = ? WHERE num = ?').run(imdbUrl, num);
       if (wikiUrl) db.prepare('UPDATE shows SET wikipedia = ? WHERE num = ?').run(wikiUrl, num);
-      return json({ success: true, source, size: processed.length }, req);
+      return json({ success: true, source, size: processed.length });
     }
 
     // ----- Auth: login -----
