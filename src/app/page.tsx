@@ -634,8 +634,10 @@ export default function Home() {
   useEffect(() => {
     // Load persisted overrides first, then merge them with the base JSON data.
     const saved = loadOverrides();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydrate persisted user edits on first mount.
     setOverrides(saved);
     // Restore custom genres saved in a previous session.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Restore user-created categories from local storage.
     setCustomGenres(loadCustomGenres());
     fetch('/talk-shows-data.json')
       .then(r => r.json())
@@ -651,6 +653,7 @@ export default function Home() {
   useEffect(() => {
     const stored = typeof window !== 'undefined' ? localStorage.getItem('bankresaneh_token') : null;
     if (!stored) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- No token means the initial auth check is complete.
       setAuthLoading(false);
       return;
     }
@@ -665,6 +668,7 @@ export default function Home() {
   // Recompute the merged list whenever overrides change (e.g. after an edit).
   useEffect(() => {
     if (baseShows.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Keep the displayed list synchronized with persisted overrides.
       setTalkShows(applyOverrides(baseShows, overrides));
     }
   }, [baseShows, overrides]);
@@ -3499,7 +3503,9 @@ function ImageGalleryEditor({ images: imagesProp, onChange, showToast }: {
   // Keep a ref to the latest images array so async FileReader callbacks always see current state
   const images = Array.isArray(imagesProp) ? imagesProp : (() => { try { return JSON.parse(imagesProp as any || '[]'); } catch { return []; } })();
   const imagesRef = useRef<string[]>(images);
-  imagesRef.current = images;
+  useEffect(() => {
+    imagesRef.current = images;
+  }, [images]);
   const MAX_IMAGES = 8;
 
   const addUrl = () => {
