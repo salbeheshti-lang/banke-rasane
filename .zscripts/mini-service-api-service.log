@@ -31,14 +31,10 @@ $ bun --hot index.js
 [seed] loading shows from /home/z/my-project/public/talk-shows-data.json
 [seed] DB has 560 shows, JSON has 560 — up to date, skipping
 [bankresaneh-api] listening on http://localhost:3002
-.serve({
-                         ^
-error: Failed to start server. Is port 3002 in use?
- syscall: "listen",
-   errno: 0,
-    code: "EADDRINUSE"
-
-      at /home/z/my-project/mini-services/api-service/index.js:337:20
+[seed] loading shows from /home/z/my-project/public/talk-shows-data.json
+[seed] DB has 560 shows, JSON has 560 — up to date, skipping
+[bankresaneh-api] listening on http://localhost:3002
+i-service/index.js:337:20
 [migration] added users.last_seen
 [migration] added users.job_title
 [migration] added users.avatar
@@ -104,3 +100,18 @@ error: Failed to start server. Is port 3002 in use?
     code: "EADDRINUSE"
 
       at /home/z/my-project/mini-services/api-service/index.js:365:20
+[seed] loading shows from /home/z/my-project/public/talk-shows-data.json
+[seed] DB has 560 shows, JSON has 560 — up to date, skipping
+366 | seedShows();
+367 | 
+368 | // ---------------------------------------------------------------------------
+369 | // Bun server
+370 | // ---------------------------------------------------------------------------
+371 | const server = Bun.serve({
+                         ^
+error: Failed to start server. Is port 3002 in use?
+ syscall: "listen",
+   errno: 0,
+    code: "EADDRINUSE"
+
+      at /home/z/my-project/mini-services/api-service/index.js:371:20

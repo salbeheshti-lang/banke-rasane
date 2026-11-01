@@ -3773,8 +3773,9 @@ function ImdbWikiEditor({ form, setForm, editingShow, showToast }: {
     if (!editingShow) { showToast('ابتدا برنامه را ذخیره کنید'); return; }
     setFetchingImage(true);
     try {
-      const isGateway = typeof window !== 'undefined' && (window.location.port === '81' || window.location.port === '' || window.location.hostname.includes('space-z.ai') || window.location.port === '443');
-      const url = isGateway ? window.location.origin + '/api/fetch-image?XTransformPort=3002' : 'http://localhost:3002/api/fetch-image';
+      const base = getApiBase();
+      const isGateway2 = typeof window !== 'undefined' && (window.location.port === '81' || window.location.port === '' || window.location.hostname.includes('space-z.ai') || window.location.port === '443');
+      const url = isGateway2 ? window.location.origin + '/api/fetch-image?XTransformPort=3002' : base.replace(/\/+$/, '') + '/api/fetch-image';
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -5815,8 +5816,8 @@ function SettingsPasswordTab({
       showToast('هر سه فیلد را پر کنید');
       return;
     }
-    if (newPw.length < 4) {
-      showToast('رمز جدید باید حداقل ۴ کاراکتر باشد');
+    if (newPw.length < 8) {
+      showToast('رمز جدید باید حداقل ۸ کاراکتر باشد');
       return;
     }
     if (newPw !== confirmPw) {

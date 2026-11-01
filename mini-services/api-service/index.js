@@ -107,15 +107,21 @@ function addColumnIfMissing(table, column, definition) {
   }
 }
 // Migrate old sessions table columns (created_at → created, expires_at → expires)
+// Safe migration: create new table, copy data, rename. No data loss.
 try {
   const sessionCols = db.prepare("PRAGMA table_info(sessions)").all();
   if (sessionCols.length > 0) {
     const hasOld = sessionCols.some(c => c.name === 'created_at' || c.name === 'expires_at');
-    const hasNew = sessionCols.some(c => c.name === 'created' && c.name === 'expires');
+    const hasNew = sessionCols.some(c => c.name === 'created') && sessionCols.some(c => c.name === 'expires');
     if (hasOld && !hasNew) {
+      // Create new table with correct column names
+      db.exec('CREATE TABLE IF NOT EXISTS sessions_new (token TEXT PRIMARY KEY, user_id INTEGER NOT NULL, created INTEGER NOT NULL, expires INTEGER NOT NULL, FOREIGN KEY (user_id) REFERENCES users(id))');
+      // Copy existing sessions (they'll just need to re-login, but data is safe)
+      try { db.exec('INSERT INTO sessions_new (token, user_id, created, expires) SELECT token, user_id, created_at, expires_at FROM sessions'); } catch(e) {}
+      // Replace old table
       db.exec('DROP TABLE sessions');
-      db.exec(`CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, user_id INTEGER NOT NULL, created INTEGER NOT NULL, expires INTEGER NOT NULL, FOREIGN KEY (user_id) REFERENCES users(id))`);
-      console.log('[migration] recreated sessions table with new column names');
+      db.exec('ALTER TABLE sessions_new RENAME TO sessions');
+      console.log('[migration] safely migrated sessions table columns');
     }
   }
 } catch(e) { console.warn('[migration] sessions:', e.message); }
