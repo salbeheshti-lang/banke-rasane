@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
-import { api, setApiBase, getApiBase, getShowImageUrl, User } from '@/lib/api';
+import { api, setApiBase, getApiBase, getApiUrl, getShowImageUrl, User } from '@/lib/api';
 
 // ============================================
 // TYPES
@@ -800,6 +800,18 @@ export default function Home() {
 
   if (!currentUser) {
     return <LoginScreen onLogin={handleLoginSuccess} />;
+  }
+
+  if (currentUser.mustChangePassword) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(135deg, #062d1b 0%, #0b5133 55%, #062d1b 100%)' }}>
+        <div className="w-full max-w-xl rounded-2xl p-5 sm:p-7" style={{ background: 'rgba(248, 251, 248, 0.97)', boxShadow: '0 24px 70px rgba(0,0,0,0.3)' }}>
+          <h2 className="text-xl font-bold mb-2" style={{ color: '#016035' }}>تغییر رمز اولیه</h2>
+          <p className="text-sm mb-5" style={{ color: '#4a5d52', lineHeight: 1.8 }}>برای ایمن‌سازی حساب، پیش از ورود به بانک رسانه باید رمز پیش‌فرض را تغییر دهید.</p>
+          <SettingsPasswordTab currentUser={currentUser} showToast={showToast} onLogout={handleLogout} />
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -3773,15 +3785,12 @@ function ImdbWikiEditor({ form, setForm, editingShow, showToast }: {
     if (!editingShow) { showToast('ابتدا برنامه را ذخیره کنید'); return; }
     setFetchingImage(true);
     try {
-      const base = getApiBase();
-      const isGateway2 = typeof window !== 'undefined' && (window.location.port === '81' || window.location.port === '' || window.location.hostname.includes('space-z.ai') || window.location.port === '443');
-      const url = isGateway2 ? window.location.origin + '/api/fetch-image?XTransformPort=3002' : base.replace(/\/+$/, '') + '/api/fetch-image';
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ num: editingShow.num, imdb: form.imdb || '', wikipedia: form.wikipedia || '', name: form.name || '' }),
+      const data = await api.fetchImage({
+        num: editingShow.num,
+        imdb: form.imdb || '',
+        wikipedia: form.wikipedia || '',
+        name: form.name || '',
       });
-      const data = await res.json();
       if (data.error) showToast('خطا: ' + data.error);
       else showToast('عکس دریافت شد (' + data.source + ', ' + (data.size/1024).toFixed(1) + ' KB)');
     } catch (e: any) { showToast('خطا: ' + (e.message || 'نامشخص')); }
@@ -5326,10 +5335,11 @@ function SettingsModal({
   showToast: (msg: string) => void;
   onLogout: () => void;
 }) {
-  const [tab, setTab] = useState<'server' | 'users' | 'password'>('server');
+  const [tab, setTab] = useState<'server' | 'profile' | 'users' | 'password'>('server');
 
   const tabs = [
     { key: 'server' as const,   label: 'سرور',     icon: '🖥' },
+    { key: 'profile' as const,  label: 'پروفایل',  icon: '👤' },
     { key: 'users' as const,    label: 'کاربران',  icon: '👥' },
     { key: 'password' as const, label: 'رمز عبور', icon: '🔑' },
   ];
@@ -5407,6 +5417,7 @@ function SettingsModal({
         {/* Body — scrollable */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6" style={{ maxHeight: 'calc(90vh - 130px)' }}>
           {tab === 'server' && <SettingsServerTab showToast={showToast} />}
+          {tab === 'profile' && <SettingsProfileTab currentUser={currentUser} showToast={showToast} />}
           {tab === 'users' && <SettingsUsersTab currentUser={currentUser} showToast={showToast} />}
           {tab === 'password' && <SettingsPasswordTab currentUser={currentUser} showToast={showToast} onLogout={onLogout} />}
         </div>
@@ -5429,7 +5440,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
     setTesting(true);
     setTestResult(null);
     try {
-      const res = await fetch(`${url.replace(/\/+$/, '')}/api/health`, { method: 'GET' });
+      const res = await fetch(getApiUrl('api/health', url), { method: 'GET' });
       const data = await res.json();
       if (res.ok && data?.status === 'ok') {
         setTestResult({ ok: true, msg: 'اتصال برقرار شد ✓' });
@@ -5530,7 +5541,60 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
   );
 }
 
-// --- Tab 2: Users management ---
+// --- Tab 2: Profile editing ---
+function SettingsProfileTab({ currentUser, showToast }: { currentUser: User; showToast: (msg: string) => void }) {
+  const [profile, setProfile] = useState({
+    name: currentUser.name || '', jobTitle: currentUser.jobTitle || '',
+    deputy: currentUser.deputy || '', avatar: currentUser.avatar || '', phone: currentUser.phone || '',
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    api.getProfile()
+      .then(user => setProfile({
+        name: user.name || '', jobTitle: user.jobTitle || '', deputy: user.deputy || '',
+        avatar: user.avatar || '', phone: user.phone || '',
+      }))
+      .catch(e => showToast(e?.message || 'خطا در دریافت پروفایل'))
+      .finally(() => setLoading(false));
+  }, []);
+  const fields: Array<{ key: keyof typeof profile; label: string; placeholder: string; type?: string }> = [
+    { key: 'name', label: 'نام نمایشی', placeholder: 'نام و نام خانوادگی' },
+    { key: 'jobTitle', label: 'عنوان شغلی', placeholder: 'عنوان شغلی' },
+    { key: 'deputy', label: 'واحد / سمت', placeholder: 'واحد یا سمت سازمانی' },
+    { key: 'phone', label: 'شماره تماس', placeholder: 'شماره تماس', type: 'tel' },
+    { key: 'avatar', label: 'آدرس تصویر پروفایل', placeholder: 'https://...' },
+  ];
+  const save = async () => {
+    setSaving(true);
+    try { await api.updateProfile(profile); showToast('اطلاعات پروفایل ذخیره شد'); }
+    catch (e: any) { showToast(e?.message || 'خطا در ذخیره پروفایل'); }
+    finally { setSaving(false); }
+  };
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      <div>
+        <h3 className="text-base font-bold mb-1" style={{ color: '#1a2e22' }}>👤 اطلاعات پروفایل</h3>
+        <p className="text-sm" style={{ color: '#7a8a80' }}>اطلاعات نمایشی حساب کاربری خود را مدیریت کنید.</p>
+      </div>
+      {fields.map(field => (
+        <label key={field.key} className="block">
+          <span className="block text-sm font-bold mb-1.5" style={{ color: '#1a2e22' }}>{field.label}</span>
+          <input type={field.type || 'text'} dir={field.key === 'phone' || field.key === 'avatar' ? 'ltr' : 'rtl'}
+            value={profile[field.key]} onChange={e => setProfile(current => ({ ...current, [field.key]: e.target.value }))}
+            placeholder={field.placeholder} disabled={loading || saving}
+            style={{ width: '100%', background: 'white', border: '1px solid rgba(2,144,72,0.2)', borderRadius: '10px', padding: '11px 14px', color: '#1a2e22', fontSize: '14px', outline: 'none' }} />
+        </label>
+      ))}
+      <button onClick={save} disabled={loading || saving} className="px-4 py-2.5 rounded-xl text-sm font-bold"
+        style={{ background: loading || saving ? '#9ca3af' : 'linear-gradient(135deg, #029048 0%, #016035 100%)', color: 'white', opacity: loading || saving ? 0.7 : 1 }}>
+        {loading ? '⏳ در حال دریافت...' : saving ? '⏳ در حال ذخیره...' : '✓ ذخیره پروفایل'}
+      </button>
+    </div>
+  );
+}
+
+// --- Tab 3: Users management ---
 function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showToast: (msg: string) => void }) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -5556,6 +5620,10 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
   const handleCreate = async () => {
     if (!newUser.username.trim() || !newUser.password) {
       showToast('نام کاربری و رمز را وارد کنید');
+      return;
+    }
+    if (newUser.password.length < 8) {
+      showToast('رمز عبور باید حداقل ۸ کاراکتر باشد');
       return;
     }
     setCreating(true);
@@ -5656,7 +5724,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
           <input
             type="password"
             dir="ltr"
-            placeholder="رمز عبور (حداقل ۴ کاراکتر)"
+            placeholder="رمز عبور (حداقل ۸ کاراکتر)"
             value={newUser.password}
             onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
             style={{

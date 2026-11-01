@@ -60,7 +60,8 @@ db.exec(`
     job_title     TEXT NOT NULL DEFAULT '',
     avatar        TEXT NOT NULL DEFAULT '',
     deputy        TEXT NOT NULL DEFAULT '',
-    phone         TEXT NOT NULL DEFAULT ''
+    phone        TEXT NOT NULL DEFAULT '',
+    must_change_password INTEGER NOT NULL DEFAULT 0
   );
   CREATE TABLE IF NOT EXISTS sessions (
     token    TEXT PRIMARY KEY,
@@ -107,24 +108,34 @@ function addColumnIfMissing(table, column, definition) {
   }
 }
 // Migrate old sessions table columns (created_at → created, expires_at → expires)
-// Safe migration: create new table, copy data, rename. No data loss.
-try {
-  const sessionCols = db.prepare("PRAGMA table_info(sessions)").all();
-  if (sessionCols.length > 0) {
-    const hasOld = sessionCols.some(c => c.name === 'created_at' || c.name === 'expires_at');
-    const hasNew = sessionCols.some(c => c.name === 'created') && sessionCols.some(c => c.name === 'expires');
-    if (hasOld && !hasNew) {
-      // Create new table with correct column names
-      db.exec('CREATE TABLE IF NOT EXISTS sessions_new (token TEXT PRIMARY KEY, user_id INTEGER NOT NULL, created INTEGER NOT NULL, expires INTEGER NOT NULL, FOREIGN KEY (user_id) REFERENCES users(id))');
-      // Copy existing sessions (they'll just need to re-login, but data is safe)
-      try { db.exec('INSERT INTO sessions_new (token, user_id, created, expires) SELECT token, user_id, created_at, expires_at FROM sessions'); } catch(e) {}
-      // Replace old table
+// Atomic, fail-safe migration: retain the old table unless copy and validation succeed.
+{
+  const sessionCols = db.prepare('PRAGMA table_info(sessions)').all();
+  const names = new Set(sessionCols.map(c => c.name));
+  const hasLegacyColumns = names.has('created_at') || names.has('expires_at');
+  const hasCurrentColumns = names.has('created') && names.has('expires');
+  if (sessionCols.length && hasLegacyColumns && !hasCurrentColumns) {
+    if (!names.has('token') || !names.has('user_id')) throw new Error('[migration] sessions table lacks token/user_id; refusing destructive migration');
+    const createdExpr = names.has('created_at') ? 'created_at' : '0';
+    const expiresExpr = names.has('expires_at') ? 'expires_at' : '0';
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      db.exec('DROP TABLE IF EXISTS sessions_new');
+      db.exec('CREATE TABLE sessions_new (token TEXT PRIMARY KEY, user_id INTEGER NOT NULL, created INTEGER NOT NULL, expires INTEGER NOT NULL, FOREIGN KEY (user_id) REFERENCES users(id))');
+      db.exec(`INSERT INTO sessions_new (token, user_id, created, expires) SELECT token, user_id, ${createdExpr}, ${expiresExpr} FROM sessions`);
+      const oldCount = db.prepare('SELECT COUNT(*) AS count FROM sessions').get().count;
+      const newCount = db.prepare('SELECT COUNT(*) AS count FROM sessions_new').get().count;
+      if (oldCount !== newCount) throw new Error(`session migration row count mismatch: ${oldCount} -> ${newCount}`);
       db.exec('DROP TABLE sessions');
       db.exec('ALTER TABLE sessions_new RENAME TO sessions');
-      console.log('[migration] safely migrated sessions table columns');
+      db.exec('COMMIT');
+      console.log(`[migration] migrated ${newCount} sessions atomically`);
+    } catch (error) {
+      try { db.exec('ROLLBACK'); } catch {}
+      throw error;
     }
   }
-} catch(e) { console.warn('[migration] sessions:', e.message); }
+}
 
 addColumnIfMissing('users', 'name', "TEXT NOT NULL DEFAULT ''");
 addColumnIfMissing('users', 'last_seen', 'INTEGER NOT NULL DEFAULT 0');
@@ -133,6 +144,7 @@ addColumnIfMissing('users', 'avatar', "TEXT NOT NULL DEFAULT ''");
 addColumnIfMissing('users', 'deputy', "TEXT NOT NULL DEFAULT ''");
 addColumnIfMissing('users', 'phone', "TEXT NOT NULL DEFAULT ''");
 addColumnIfMissing('users', 'created_at', 'INTEGER NOT NULL DEFAULT 0');
+addColumnIfMissing('users', 'must_change_password', 'INTEGER NOT NULL DEFAULT 0');
 addColumnIfMissing('shows', 'image_data', 'BLOB');
 addColumnIfMissing('shows', 'image_mime', "TEXT NOT NULL DEFAULT 'image/jpeg'");
 addColumnIfMissing('shows', 'image_source', "TEXT NOT NULL DEFAULT ''");
@@ -195,6 +207,7 @@ function publicUser(u, viewer) {
     createdAt: u.created_at, lastSeen: u.last_seen,
     online: u.last_seen && (nowSec() - u.last_seen) < 120,
     jobTitle: u.job_title || '', deputy: u.deputy || '', avatar: u.avatar || '',
+    mustChangePassword: !!u.must_change_password,
   };
   // Phone visible only to admins (or self)
   if (viewer && (viewer.role === 'admin' || viewer.id === u.id)) base.phone = u.phone || '';
@@ -309,8 +322,12 @@ function clearRateLimit(ip) { loginAttempts.delete(ip); }
 function seedDefaultAdmin() {
   const existing = db.prepare('SELECT COUNT(*) AS c FROM users').get();
   if (existing.c === 0) {
-    db.prepare('INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)').run('admin', sha256('admin'), 'admin', 'مدیر سیستم');
-    console.log('[seed] created default admin: admin / admin');
+    db.prepare('INSERT INTO users (username, password_hash, role, name, must_change_password) VALUES (?, ?, ?, ?, 1)')
+      .run('admin', sha256('admin'), 'admin', 'مدیر سیستم');
+    console.log('[seed] created default admin; password change is required at first login');
+  } else {
+    db.prepare('UPDATE users SET must_change_password = 1 WHERE username = ? AND password_hash = ?')
+      .run('admin', sha256('admin'));
   }
 }
 
@@ -405,7 +422,7 @@ const server = Bun.serve({
 
     // ----- Fetch image from IMDb/Wikipedia -----
     if (pathname === '/api/fetch-image' && method === 'POST') {
-      const authUser = requireUser(req);
+      const authUser = requireRole(req, ['admin', 'editor']);
       if (!authUser) return json({ error: 'Unauthorized' }, 401, req);
       let body;
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
@@ -547,13 +564,15 @@ const server = Bun.serve({
       if (!oldPassword || !newPassword) return json({ error: 'رمز قدیمی و جدید را وارد کنید' }, 400, req);
       if (newPassword.length < 8) return json({ error: 'رمز جدید باید حداقل ۸ کاراکتر باشد' }, 400, req);
       if (!verifyPassword(oldPassword, user.password_hash)) return json({ error: 'رمز فعلی نادرست است' }, 401, req);
-      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashPassword(newPassword), user.id);
+      db.prepare('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?').run(hashPassword(newPassword), user.id);
       db.prepare('DELETE FROM sessions WHERE user_id = ?').run(user.id);
       return json({ success: true }, req);
     }
 
     // ----- Shows: list -----
     if (pathname === '/api/shows' && method === 'GET') {
+      const user = requireUser(req);
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
       const rows = db.prepare('SELECT * FROM shows ORDER BY num').all();
       return json({ shows: rows.map(rowToShow) }, req);
     }
@@ -613,10 +632,12 @@ const server = Bun.serve({
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
       const username = String(body?.username || '').trim();
       const password = String(body?.password || '');
-      if (!username || !password) return json({ error: 'نام کاربری و رمز required' }, 400, req);
+      if (!username || !password) return json({ error: 'نام کاربری و رمز عبور را وارد کنید' }, 400, req);
+      if (password.length < 8) return json({ error: 'رمز عبور باید حداقل ۸ کاراکتر باشد' }, 400, req);
+      const role = ['admin', 'editor', 'viewer'].includes(body.role) ? body.role : 'viewer';
       const existing = getUserByUsername(username);
       if (existing) return json({ error: 'نام کاربری تکراری' }, 409, req);
-      const result = db.prepare('INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)').run(username, hashPassword(password), body.role || 'viewer', body.name || '');
+      const result = db.prepare('INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)').run(username, hashPassword(password), role, body.name || '');
       return json(publicUser(getUserById(result.lastInsertRowid), admin), req);
     }
 
