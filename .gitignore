@@ -1,2 +1,41 @@
-skills/
+# Dependencies and local tooling
 node_modules/
+skills/
+
+# Next.js build output
+.next/
+out/
+build/
+dist/
+
+# Electron artifacts
+release/
+*.asar
+*.exe
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Local databases and SQLite transient files
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Logs and runtime files
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+bun-debug.log*
+--timeout
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
