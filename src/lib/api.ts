@@ -80,7 +80,16 @@ export const api = {
     return data;
   },
 
-  logout() {
+  async logout() {
+    const token = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;
+    if (token) {
+      try {
+        const base = getApiBase();
+        const isGateway = typeof window !== 'undefined' && (window.location.port === '81' || window.location.port === '' || window.location.hostname.includes('space-z.ai'));
+        const url = isGateway ? window.location.origin + '/api/auth/logout?XTransformPort=3002' : base.replace(/\/+$/, '') + '/api/auth/logout';
+        await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify({ token }) });
+      } catch {}
+    }
     if (typeof window !== 'undefined') localStorage.removeItem(TOKEN_KEY);
   },
 

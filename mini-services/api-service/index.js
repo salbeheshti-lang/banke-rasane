@@ -14,7 +14,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { readFileSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 
-const PORT = 3002;
+const PORT = parseInt(process.env.PORT || '3002', 10);
 
 // ---------------------------------------------------------------------------
 // DB setup
@@ -106,6 +106,20 @@ function addColumnIfMissing(table, column, definition) {
     console.warn(`[migration] failed to add ${table}.${column}:`, e.message);
   }
 }
+// Migrate old sessions table columns (created_at → created, expires_at → expires)
+try {
+  const sessionCols = db.prepare("PRAGMA table_info(sessions)").all();
+  if (sessionCols.length > 0) {
+    const hasOld = sessionCols.some(c => c.name === 'created_at' || c.name === 'expires_at');
+    const hasNew = sessionCols.some(c => c.name === 'created' && c.name === 'expires');
+    if (hasOld && !hasNew) {
+      db.exec('DROP TABLE sessions');
+      db.exec(`CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, user_id INTEGER NOT NULL, created INTEGER NOT NULL, expires INTEGER NOT NULL, FOREIGN KEY (user_id) REFERENCES users(id))`);
+      console.log('[migration] recreated sessions table with new column names');
+    }
+  }
+} catch(e) { console.warn('[migration] sessions:', e.message); }
+
 addColumnIfMissing('users', 'name', "TEXT NOT NULL DEFAULT ''");
 addColumnIfMissing('users', 'last_seen', 'INTEGER NOT NULL DEFAULT 0');
 addColumnIfMissing('users', 'job_title', "TEXT NOT NULL DEFAULT ''");
@@ -124,6 +138,9 @@ addColumnIfMissing('shows', 'tags', "TEXT NOT NULL DEFAULT '[]'");
 // ---------------------------------------------------------------------------
 function isAllowedOrigin(origin) {
   if (!origin) return false;
+  // Check env-based additional origins
+  const extraOrigins = (process.env.CORS_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (extraOrigins.includes(origin)) return true;
   if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true;
   if (/^https?:\/\/[^/]*\.space-z\.ai(:\d+)?$/.test(origin)) return true;
   if (/^https?:\/\/[^/]*\.(lan|local)(:\d+)?$/.test(origin)) return true;
@@ -174,7 +191,7 @@ function publicUser(u, viewer) {
     jobTitle: u.job_title || '', deputy: u.deputy || '', avatar: u.avatar || '',
   };
   // Phone visible only to admins (or self)
-  if (viewer && viewer.role === 'admin') base.phone = u.phone || '';
+  if (viewer && (viewer.role === 'admin' || viewer.id === u.id)) base.phone = u.phone || '';
   return base;
 }
 
@@ -201,6 +218,7 @@ const SHOW_COLUMNS = [
   'num', 'name', 'category', 'source', 'size', 'viewers', 'style', 'effects', 'layout',
   'elements', 'materials', 'colors', 'lighting', 'summary', 'descriptionFa',
   'youtube', 'imdb', 'wikipedia', 'socialPost', 'images', 'videos', 'tags',
+  'is_film',
 ];
 function showToValues(s) {
   return [
@@ -211,6 +229,7 @@ function showToValues(s) {
     JSON.stringify(Array.isArray(s.images) ? s.images : []),
     JSON.stringify(Array.isArray(s.videos) ? s.videos : []),
     JSON.stringify(Array.isArray(s.tags) ? s.tags : []),
+    s.isFilm ? 1 : 0,
   ];
 }
 
@@ -380,6 +399,8 @@ const server = Bun.serve({
 
     // ----- Fetch image from IMDb/Wikipedia -----
     if (pathname === '/api/fetch-image' && method === 'POST') {
+      const authUser = requireUser(req);
+      if (!authUser) return json({ error: 'Unauthorized' }, 401, req);
       let body;
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
       const num = parseInt(body?.num, 10);

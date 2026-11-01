@@ -87,7 +87,25 @@ const api = {
         if ("TURBOPACK compile-time truthy", 1) localStorage.setItem(TOKEN_KEY, data.token);
         return data;
     },
-    logout () {
+    async logout () {
+        const token = ("TURBOPACK compile-time truthy", 1) ? localStorage.getItem(TOKEN_KEY) : "TURBOPACK unreachable";
+        if (token) {
+            try {
+                const base = getApiBase();
+                const isGateway = ("TURBOPACK compile-time value", "object") !== 'undefined' && (window.location.port === '81' || window.location.port === '' || window.location.hostname.includes('space-z.ai'));
+                const url = isGateway ? window.location.origin + '/api/auth/logout?XTransformPort=3002' : base.replace(/\/+$/, '') + '/api/auth/logout';
+                await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...authHeaders()
+                    },
+                    body: JSON.stringify({
+                        token
+                    })
+                });
+            } catch  {}
+        }
         if ("TURBOPACK compile-time truthy", 1) localStorage.removeItem(TOKEN_KEY);
     },
     async getShows () {

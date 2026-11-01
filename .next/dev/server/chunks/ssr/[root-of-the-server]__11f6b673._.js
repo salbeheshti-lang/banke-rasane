@@ -78,7 +78,10 @@ const api = {
         ;
         return data;
     },
-    logout () {
+    async logout () {
+        const token = ("TURBOPACK compile-time falsy", 0) ? "TURBOPACK unreachable" : null;
+        if ("TURBOPACK compile-time falsy", 0) //TURBOPACK unreachable
+        ;
         if ("TURBOPACK compile-time falsy", 0) //TURBOPACK unreachable
         ;
     },
