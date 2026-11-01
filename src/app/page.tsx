@@ -634,7 +634,6 @@ export default function Home() {
   useEffect(() => {
     // Load persisted overrides first, then merge them with the base JSON data.
     const saved = loadOverrides();
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydrate persisted user edits on first mount.
     setOverrides(saved);
     // Restore custom genres saved in a previous session.
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Restore user-created categories from local storage.
