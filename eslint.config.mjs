@@ -7,6 +7,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
+  files: ["electron/**/*.js", "scripts/**/*.cjs"],
+  rules: { "@typescript-eslint/no-require-imports": "off" },
+}, {
   rules: {
     // TypeScript rules
     "@typescript-eslint/no-explicit-any": "off",
