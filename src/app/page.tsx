@@ -634,8 +634,11 @@ export default function Home() {
   useEffect(() => {
     // Load persisted overrides first, then merge them with the base JSON data.
     const saved = loadOverrides();
+    // Hydrate browser-persisted state after client mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOverrides(saved);
     // Restore custom genres saved in a previous session.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCustomGenres(loadCustomGenres());
     fetch('/talk-shows-data.json')
       .then(r => r.json())
@@ -651,6 +654,7 @@ export default function Home() {
   useEffect(() => {
     const stored = typeof window !== 'undefined' ? localStorage.getItem('bankresaneh_token') : null;
     if (!stored) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAuthLoading(false);
       return;
     }
@@ -665,6 +669,7 @@ export default function Home() {
   // Recompute the merged list whenever overrides change (e.g. after an edit).
   useEffect(() => {
     if (baseShows.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTalkShows(applyOverrides(baseShows, overrides));
     }
   }, [baseShows, overrides]);
@@ -2006,25 +2011,24 @@ function ProgramsView({
   const [filterViewers, setFilterViewers] = useState('all');
   const [filterStyle, setFilterStyle] = useState('all');
   const [islamicOnly, setIslamicOnly] = useState(false);
-  const [serverSearchShows, setServerSearchShows] = useState<TalkShow[] | null>(null);
+  const [serverSearchResult, setServerSearchResult] = useState<{ query: string; shows: TalkShow[] } | null>(null);
 
   // Use SQLite FTS for the complete archive; retain local search as an offline/typo fallback.
   useEffect(() => {
     const query = search.trim();
-    if (genre || query.length < 2) {
-      setServerSearchShows(null);
-      return;
-    }
+    if (genre || query.length < 2) return;
     let cancelled = false;
-    setServerSearchShows(null);
     const timer = setTimeout(() => {
       api.searchShows({ query, page: 1, limit: 100 })
         .then((result) => {
           if (cancelled) return;
-          setServerSearchShows(result.shows.length ? result.shows as unknown as TalkShow[] : null);
+          setServerSearchResult({
+            query,
+            shows: result.shows as unknown as TalkShow[],
+          });
         })
         .catch(() => {
-          if (!cancelled) setServerSearchShows(null);
+          if (!cancelled) setServerSearchResult({ query, shows: [] });
         });
     }, 250);
     return () => {
@@ -2034,14 +2038,17 @@ function ProgramsView({
   }, [genre, search]);
 
   const filteredShows = useMemo(() => {
-    const useServerResults = !genre && search.trim().length >= 2 && serverSearchShows !== null;
-    let shows = [...(useServerResults ? serverSearchShows : talkShows)];
+    const currentServerResult = !genre
+      && search.trim().length >= 2
+      && serverSearchResult?.query === search.trim()
+      && serverSearchResult.shows.length > 0;
+    let shows = [...(currentServerResult ? serverSearchResult.shows : talkShows)];
     if (genre) shows = shows.filter(genre.filterFn);
     if (filterSize !== 'all') shows = shows.filter(s => s.size === filterSize);
     if (filterViewers !== 'all') shows = shows.filter(s => s.viewers === filterViewers);
     if (filterStyle !== 'all') shows = shows.filter(s => s.style === filterStyle);
     if (islamicOnly) shows = shows.filter(s => detectCountries(s).length > 0);
-    if (search && !useServerResults) {
+    if (search && !currentServerResult) {
       const q = search.toLowerCase();
       // Section-specific search: use genre.searchFields if defined, else default to name+summary+category.
       const fields: (keyof TalkShow)[] = genre?.searchFields || ['name', 'summary', 'category'];
@@ -2058,7 +2065,7 @@ function ProgramsView({
       });
     }
     return shows;
-  }, [talkShows, genre, search, filterSize, filterViewers, filterStyle, islamicOnly, serverSearchShows]);
+  }, [talkShows, genre, search, filterSize, filterViewers, filterStyle, islamicOnly, serverSearchResult]);
 
   const handleUploadSelected = () => {
     const selectedShows = filteredShows.filter(s => selectedIds.includes(s.num));
@@ -3546,7 +3553,9 @@ function ImageGalleryEditor({ images: imagesProp, onChange, showToast }: {
   // Keep a ref to the latest images array so async FileReader callbacks always see current state
   const images = Array.isArray(imagesProp) ? imagesProp : (() => { try { return JSON.parse(imagesProp as any || '[]'); } catch { return []; } })();
   const imagesRef = useRef<string[]>(images);
-  imagesRef.current = images;
+  useEffect(() => {
+    imagesRef.current = images;
+  }, [images]);
   const MAX_IMAGES = 8;
 
   const addUrl = () => {
