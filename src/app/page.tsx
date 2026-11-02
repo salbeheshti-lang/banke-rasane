@@ -2010,31 +2010,56 @@ function ProgramsView({
   const [filterViewers, setFilterViewers] = useState('all');
   const [filterStyle, setFilterStyle] = useState('all');
   const [islamicOnly, setIslamicOnly] = useState(false);
-  const [serverSearchResult, setServerSearchResult] = useState<{ query: string; shows: TalkShow[] } | null>(null);
+  const [serverSearchResult, setServerSearchResult] = useState<{
+    query: string;
+    shows: TalkShow[];
+    pagination: { page: number; limit: number; total: number; totalPages: number };
+  } | null>(null);
+  const [visibleCount, setVisibleCount] = useState(60);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  // Use SQLite FTS for the complete archive; retain local search as an offline/typo fallback.
+  // Use SQLite FTS for the complete archive; load further pages on demand.
   useEffect(() => {
     const query = search.trim();
-    if (genre || query.length < 2) return;
+    setVisibleCount(60);
+    if (genre || query.length < 2) {
+      setServerSearchResult(null);
+      return;
+    }
     let cancelled = false;
     const timer = setTimeout(() => {
       api.searchShows({ query, page: 1, limit: 100 })
         .then((result) => {
           if (cancelled) return;
-          setServerSearchResult({
-            query,
-            shows: result.shows as unknown as TalkShow[],
-          });
+          setServerSearchResult({ query, shows: result.shows as unknown as TalkShow[], pagination: result.pagination });
         })
         .catch(() => {
-          if (!cancelled) setServerSearchResult({ query, shows: [] });
+          if (!cancelled) setServerSearchResult({
+            query, shows: [], pagination: { page: 1, limit: 100, total: 0, totalPages: 0 },
+          });
         });
     }, 250);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [genre, search]);
+
+  const loadMoreSearchResults = async () => {
+    const current = serverSearchResult;
+    if (!current || loadingMore || current.pagination.page >= current.pagination.totalPages) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = current.pagination.page + 1;
+      const result = await api.searchShows({ query: current.query, page: nextPage, limit: current.pagination.limit });
+      setServerSearchResult(latest => {
+        if (!latest || latest.query !== current.query || latest.pagination.page !== current.pagination.page) return latest;
+        const known = new Set(latest.shows.map(show => show.num));
+        const additions = (result.shows as unknown as TalkShow[]).filter(show => !known.has(show.num));
+        return { query: latest.query, shows: [...latest.shows, ...additions], pagination: result.pagination };
+      });
+      setVisibleCount(count => Math.max(count, current.shows.length + (result.shows as unknown as TalkShow[]).length));
+    } catch (error: any) {
+      showToast(error?.message || 'دریافت ادامه نتایج جستجو ناموفق بود');
+    } finally { setLoadingMore(false); }
+  };
 
   const filteredShows = useMemo(() => {
     const hasCurrentServerResults = !genre
@@ -2362,7 +2387,7 @@ function ProgramsView({
         </div>
       ) : view === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredShows.slice(0, 60).map(s => (
+          {filteredShows.slice(0, visibleCount).map(s => (
             <ProgramCard
               key={s.num}
               show={s}
@@ -2380,7 +2405,7 @@ function ProgramsView({
         </div>
       ) : (
         <div className="space-y-2">
-          {filteredShows.slice(0, 60).map(s => (
+          {filteredShows.slice(0, visibleCount).map(s => (
             <ProgramListRow
               key={s.num}
               show={s}
@@ -2398,12 +2423,28 @@ function ProgramsView({
         </div>
       )}
 
-      {filteredShows.length > 60 && (
-        <div className="text-center mt-8" style={{ color: '#7a8a80' }}>
-          <p className="text-sm">
-            نمایش ۶۰ برنامه از {filteredShows.length.toLocaleString('fa-IR')} • برای مشاهده همه، جستجو را فیلتر کنید
-          </p>
+      {filteredShows.length > visibleCount && (
+        <div className="text-center mt-8">
+          <button onClick={() => setVisibleCount(count => Math.min(count + 60, filteredShows.length))}
+            className="px-5 py-2.5 rounded-xl text-sm font-bold"
+            style={{ background: 'rgba(2, 144, 72, 0.1)', color: '#016035', border: '1px solid rgba(2, 144, 72, 0.25)' }}>
+            نمایش ۶۰ برنامهٔ بعدی
+          </button>
         </div>
+      )}
+      {!genre && serverSearchResult?.query === search.trim() && serverSearchResult.pagination.page < serverSearchResult.pagination.totalPages && visibleCount >= filteredShows.length && (
+        <div className="text-center mt-4">
+          <button onClick={loadMoreSearchResults} disabled={loadingMore}
+            className="px-5 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50"
+            style={{ background: '#029048', color: 'white' }}>
+            {loadingMore ? 'در حال دریافت...' : 'دریافت نتایج بیشتر از آرشیو'}
+          </button>
+        </div>
+      )}
+      {!genre && serverSearchResult?.query === search.trim() && (
+        <p className="text-center mt-3 text-xs" style={{ color: '#7a8a80' }}>
+          نمایش {Math.min(visibleCount, filteredShows.length).toLocaleString('fa-IR')} از {serverSearchResult.pagination.total.toLocaleString('fa-IR')} نتیجه
+        </p>
       )}
     </>
   );
