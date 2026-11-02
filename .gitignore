@@ -60,3 +60,4 @@ tool-results/
 # These are created at runtime and should not be committed.
 public/uploads/
 data/
+*.sqlite
