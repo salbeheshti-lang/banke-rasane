@@ -1235,11 +1235,11 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
               disabled={loading}
               style={{
                 width: '100%',
-                background: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(52, 211, 153, 0.4)',
+                background: 'rgba(255, 255, 255, 0.96)',
+                border: '1px solid rgba(52, 211, 153, 0.5)',
                 borderRadius: '12px',
                 padding: '12px 16px',
-                color: '#f0fdf4',
+                color: '#0d2218',
                 fontSize: '15px',
                 fontFamily: 'inherit',
                 outline: 'none',
@@ -1266,11 +1266,11 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 disabled={loading}
                 style={{
                   width: '100%',
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(52, 211, 153, 0.4)',
+                  background: 'rgba(255, 255, 255, 0.96)',
+                  border: '1px solid rgba(52, 211, 153, 0.5)',
                   borderRadius: '12px',
                   padding: '12px 48px 12px 16px',
-                  color: '#f0fdf4',
+                  color: '#0d2218',
                   fontSize: '15px',
                   fontFamily: 'inherit',
                   outline: 'none',
@@ -1284,7 +1284,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 aria-label={showPassword ? 'پنهان کردن رمز' : 'نمایش رمز'}
                 disabled={loading}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-colors"
-                style={{ color: '#86efac', background: 'transparent' }}
+                style={{ color: '#0d7c4a', background: 'transparent' }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(13, 124, 74, 0.1)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
@@ -1323,10 +1323,10 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
             className="btn-enter-white group"
             style={{ marginTop: '8px' }}
           >
-            <span className="relative z-10 flex items-center gap-3 justify-center" style={{ color: '#ffffff' }}>
+            <span className="relative z-10 flex items-center gap-3 justify-center" style={{ color: '#0d7c4a' }}>
               {loading ? (
                 <>
-                  <div className="w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(255,255,255,0.35)', borderTopColor: '#ffffff' }}></div>
+                  <div className="w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(13,124,74,0.35)', borderTopColor: '#0d7c4a' }}></div>
                   <span>در حال ورود...</span>
                 </>
               ) : (
@@ -1335,7 +1335,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                   <svg
                     className="w-5 h-5 rtl-flip group-hover:-translate-x-1.5 transition-transform"
                     fill="none"
-                    stroke="#ffffff"
+                    stroke="#0d7c4a"
                     viewBox="0 0 24 24"
                     strokeWidth={2.5}
                   >

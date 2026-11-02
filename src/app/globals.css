@@ -629,6 +629,14 @@ html, body {
   color: rgba(255, 255, 255, 0.5) !important;
 }
 
+/* Login inputs have solid white backgrounds → need dark placeholders
+   so "admin" and "•••••" are visible inside the white box. */
+#login-username::placeholder,
+#login-password::placeholder {
+  color: rgba(13, 34, 24, 0.45);
+  opacity: 1;
+}
+
 /* ============================================
    LOGIN AMBIENT LIGHTS
    ============================================ */
