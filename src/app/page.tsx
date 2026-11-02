@@ -2386,18 +2386,18 @@ function UserProfileModal({ user, onClose, showToast }: {
         style={{
           maxWidth: '440px',
           maxHeight: '90vh',
-          /* Brighter glass — matches app background material */
-          background: 'linear-gradient(180deg, rgba(10, 85, 71, 0.75) 0%, rgba(0, 107, 80, 0.7) 50%, rgba(21, 158, 137, 0.65) 100%)',
-          backdropFilter: 'blur(32px) saturate(140%)',
-          WebkitBackdropFilter: 'blur(32px) saturate(140%)',
+          /* Glass matching app background — brighter */
+          background: 'linear-gradient(180deg, rgba(10, 85, 71, 0.55) 0%, rgba(0, 107, 80, 0.5) 50%, rgba(21, 158, 137, 0.45) 100%)',
+          backdropFilter: 'blur(32px) saturate(145%)',
+          WebkitBackdropFilter: 'blur(32px) saturate(145%)',
           borderRadius: '28px',
           border: '1px solid rgba(255, 255, 255, 0.25)',
-          boxShadow: '0 24px 80px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+          boxShadow: '0 24px 80px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
           overflow: 'hidden',
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Full-width banner image — bigger, text overlays on it */}
+        {/* Full-width banner image — bigger, text overlays on it, bottom fades into card */}
         <div style={{ position: 'relative', width: '100%', height: '280px', flexShrink: 0 }}>
           {avatar ? (
             <img
@@ -2415,10 +2415,10 @@ function UserProfileModal({ user, onClose, showToast }: {
               {(name || user.username).charAt(0).toUpperCase()}
             </div>
           )}
-          {/* Gradient overlay — covers bottom half for text readability */}
+          {/* Gradient overlay — bottom fades into card background */}
           <div style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0, height: '160px',
-            background: 'linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.65) 50%, rgba(0, 0, 0, 0.8) 100%)',
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: '120px',
+            background: 'linear-gradient(180deg, transparent 0%, rgba(10, 85, 71, 0.6) 50%, rgba(10, 85, 71, 0.9) 100%)',
           }} />
           {/* Top bar buttons — overlay on image */}
           <div className="flex items-center justify-between p-4" style={{ position: 'absolute', top: 0, left: 0, right: 0 }}>
@@ -4059,9 +4059,9 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
 
           {/* 🔗 Related programs — computed from allShows via findRelated */}
           {related.length > 0 && (
-            <div className="mt-6">
+            <div className="mt-6" style={{ overflow: 'visible' }}>
               <h4 className="font-bold mb-3" style={{ color: '#f0fdf4' }}>🔗 برنامه‌های مرتبط</h4>
-              <div className="flex items-center gap-3 overflow-x-auto pb-3 no-scrollbar">
+              <div className="flex items-center gap-3 overflow-x-auto pb-3" style={{ scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch' }}>
                 {related.map(r => {
                   const rThumb = getShowThumbnail(r);
                   const rDark = adjustColor(rThumb.accent, -40);
