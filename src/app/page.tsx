@@ -1345,12 +1345,12 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
     <header
       className="fixed top-0 left-0 right-0 z-40"
       style={{
-        /* Header: 2 shades darker, slightly glossy */
-        background: 'linear-gradient(90deg, rgba(2, 35, 28, 0.92) 0%, rgba(0, 50, 40, 0.88) 50%, rgba(4, 60, 48, 0.85) 100%)',
-        backdropFilter: 'blur(24px) saturate(130%)',
-        WebkitBackdropFilter: 'blur(24px) saturate(130%)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
-        boxShadow: '0 4px 18px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
+        /* Header: 2 shades darker than background, slightly glossy */
+        background: 'linear-gradient(90deg, rgba(5, 80, 65, 0.82) 0%, rgba(0, 95, 75, 0.78) 50%, rgba(8, 110, 90, 0.75) 100%)',
+        backdropFilter: 'blur(24px) saturate(135%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(135%)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+        boxShadow: '0 4px 18px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.12)',
         borderBottomLeftRadius: '30px',
         borderBottomRightRadius: '30px',
         overflow: 'hidden',

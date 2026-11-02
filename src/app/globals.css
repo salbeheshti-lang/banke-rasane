@@ -1013,10 +1013,10 @@ html, body {
   border-radius: 999px;
   font-size: 10px;
   font-weight: 700;
-  background: rgba(0, 230, 160, 0.25);
-  color: #00E6A0;
-  border: 1px solid rgba(0, 230, 160, 0.5);
-  box-shadow: 0 0 12px rgba(0, 230, 160, 0.2);
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  /* Matte white — no glow */
 }
 .analytics-mini-row {
   display: flex;
@@ -1181,8 +1181,8 @@ html, body {
 }
 .theme-dark .analytics-card-title { color: #f0fdf4; }
 .theme-dark .analytics-card-subtitle { color: rgba(167, 243, 208, 0.7); }
-.theme-dark .analytics-donut-center-num { color: #34d399; }
-.theme-dark .analytics-donut-center-label { color: rgba(167, 243, 208, 0.7); }
+.theme-dark .analytics-donut-center-num { color: rgba(255, 255, 255, 0.92); }
+.theme-dark .analytics-donut-center-label { color: rgba(255, 255, 255, 0.8); }
 .theme-dark .analytics-list-name { color: #ecfdf5; }
 .theme-dark .analytics-list-count { color: #ecfdf5; }
 .theme-dark .analytics-list-row {
