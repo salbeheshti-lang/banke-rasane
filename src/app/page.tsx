@@ -1548,12 +1548,12 @@ function DrawerMenu({
         className="fixed top-0 right-0 bottom-0 animate-drawer-slide-in flex flex-col"
         style={{
           width: 'min(340px, 88vw)',
-          /* Drawer: more liquid glass — higher blur, more transparency */
-          background: 'linear-gradient(180deg, rgba(0, 90, 72, 0.65) 0%, rgba(8, 127, 107, 0.6) 50%, rgba(22, 143, 135, 0.58) 100%)',
-          backdropFilter: 'blur(40px) saturate(150%)',
-          WebkitBackdropFilter: 'blur(40px) saturate(150%)',
-          borderLeft: '1px solid rgba(255, 255, 255, 0.35)',
-          boxShadow: '-16px 0 56px rgba(0, 30, 27, 0.3), inset 1px 0 0 rgba(255, 255, 255, 0.15)',
+          /* Drawer: same material as background but 2 shades darker */
+          background: 'linear-gradient(180deg, rgba(4, 50, 38, 0.88) 0%, rgba(0, 60, 48, 0.85) 50%, rgba(7, 90, 75, 0.82) 100%)',
+          backdropFilter: 'blur(40px) saturate(130%)',
+          WebkitBackdropFilter: 'blur(40px) saturate(130%)',
+          borderLeft: '1px solid rgba(255, 255, 255, 0.2)',
+          boxShadow: '-16px 0 56px rgba(0, 0, 0, 0.3), inset 1px 0 0 rgba(255, 255, 255, 0.1)',
           borderTopLeftRadius: '30px',
           borderBottomLeftRadius: '30px',
           overflow: 'hidden',
@@ -1905,13 +1905,13 @@ function MobileBottomNav({
         <div
           className="flex items-center justify-around no-scrollbar"
           style={{
-            /* Same emerald glass as header — blue/pink tint on right */
-            background: 'linear-gradient(90deg, rgba(0, 90, 72, 0.82) 0%, rgba(8, 127, 107, 0.78) 40%, rgba(22, 143, 135, 0.72) 65%, rgba(169, 214, 231, 0.55) 88%, rgba(230, 198, 224, 0.5) 100%)',
-            backdropFilter: 'blur(24px) saturate(140%)',
-            WebkitBackdropFilter: 'blur(24px) saturate(140%)',
-            border: '1px solid rgba(255, 255, 255, 0.3)',
+            /* Mobile nav: same material as background but 2 shades darker */
+            background: 'linear-gradient(90deg, rgba(4, 50, 38, 0.88) 0%, rgba(0, 60, 48, 0.85) 50%, rgba(7, 90, 75, 0.82) 100%)',
+            backdropFilter: 'blur(24px) saturate(130%)',
+            WebkitBackdropFilter: 'blur(24px) saturate(130%)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
             borderRadius: '30px',
-            boxShadow: '0 4px 18px rgba(0, 30, 25, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
+            boxShadow: '0 4px 18px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
             padding: '8px',
           }}
         >
@@ -2217,7 +2217,33 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                   </div>
                 ))}
               </div>
-              {/* No ranked list below — only the 5 chips */}
+              {/* Ranked list — top 5 below the strip */}
+              <div className="analytics-list-items" style={{ marginTop: '12px' }}>
+                {genreStats.slice(0, 5).map((g, i) => {
+                  const pct = totalShows > 0 ? Math.round((g.count / totalShows) * 100) : 0;
+                  return (
+                    <button
+                      key={g.genre.id}
+                      onClick={() => onGenreClick(g.genre)}
+                      className="analytics-list-row"
+                      style={{ ['--row-color' as string]: g.color }}
+                      title={g.genre.description}
+                    >
+                      <span className="analytics-list-rank">{(i + 1).toLocaleString('fa-IR')}</span>
+                      <span className="analytics-list-dot" />
+                      <span className="analytics-list-name">{g.genre.nameFa}</span>
+                      <span className="analytics-list-bar-wrap">
+                        <span
+                          className="analytics-list-bar"
+                          style={{ width: `${Math.min(pct, 100)}%` }}
+                        />
+                      </span>
+                      <span className="analytics-list-count">{g.count.toLocaleString('fa-IR')}</span>
+                      <span className="analytics-list-pct">{pct.toLocaleString('fa-IR')}٪</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>

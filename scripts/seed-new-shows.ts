@@ -11,6 +11,7 @@ import { zandanShows, ehdaShows } from './seed-data-part4';
 import { tarikhiShows, radioShows } from './seed-data-part5';
 import { rustaShows } from './seed-data-part6';
 import { ketabShows } from './seed-data-part7';
+import { sarmayeShows } from './seed-data-part8';
 import type { NewShow } from './seed-data-part1';
 
 const DB_PATH = '/home/z/my-project/mini-services/api-service/bankresaneh.sqlite';
@@ -32,6 +33,7 @@ const allNewShows: NewShow[] = [
   ...radioShows,
   ...rustaShows,
   ...ketabShows,
+  ...sarmayeShows,
 ];
 
 console.log(`📦 Total new shows to seed: ${allNewShows.length}`);
