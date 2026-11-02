@@ -10,7 +10,9 @@
     "db:push": "prisma db push --accept-data-loss",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:reset": "prisma migrate reset"
+    "db:reset": "prisma migrate reset",
+    "desktop:dir": "npm run build && electron-builder --dir",
+    "desktop:win": "npm run build && electron-builder --win nsis"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -90,7 +92,9 @@
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.5",
     "typescript": "^5",
-    "@oven/bun-windows-x64": "1.4.4"
+    "@oven/bun-windows-x64": "1.4.4",
+    "electron": "45.2.1",
+    "electron-builder": "26.18.1"
   },
   "main": "electron/main.js",
   "build": {
@@ -122,13 +126,6 @@
           "talk-shows-data.json",
           "download-images.js",
           "download-all-images.bat"
-        ]
-      },
-      {
-        "from": "electron/icons",
-        "to": "icons",
-        "filter": [
-          "**/*"
         ]
       },
       {
