@@ -1330,7 +1330,7 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack }: {
   canGoBack: boolean;
 }) {
   const viewTitles: Record<string, string> = {
-    dashboard: 'آرشیو تخصصی برنامه‌های تلویزیونی',
+    dashboard: 'مرجع جامع برنامه‌های تلویزیونی بین‌المللی',
     programs: 'همهٔ برنامه‌ها',
     genre: 'برنامه‌های ژانر',
     reports: 'گزارش‌ها',
@@ -1341,14 +1341,14 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack }: {
     <header
       className="fixed top-0 left-0 right-0 z-40"
       style={{
-        /* Glass header — dark emerald panel on layered background */
-        background: 'linear-gradient(110deg, rgba(0, 61, 43, 0.92) 0%, rgba(0, 75, 57, 0.86) 50%, rgba(12, 68, 65, 0.88) 100%)',
-        backdropFilter: 'blur(24px) saturate(150%)',
-        WebkitBackdropFilter: 'blur(24px) saturate(150%)',
-        borderBottom: '1px solid rgba(61, 223, 176, 0.32)',
-        boxShadow: '0 10px 35px rgba(0, 30, 27, 0.35), 0 0 25px rgba(0, 215, 160, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.12)',
-        borderBottomLeftRadius: '24px',
-        borderBottomRightRadius: '24px',
+        /* Thin elegant emerald glass header with subtle pink reflection on the right */
+        background: 'linear-gradient(110deg, rgba(0, 61, 48, 0.78) 0%, rgba(0, 80, 64, 0.7) 60%, rgba(0, 70, 56, 0.72) 85%, rgba(50, 30, 40, 0.55) 100%)',
+        backdropFilter: 'blur(20px) saturate(140%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(140%)',
+        borderBottom: '1px solid rgba(84, 217, 192, 0.22)',
+        boxShadow: '0 4px 18px rgba(0, 30, 25, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
+        borderBottomLeftRadius: '18px',
+        borderBottomRightRadius: '18px',
         overflow: 'hidden',
       }}
     >
@@ -1996,6 +1996,34 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
   const TOP_GENRES = genreStats.slice(0, 12);                // top 12 in donut
   const OTHERS_COUNT = genreStats.slice(12).reduce((s, x) => s + x.count, 0);
 
+  // Default: top 4 genres — initialize once with useState lazy initializer
+  const [selectedGenreIds, setSelectedGenreIds] = useState<string[]>(() => {
+    // Will be set after first render when genreStats is available
+    return [];
+  });
+  const [showGenrePicker, setShowGenrePicker] = useState(false);
+  const STRIP_COUNT = 4;
+
+  // Use memo for default selection — computed from genreStats
+  const defaultGenreIds = useMemo(
+    () => genreStats.slice(0, STRIP_COUNT).map(g => g.genre.id),
+    [genreStats]
+  );
+
+  useEffect(() => {
+    if (selectedGenreIds.length === 0 && defaultGenreIds.length > 0) {
+      setSelectedGenreIds(defaultGenreIds);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultGenreIds]);
+
+  const stripGenres = useMemo(() => {
+    return selectedGenreIds
+      .map(id => genreStats.find(g => g.genre.id === id))
+      .filter((x): x is NonNullable<typeof x> => x !== undefined)
+      .slice(0, STRIP_COUNT);
+  }, [selectedGenreIds, genreStats]);
+
   const donutSegments = useMemo(() => {
     const segs: { color: string; dash: number; offset: number; pct: number }[] = [];
     let acc = 0;
@@ -2021,7 +2049,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
     <>
       <header className="mb-8 animate-fade-in">
         <div className="flex items-center gap-3 mb-2 flex-wrap">
-          <h1 className="text-3xl font-bold" style={{ color: '#1a2e1a' }}>آرشیو تخصصی برنامه‌های تلویزیونی</h1>
+          <h1 className="text-3xl font-bold" style={{ color: '#1a2e1a' }}>مرجع جامع برنامه‌های تلویزیونی بین‌المللی</h1>
           <span
             className="text-sm px-3 py-1 rounded-full"
             style={{ background: 'rgba(13, 124, 74, 0.1)', color: '#0d7c4a' }}
@@ -2105,46 +2133,54 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                 </div>
               </div>
 
-              {/* Mini stats row */}
+              {/* Mini stats row — only 2 stats (no "پوشش" / no "آپلود شده") */}
               <div className="analytics-mini-row">
-                <div className="analytics-mini-stat" style={{ ['--mini-color' as string]: '#34d399' }}>
+                <div className="analytics-mini-stat" style={{ ['--mini-color' as string]: '#54D9C0' }}>
+                  <div className="analytics-mini-num">{totalShows.toLocaleString('fa-IR')}</div>
+                  <div className="analytics-mini-label">کل برنامه‌ها</div>
+                </div>
+                <div className="analytics-mini-divider" />
+                <div className="analytics-mini-stat" style={{ ['--mini-color' as string]: '#22B99A' }}>
+                  <div className="analytics-mini-num">{totalGenres.toLocaleString('fa-IR')}</div>
+                  <div className="analytics-mini-label">ژانرها</div>
+                </div>
+                <div className="analytics-mini-divider" />
+                <div className="analytics-mini-stat" style={{ ['--mini-color' as string]: '#E98BB8' }}>
                   <div className="analytics-mini-num">{withImages.toLocaleString('fa-IR')}</div>
                   <div className="analytics-mini-label">با تصویر</div>
-                </div>
-                <div className="analytics-mini-divider" />
-                <div className="analytics-mini-stat" style={{ ['--mini-color' as string]: '#60a5fa' }}>
-                  <div className="analytics-mini-num">{uploadedCount.toLocaleString('fa-IR')}</div>
-                  <div className="analytics-mini-label">آپلود شده</div>
-                </div>
-                <div className="analytics-mini-divider" />
-                <div className="analytics-mini-stat" style={{ ['--mini-color' as string]: '#f472b6' }}>
-                  <div className="analytics-mini-num">{uploadedPct.toLocaleString('fa-IR')}٪</div>
-                  <div className="analytics-mini-label">پوشش</div>
                 </div>
               </div>
             </div>
 
-            {/* ----- HORIZONTAL GENRE STRIP — 5 visible, scrollable, selectable ----- */}
+            {/* ----- HORIZONTAL GENRE STRIP — 4 visible, selectable, + button to add more ----- */}
             <div className="analytics-list-col">
               <div className="analytics-list-header">
-                <span>ژانرها</span>
-                <span className="analytics-list-header-count">
-                  {totalGenres.toLocaleString('fa-IR')} دسته
-                </span>
+                <span>ژانرهای منتخب</span>
+                <button
+                  onClick={() => setShowGenrePicker(true)}
+                  className="analytics-list-header-count"
+                  style={{
+                    cursor: 'pointer',
+                    background: 'rgba(84, 217, 192, 0.18)',
+                    color: '#54D9C0',
+                    border: '1px solid rgba(84, 217, 192, 0.3)',
+                  }}
+                  title="انتخاب ژانرهای دیگر"
+                >
+                  ⚙ تنظیم
+                </button>
               </div>
-              {/* Horizontal scrollable strip of genre chips — 5 visible at a time */}
+              {/* Horizontal strip — exactly 4 chips */}
               <div
                 className="analytics-genre-strip"
                 style={{
-                  display: 'flex',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(4, 1fr)',
                   gap: '8px',
-                  overflowX: 'auto',
-                  paddingBottom: '8px',
-                  scrollbarWidth: 'thin',
-                  scrollSnapType: 'x mandatory',
+                  overflow: 'hidden',
                 }}
               >
-                {genreStats.map((g, i) => {
+                {stripGenres.map((g, i) => {
                   const pct = totalShows > 0 ? Math.round((g.count / totalShows) * 100) : 0;
                   return (
                     <button
@@ -2153,24 +2189,42 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                       className="analytics-genre-chip"
                       style={{
                         ['--row-color' as string]: g.color,
-                        flex: '0 0 auto',
-                        scrollSnapAlign: 'start',
+                        flexDirection: 'column',
+                        alignItems: 'stretch',
+                        gap: '4px',
+                        padding: '10px 8px',
                       }}
                       title={g.genre.description}
                     >
                       <span className="analytics-genre-chip-rank">
                         {(i + 1).toLocaleString('fa-IR')}
                       </span>
-                      <span className="analytics-genre-chip-dot" />
-                      <span className="analytics-genre-chip-info">
-                        <span className="analytics-genre-chip-name">{g.genre.nameFa}</span>
-                        <span className="analytics-genre-chip-meta">
-                          {g.count.toLocaleString('fa-IR')} برنامه • {pct.toLocaleString('fa-IR')}٪
-                        </span>
+                      <span className="analytics-genre-chip-name" style={{ fontSize: '11px', maxWidth: 'none', textAlign: 'center' }}>
+                        {g.genre.nameFa}
+                      </span>
+                      <span className="analytics-genre-chip-meta" style={{ textAlign: 'center' }}>
+                        {g.count.toLocaleString('fa-IR')} ({pct.toLocaleString('fa-IR')}٪)
                       </span>
                     </button>
                   );
                 })}
+                {/* Empty placeholder slots if fewer than 4 */}
+                {Array.from({ length: Math.max(0, STRIP_COUNT - stripGenres.length) }).map((_, i) => (
+                  <div
+                    key={`empty-${i}`}
+                    className="analytics-genre-chip"
+                    style={{
+                      opacity: 0.4,
+                      cursor: 'default',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      padding: '10px 8px',
+                      background: 'rgba(255, 255, 255, 0.03)',
+                    }}
+                  >
+                    <span className="analytics-genre-chip-name" style={{ fontSize: '11px', opacity: 0.5 }}>خالی</span>
+                  </div>
+                ))}
               </div>
               {/* Ranked list — top 8 below the strip */}
               <div className="analytics-list-items" style={{ marginTop: '12px' }}>
@@ -2203,6 +2257,96 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
           </div>
         </div>
       </div>
+
+      {/* Genre picker modal — lets user change which genres are shown in the strip */}
+      {showGenrePicker && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(4px)' }}
+          onClick={() => setShowGenrePicker(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'linear-gradient(135deg, rgba(7, 55, 48, 0.95) 0%, rgba(10, 70, 60, 0.92) 100%)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(84, 217, 192, 0.3)',
+              borderRadius: '20px',
+              padding: '24px',
+              maxWidth: '480px',
+              width: '100%',
+              maxHeight: '70vh',
+              overflowY: 'auto',
+              boxShadow: '0 12px 40px rgba(0, 30, 25, 0.4)',
+            }}
+          >
+            <h3 style={{ color: '#f0fdf4', marginBottom: '8px', fontWeight: 800 }}>
+              انتخاب ژانرهای نمایش داده‌شده
+            </h3>
+            <p style={{ color: '#7ba8a0', fontSize: '12px', marginBottom: '16px' }}>
+              حداکثر {STRIP_COUNT.toLocaleString('fa-IR')} ژانر را برای نمایش در نوار افقی انتخاب کنید
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+              {genreStats.map(g => {
+                const checked = selectedGenreIds.includes(g.genre.id);
+                return (
+                  <button
+                    key={g.genre.id}
+                    onClick={() => {
+                      setSelectedGenreIds(prev => {
+                        if (prev.includes(g.genre.id)) {
+                          return prev.filter(id => id !== g.genre.id);
+                        }
+                        if (prev.length >= STRIP_COUNT) return prev; // Max limit
+                        return [...prev, g.genre.id];
+                      });
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '10px 12px',
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      background: checked ? `rgba(84, 217, 192, 0.18)` : 'rgba(255, 255, 255, 0.04)',
+                      border: checked ? `1px solid ${g.color}` : '1px solid rgba(255, 255, 255, 0.08)',
+                      color: '#f0fdf4',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      textAlign: 'right',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: g.color, flexShrink: 0 }} />
+                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {g.genre.nameFa}
+                    </span>
+                    <span style={{ fontSize: '11px', opacity: 0.7 }}>
+                      {g.count.toLocaleString('fa-IR')}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={() => setShowGenrePicker(false)}
+              style={{
+                marginTop: '16px',
+                width: '100%',
+                padding: '10px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
+                color: 'white',
+                fontWeight: 700,
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              ✓ تأیید
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <h2 className="text-xl font-bold" style={{ color: '#1a2e1a' }}>همهٔ ژانرها</h2>
@@ -2249,10 +2393,10 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                 <div
                   className="w-14 h-14 rounded-2xl flex items-center justify-center"
                   style={{
-                    /* Clean icon — subtle tint only, no glow */
-                    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                    color: g.color,
-                    border: `1px solid ${g.color}55`,
+                    /* Colored icon container — vibrant, no glow */
+                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                    color: '#ffffff',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
                   }}
                 >
                   <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -5241,7 +5385,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
                   </svg>
                 </div>
                 <h3 className="text-xl font-black mb-2" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.4)' }}>گزارش جامع آرشیو برنامه‌های تلویزیونی</h3>
-                <p className="text-xs" style={{ color: 'rgba(134, 239, 172, 0.8)' }}>بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی</p>
+                <p className="text-xs" style={{ color: 'rgba(134, 239, 172, 0.8)' }}>بانک رسانه — مرجع جامع برنامه‌های تلویزیونی بین‌المللی</p>
                 <div
                   className="flex justify-center gap-4 mt-4 mx-auto"
                   style={{
