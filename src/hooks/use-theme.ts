@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 type Theme = 'light' | 'dark';
 
 export function useTheme() {
-  const [theme, setThemeState] = useState<Theme>('light');
+  const [theme, setThemeState] = useState<Theme>('dark');
 
   function applyTheme(t: Theme) {
     if (typeof document !== 'undefined') {
@@ -20,7 +20,7 @@ export function useTheme() {
         applyTheme(saved);
         Promise.resolve().then(() => setThemeState(saved));
       } else {
-        applyTheme('light');
+        applyTheme('dark');
       }
     } catch {}
   }, []);
@@ -39,7 +39,7 @@ export function useTheme() {
 export const themeNoFlashScript = `
 (function() {
   try {
-    var t = localStorage.getItem('bankresaneh_theme') || 'light';
+    var t = localStorage.getItem('bankresaneh_theme') || 'dark';
     document.documentElement.setAttribute('data-theme', t);
     if (t === 'dark') document.documentElement.className = 'theme-dark';
   } catch(e) {}

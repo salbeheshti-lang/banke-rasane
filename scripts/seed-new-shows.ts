@@ -7,6 +7,9 @@ import { resolve } from 'node:path';
 import { allNewShows as part1 } from './seed-data-part1';
 import { polisiShows, ramazanShows } from './seed-data-part2';
 import { safarShows, madreseShows, naghdShows, ghanunShows, pakhshShows, jasoosiShows } from './seed-data-part3';
+import { zandanShows, ehdaShows } from './seed-data-part4';
+import { tarikhiShows, radioShows } from './seed-data-part5';
+import { rustaShows } from './seed-data-part6';
 import type { NewShow } from './seed-data-part1';
 
 const DB_PATH = '/home/z/my-project/mini-services/api-service/bankresaneh.sqlite';
@@ -22,6 +25,11 @@ const allNewShows: NewShow[] = [
   ...ghanunShows,
   ...pakhshShows,
   ...jasoosiShows,
+  ...zandanShows,
+  ...ehdaShows,
+  ...tarikhiShows,
+  ...radioShows,
+  ...rustaShows,
 ];
 
 console.log(`📦 Total new shows to seed: ${allNewShows.length}`);

@@ -353,6 +353,47 @@ const GENRES: Genre[] = [
     presetTags: ['جاسوسی', 'مستند', 'اطلاعاتی', 'جنگ سرد', 'عملیات'],
     searchFields: ['name', 'summary', 'tags'],
   },
+  // ----- 5 more new categories (zandan, ehda, tarikhi, radio, rusta) -----
+  {
+    id: 'zandan', key: 'zandan', nameFa: 'زندان', name: 'Prison',
+    color: '#4b5563', description: '۱۷ برنامه — مستند و سریال زندان',
+    filterFn: s => s.category === 'زندان',
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting],
+    presetTags: ['زندان', 'مستند', 'سریال', 'اعدام', 'اصلاح'],
+    searchFields: ['name', 'summary', 'tags'],
+  },
+  {
+    id: 'ehda', key: 'ehda', nameFa: 'اهدای عضو', name: 'Organ Donation',
+    color: '#dc2626', description: '۶۰ برنامه — سریال و فیلم پیوند اعضا',
+    filterFn: s => s.category === 'اهدای عضو',
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
+    presetTags: ['اهدای عضو', 'پزشکی', 'پیوند', 'بیمارستان', 'سریال', 'فیلم'],
+    searchFields: ['name', 'summary', 'tags'],
+  },
+  {
+    id: 'tarikhi', key: 'tarikhi', nameFa: 'تاریخی', name: 'Historical',
+    color: '#b45309', description: '۱۵ برنامه — مستند و واقع‌نمای تاریخی',
+    filterFn: s => s.category === 'تاریخی',
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.materials],
+    presetTags: ['تاریخی', 'مستند', 'واقع‌نما', 'بازسازی', 'تمدن'],
+    searchFields: ['name', 'summary', 'tags'],
+  },
+  {
+    id: 'radio', key: 'radio', nameFa: 'رادیو تصویری', name: 'Radio & Visual Media',
+    color: '#7c3aed', description: '۵۰ برنامه — رادیو تصویری، پادکست، تاک‌شو',
+    filterFn: s => s.category === 'رادیو تصویری',
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
+    presetTags: ['رادیو', 'پادکست', 'تاک‌شو', 'موسیقی', 'خبری', 'طنز'],
+    searchFields: ['name', 'summary', 'tags'],
+  },
+  {
+    id: 'rusta', key: 'rusta', nameFa: 'روستا', name: 'Rural & Village',
+    color: '#65a30d', description: '۹۵ برنامه — مستند و رئالیتی روستایی و کشاورزی',
+    filterFn: s => s.category === 'روستا',
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
+    presetTags: ['روستا', 'کشاورزی', 'مزرعه', 'طبیعت', 'دامداری', 'واقع‌نما'],
+    searchFields: ['name', 'summary', 'tags'],
+  },
 ];
 
 // ============================================
@@ -1992,12 +2033,6 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
           {/* Header */}
           <div className="analytics-card-header">
             <div className="analytics-card-header-left">
-              <div className="analytics-card-icon-badge">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
-                </svg>
-              </div>
               <div>
                 <div className="analytics-card-eyebrow">
                   <span>بانک رسانه</span>

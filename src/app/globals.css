@@ -1145,9 +1145,12 @@ html, body {
   box-shadow: 0 0 8px color-mix(in srgb, var(--row-color, #00E5EF) 25%, transparent);
 }
 .theme-dark .analytics-card {
-  background: linear-gradient(135deg, rgba(20, 35, 25, 0.85) 0%, rgba(15, 28, 20, 0.9) 100%);
-  border-color: rgba(16, 185, 129, 0.22);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  /* 2-3 shades lighter than page background (#0d1f17) — translucent teal glass */
+  background: linear-gradient(135deg, rgba(35, 60, 45, 0.85) 0%, rgba(28, 50, 38, 0.92) 100%);
+  border-color: rgba(16, 185, 129, 0.28);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 .theme-dark .analytics-card-title { color: #f0fdf4; }
 .theme-dark .analytics-card-subtitle { color: rgba(167, 243, 208, 0.7); }
