@@ -50,63 +50,22 @@
    Dark theme is the toggle option.
    ============================================ */
 :root {
-  /* Accent — dark green primary, emerald bright for dark surfaces */
+  /* ===== LIGHT THEME (default) — emerald gradient + glass cards =====
+     This is the "روشن" theme — the green/teal gradient with vibrant glass
+     stat cards that we finalized today. */
   --accent: #0d7c4a;
   --accent-bright: #10b981;
   --accent-hover: #0a6b40;
   --accent-dark: #065f3a;
 
-  /* App background — warm cream with subtle olive depth */
-  --bg-deep: #f5f3ed;
-  --bg-mid: #e8e4d8;
-
-  /* Glass surfaces (light) */
-  --glass-bg: rgba(255, 255, 255, 0.85);
-  --glass-bg-strong: rgba(255, 255, 255, 0.9);
-  --glass-bg-modal: rgba(255, 255, 255, 0.95);
-  --glass-bg-drawer: rgba(240, 238, 230, 0.85);
-  --glass-bg-topbar: rgba(245, 243, 237, 0.85);
-  --glass-border: rgba(13, 124, 74, 0.12);
-  --glass-border-strong: rgba(13, 124, 74, 0.25);
-  --glass-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, transparent 50%);
-
-  /* Text — dark green primary, olive secondary, warm gray muted */
-  --text-primary: #1a2e1a;
-  --text-secondary: #5a6b4a;
-  --text-muted: #8a8a7a;
-
-  /* Inputs — white glass */
-  --input-bg: rgba(255, 255, 255, 0.8);
-  --input-border: rgba(13, 124, 74, 0.2);
-
-  /* Misc */
-  --background: #f5f3ed;
-  --foreground: #1a2e1a;
-
-  /* Card-accent — used by stat cards (set inline per card) */
-  --card-accent-color: #0d7c4a;
-  /* Genre-color — used by genre cards (dark base + tint overlay) */
-  --genre-color: #10b981;
-
-  /* Analytics card — light theme: solid white glass with subtle green tint.
-     Was only defined in .theme-dark, so on light theme the card fell back to
-     transparent and looked washed-out / faded. */
-  --analytics-bg: linear-gradient(135deg,
-    rgba(255, 255, 255, 0.92) 0%,
-    rgba(248, 252, 250, 0.88) 50%,
-    rgba(240, 252, 244, 0.90) 100%);
-  --analytics-border: rgba(13, 124, 74, 0.18);
-}
-
-/* Dark theme override — applied via .theme-dark on <html> */
-.theme-dark {
-  /* ===== Premium Emerald Glassmorphism palette v2 ===== */
-  /* Background: emerald (left) → blue → pink (right) */
+  /* Background colors used by various gradient vars */
   --bg-start: #003F34;
   --bg-emerald: #00634F;
   --bg-mid-green: #078E7D;
   --bg-blue: #54BBD0;
   --bg-pink: #DDBDDC;
+  --bg-deep: #0A5547;
+  --bg-mid: #007A5E;
 
   /* Header colors */
   --header-base: #087F6B;
@@ -121,7 +80,7 @@
   --glass-tint-blue: #B5DDF3;
   --glass-tint-pink: #EBC9E3;
 
-  /* Glass surfaces */
+  /* Glass surfaces — translucent on gradient background */
   --glass-bg: rgba(217, 242, 238, 0.15);
   --glass-bg-strong: rgba(217, 242, 238, 0.22);
   --glass-bg-modal: rgba(7, 40, 35, 0.92);
@@ -131,6 +90,7 @@
   --glass-border-strong: rgba(255, 255, 255, 0.5);
   --glass-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, transparent 50%);
 
+  /* Text — light on the dark-green gradient */
   --text-primary: #f0fdf4;
   --text-secondary: #99f6e4;
   --text-muted: #7ba8a0;
@@ -148,9 +108,12 @@
       #3A9DB0 100%);
   --foreground: #f0fdf4;
 
-  /* Analytics card: vibrant glass — more alive, more saturated tints.
-     Previously 0.22-0.28 opacity → too transparent, looked washed out.
-     Upped to 0.45-0.55 so the card has a visible glass surface. */
+  /* Card-accent — used by stat cards (set inline per card) */
+  --card-accent-color: #0d7c4a;
+  /* Genre-color — used by genre cards (dark base + tint overlay) */
+  --genre-color: #10b981;
+
+  /* Analytics card: vibrant glass — 0.45-0.55 opacity for visible surface */
   --analytics-bg: linear-gradient(135deg,
     rgba(180, 240, 220, 0.55) 0%,
     rgba(34, 185, 154, 0.45) 30%,
@@ -160,6 +123,84 @@
 
   /* Genre card: same emerald glass, slightly darker */
   --genre-card-bg: linear-gradient(135deg, rgba(7, 55, 48, 0.55) 0%, rgba(10, 70, 60, 0.45) 100%);
+}
+
+/* ============================================
+   DARK THEME — applied via .theme-dark on <html>
+   Truly dark: deep charcoal/navy background, dark glass cards.
+   This is the "تیره" theme — darker than the default green gradient.
+   ============================================ */
+.theme-dark {
+  /* Accent stays emerald, but brighter for the darker backdrop */
+  --accent: #10b981;
+  --accent-bright: #34d399;
+  --accent-hover: #059669;
+  --accent-dark: #047857;
+
+  /* Background colors — deep midnight */
+  --bg-start: #050810;
+  --bg-emerald: #0a0f1c;
+  --bg-mid-green: #0d1424;
+  --bg-blue: #111a2e;
+  --bg-pink: #1a1228;
+  --bg-deep: #050810;
+  --bg-mid: #0a0f1c;
+
+  /* Header colors — dark with subtle emerald tint */
+  --header-base: #0d1424;
+  --header-left: #050810;
+  --header-center: #0f1a2e;
+  --header-right: #1a2540;
+  --header-right-end: #251a35;
+
+  /* Glass card tints — very dark */
+  --glass-base: #131a2b;
+  --glass-tint-green: #0d3a30;
+  --glass-tint-blue: #1a2540;
+  --glass-tint-pink: #2a1a35;
+
+  /* Glass surfaces — dark, semi-transparent on midnight background */
+  --glass-bg: rgba(20, 28, 45, 0.55);
+  --glass-bg-strong: rgba(25, 35, 55, 0.70);
+  --glass-bg-modal: rgba(8, 12, 22, 0.95);
+  --glass-bg-drawer: rgba(5, 8, 16, 0.92);
+  --glass-bg-topbar: rgba(10, 15, 28, 0.85);
+  --glass-border: rgba(80, 120, 160, 0.25);
+  --glass-border-strong: rgba(120, 160, 200, 0.40);
+  --glass-shine: linear-gradient(180deg, rgba(80, 120, 160, 0.10) 0%, transparent 50%);
+
+  /* Text — bright on dark background */
+  --text-primary: #e8eef5;
+  --text-secondary: #94a8c0;
+  --text-muted: #6b7a92;
+  --input-bg: rgba(20, 28, 45, 0.6);
+  --input-border: rgba(80, 120, 160, 0.3);
+
+  /* Background: deep midnight with subtle emerald glow */
+  --background:
+    radial-gradient(ellipse 50% 40% at 20% 10%, rgba(16, 185, 129, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 80% 90%, rgba(120, 80, 160, 0.06) 0%, transparent 65%),
+    linear-gradient(135deg,
+      #050810 0%,
+      #0a0f1c 35%,
+      #0d1424 65%,
+      #111a2e 100%);
+  --foreground: #e8eef5;
+
+  /* Card-accent — brighter emerald on dark */
+  --card-accent-color: #10b981;
+  --genre-color: #34d399;
+
+  /* Analytics card — dark glass with subtle emerald tint */
+  --analytics-bg: linear-gradient(135deg,
+    rgba(20, 35, 50, 0.65) 0%,
+    rgba(15, 50, 45, 0.55) 30%,
+    rgba(25, 40, 65, 0.55) 65%,
+    rgba(35, 25, 50, 0.65) 100%);
+  --analytics-border: rgba(80, 120, 160, 0.35);
+
+  /* Genre card — dark */
+  --genre-card-bg: linear-gradient(135deg, rgba(15, 25, 40, 0.75) 0%, rgba(20, 35, 55, 0.65) 100%);
 }
 
 * { box-sizing: border-box; }

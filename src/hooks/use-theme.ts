@@ -4,12 +4,15 @@ import { useEffect, useState } from 'react';
 type Theme = 'light' | 'dark';
 
 export function useTheme() {
-  const [theme, setThemeState] = useState<Theme>('dark');
+  // Default to 'light' (the emerald gradient theme we finalized today).
+  const [theme, setThemeState] = useState<Theme>('light');
 
   function applyTheme(t: Theme) {
     if (typeof document !== 'undefined') {
-      document.documentElement.setAttribute('data-theme', t);
+      // Light = no class on <html> (uses :root defaults)
+      // Dark  = 'theme-dark' class on <html>
       document.documentElement.className = t === 'dark' ? 'theme-dark' : '';
+      document.documentElement.setAttribute('data-theme', t);
     }
   }
 
@@ -20,7 +23,7 @@ export function useTheme() {
         applyTheme(saved);
         Promise.resolve().then(() => setThemeState(saved));
       } else {
-        applyTheme('dark');
+        applyTheme('light');
       }
     } catch {}
   }, []);
@@ -39,13 +42,13 @@ export function useTheme() {
 export const themeNoFlashScript = `
 (function() {
   try {
-    var t = localStorage.getItem('bankresaneh_theme') || 'dark';
-    if (t === 'light') {
-      document.documentElement.className = '';
-      document.documentElement.setAttribute('data-theme', 'light');
-    } else {
+    var t = localStorage.getItem('bankresaneh_theme') || 'light';
+    if (t === 'dark') {
       document.documentElement.className = 'theme-dark';
       document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+      document.documentElement.className = '';
+      document.documentElement.setAttribute('data-theme', 'light');
     }
   } catch(e) {}
 })();
