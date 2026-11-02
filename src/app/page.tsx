@@ -1985,6 +1985,10 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
   const [featuredNums, setFeaturedNums] = useState<number[]>([]);
   const [showPicker, setShowPicker] = useState(false);
   const [search, setSearch] = useState('');
+  const [activePage, setActivePage] = useState(0);
+
+  // How many cards per "page" — based on viewport
+  const CARDS_PER_PAGE = 6;
 
   // Load featured shows from localStorage
   useEffect(() => {
@@ -2012,7 +2016,27 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
   const scroll = (dir: 'left' | 'right') => {
     const el = trackRef.current;
     if (!el) return;
-    el.scrollBy({ left: dir === 'left' ? -300 : 300, behavior: 'smooth' });
+    const scrollAmount = CARDS_PER_PAGE * 148; // card width + gap
+    el.scrollBy({ left: dir === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
+  };
+
+  // Track scroll position to update active dot
+  const handleScroll = () => {
+    const el = trackRef.current;
+    if (!el) return;
+    const page = Math.round(el.scrollLeft / (CARDS_PER_PAGE * 148));
+    setActivePage(page);
+  };
+
+  const totalPages = Math.ceil(featuredShows.length / CARDS_PER_PAGE);
+
+  // Scroll to specific page when dot clicked
+  const scrollToPage = (page: number) => {
+    const el = trackRef.current;
+    if (!el) return;
+    const scrollAmount = page * CARDS_PER_PAGE * 148;
+    el.scrollTo({ left: scrollAmount, behavior: 'smooth' });
+    setActivePage(page);
   };
 
   const removeShow = (num: number) => {
@@ -2047,7 +2071,7 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
     <div className="featured-carousel">
       <div className="featured-carousel-header">
         <span className="featured-carousel-title">
-          ✨ برنامه‌های منتخب
+          برنامه‌های منتخب
         </span>
         <div className="featured-carousel-nav">
           {isAdmin && (
@@ -2083,7 +2107,8 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
           {isAdmin ? 'برنامه‌ای انتخاب نشده — روی «مدیریت» کلیک کنید' : 'برنامه‌ای موجود نیست'}
         </div>
       ) : (
-        <div className="featured-carousel-track" ref={trackRef}>
+        <>
+        <div className="featured-carousel-track" ref={trackRef} onScroll={handleScroll}>
           {featuredShows.map(show => {
             const thumb = getShowThumbnail(show);
             return (
@@ -2119,6 +2144,21 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
             );
           })}
         </div>
+
+        {/* Netflix-style pagination dots */}
+        {totalPages > 1 && (
+          <div className="featured-dots">
+            {Array.from({ length: totalPages }).map((_, i) => (
+              <button
+                key={i}
+                className={`featured-dot ${i === activePage ? 'active' : ''}`}
+                onClick={() => scrollToPage(i)}
+                aria-label={`صفحه ${i + 1}`}
+              />
+            ))}
+          </div>
+        )}
+        </>
       )}
 
       {/* Admin picker modal */}
