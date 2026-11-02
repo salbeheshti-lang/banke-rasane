@@ -207,6 +207,14 @@ function startNextServer() {
       PORT: String(NEXT_PORT),
       HOSTNAME: '127.0.0.1',
       BANKRESANEH_STARTUP_TOKEN: STARTUP_TOKEN,
+      // The standalone server is stored under resources/next-service-dist,
+      // while Electron packages production dependencies inside app.asar.
+      // Add that dependency directory to Node's module resolution path.
+      NODE_PATH: [
+        path.join(app.getAppPath(), 'node_modules'),
+        path.join(process.resourcesPath || '', 'app.asar.unpacked', 'node_modules'),
+        process.env.NODE_PATH || '',
+      ].filter(Boolean).join(path.delimiter),
     };
     nextServer = spawn(process.execPath, [serverPath], {
       cwd: staticDir,
