@@ -129,13 +129,13 @@
   --input-border: rgba(255, 255, 255, 0.25);
 
   /* Multi-point gradient background: emerald (left) → blue → pink (right)
-     — one shade brighter, greens more vivid and saturated */
+     — one shade brighter, greens more vivid, pink reduced */
   --background: linear-gradient(90deg,
     #0A5547 0%,
-    #007A5E 18%,
-    #159E89 42%,
-    #6CC8DC 72%,
-    #E8CFE5 100%);
+    #007A5E 22%,
+    #159E89 48%,
+    #5CB8CC 78%,
+    #C8C2D8 100%);
   --foreground: #f0fdf4;
 
   /* Analytics card: vibrant glass — more alive, more saturated tints */
@@ -455,28 +455,27 @@ html, body {
   overflow: hidden;
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   color: #ffffff;
-  /* Full-saturation vibrant gradient — bold and alive */
+  /* Full-saturation vibrant gradient — bold, strong, NOT pastel */
   background:
     linear-gradient(145deg,
-      color-mix(in srgb, var(--genre-color, #006B50) 100%, white) 0%,
-      var(--genre-color, #006B50) 50%,
-      color-mix(in srgb, var(--genre-color, #006B50) 70%, #073D35 30%) 100%);
-  border: 1.5px solid color-mix(in srgb, var(--genre-color, #006B50) 80%, rgba(255, 255, 255, 0.4));
+      var(--genre-color, #006B50) 0%,
+      color-mix(in srgb, var(--genre-color, #006B50) 85%, #000 15%) 100%);
+  border: 1.5px solid color-mix(in srgb, var(--genre-color, #006B50) 90%, rgba(255, 255, 255, 0.3));
   box-shadow:
-    0 12px 36px color-mix(in srgb, var(--genre-color, #006B50) 40%, rgba(0, 0, 0, 0.4)),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    inset 0 -4px 16px rgba(0, 0, 0, 0.22);
+    0 12px 36px color-mix(in srgb, var(--genre-color, #006B50) 45%, rgba(0, 0, 0, 0.45)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -4px 16px rgba(0, 0, 0, 0.25);
 }
 
-/* Bold diagonal sheen — sunlight hitting glass */
+/* Subtle sheen — just a hint of light, not washed out */
 .premium-genre-card::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 70%;
-  background: linear-gradient(155deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.1) 40%, transparent 100%);
+  height: 50%;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.18) 0%, transparent 60%);
   pointer-events: none;
   z-index: 0;
   border-radius: 24px 24px 0 0;
@@ -487,12 +486,12 @@ html, body {
 }
 
 .premium-genre-card:hover {
-  transform: translateY(-6px) scale(1.05);
-  border-color: color-mix(in srgb, var(--genre-color, #006B50) 90%, rgba(255, 255, 255, 0.6));
+  transform: translateY(-5px) scale(1.04);
+  border-color: color-mix(in srgb, var(--genre-color, #006B50) 100%, rgba(255, 255, 255, 0.4));
   box-shadow:
-    0 20px 48px color-mix(in srgb, var(--genre-color, #006B50) 50%, rgba(0, 0, 0, 0.45)),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 -4px 16px rgba(0, 0, 0, 0.25);
+    0 18px 44px color-mix(in srgb, var(--genre-color, #006B50) 55%, rgba(0, 0, 0, 0.5)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .premium-genre-card > * {
