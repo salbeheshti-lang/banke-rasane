@@ -1006,7 +1006,7 @@ export default function Home() {
       />
 
       <main key={currentView} className={`animate-view-enter ${isMobile ? 'p-4 pt-20 pb-28' : 'p-8 pt-24'}`}>
-        {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} />}
+        {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} onShowClick={setSelectedShow} />}
         {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} />}
         {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} />}
         {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} onExport={(shows, format) => setExportPreview({ shows, format })} />}
@@ -1971,9 +1971,257 @@ function MobileNavBtn({ label, icon, active, onClick, highlight }: {
 }
 
 // ============================================
+// FEATURED CAROUSEL — Netflix-style featured programs row
+// Admin can add/remove featured shows
+// ============================================
+const FEATURED_KEY = 'bankresaneh_featured_shows_v1';
+
+function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
+  talkShows: TalkShow[];
+  onShowClick: (s: TalkShow) => void;
+  isAdmin: boolean;
+}) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [featuredNums, setFeaturedNums] = useState<number[]>([]);
+  const [showPicker, setShowPicker] = useState(false);
+  const [search, setSearch] = useState('');
+
+  // Load featured shows from localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(FEATURED_KEY);
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) setFeaturedNums(arr);
+      }
+    } catch {}
+  }, []);
+
+  // Save to localStorage when changed
+  const saveFeatured = (nums: number[]) => {
+    setFeaturedNums(nums);
+    try { localStorage.setItem(FEATURED_KEY, JSON.stringify(nums)); } catch {}
+  };
+
+  const featuredShows = useMemo(() => {
+    return featuredNums
+      .map(n => talkShows.find(s => s.num === n))
+      .filter((s): s is TalkShow => s !== undefined);
+  }, [featuredNums, talkShows]);
+
+  const scroll = (dir: 'left' | 'right') => {
+    const el = trackRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir === 'left' ? -300 : 300, behavior: 'smooth' });
+  };
+
+  const removeShow = (num: number) => {
+    saveFeatured(featuredNums.filter(n => n !== num));
+  };
+
+  const addShow = (num: number) => {
+    if (!featuredNums.includes(num)) {
+      saveFeatured([...featuredNums, num]);
+    }
+  };
+
+  const filteredSearch = useMemo(() => {
+    if (!search.trim()) return talkShows.slice(0, 30);
+    const q = search.toLowerCase();
+    return talkShows.filter(s => s.name.toLowerCase().includes(q) || s.category.includes(search)).slice(0, 30);
+  }, [search, talkShows]);
+
+  // Default: pick 8 interesting shows if empty
+  useEffect(() => {
+    if (featuredNums.length === 0 && talkShows.length > 0) {
+      const defaults = talkShows
+        .filter(s => s.images && s.images.length > 0)
+        .slice(0, 8)
+        .map(s => s.num);
+      if (defaults.length > 0) saveFeatured(defaults);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [talkShows]);
+
+  return (
+    <div className="featured-carousel">
+      <div className="featured-carousel-header">
+        <span className="featured-carousel-title">
+          ✨ برنامه‌های منتخب
+        </span>
+        <div className="featured-carousel-nav">
+          {isAdmin && (
+            <button
+              onClick={() => setShowPicker(true)}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+              style={{
+                background: 'rgba(255, 255, 255, 0.12)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
+                color: 'rgba(255, 255, 255, 0.9)',
+              }}
+            >
+              + مدیریت
+            </button>
+          )}
+          <button className="featured-nav-btn" onClick={() => scroll('right')} aria-label="قبلی">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+          <button className="featured-nav-btn" onClick={() => scroll('left')} aria-label="بعدی">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {featuredShows.length === 0 ? (
+        <div className="featured-empty">
+          {isAdmin ? 'برنامه‌ای انتخاب نشده — روی «مدیریت» کلیک کنید' : 'برنامه‌ای موجود نیست'}
+        </div>
+      ) : (
+        <div className="featured-carousel-track" ref={trackRef}>
+          {featuredShows.map(show => {
+            const thumb = getShowThumbnail(show);
+            return (
+              <div
+                key={show.num}
+                className="featured-card"
+                onClick={() => onShowClick(show)}
+              >
+                {isAdmin && (
+                  <button
+                    className="featured-card-remove"
+                    onClick={(e) => { e.stopPropagation(); removeShow(show.num); }}
+                    title="حذف از منتخب"
+                  >
+                    ×
+                  </button>
+                )}
+                {thumb.image ? (
+                  <img className="featured-card-thumb" src={thumb.image} alt={show.name} />
+                ) : (
+                  <div
+                    className="featured-card-thumb-placeholder"
+                    style={{ background: thumb.gradient }}
+                  >
+                    {show.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="featured-card-info">
+                  <div className="featured-card-name">{show.name}</div>
+                  <div className="featured-card-cat">{show.category}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Admin picker modal */}
+      {showPicker && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(4px)' }}
+          onClick={() => setShowPicker(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'linear-gradient(135deg, rgba(0, 60, 48, 0.95) 0%, rgba(8, 90, 75, 0.92) 100%)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              borderRadius: '20px',
+              padding: '20px',
+              maxWidth: '520px',
+              width: '100%',
+              maxHeight: '75vh',
+              overflowY: 'auto',
+              boxShadow: '0 12px 40px rgba(0, 0, 0, 0.4)',
+            }}
+          >
+            <h3 style={{ color: '#f0fdf4', marginBottom: '12px', fontWeight: 800, fontSize: '16px' }}>
+              مدیریت برنامه‌های منتخب
+            </h3>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="جستجوی برنامه..."
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                borderRadius: '12px',
+                background: 'rgba(255, 255, 255, 0.12)',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
+                color: '#f0fdf4',
+                fontSize: '13px',
+                outline: 'none',
+                marginBottom: '12px',
+                fontFamily: 'inherit',
+              }}
+            />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', maxHeight: '400px', overflowY: 'auto' }}>
+              {filteredSearch.map(show => {
+                const isFeatured = featuredNums.includes(show.num);
+                return (
+                  <button
+                    key={show.num}
+                    onClick={() => isFeatured ? removeShow(show.num) : addShow(show.num)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 10px',
+                      borderRadius: '10px',
+                      cursor: 'pointer',
+                      background: isFeatured ? 'rgba(34, 185, 154, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                      border: isFeatured ? '1px solid rgba(34, 185, 154, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
+                      color: '#f0fdf4',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      textAlign: 'right',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <span style={{ fontSize: '14px' }}>{isFeatured ? '✓' : '+'}</span>
+                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {show.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={() => setShowPicker(false)}
+              style={{
+                marginTop: '12px',
+                width: '100%',
+                padding: '10px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
+                color: 'white',
+                fontWeight: 700,
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              ✓ تأیید
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================
 // DASHBOARD
 // ============================================
-function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isAdmin, genres = GENRES, onAddGenre }: {
+function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isAdmin, genres = GENRES, onAddGenre, onShowClick }: {
   onGenreClick: (g: Genre) => void;
   talkShows: TalkShow[];
   uploadedCount: number;
@@ -1982,6 +2230,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
   isAdmin?: boolean;
   genres?: Genre[];
   onAddGenre?: (g: Genre) => void;
+  onShowClick?: (s: TalkShow) => void;
 }) {
   const [showAddGenre, setShowAddGenre] = useState(false);
 
@@ -2344,6 +2593,13 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
         </div>
       )}
 
+      {/* ====== FEATURED CAROUSEL — Netflix-style program row ====== */}
+      <FeaturedCarousel
+        talkShows={talkShows}
+        onShowClick={(s) => onShowClick?.(s)}
+        isAdmin={isAdmin}
+      />
+
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <h2 className="text-xl font-bold" style={{ color: '#f0fdf4' }}>همهٔ ژانرها</h2>
         <div className="flex items-center gap-2 flex-wrap">
@@ -2391,6 +2647,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
               style={{
                 animationDelay: `${idx * 50}ms`,
                 ['--genre-color' as string]: g.color,
+                ['--card-index' as string]: idx,
               }}
             >
               <div className="flex items-start justify-between mb-4">
