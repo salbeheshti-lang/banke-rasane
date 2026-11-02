@@ -1,3 +1,4 @@
+/* eslint @typescript-eslint/no-require-imports: off */
 // Electron Main Process — بانک رسانه
 // Starts the Bun API service (port 3002) and the Next.js standalone server
 // (port 3000), then opens a window pointed at the Next.js UI.
