@@ -445,7 +445,7 @@ html, body {
 }
 
 /* ============================================
-   PREMIUM GENRE CARD — vibrant, alive, special (NOT dull)
+   PREMIUM GENRE CARD — STRONG, vibrant, premium
    ============================================ */
 .premium-genre-card {
   position: relative;
@@ -455,28 +455,28 @@ html, body {
   overflow: hidden;
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   color: #ffffff;
-  /* Vibrant saturated gradient — bright genre color, fully alive */
+  /* Full-saturation vibrant gradient — bold and alive */
   background:
     linear-gradient(145deg,
-      color-mix(in srgb, var(--genre-color, #006B50) 88%, white 12%) 0%,
-      var(--genre-color, #006B50) 40%,
-      color-mix(in srgb, var(--genre-color, #006B50) 75%, #073D35 25%) 100%);
-  border: 1px solid color-mix(in srgb, var(--genre-color, #006B50) 60%, rgba(255, 255, 255, 0.3));
+      color-mix(in srgb, var(--genre-color, #006B50) 100%, white) 0%,
+      var(--genre-color, #006B50) 50%,
+      color-mix(in srgb, var(--genre-color, #006B50) 70%, #073D35 30%) 100%);
+  border: 1.5px solid color-mix(in srgb, var(--genre-color, #006B50) 80%, rgba(255, 255, 255, 0.4));
   box-shadow:
-    0 10px 30px color-mix(in srgb, var(--genre-color, #006B50) 30%, rgba(0, 0, 0, 0.35)),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    inset 0 -3px 12px rgba(0, 0, 0, 0.2);
+    0 12px 36px color-mix(in srgb, var(--genre-color, #006B50) 40%, rgba(0, 0, 0, 0.4)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -4px 16px rgba(0, 0, 0, 0.22);
 }
 
-/* Vivid diagonal top sheen — like sunlight hitting glass */
+/* Bold diagonal sheen — sunlight hitting glass */
 .premium-genre-card::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 65%;
-  background: linear-gradient(155deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.08) 35%, transparent 100%);
+  height: 70%;
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.1) 40%, transparent 100%);
   pointer-events: none;
   z-index: 0;
   border-radius: 24px 24px 0 0;
@@ -487,12 +487,12 @@ html, body {
 }
 
 .premium-genre-card:hover {
-  transform: translateY(-5px) scale(1.04);
-  border-color: color-mix(in srgb, var(--genre-color, #006B50) 70%, rgba(255, 255, 255, 0.5));
+  transform: translateY(-6px) scale(1.05);
+  border-color: color-mix(in srgb, var(--genre-color, #006B50) 90%, rgba(255, 255, 255, 0.6));
   box-shadow:
-    0 16px 40px color-mix(in srgb, var(--genre-color, #006B50) 35%, rgba(0, 0, 0, 0.4)),
-    inset 0 1px 0 rgba(255, 255, 255, 0.45),
-    inset 0 -3px 12px rgba(0, 0, 0, 0.25);
+    0 20px 48px color-mix(in srgb, var(--genre-color, #006B50) 50%, rgba(0, 0, 0, 0.45)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -4px 16px rgba(0, 0, 0, 0.25);
 }
 
 .premium-genre-card > * {

@@ -2125,19 +2125,19 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                 </div>
               </div>
 
-              {/* Mini stats row — only 2 stats (no "پوشش" / no "آپلود شده") */}
+              {/* Mini stats row — vibrant colors */}
               <div className="analytics-mini-row">
-                <div className="analytics-mini-stat" style={{ ['--mini-color' as string]: '#54D9C0' }}>
+                <div className="analytics-mini-stat" style={{ ['--mini-color' as string]: '#10E98B' }}>
                   <div className="analytics-mini-num">{totalShows.toLocaleString('fa-IR')}</div>
                   <div className="analytics-mini-label">کل برنامه‌ها</div>
                 </div>
                 <div className="analytics-mini-divider" />
-                <div className="analytics-mini-stat" style={{ ['--mini-color' as string]: '#22B99A' }}>
+                <div className="analytics-mini-stat" style={{ ['--mini-color' as string]: '#06B6D4' }}>
                   <div className="analytics-mini-num">{totalGenres.toLocaleString('fa-IR')}</div>
                   <div className="analytics-mini-label">ژانرها</div>
                 </div>
                 <div className="analytics-mini-divider" />
-                <div className="analytics-mini-stat" style={{ ['--mini-color' as string]: '#E98BB8' }}>
+                <div className="analytics-mini-stat" style={{ ['--mini-color' as string]: '#F472B6' }}>
                   <div className="analytics-mini-num">{withImages.toLocaleString('fa-IR')}</div>
                   <div className="analytics-mini-label">با تصویر</div>
                 </div>
@@ -2321,7 +2321,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
               onClick={() => setShowAddGenre(true)}
               className="px-4 py-2 rounded-xl text-sm font-bold transition-all"
               style={{
-                /* Visible add-genre button — emerald glass with white border */
+                /* Same style as add-program button — emerald glass */
                 background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
                 color: '#ffffff',
                 border: '1px solid rgba(255, 255, 255, 0.4)',
@@ -2334,8 +2334,14 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
           {canEdit && (
             <button
               onClick={onAdd}
-              className="btn-enter-premium text-sm"
-              style={{ padding: '8px 20px', fontSize: '14px' }}
+              className="px-4 py-2 rounded-xl text-sm font-bold transition-all"
+              style={{
+                /* Same style as add-genre button — emerald glass */
+                background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
+                color: '#ffffff',
+                border: '1px solid rgba(255, 255, 255, 0.4)',
+                boxShadow: '0 4px 14px rgba(0, 107, 80, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+              }}
             >
               + افزودن برنامه
             </button>
@@ -2576,8 +2582,11 @@ function ProgramsView({
             onChange={(e) => setSearch(e.target.value)}
             placeholder={`جستجو در ${genre ? genre.nameFa : 'همهٔ برنامه‌ها'}...`}
             style={{
-              background: 'rgba(255, 255, 255, 0.8)',
-              border: '1px solid rgba(13, 124, 74, 0.15)',
+              /* Glass search box matching the theme */
+              background: 'rgba(255, 255, 255, 0.12)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
               borderRadius: '12px',
               padding: '11px 36px 11px 16px',
               width: '100%',
@@ -2594,14 +2603,16 @@ function ProgramsView({
           <div
             className="flex items-center gap-1 rounded-xl p-1 flex-shrink-0"
             style={{
-              background: 'rgba(255, 255, 255, 0.8)',
-              border: '1px solid rgba(13, 124, 74, 0.15)',
+              background: 'rgba(255, 255, 255, 0.12)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
             }}
           >
             <button
               onClick={() => setView('grid')}
               className="p-2 rounded-lg transition-colors"
-              style={view === 'grid' ? { background: '#10b981', color: 'white' } : { color: '#99f6e4' }}
+              style={view === 'grid' ? { background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)', color: 'white' } : { color: 'rgba(244, 255, 255, 0.7)' }}
               aria-label="نمایش شبکه‌ای"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2611,7 +2622,7 @@ function ProgramsView({
             <button
               onClick={() => setView('list')}
               className="p-2 rounded-lg transition-colors"
-              style={view === 'list' ? { background: '#10b981', color: 'white' } : { color: '#99f6e4' }}
+              style={view === 'list' ? { background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)', color: 'white' } : { color: 'rgba(244, 255, 255, 0.7)' }}
               aria-label="نمایش لیستی"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
