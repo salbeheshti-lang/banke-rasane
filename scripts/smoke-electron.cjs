@@ -5,11 +5,14 @@ const path = require('node:path');
 const http = require('node:http');
 
 const executable = path.resolve(__dirname, '..', 'release', 'win-unpacked', 'BankResaneh.exe');
+let spawnError = null;
 const child = spawn(executable, ['--disable-gpu', '--no-sandbox'], {
   stdio: 'ignore',
   windowsHide: false,
   env: { ...process.env, ELECTRON_DISABLE_SECURITY_WARNINGS: 'true' },
 });
+
+child.on('error', (error) => { spawnError = error; });
 
 function getResponse(url) {
   return new Promise((resolve, reject) => {
@@ -30,6 +33,7 @@ async function waitFor(url, label, timeoutMs = 90000) {
   const deadline = Date.now() + timeoutMs;
   let lastError = 'not started';
   while (Date.now() < deadline) {
+    if (spawnError) throw new Error('Electron failed to spawn: ' + spawnError.message);
     if (child.exitCode !== null) {
       throw new Error('Electron exited early with code ' + child.exitCode + ' while waiting for ' + label);
     }
@@ -50,7 +54,6 @@ async function waitFor(url, label, timeoutMs = 90000) {
 
 (async () => {
   try {
-    child.on('error', (error) => { process.stderr.write('Electron spawn error: ' + error.message + '\n'); });
     await waitFor('http://127.0.0.1:3000/', 'Next.js UI');
     const apiHealth = await waitFor('http://127.0.0.1:3002/api/health', 'Local API');
     const healthData = JSON.parse(apiHealth.body);
