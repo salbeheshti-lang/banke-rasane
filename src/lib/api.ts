@@ -105,7 +105,7 @@ export const api = {
     query.set('page', String(Math.max(1, params.page || 1)));
     query.set('limit', String(Math.min(100, Math.max(1, params.limit || 30))));
     return request<{
-      shows: Show[];
+      shows: unknown[];
       pagination: { page: number; limit: number; total: number; totalPages: number };
       query: string;
     }>(getApiUrl('api/shows/search?' + query.toString()));
