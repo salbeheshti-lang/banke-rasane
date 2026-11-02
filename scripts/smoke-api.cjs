@@ -95,11 +95,16 @@ async function main() {
 
     const profileUpdate = await request('/api/profile', {
       method: 'PUT', token, body: {
-        name: 'API Smoke Admin', jobTitle: 'QA', deputy: 'Test', avatar: '', phone: '0000000000',
+        username: 'smoke-admin-renamed', name: 'API Smoke Admin', jobTitle: 'QA', deputy: 'Test', avatar: '', phone: '0000000000',
       },
     });
     assert.equal(profileUpdate.status, 200);
     assert.equal(profileUpdate.data.name, 'API Smoke Admin');
+    assert.equal(profileUpdate.data.username, 'smoke-admin-renamed');
+    const renamedLogin = await request('/api/auth/login', {
+      method: 'POST', body: { username: 'smoke-admin-renamed', password: 'SmokeTest-Password-53!' },
+    });
+    assert.equal(renamedLogin.status, 200, 'changed login name must work for next sign-in');
     assert.equal(profileUpdate.data.phone, '0000000000');
 
     const created = await request('/api/users', {
@@ -109,6 +114,11 @@ async function main() {
     });
     assert.equal(created.status, 200, 'admin must create an editor');
     const userId = created.data.id;
+
+    const duplicateUsername = await request('/api/profile', {
+      method: 'PUT', token, body: { username: 'smoke-editor' },
+    });
+    assert.equal(duplicateUsername.status, 409, 'duplicate login names must be rejected');
 
     const invalidRole = await request('/api/users?id=' + userId, {
       method: 'PUT', token, body: { role: 'superuser' },
