@@ -3,5 +3,8 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "bun --hot index.js"
+  },
+  "dependencies": {
+    "sharp": "^0.34.3"
   }
 }

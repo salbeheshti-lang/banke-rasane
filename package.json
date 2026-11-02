@@ -1,16 +1,19 @@
 {
-  "name": "nextjs_tailwind_shadcn_ts",
-  "version": "0.2.1",
+  "name": "banke-rasane",
+  "version": "5.3.1",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
-    "dev": "next dev -p 3000 2>&1 | tee dev.log",
-    "build": "next build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
-    "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
+    "dev": "next dev -p 3000",
+    "build": "next build && node scripts/copy-standalone.cjs",
+    "start": "node scripts/start-standalone.cjs",
     "lint": "eslint .",
-    "db:push": "prisma db push --accept-data-loss",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:reset": "prisma migrate reset"
+    "electron:dev": "electron electron/main.js",
+    "electron:build": "npm run build && npm run typecheck && electron-builder --win --x64 --publish never",
+    "electron:dist": "npm run electron:build",
+    "typecheck": "tsc --noEmit",
+    "desktop:win": "npm run electron:build",
+    "smoke:desktop": "node scripts/smoke-electron.cjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -78,7 +81,8 @@
     "vaul": "^1.1.2",
     "z-ai-web-dev-sdk": "^0.0.18",
     "zod": "^4.0.2",
-    "zustand": "^5.0.6"
+    "zustand": "^5.0.6",
+    "electron-updater": "^6.8.11"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -89,9 +93,11 @@
     "eslint-config-next": "^16.1.1",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.5",
-    "typescript": "^5"
+    "typescript": "^5",
+    "electron": "^33.0.0",
+    "electron-builder": "^26.0.0",
+    "@oven/bun-windows-x64": "1.4.4"
   },
-  "main": "electron/main.js",
   "build": {
     "appId": "com.banke.rasane",
     "productName": "BankResaneh",
@@ -100,16 +106,15 @@
     },
     "files": [
       "electron/**/*",
+      ".next/standalone/**/*",
+      ".next/static/**/*",
+      "public/**/*",
       "package.json"
     ],
     "extraResources": [
       {
         "from": ".next/standalone",
-        "to": "next-service-dist",
-        "filter": [
-          "**/*",
-          "!**/.DS_Store"
-        ]
+        "to": "next-service-dist"
       },
       {
         "from": "mini-services/api-service",
@@ -119,20 +124,14 @@
           "package.json",
           "bankresaneh.sqlite",
           "talk-shows-data.json",
+          "bankresaneh.sqlite-wal",
           "download-images.js",
           "download-all-images.bat"
         ]
       },
       {
-        "from": "electron/bun",
-        "to": "bun",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "electron/icons",
-        "to": "icons",
+        "from": "node_modules/@oven/bun-windows-x64",
+        "to": "bun-runtime",
         "filter": [
           "**/*"
         ]

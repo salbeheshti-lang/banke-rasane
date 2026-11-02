@@ -1,2 +1,57 @@
 skills/
 node_modules/
+
+# Next.js build cache and output — don't commit
+.next/
+out/
+
+# Dev logs and runtime
+dev.log
+server.log
+api-service.log
+download-images.log
+download-loop.log
+watchdog.log
+startup.log
+keep-alive.log
+*.log
+
+# SQLite databases (local data — user gets bundled copy)
+mini-services/api-service/bankresaneh.sqlite-shm
+mini-services/api-service/bankresaneh.sqlite-wal
+*.sqlite-shm
+*.sqlite-wal
+
+# Electron build outputs
+electron/dist/
+electron/out/
+release/
+
+# Public images & PDFs (large assets)
+public/program-images/
+
+# Env files
+.env
+.env.local
+.env.production
+
+# IDE / OS
+.DS_Store
+tsconfig.tsbuildinfo
+tool-results/
+upload/
+
+# Bun cache
+bun.lockb
+
+# Caddy
+Caddyfile
+
+# Runtime/build output and local-only state
+.zscripts/
+tool-results/
+*.log
+*.pid
+*.sqlite-shm
+.env
+!.env.example

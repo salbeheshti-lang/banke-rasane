@@ -2,44 +2,75 @@
 //  BankResaneh local API service — Bun + bun:sqlite
 //  Port: 3002
 //
+//  IMPORTANT: This service requires Bun (bun:sqlite is Bun-only).
+//  When packaged with Electron, a bundled Bun binary is used.
+//
 //  Tables: users, sessions, shows
 //  Default admin: admin / admin (SHA-256 hashed)
-//  Seeds 560 shows from ../public/talk-shows-data.json on first run
-//  Session tokens: random hex, 7-day TTL
 //  All endpoints under /api/*
 // ============================================================================
 import { Database } from 'bun:sqlite';
 import { createHash, randomBytes } from 'node:crypto';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 
-const PORT = 3002;
+const PORT = parseInt(process.env.PORT || '3002', 10);
 
 // ---------------------------------------------------------------------------
 // DB setup
+//   - In dev: writes to ./bankresaneh.sqlite next to index.js
+//   - In Electron (bundled): writes to DB_PATH env (user data dir)
+//     so user-added shows/edits persist across reinstalls.
 // ---------------------------------------------------------------------------
-const DB_PATH = resolve(import.meta.dir, 'bankresaneh.sqlite');
+const DB_PATH = process.env.DB_PATH
+  ? resolve(process.env.DB_PATH)
+  : resolve(import.meta.dir, 'bankresaneh.sqlite');
+
+// Ensure parent dir exists
+try {
+  const dir = resolve(DB_PATH, '..');
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+} catch (e) { /* ignore */ }
+
+// On first run inside Electron, copy the bundled seed DB
+if (process.env.DB_PATH && !existsSync(DB_PATH)) {
+  const candidates = [
+    resolve(import.meta.dir, 'bankresaneh.sqlite'),
+    resolve(process.resourcesPath || '', 'api-service', 'bankresaneh.sqlite'),
+  ];
+  for (const src of candidates) {
+    if (existsSync(src)) {
+      try { copyFileSync(src, DB_PATH); console.log('[seed] copied bundled DB'); break; } catch (e) {}
+    }
+  }
+}
+
 const db = new Database(DB_PATH, { create: true });
 db.exec('PRAGMA journal_mode = WAL;');
+db.exec('PRAGMA recursive_triggers = ON;');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     username      TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
-    role          TEXT NOT NULL DEFAULT 'viewer', -- admin | editor | viewer
+    role          TEXT NOT NULL DEFAULT 'viewer',
     name          TEXT NOT NULL DEFAULT '',
-    created_at    INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+    created_at    INTEGER NOT NULL DEFAULT 0,
+    last_seen     INTEGER NOT NULL DEFAULT 0,
+    job_title     TEXT NOT NULL DEFAULT '',
+    avatar        TEXT NOT NULL DEFAULT '',
+    deputy        TEXT NOT NULL DEFAULT '',
+    phone        TEXT NOT NULL DEFAULT '',
+    must_change_password INTEGER NOT NULL DEFAULT 0
   );
-
   CREATE TABLE IF NOT EXISTS sessions (
-    token       TEXT PRIMARY KEY,
-    user_id     INTEGER NOT NULL,
-    created_at  INTEGER NOT NULL DEFAULT (strftime('%s','now')),
-    expires_at  INTEGER NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    token    TEXT PRIMARY KEY,
+    user_id  INTEGER NOT NULL,
+    created  INTEGER NOT NULL,
+    expires  INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id)
   );
-
   CREATE TABLE IF NOT EXISTS shows (
     num          INTEGER PRIMARY KEY,
     name         TEXT NOT NULL DEFAULT '',
@@ -60,169 +91,265 @@ db.exec(`
     imdb         TEXT NOT NULL DEFAULT '',
     wikipedia    TEXT NOT NULL DEFAULT '',
     socialPost   TEXT NOT NULL DEFAULT '',
-    images       TEXT NOT NULL DEFAULT '[]',  -- JSON array of URLs
-    videos       TEXT NOT NULL DEFAULT '[]'   -- JSON array of URLs
+    images       TEXT NOT NULL DEFAULT '[]',
+    videos       TEXT NOT NULL DEFAULT '[]'
   );
 `);
+
+// --- Add columns that may not exist in older bundled DBs ---
+function addColumnIfMissing(table, column, definition) {
+  try {
+    const cols = db.prepare(`PRAGMA table_info(${table})`).all();
+    if (!cols.some(c => c.name === column)) {
+      db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+      console.log(`[migration] added ${table}.${column}`);
+    }
+  } catch (e) {
+    console.warn(`[migration] failed to add ${table}.${column}:`, e.message);
+  }
+}
+// Migrate old sessions table columns (created_at → created, expires_at → expires)
+// Atomic, fail-safe migration: retain the old table unless copy and validation succeed.
+{
+  const sessionCols = db.prepare('PRAGMA table_info(sessions)').all();
+  const names = new Set(sessionCols.map(c => c.name));
+  const hasLegacyColumns = names.has('created_at') || names.has('expires_at');
+  const hasCurrentColumns = names.has('created') && names.has('expires');
+  if (sessionCols.length && hasLegacyColumns && !hasCurrentColumns) {
+    if (!names.has('token') || !names.has('user_id')) throw new Error('[migration] sessions table lacks token/user_id; refusing destructive migration');
+    const createdExpr = names.has('created_at') ? 'created_at' : '0';
+    const expiresExpr = names.has('expires_at') ? 'expires_at' : '0';
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      db.exec('DROP TABLE IF EXISTS sessions_new');
+      db.exec('CREATE TABLE sessions_new (token TEXT PRIMARY KEY, user_id INTEGER NOT NULL, created INTEGER NOT NULL, expires INTEGER NOT NULL, FOREIGN KEY (user_id) REFERENCES users(id))');
+      db.exec(`INSERT INTO sessions_new (token, user_id, created, expires) SELECT token, user_id, ${createdExpr}, ${expiresExpr} FROM sessions`);
+      const oldCount = db.prepare('SELECT COUNT(*) AS count FROM sessions').get().count;
+      const newCount = db.prepare('SELECT COUNT(*) AS count FROM sessions_new').get().count;
+      if (oldCount !== newCount) throw new Error(`session migration row count mismatch: ${oldCount} -> ${newCount}`);
+      db.exec('DROP TABLE sessions');
+      db.exec('ALTER TABLE sessions_new RENAME TO sessions');
+      db.exec('COMMIT');
+      console.log(`[migration] migrated ${newCount} sessions atomically`);
+    } catch (error) {
+      try { db.exec('ROLLBACK'); } catch {}
+      throw error;
+    }
+  }
+}
+
+addColumnIfMissing('users', 'name', "TEXT NOT NULL DEFAULT ''");
+addColumnIfMissing('users', 'last_seen', 'INTEGER NOT NULL DEFAULT 0');
+addColumnIfMissing('users', 'job_title', "TEXT NOT NULL DEFAULT ''");
+addColumnIfMissing('users', 'avatar', "TEXT NOT NULL DEFAULT ''");
+addColumnIfMissing('users', 'deputy', "TEXT NOT NULL DEFAULT ''");
+addColumnIfMissing('users', 'phone', "TEXT NOT NULL DEFAULT ''");
+addColumnIfMissing('users', 'created_at', 'INTEGER NOT NULL DEFAULT 0');
+addColumnIfMissing('users', 'must_change_password', 'INTEGER NOT NULL DEFAULT 0');
+addColumnIfMissing('shows', 'image_data', 'BLOB');
+addColumnIfMissing('shows', 'image_mime', "TEXT NOT NULL DEFAULT 'image/jpeg'");
+addColumnIfMissing('shows', 'image_source', "TEXT NOT NULL DEFAULT ''");
+addColumnIfMissing('shows', 'is_film', 'INTEGER NOT NULL DEFAULT 0');
+addColumnIfMissing('shows', 'tags', "TEXT NOT NULL DEFAULT '[]'");
+
+// Full-text search index for the archive. Triggers keep it in sync with show edits.
+let showsFtsAvailable = false;
+try {
+  const hadShowsFts = !!db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'shows_fts'").get();
+  db.exec(`
+    CREATE VIRTUAL TABLE IF NOT EXISTS shows_fts USING fts5(
+      name, category, summary, descriptionFa, source, style, effects, layout,
+      elements, materials, colors, lighting,
+      content='shows', content_rowid='num',
+      tokenize='unicode61 remove_diacritics 2',
+      prefix='2 3'
+    );
+    CREATE TRIGGER IF NOT EXISTS shows_fts_ai AFTER INSERT ON shows BEGIN
+      INSERT INTO shows_fts(rowid, name, category, summary, descriptionFa, source, style, effects, layout, elements, materials, colors, lighting)
+      VALUES (new.num, new.name, new.category, new.summary, new.descriptionFa, new.source, new.style, new.effects, new.layout, new.elements, new.materials, new.colors, new.lighting);
+    END;
+    CREATE TRIGGER IF NOT EXISTS shows_fts_ad AFTER DELETE ON shows BEGIN
+      INSERT INTO shows_fts(shows_fts, rowid, name, category, summary, descriptionFa, source, style, effects, layout, elements, materials, colors, lighting)
+      VALUES ('delete', old.num, old.name, old.category, old.summary, old.descriptionFa, old.source, old.style, old.effects, old.layout, old.elements, old.materials, old.colors, old.lighting);
+    END;
+    CREATE TRIGGER IF NOT EXISTS shows_fts_au AFTER UPDATE ON shows BEGIN
+      INSERT INTO shows_fts(shows_fts, rowid, name, category, summary, descriptionFa, source, style, effects, layout, elements, materials, colors, lighting)
+      VALUES ('delete', old.num, old.name, old.category, old.summary, old.descriptionFa, old.source, old.style, old.effects, old.layout, old.elements, old.materials, old.colors, old.lighting);
+      INSERT INTO shows_fts(rowid, name, category, summary, descriptionFa, source, style, effects, layout, elements, materials, colors, lighting)
+      VALUES (new.num, new.name, new.category, new.summary, new.descriptionFa, new.source, new.style, new.effects, new.layout, new.elements, new.materials, new.colors, new.lighting);
+    END;
+  `);
+  if (!hadShowsFts) db.exec("INSERT INTO shows_fts(shows_fts) VALUES ('rebuild')");
+  showsFtsAvailable = true;
+} catch (error) {
+  console.warn('[search] FTS5 unavailable; using SQL fallback:', error.message);
+}
+
+
+// ---------------------------------------------------------------------------
+// CORS — allow any localhost/127.0.0.1 port + space-z.ai preview gateway
+// ---------------------------------------------------------------------------
+function isAllowedOrigin(origin) {
+  if (!origin) return false;
+  // Check env-based additional origins
+  const extraOrigins = (process.env.CORS_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (extraOrigins.includes(origin)) return true;
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true;
+  if (/^https?:\/\/[^/]*\.space-z\.ai(:\d+)?$/.test(origin)) return true;
+  if (/^https?:\/\/[^/]*\.(lan|local)(:\d+)?$/.test(origin)) return true;
+  return false;
+}
+function getCorsHeader(req) {
+  const origin = req.headers.get('origin') || '';
+  return isAllowedOrigin(origin) ? origin : '';
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-function sha256(s) {
-  return createHash('sha256').update(s, 'utf8').digest('hex');
-}
-
-function genToken() {
-  return randomBytes(32).toString('hex');
-}
-
-function nowSec() {
-  return Math.floor(Date.now() / 1000);
-}
-
-const SESSION_TTL = 7 * 24 * 60 * 60; // 7 days
-
-function json(body, status = 200) {
+function json(body, statusOrReq, maybeReq) {
+  let status = 200, req = null;
+  if (typeof statusOrReq === 'number') { status = statusOrReq; req = maybeReq; }
+  else { req = statusOrReq; }
+  const corsOrigin = req ? getCorsHeader(req) : '*';
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': corsOrigin,
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Credentials': 'true',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
     },
   });
 }
-
-function corsOptions() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
+function corsOptions(req) {
+  const corsOrigin = req ? getCorsHeader(req) : '*';
+  return new Response(null, { status: 204, headers: {
+    'Access-Control-Allow-Origin': corsOrigin,
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Credentials': 'true',
+  }});
 }
 
-function publicUser(u) {
+function publicUser(u, viewer) {
   if (!u) return null;
-  return { id: u.id, username: u.username, role: u.role, name: u.name };
+  const base = {
+    id: u.id, username: u.username, role: u.role, name: u.name,
+    createdAt: u.created_at, lastSeen: u.last_seen,
+    online: u.last_seen && (nowSec() - u.last_seen) < 120,
+    jobTitle: u.job_title || '', deputy: u.deputy || '', avatar: u.avatar || '',
+    mustChangePassword: !!u.must_change_password,
+  };
+  // Phone visible only to admins (or self)
+  if (viewer && (viewer.role === 'admin' || viewer.id === u.id)) base.phone = u.phone || '';
+  return base;
 }
 
 function rowToShow(r) {
   if (!r) return null;
-  let images = [];
-  let videos = [];
+  let images = [], videos = [];
   try { images = JSON.parse(r.images || '[]'); } catch {}
   try { videos = JSON.parse(r.videos || '[]'); } catch {}
+  let tags = [];
+  try { tags = JSON.parse(r.tags || '[]'); } catch {}
   return {
-    num: r.num,
-    name: r.name,
-    category: r.category,
-    source: r.source,
-    size: r.size,
-    viewers: r.viewers,
-    style: r.style,
-    effects: r.effects,
-    layout: r.layout,
-    elements: r.elements,
-    materials: r.materials,
-    colors: r.colors,
-    lighting: r.lighting,
-    summary: r.summary,
-    descriptionFa: r.descriptionFa,
-    youtube: r.youtube,
-    imdb: r.imdb,
-    wikipedia: r.wikipedia,
-    socialPost: r.socialPost,
-    images,
-    videos,
+    num: r.num, name: r.name, category: r.category, source: r.source,
+    size: r.size, viewers: r.viewers, style: r.style, effects: r.effects,
+    layout: r.layout, elements: r.elements, materials: r.materials,
+    colors: r.colors, lighting: r.lighting, summary: r.summary,
+    descriptionFa: r.descriptionFa, youtube: r.youtube, imdb: r.imdb,
+    wikipedia: r.wikipedia, socialPost: r.socialPost,
+    images, videos, tags,
+    isFilm: !!(r.is_film),
   };
 }
 
-// Ordered column list — used for positional placeholders.
 const SHOW_COLUMNS = [
   'num', 'name', 'category', 'source', 'size', 'viewers', 'style', 'effects', 'layout',
   'elements', 'materials', 'colors', 'lighting', 'summary', 'descriptionFa',
-  'youtube', 'imdb', 'wikipedia', 'socialPost', 'images', 'videos',
+  'youtube', 'imdb', 'wikipedia', 'socialPost', 'images', 'videos', 'tags',
+  'is_film',
 ];
-
 function showToValues(s) {
   return [
-    s.num,
-    s.name || '',
-    s.category || '',
-    s.source || '',
-    s.size || '',
-    s.viewers || '',
-    s.style || '',
-    s.effects || '',
-    s.layout || '',
-    s.elements || '',
-    s.materials || '',
-    s.colors || '',
-    s.lighting || '',
-    s.summary || '',
-    s.descriptionFa || '',
-    s.youtube || '',
-    s.imdb || '',
-    s.wikipedia || '',
-    s.socialPost || '',
+    s.num, s.name || '', s.category || '', s.source || '', s.size || '', s.viewers || '',
+    s.style || '', s.effects || '', s.layout || '', s.elements || '', s.materials || '',
+    s.colors || '', s.lighting || '', s.summary || '', s.descriptionFa || '',
+    s.youtube || '', s.imdb || '', s.wikipedia || '', s.socialPost || '',
     JSON.stringify(Array.isArray(s.images) ? s.images : []),
     JSON.stringify(Array.isArray(s.videos) ? s.videos : []),
+    JSON.stringify(Array.isArray(s.tags) ? s.tags : []),
+    s.isFilm ? 1 : 0,
   ];
 }
 
-// ---------------------------------------------------------------------------
-// Auth helpers
-// ---------------------------------------------------------------------------
-function getUserById(id) {
-  return db.prepare('SELECT * FROM users WHERE id = ?').get(id);
-}
-
-function getUserByUsername(username) {
-  return db.prepare('SELECT * FROM users WHERE username = ?').get(username);
-}
-
+function getUserById(id) { return db.prepare('SELECT * FROM users WHERE id = ?').get(id); }
+function getUserByUsername(username) { return db.prepare('SELECT * FROM users WHERE username = ?').get(username); }
 function getUserByToken(token) {
-  if (!token) return null;
-  const row = db.prepare('SELECT * FROM sessions WHERE token = ?').get(token);
-  if (!row) return null;
-  // Expired?
-  if (row.expires_at && row.expires_at < nowSec()) {
-    db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
-    return null;
-  }
-  return getUserById(row.user_id);
+  const row = db.prepare('SELECT user_id FROM sessions WHERE token = ? AND expires > ?').get(token, nowSec());
+  return row ? getUserById(row.user_id) : null;
 }
-
 function createSession(userId) {
   const token = genToken();
-  const exp = nowSec() + SESSION_TTL;
-  db.prepare('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)').run(token, userId, exp);
+  db.prepare('INSERT INTO sessions (token, user_id, created, expires) VALUES (?, ?, ?, ?)').run(token, userId, nowSec(), nowSec() + 7 * 86400);
   return token;
 }
-
-function destroySession(token) {
-  db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
-}
-
+function destroySession(token) { db.prepare('DELETE FROM sessions WHERE token = ?').run(token); }
 function requireUser(req) {
   const auth = req.headers.get('Authorization') || '';
-  const m = auth.match(/^Bearer\s+(.+)$/i);
-  if (!m) return null;
-  return getUserByToken(m[1].trim());
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  return token ? getUserByToken(token) : null;
 }
-
 function requireRole(req, roles) {
   const user = requireUser(req);
-  if (!user) return { user: null, ok: false, status: 401, error: 'Unauthorized' };
-  if (roles && !roles.includes(user.role)) {
-    return { user, ok: false, status: 403, error: 'Forbidden' };
-  }
-  return { user, ok: true };
+  if (!user || user.must_change_password || !roles.includes(user.role)) return null;
+  return user;
 }
+
+function sha256(s) { return createHash('sha256').update(s, 'utf8').digest('hex'); }
+function hashPassword(password) {
+  const salt = randomBytes(16).toString('hex');
+  const hash = createHash('sha256').update(salt + password, 'utf8').digest('hex');
+  return salt + '$' + hash;
+}
+function verifyPassword(password, stored) {
+  if (!stored.includes('$')) return stored === sha256(password);
+  const [salt, hash] = stored.split('$');
+  return hash === createHash('sha256').update(salt + password, 'utf8').digest('hex');
+}
+function genToken() { return randomBytes(32).toString('hex'); }
+function nowSec() { return Math.floor(Date.now() / 1000); }
+function getClientIP(req) {
+  const fwd = req.headers.get('x-forwarded-for');
+  if (fwd) return fwd.split(',')[0].trim();
+  return req.headers.get('x-real-ip') || 'unknown';
+}
+
+// ---------------------------------------------------------------------------
+// Login rate limiting
+// ---------------------------------------------------------------------------
+const loginAttempts = new Map();
+function checkRateLimit(ip) {
+  const entry = loginAttempts.get(ip);
+  const now = nowSec();
+  if (!entry || now > entry.blockedUntil) {
+    if (entry && now > entry.blockedUntil) loginAttempts.delete(ip);
+    return { ok: true };
+  }
+  return { ok: false, retryAfter: entry.blockedUntil - now };
+}
+function recordFailedAttempt(ip) {
+  const now = nowSec();
+  let entry = loginAttempts.get(ip) || { count: 0, firstAttempt: now, blockedUntil: 0 };
+  entry.count++;
+  if (entry.count >= 5) entry.blockedUntil = now + 900;
+  loginAttempts.set(ip, entry);
+}
+function clearRateLimit(ip) { loginAttempts.delete(ip); }
 
 // ---------------------------------------------------------------------------
 // Seed default admin + shows
@@ -230,103 +357,202 @@ function requireRole(req, roles) {
 function seedDefaultAdmin() {
   const existing = db.prepare('SELECT COUNT(*) AS c FROM users').get();
   if (existing.c === 0) {
-    db.prepare('INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)')
+    db.prepare('INSERT INTO users (username, password_hash, role, name, must_change_password) VALUES (?, ?, ?, ?, 1)')
       .run('admin', sha256('admin'), 'admin', 'مدیر سیستم');
-    console.log('[seed] created default admin: admin / admin');
+    console.log('[seed] created default admin; password change is required at first login');
+  } else {
+    db.prepare('UPDATE users SET must_change_password = 1 WHERE username = ? AND password_hash = ?')
+      .run('admin', sha256('admin'));
   }
 }
 
 function seedShows() {
-  const existing = db.prepare('SELECT COUNT(*) AS c FROM shows').get();
-  if (existing.c > 0) {
-    console.log(`[seed] shows table already has ${existing.c} rows — skipping seed`);
-    return;
-  }
-  // Try several candidate paths for the talk-shows JSON
   const candidates = [
+    process.env.BANKRESANEH_SEED_PATH,
+    resolve(import.meta.dir, 'talk-shows-data.json'),
     resolve(import.meta.dir, '../../public/talk-shows-data.json'),
     resolve(import.meta.dir, '../../../public/talk-shows-data.json'),
-    '/home/z/my-project/public/talk-shows-data.json',
-  ];
-  let path = null;
+    resolve(process.resourcesPath || '', 'api-service', 'talk-shows-data.json'),
+    resolve(process.resourcesPath || '', 'next-service-dist', 'public', 'talk-shows-data.json'),
+  ].filter(Boolean);
+  let jsonPath = null;
   for (const p of candidates) {
-    if (existsSync(p)) { path = p; break; }
+    if (existsSync(p)) { jsonPath = p; break; }
   }
-  if (!path) {
+  if (!jsonPath) {
     console.warn('[seed] talk-shows-data.json not found — skipping shows seed');
     return;
   }
-  console.log(`[seed] loading shows from ${path}`);
+  console.log(`[seed] loading shows from ${jsonPath}`);
   let shows;
-  try {
-    shows = JSON.parse(readFileSync(path, 'utf8'));
-  } catch (e) {
-    console.warn('[seed] failed to parse talk-shows-data.json:', e.message);
+  try { shows = JSON.parse(readFileSync(jsonPath, 'utf8')); } catch (e) {
+    console.warn('[seed] failed to parse:', e.message); return;
+  }
+  if (!Array.isArray(shows)) { console.warn('[seed] expected array'); return; }
+  const existing = db.prepare('SELECT COUNT(*) AS c FROM shows').get();
+  if (existing.c >= shows.length) {
+    console.log(`[seed] DB has ${existing.c} shows, JSON has ${shows.length} — up to date, skipping`);
     return;
   }
-  if (!Array.isArray(shows)) {
-    console.warn('[seed] expected array, got', typeof shows);
-    return;
-  }
+  console.log(`[seed] DB has ${existing.c} shows, JSON has ${shows.length} — inserting new entries`);
   const stmt = db.prepare(`
-    INSERT OR REPLACE INTO shows
+    INSERT OR IGNORE INTO shows
       (num, name, category, source, size, viewers, style, effects, layout,
        elements, materials, colors, lighting, summary, descriptionFa,
        youtube, imdb, wikipedia, socialPost, images, videos)
-    VALUES
-      (?, ?, ?, ?, ?, ?, ?, ?, ?,
-       ?, ?, ?, ?, ?, ?,
-       ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   let inserted = 0;
   const tx = db.transaction(() => {
     for (const s of shows) {
       if (typeof s.num !== 'number') continue;
-      try {
-        stmt.run(...showToValues(s));
-        inserted++;
-      } catch (e) {
+      try { stmt.run(...showToValues(s)); inserted++; } catch (e) {
         console.warn(`[seed] failed to insert show num=${s.num}:`, e.message);
       }
     }
   });
   tx();
-  console.log(`[seed] inserted ${inserted} shows`);
+  console.log(`[seed] inserted ${inserted} shows (now ${shows.length} total)`);
 }
 
 seedDefaultAdmin();
 seedShows();
 
 // ---------------------------------------------------------------------------
-// Router
+// Bun server
 // ---------------------------------------------------------------------------
 const server = Bun.serve({
   port: PORT,
+  hostname: process.env.HOSTNAME || '127.0.0.1',
   async fetch(req) {
     const url = new URL(req.url);
-    const { pathname } = url;
-    const method = req.method.toUpperCase();
+    const pathname = url.pathname;
+    const method = req.method;
 
-    if (method === 'OPTIONS') return corsOptions();
+    if (method === 'OPTIONS') return corsOptions(req);
+
+    // Private readiness handshake: prevents mistaking another local service for this API.
+    if (pathname === '/api/internal/ready' && method === 'GET') {
+      if (!process.env.BANKRESANEH_STARTUP_TOKEN || req.headers.get('x-bankresaneh-startup-token') !== process.env.BANKRESANEH_STARTUP_TOKEN) {
+        return json({ error: 'Not Found' }, 404, req);
+      }
+      return json({ status: 'ready' }, req);
+    }
 
     // ----- Health -----
     if (pathname === '/api/health' && method === 'GET') {
-      return json({ status: 'ok', time: nowSec() });
+      return json({ status: 'ok', time: nowSec() }, req);
+    }
+
+    // ----- Image serving -----
+    if (pathname.startsWith('/api/image/') && method === 'GET') {
+      const numStr = pathname.slice('/api/image/'.length).split('/')[0];
+      const num = parseInt(numStr, 10);
+      if (!Number.isFinite(num) || num < 1) return json({ error: 'invalid show number' }, 400, req);
+      const row = db.prepare('SELECT image_data, image_mime FROM shows WHERE num = ?').get(num);
+      if (!row || !row.image_data) return json({ error: 'no image for show ' + num }, 404, req);
+      const origin = req.headers.get('origin') || '';
+      const corsOrigin = isAllowedOrigin(origin) ? origin : '*';
+      return new Response(new Uint8Array(row.image_data), {
+        status: 200,
+        headers: {
+          'Content-Type': row.image_mime || 'image/jpeg',
+          'Cache-Control': 'public, max-age=86400, immutable',
+          'Access-Control-Allow-Origin': corsOrigin,
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'X-Content-Type-Options': 'nosniff',
+        },
+      });
+    }
+
+    // ----- Fetch image from IMDb/Wikipedia -----
+    if (pathname === '/api/fetch-image' && method === 'POST') {
+      const authUser = requireRole(req, ['admin', 'editor']);
+      if (!authUser) return json({ error: 'Unauthorized' }, 401, req);
+      let body;
+      try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
+      const num = parseInt(body?.num, 10);
+      const imdbUrl = String(body?.imdb || '');
+      const wikiUrl = String(body?.wikipedia || '');
+      const showName = String(body?.name || '');
+      if (!Number.isFinite(num) || num < 1) return json({ error: 'invalid show number' }, 400, req);
+
+      const OMDB_API_KEY = 'thewdb';
+      const UA = 'BankResaneh/2.0 (contact@bankrasaneh.ir)';
+      const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+      async function fetchRetry(url, opts = {}, retries = 2) {
+        for (let i = 0; i <= retries; i++) {
+          try { const r = await fetch(url, opts); if (r.ok) return r; if (r.status === 429) { await new Promise(x=>setTimeout(x,3000*(i+1))); continue; } if (r.status === 404) return r; }
+          catch(e) { if (i === retries) throw e; await new Promise(x=>setTimeout(x,1500)); }
+        }
+        return null;
+      }
+      function cleanQ(s) { return (s||'').replace(/[?!]+$/,'').replace(/\(.*?\)/g,' ').replace(/[\u2013\u2014-]/g,' ').replace(/\s+/g,' ').trim(); }
+
+      let imageUrl = null, source = '';
+      const direct = imdbUrl?.match(/tt(\d+)/);
+      if (direct) {
+        const r = await fetchRetry(`https://www.omdbapi.com/?i=tt${direct[1]}&apikey=${OMDB_API_KEY}`,{},1);
+        if (r && r.ok) { const d = await r.json(); if (d.Response==='True' && d.Poster && d.Poster!=='N/A') { imageUrl=d.Poster; source='omdb'; } }
+      }
+      if (!imageUrl && showName) {
+        const q = cleanQ(showName);
+        if (q) {
+          const r = await fetchRetry(`https://www.omdbapi.com/?s=${encodeURIComponent(q)}&apikey=${OMDB_API_KEY}`,{},1);
+          if (r && r.ok) { const d = await r.json(); if (d.Search) for (const item of d.Search) if (item.Poster && item.Poster!=='N/A') { imageUrl=item.Poster; source='omdb'; break; } }
+        }
+      }
+      if (!imageUrl && showName) {
+        for (const lang of ['en','fa']) {
+          for (const suffix of [' (TV series)',' (TV program)',' (film)','']) {
+            const r = await fetchRetry(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cleanQ(showName)+suffix)}`,{headers:{'User-Agent':UA}},1);
+            if (r && r.ok) { const d = await r.json(); const img = d.originalimage?.source || d.thumbnail?.source; if (img) { imageUrl=img; source='wikipedia-'+lang; break; } }
+          }
+          if (imageUrl) break;
+        }
+      }
+      if (!imageUrl) return json({ error: 'no image found' }, 404, req);
+
+      const isWiki = imageUrl.includes('wikimedia.org') || imageUrl.includes('wikipedia.org');
+      const ires = await fetchRetry(imageUrl, { headers: isWiki ? {'User-Agent':UA} : {'User-Agent':BROWSER_UA,'Referer':'https://www.imdb.com/'} }, 3);
+      if (!ires || !ires.ok) return json({ error: 'download failed' }, 500, req);
+      const buf = await ires.arrayBuffer();
+      const raw = new Uint8Array(buf);
+      if (raw.length < 200) return json({ error: 'image too small' }, 500, req);
+
+      let processed;
+      try {
+        const sharp = (await import('sharp')).default;
+        processed = await sharp(Buffer.from(raw)).resize(400, 600, { fit:'inside', withoutEnlargement:true }).jpeg({ quality:85, mozjpeg:true }).toBuffer();
+      } catch(e) { processed = Buffer.from(raw); }
+
+      db.prepare('UPDATE shows SET image_data = ?, image_mime = ?, image_source = ? WHERE num = ?').run(new Uint8Array(processed), 'image/jpeg', source, num);
+      if (imdbUrl) db.prepare('UPDATE shows SET imdb = ? WHERE num = ?').run(imdbUrl, num);
+      if (wikiUrl) db.prepare('UPDATE shows SET wikipedia = ? WHERE num = ?').run(wikiUrl, num);
+      return json({ success: true, source, size: processed.length }, req);
     }
 
     // ----- Auth: login -----
     if (pathname === '/api/auth/login' && method === 'POST') {
+      const ip = getClientIP(req);
+      const rl = checkRateLimit(ip);
+      if (!rl.ok) return json({ error: `تلاش‌های ناموفق زیاد. لطفاً ${rl.retryAfter} ثانیه صبر کنید.` }, 429, req);
       let body;
-      try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400); }
+      try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400, req); }
       const username = String(body?.username || '').trim();
       const password = String(body?.password || '');
-      if (!username || !password) return json({ error: 'نام کاربری و رمز عبور را وارد کنید' }, 400);
+      if (!username || !password) return json({ error: 'نام کاربری و رمز عبور را وارد کنید' }, 400, req);
       const user = getUserByUsername(username);
-      if (!user || user.password_hash !== sha256(password)) {
-        return json({ error: 'نام کاربری یا رمز عبور نادرست است' }, 401);
+      if (!user || !verifyPassword(password, user.password_hash)) {
+        recordFailedAttempt(ip);
+        return json({ error: 'نام کاربری یا رمز عبور نادرست است' }, 401, req);
       }
+      clearRateLimit(ip);
+      db.prepare('UPDATE users SET last_seen = ? WHERE id = ?').run(nowSec(), user.id);
+      user.last_seen = nowSec();
       const token = createSession(user.id);
-      return json({ token, user: publicUser(user) });
+      return json({ token, user: publicUser(user, user) }, req);
     }
 
     // ----- Auth: logout -----
@@ -335,180 +561,215 @@ const server = Bun.serve({
       try { body = await req.json(); } catch {}
       const token = String(body?.token || '');
       const auth = req.headers.get('Authorization') || '';
-      const m = auth.match(/^Bearer\s+(.+)$/i);
-      const t = token || (m ? m[1].trim() : '');
+      const t = auth.startsWith('Bearer ') ? auth.slice(7) : token;
       if (t) destroySession(t);
-      return json({ success: true });
+      return json({ success: true }, req);
     }
 
     // ----- Auth: me -----
     if (pathname === '/api/auth/me' && method === 'GET') {
       const user = requireUser(req);
-      if (!user) return json({ error: 'Unauthorized' }, 401);
-      return json(publicUser(user));
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+      return json(publicUser(user, user), req);
     }
 
-    // ----- Auth: change password -----
+    // ----- Profile -----
+    if (pathname === '/api/profile' && method === 'GET') {
+      const user = requireUser(req);
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+      return json(publicUser(user, user), req);
+    }
+    if (pathname === '/api/profile' && method === 'PUT') {
+      const user = requireUser(req);
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+      let body;
+      try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
+      const updated = db.prepare(`
+        UPDATE users SET name = ?, job_title = ?, deputy = ?, avatar = ?, phone = ?
+        WHERE id = ?
+      `).run(
+        body.name ?? user.name,
+        body.jobTitle ?? user.job_title,
+        body.deputy ?? user.deputy,
+        body.avatar ?? user.avatar,
+        body.phone ?? user.phone,
+        user.id
+      );
+      return json(publicUser(getUserById(user.id), user), req);
+    }
+
+    // ----- Change password -----
     if (pathname === '/api/auth/change-password' && method === 'PUT') {
       const user = requireUser(req);
-      if (!user) return json({ error: 'Unauthorized' }, 401);
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
       let body;
-      try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400); }
+      try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
       const oldPassword = String(body?.oldPassword || '');
       const newPassword = String(body?.newPassword || '');
-      if (!oldPassword || !newPassword) return json({ error: 'رمز قدیمی و جدید را وارد کنید' }, 400);
-      if (newPassword.length < 4) return json({ error: 'رمز جدید باید حداقل ۴ کاراکتر باشد' }, 400);
-      if (user.password_hash !== sha256(oldPassword)) {
-        return json({ error: 'رمز فعلی نادرست است' }, 401);
-      }
-      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(sha256(newPassword), user.id);
-      // Invalidate all sessions for this user, force re-login
+      if (!oldPassword || !newPassword) return json({ error: 'رمز قدیمی و جدید را وارد کنید' }, 400, req);
+      if (newPassword.length < 8) return json({ error: 'رمز جدید باید حداقل ۸ کاراکتر باشد' }, 400, req);
+      if (!verifyPassword(oldPassword, user.password_hash)) return json({ error: 'رمز فعلی نادرست است' }, 401, req);
+      db.prepare('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?').run(hashPassword(newPassword), user.id);
       db.prepare('DELETE FROM sessions WHERE user_id = ?').run(user.id);
-      return json({ success: true });
+      return json({ success: true }, req);
+    }
+
+    // ----- Persian full-text archive search with bounded pagination -----
+    if (pathname === '/api/shows/search' && method === 'GET') {
+      const user = requireRole(req, ['admin', 'editor', 'viewer']);
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+
+      const normalize = (value) => String(value || '').normalize('NFKC').toLowerCase()
+        .replace(/[يى]/g, 'ی').replace(/ك/g, 'ک').replace(/[ۀة]/g, 'ه')
+        .replace(/[\u064B-\u065F\u0670]/g, '').replace(/[\u200c\u200d\uFEFF]/g, ' ')
+        .replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
+        .replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+        .replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim();
+      const query = normalize(url.searchParams.get('q') || url.searchParams.get('search') || '');
+      const category = normalize(url.searchParams.get('category') || '');
+      const page = Math.max(1, Math.min(1000000, parseInt(url.searchParams.get('page') || '1', 10) || 1));
+      const limit = Math.max(1, Math.min(100, parseInt(url.searchParams.get('limit') || '30', 10) || 30));
+      const terms = query.split(' ').filter(Boolean).slice(0, 8);
+      const offset = (page - 1) * limit;
+      const categorySql = category ? ' AND LOWER(shows.category) LIKE ?' : '';
+      const categoryParams = category ? ['%' + category + '%'] : [];
+      let total = 0;
+      let rows = [];
+
+      if (terms.length && showsFtsAvailable) {
+        const match = terms.map(term => '"' + term.replace(/"/g, '""') + '"*').join(' AND ');
+        try {
+          total = db.prepare(`SELECT COUNT(*) AS total FROM shows_fts JOIN shows ON shows.num = shows_fts.rowid WHERE shows_fts MATCH ?${categorySql}`).get(match, ...categoryParams).total;
+          rows = db.prepare(`SELECT shows.* FROM shows_fts JOIN shows ON shows.num = shows_fts.rowid
+            WHERE shows_fts MATCH ?${categorySql}
+            ORDER BY bm25(shows_fts, 12, 8, 6, 5, 3, 3, 3, 3, 3, 2, 2, 2),
+              CASE WHEN LOWER(shows.name) = ? THEN 0 WHEN LOWER(shows.name) LIKE ? THEN 1 ELSE 2 END,
+              shows.num ASC LIMIT ? OFFSET ?`).all(match, ...categoryParams, query, query + '%', limit, offset);
+        } catch (error) {
+          console.warn('[search] FTS query failed; using SQL fallback:', error.message);
+        }
+      }
+
+      if (!terms.length || !showsFtsAvailable || (terms.length && rows.length === 0 && total === 0)) {
+        const conditions = [];
+        const params = [];
+        for (const term of terms) {
+          const pattern = '%' + term + '%';
+          conditions.push('(name LIKE ? OR category LIKE ? OR summary LIKE ? OR descriptionFa LIKE ? OR source LIKE ? OR style LIKE ? OR effects LIKE ? OR layout LIKE ? OR elements LIKE ? OR materials LIKE ? OR colors LIKE ? OR lighting LIKE ?)');
+          params.push(pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern);
+        }
+        if (category) { conditions.push('LOWER(category) LIKE ?'); params.push('%' + category + '%'); }
+        const where = conditions.length ? ' WHERE ' + conditions.join(' AND ') : '';
+        total = db.prepare('SELECT COUNT(*) AS total FROM shows' + where).get(...params).total;
+        rows = db.prepare(`SELECT * FROM shows${where}
+          ORDER BY CASE WHEN LOWER(name) = ? THEN 0 WHEN LOWER(name) LIKE ? THEN 1 ELSE 2 END, num ASC
+          LIMIT ? OFFSET ?`).all(...params, query, query + '%', limit, offset);
+      }
+
+      return json({
+        shows: rows.map(rowToShow),
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+        query,
+      }, req);
     }
 
     // ----- Shows: list -----
     if (pathname === '/api/shows' && method === 'GET') {
-      const rows = db.prepare('SELECT * FROM shows ORDER BY num ASC').all();
-      return json({ shows: rows.map(rowToShow) });
+      const user = requireRole(req, ['admin', 'editor', 'viewer']);
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+      const rows = db.prepare('SELECT * FROM shows ORDER BY num').all();
+      return json({ shows: rows.map(rowToShow) }, req);
     }
 
     // ----- Shows: create -----
     if (pathname === '/api/shows' && method === 'POST') {
-      const { user, ok, status, error } = requireRole(req, ['admin', 'editor']);
-      if (!ok) return json({ error }, status);
+      const user = requireRole(req, ['admin', 'editor']);
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
       let body;
-      try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400); }
-      if (typeof body?.num !== 'number') {
-        // Auto-assign next num
+      try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
+      if (!body.num) {
         const max = db.prepare('SELECT MAX(num) AS m FROM shows').get();
         body.num = (max?.m || 0) + 1;
       }
-      const row = showToValues(body);
-      try {
-        db.prepare(`INSERT OR REPLACE INTO shows
-          (num, name, category, source, size, viewers, style, effects, layout,
-           elements, materials, colors, lighting, summary, descriptionFa,
-           youtube, imdb, wikipedia, socialPost, images, videos)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,
-           ?, ?, ?, ?, ?, ?,
-           ?, ?, ?, ?, ?, ?)`).run(...row);
-      } catch (e) {
-        return json({ error: 'خطا در ایجاد برنامه: ' + e.message }, 500);
-      }
-      return json({ num: body.num });
+      db.prepare(`INSERT OR REPLACE INTO shows (${SHOW_COLUMNS.join(', ')}) VALUES (${SHOW_COLUMNS.map(() => '?').join(', ')})`).run(...showToValues(body));
+      return json(rowToShow(db.prepare('SELECT * FROM shows WHERE num = ?').get(body.num)), req);
     }
 
-    // ----- Shows: get by num / update / delete -----
-    const showMatch = pathname.match(/^\/api\/shows\/(\d+)$/);
-    if (showMatch) {
-      const num = Number(showMatch[1]);
-
-      if (method === 'GET') {
-        const r = db.prepare('SELECT * FROM shows WHERE num = ?').get(num);
-        if (!r) return json({ error: 'برنامه یافت نشد' }, 404);
-        return json({ show: rowToShow(r) });
-      }
-
-      if (method === 'PUT') {
-        const { user, ok, status, error } = requireRole(req, ['admin', 'editor']);
-        if (!ok) return json({ error }, status);
-        let body;
-        try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400); }
-        const existing = db.prepare('SELECT * FROM shows WHERE num = ?').get(num);
-        if (!existing) return json({ error: 'برنامه یافت نشد' }, 404);
-        const merged = { ...rowToShow(existing), ...body, num };
-        try {
-          db.prepare(`UPDATE shows SET
-            name=?, category=?, source=?, size=?, viewers=?,
-            style=?, effects=?, layout=?, elements=?, materials=?,
-            colors=?, lighting=?, summary=?, descriptionFa=?,
-            youtube=?, imdb=?, wikipedia=?, socialPost=?,
-            images=?, videos=?
-            WHERE num=?`).run(...showToValues(merged).slice(1), num);
-        } catch (e) {
-          return json({ error: 'خطا در بروزرسانی: ' + e.message }, 500);
-        }
-        return json({ success: true });
-      }
-
-      if (method === 'DELETE') {
-        const { user, ok, status, error } = requireRole(req, ['admin']);
-        if (!ok) return json({ error }, status);
-        const r = db.prepare('DELETE FROM shows WHERE num = ?').run(num);
-        if (r.changes === 0) return json({ error: 'برنامه یافت نشد' }, 404);
-        return json({ success: true });
-      }
-    }
-
-    // ----- Users: list / create / delete / update -----
-    if (pathname === '/api/users' && method === 'GET') {
-      const { user, ok, status, error } = requireRole(req, ['admin']);
-      if (!ok) return json({ error }, status);
-      const rows = db.prepare('SELECT * FROM users ORDER BY id ASC').all();
-      return json({ users: rows.map(publicUser) });
-    }
-
-    if (pathname === '/api/users' && method === 'POST') {
-      const { user, ok, status, error } = requireRole(req, ['admin']);
-      if (!ok) return json({ error }, status);
+    // ----- Shows: update -----
+    if (pathname.startsWith('/api/shows/') && method === 'PUT') {
+      const user = requireRole(req, ['admin', 'editor']);
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+      const num = parseInt(pathname.slice('/api/shows/'.length));
       let body;
-      try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400); }
+      try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
+      body.num = num;
+      const existing = db.prepare('SELECT * FROM shows WHERE num = ?').get(num);
+      if (!existing) return json({ error: 'show not found' }, 404, req);
+      const merged = { ...rowToShow(existing), ...body, num };
+      db.prepare(`INSERT OR REPLACE INTO shows (${SHOW_COLUMNS.join(', ')}) VALUES (${SHOW_COLUMNS.map(() => '?').join(', ')})`).run(...showToValues(merged));
+      return json(rowToShow(db.prepare('SELECT * FROM shows WHERE num = ?').get(num)), req);
+    }
+
+    // ----- Shows: delete -----
+    if (pathname.startsWith('/api/shows') && method === 'DELETE') {
+      const user = requireRole(req, ['admin', 'editor']);
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+      const num = parseInt(url.searchParams.get('num') || '0');
+      if (!num) return json({ error: 'num required' }, 400, req);
+      db.prepare('DELETE FROM shows WHERE num = ?').run(num);
+      return json({ success: true }, req);
+    }
+
+    // ----- Users: list -----
+    if (pathname === '/api/users' && method === 'GET') {
+      const user = requireRole(req, ['admin']);
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+      const rows = db.prepare('SELECT * FROM users ORDER BY id').all();
+      return json({ users: rows.map(u => publicUser(u, user)) }, req);
+    }
+
+    // ----- Users: create -----
+    if (pathname === '/api/users' && method === 'POST') {
+      const admin = requireRole(req, ['admin']);
+      if (!admin) return json({ error: 'Unauthorized' }, 401, req);
+      let body;
+      try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
       const username = String(body?.username || '').trim();
       const password = String(body?.password || '');
-      const role = ['admin', 'editor', 'viewer'].includes(body?.role) ? body.role : 'viewer';
-      const name = String(body?.name || '');
-      if (!username || !password) return json({ error: 'نام کاربری و رمز عبور را وارد کنید' }, 400);
-      if (password.length < 4) return json({ error: 'رمز باید حداقل ۴ کاراکتر باشد' }, 400);
-      const exists = getUserByUsername(username);
-      if (exists) return json({ error: 'این نام کاربری قبلاً ثبت شده است' }, 409);
-      try {
-        const r = db.prepare('INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)')
-          .run(username, sha256(password), role, name);
-        return json({ id: Number(r.lastInsertRowid) });
-      } catch (e) {
-        return json({ error: 'خطا در ایجاد کاربر: ' + e.message }, 500);
-      }
+      if (!username || !password) return json({ error: 'نام کاربری و رمز عبور را وارد کنید' }, 400, req);
+      if (password.length < 8) return json({ error: 'رمز عبور باید حداقل ۸ کاراکتر باشد' }, 400, req);
+      const role = ['admin', 'editor', 'viewer'].includes(body.role) ? body.role : 'viewer';
+      const existing = getUserByUsername(username);
+      if (existing) return json({ error: 'نام کاربری تکراری' }, 409, req);
+      const result = db.prepare('INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)').run(username, hashPassword(password), role, body.name || '');
+      return json(publicUser(getUserById(result.lastInsertRowid), admin), req);
     }
 
-    const userMatch = pathname.match(/^\/api\/users\/(\d+)$/);
-    if (userMatch) {
-      const id = Number(userMatch[1]);
-
-      if (method === 'DELETE') {
-        const { user, ok, status, error } = requireRole(req, ['admin']);
-        if (!ok) return json({ error }, status);
-        if (user.id === id) return json({ error: 'نمی‌توانید حساب خودتان را حذف کنید' }, 400);
-        const r = db.prepare('DELETE FROM users WHERE id = ?').run(id);
-        if (r.changes === 0) return json({ error: 'کاربر یافت نشد' }, 404);
-        db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id);
-        return json({ success: true });
-      }
-
-      if (method === 'PUT') {
-        const { user, ok, status, error } = requireRole(req, ['admin']);
-        if (!ok) return json({ error }, status);
-        let body;
-        try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400); }
-        const target = getUserById(id);
-        if (!target) return json({ error: 'کاربر یافت نشد' }, 404);
-        const role = ['admin', 'editor', 'viewer'].includes(body?.role) ? body.role : target.role;
-        const name = body?.name !== undefined ? String(body.name) : target.name;
-        if (body?.password) {
-          if (String(body.password).length < 4) return json({ error: 'رمز باید حداقل ۴ کاراکتر باشد' }, 400);
-          db.prepare('UPDATE users SET password_hash = ?, role = ?, name = ? WHERE id = ?')
-            .run(sha256(String(body.password)), role, name, id);
-        } else {
-          db.prepare('UPDATE users SET role = ?, name = ? WHERE id = ?')
-            .run(role, name, id);
-        }
-        return json({ success: true });
-      }
+    // ----- Users: update -----
+    if (pathname.startsWith('/api/users') && method === 'PUT') {
+      const admin = requireRole(req, ['admin']);
+      if (!admin) return json({ error: 'Unauthorized' }, 401, req);
+      const id = parseInt(url.searchParams.get('id') || '0');
+      let body;
+      try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
+      const target = getUserById(id);
+      if (!target) return json({ error: 'user not found' }, 404, req);
+      db.prepare('UPDATE users SET name = ?, role = ? WHERE id = ?').run(body.name ?? target.name, body.role ?? target.role, id);
+      return json(publicUser(getUserById(id), admin), req);
     }
 
-    // 404
-    return json({ error: 'Not Found', path: pathname }, 404);
+    // ----- Users: delete -----
+    if (pathname.startsWith('/api/users') && method === 'DELETE') {
+      const admin = requireRole(req, ['admin']);
+      if (!admin) return json({ error: 'Unauthorized' }, 401, req);
+      const id = parseInt(url.searchParams.get('id') || '0');
+      if (id === admin.id) return json({ error: 'cannot delete self' }, 400, req);
+      db.prepare('DELETE FROM users WHERE id = ?').run(id);
+      return json({ success: true }, req);
+    }
+
+    return json({ error: 'Not Found', path: pathname }, 404, req);
   },
 });
 
-console.log(`[bankresaneh-api] listening on http://localhost:${server.port}`);
+console.log(`[bankresaneh-api] listening on http://localhost:${PORT}`);

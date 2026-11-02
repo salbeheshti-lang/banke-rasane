@@ -1,229 +1,131 @@
 // API client for BankResaneh API
 
-// The API base URL is configurable so admins can point the app at any
-// reachable instance of the API service (default: local Bun service on :3002).
-export function getApiBase(): string {
+const TOKEN_KEY = 'bankresaneh_token';
+
+function defaultApiBase(): string {
   if (typeof window !== 'undefined') {
-    // If user set a custom server URL, use it
-    const custom = localStorage.getItem('server_url');
-    if (custom) return custom;
-    // Auto-detect: if we're behind the preview gateway (port 81),
-    // route API requests through the gateway with XTransformPort
     const currentPort = window.location.port;
     const currentHost = window.location.hostname;
-    if (currentPort === '81' || currentPort === '') {
-      // Behind gateway — use relative path with XTransformPort
-      return `${window.location.origin}/?XTransformPort=3002`.replace(/\?.*/, '');
-    }
-    return 'http://localhost:3002';
+    if (currentPort === '81' || currentPort === '' || currentPort === '443' || currentHost.includes('space-z.ai')) return window.location.origin;
   }
-  return 'http://localhost:3002';
+  return 'http://127.0.0.1:3002';
+}
+
+export function getApiBase(): string {
+  if (typeof window !== 'undefined') {
+    const custom = localStorage.getItem('server_url');
+    if (custom) return custom;
+  }
+  return defaultApiBase();
+}
+
+export function getApiUrl(path: string, baseOverride?: string): string {
+  const cleanPath = path.replace(/^\/+/, '');
+  const stored = typeof window !== 'undefined' ? localStorage.getItem('server_url') : null;
+  const selected = (baseOverride ?? stored ?? '').trim();
+  const base = (selected || getApiBase()).replace(/\/+$/, '');
+  const isGatewayHost = typeof window !== 'undefined'
+    && (window.location.port === '81' || window.location.port === '' || window.location.port === '443' || window.location.hostname.includes('space-z.ai'));
+  const isCurrentGateway = typeof window !== 'undefined' && isGatewayHost && base === window.location.origin;
+  if (isCurrentGateway) {
+    const separator = cleanPath.includes('?') ? '&' : '?';
+    return base + '/' + cleanPath + separator + 'XTransformPort=3002';
+  }
+  return base + '/' + cleanPath;
 }
 
 export function setApiBase(url: string): void {
-  if (typeof window !== 'undefined') {
-    const cleaned = (url || '').trim().replace(/\/+$/, '');
-    if (cleaned) {
-      localStorage.setItem('server_url', cleaned);
-    } else {
-      localStorage.removeItem('server_url');
-    }
-  }
+  if (typeof window === 'undefined') return;
+  const cleaned = (url || '').trim().replace(/\/+$/, '');
+  const previous = (localStorage.getItem('server_url') || defaultApiBase()).replace(/\/+$/, '');
+  const next = cleaned || defaultApiBase();
+  if (previous !== next) localStorage.removeItem(TOKEN_KEY);
+  if (cleaned) localStorage.setItem('server_url', cleaned);
+  else localStorage.removeItem('server_url');
 }
 
-export function getApiBaseUrl(): string {
-  return getApiBase();
-}
+export function getApiBaseUrl(): string { return getApiBase(); }
+export function getShowImageUrl(showNum: number): string { return getApiUrl('api/image/' + showNum); }
 
 export interface User {
   id: number;
   username: string;
   role: 'admin' | 'editor' | 'viewer';
   name: string;
+  jobTitle?: string;
+  deputy?: string;
+  avatar?: string;
+  phone?: string;
+  createdAt?: number;
+  lastSeen?: number;
+  online?: boolean;
+  mustChangePassword?: boolean;
 }
 
-export interface Show {
-  num: number;
-  name: string;
-  category: string;
-  source: string;
-  size: string;
-  viewers: string;
-  style: string;
-  effects: string;
-  layout: string;
-  elements: string;
-  materials: string;
-  colors: string;
-  lighting: string;
-  summary: string;
-  descriptionFa: string;
-  youtube: string;
-  imdb: string;
-  wikipedia: string;
-  socialPost: string;
-  images: string[];
-  videos: string[];
+function authHeaders(): Record<string, string> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;
+  return token ? { Authorization: 'Bearer ' + token } : {};
 }
 
-// Token management
-let authToken: string | null = null;
-
-export function setToken(token: string | null) {
-  authToken = token;
-  if (typeof window !== 'undefined') {
-    if (token) {
-      localStorage.setItem('bankresaneh_token', token);
-    } else {
-      localStorage.removeItem('bankresaneh_token');
-    }
-  }
-}
-
-export function getToken(): string | null {
-  if (authToken) return authToken;
-  if (typeof window !== 'undefined') {
-    authToken = localStorage.getItem('bankresaneh_token');
-  }
-  return authToken;
-}
-
-export function isLoggedIn(): boolean {
-  return !!getToken();
-}
-
-// Helper: API request
-async function apiRequest(path: string, options: RequestInit = {}): Promise<any> {
-  const token = getToken();
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...((options.headers as Record<string, string>) || {}),
-  };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  // Detect if behind gateway — if so, append XTransformPort to query
-  let url = `${getApiBase()}${path}`;
-  if (typeof window !== 'undefined') {
-    const port = window.location.port;
-    if (port === '81' || port === '') {
-      // Behind gateway — use relative path with XTransformPort
-      const sep = path.includes('?') ? '&' : '?';
-      url = `${path}${sep}XTransformPort=3002`;
-    }
-  }
-
-  const response = await fetch(url, {
+async function request<T = any>(url: string, options: RequestInit = {}): Promise<T> {
+  const res = await fetch(url, {
     ...options,
-    headers,
+    headers: { 'Content-Type': 'application/json', ...authHeaders(), ...options.headers },
   });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'خطای شبکه' }));
-    throw new Error(error.error || `HTTP ${response.status}`);
-  }
-
-  return response.json();
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'درخواست ناموفق بود (' + res.status + ')');
+  return data;
 }
 
-// Auth
 export const api = {
-  async login(username: string, password: string): Promise<{ token: string; user: User }> {
-    const data = await apiRequest('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ username, password }),
+  async login(username: string, password: string) {
+    const data = await request<{ token: string; user: User }>(getApiUrl('api/auth/login'), {
+      method: 'POST', body: JSON.stringify({ username, password }),
     });
-    setToken(data.token);
+    if (typeof window !== 'undefined') localStorage.setItem(TOKEN_KEY, data.token);
     return data;
   },
-
-  async logout(): Promise<void> {
-    try {
-      await apiRequest('/api/auth/logout', { method: 'POST' });
-    } catch (e) {
-      // Ignore errors on logout
+  async logout() {
+    const token = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;
+    if (token) {
+      try {
+        await fetch(getApiUrl('api/auth/logout'), {
+          method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({ token }),
+        });
+      } catch {}
     }
-    setToken(null);
+    if (typeof window !== 'undefined') localStorage.removeItem(TOKEN_KEY);
   },
-
-  async getCurrentUser(): Promise<User> {
-    const data = await apiRequest('/api/auth/me');
-    return data;
-  },
-
-  // Shows
-  async getShows(params?: { search?: string; category?: string; limit?: number }): Promise<Show[]> {
+  async getShows() { return request(getApiUrl('api/shows')); },
+  async searchShows(params: { query?: string; category?: string; page?: number; limit?: number }) {
     const query = new URLSearchParams();
-    if (params?.search) query.set('search', params.search);
-    if (params?.category) query.set('category', params.category);
-    if (params?.limit) query.set('limit', String(params.limit));
-    const data = await apiRequest(`/api/shows?${query.toString()}`);
-    return data.shows;
+    if (params.query) query.set('q', params.query);
+    if (params.category) query.set('category', params.category);
+    query.set('page', String(Math.max(1, params.page || 1)));
+    query.set('limit', String(Math.min(100, Math.max(1, params.limit || 30))));
+    return request<{
+      shows: Show[];
+      pagination: { page: number; limit: number; total: number; totalPages: number };
+      query: string;
+    }>(getApiUrl('api/shows/search?' + query.toString()));
   },
-
-  async getShow(num: number): Promise<Show> {
-    const data = await apiRequest(`/api/shows/${num}`);
-    return data.show;
+  async saveShow(show: any) { return request(getApiUrl('api/shows'), { method: 'POST', body: JSON.stringify(show) }); },
+  async deleteShow(num: number) { return request(getApiUrl('api/shows?num=' + encodeURIComponent(num)), { method: 'DELETE' }); },
+  async fetchImage(data: { num: number; imdb?: string; wikipedia?: string; name?: string }) {
+    return request(getApiUrl('api/fetch-image'), { method: 'POST', body: JSON.stringify(data) });
   },
-
-  async createShow(show: Partial<Show>): Promise<{ num: number }> {
-    const data = await apiRequest('/api/shows', {
-      method: 'POST',
-      body: JSON.stringify(show),
-    });
-    return data;
+  async getProfile() { return request<User>(getApiUrl('api/profile')); },
+  async updateProfile(data: Partial<User>) { return request<User>(getApiUrl('api/profile'), { method: 'PUT', body: JSON.stringify(data) }); },
+  async changePassword(oldPassword: string, newPassword: string) {
+    return request(getApiUrl('api/auth/change-password'), { method: 'PUT', body: JSON.stringify({ oldPassword, newPassword }) });
   },
-
-  async updateShow(num: number, show: Partial<Show>): Promise<void> {
-    await apiRequest(`/api/shows/${num}`, {
-      method: 'PUT',
-      body: JSON.stringify(show),
-    });
+  async getUsers() { const data = await request<{ users: User[] }>(getApiUrl('api/users')); return data.users || []; },
+  async getCurrentUser(): Promise<User | null> {
+    if (typeof window === 'undefined' || !localStorage.getItem(TOKEN_KEY)) return null;
+    try { return await request<User>(getApiUrl('api/auth/me')); } catch { return null; }
   },
-
-  async deleteShow(num: number): Promise<void> {
-    await apiRequest(`/api/shows/${num}`, { method: 'DELETE' });
-  },
-
-  // Users (admin only)
-  async getUsers(): Promise<User[]> {
-    const data = await apiRequest('/api/users');
-    return data.users;
-  },
-
-  async createUser(user: { username: string; password: string; role: string; name?: string }): Promise<void> {
-    await apiRequest('/api/users', {
-      method: 'POST',
-      body: JSON.stringify(user),
-    });
-  },
-
-  async deleteUser(id: number): Promise<void> {
-    await apiRequest(`/api/users/${id}`, { method: 'DELETE' });
-  },
-
-  async updateUser(id: number, patch: { role?: string; name?: string; password?: string }): Promise<void> {
-    await apiRequest(`/api/users/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(patch),
-    });
-  },
-
-  async changePassword(oldPassword: string, newPassword: string): Promise<void> {
-    await apiRequest('/api/auth/change-password', {
-      method: 'PUT',
-      body: JSON.stringify({ oldPassword, newPassword }),
-    });
-  },
-
-  async getHealth(): Promise<{ status: string }> {
-    const data = await apiRequest('/api/health');
-    return data;
-  },
-
-  // Stats
-  async getStats(): Promise<{ total: number; categories: Array<{ category: string; count: number }> }> {
-    return await apiRequest('/api/stats');
-  },
+  async updateUser(id: number, data: any) { return request(getApiUrl('api/users?id=' + encodeURIComponent(id)), { method: 'PUT', body: JSON.stringify(data) }); },
+  async deleteUser(id: number) { return request(getApiUrl('api/users?id=' + encodeURIComponent(id)), { method: 'DELETE' }); },
+  async createUser(data: any) { return request(getApiUrl('api/users'), { method: 'POST', body: JSON.stringify(data) }); },
 };

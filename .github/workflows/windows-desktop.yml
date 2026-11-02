@@ -1,0 +1,55 @@
+name: Windows desktop build
+
+on:
+  push:
+    branches: [fix/complete-v5.3.1-desktop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - name: Install dependencies
+        run: bun install --no-save
+
+      - name: Generate Prisma client
+        run: bunx prisma generate
+        env:
+          DATABASE_URL: file:./db/custom.db
+
+      - name: Check Electron main-process syntax
+        run: node --check electron/main.js
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Build Windows installer
+        run: npm run electron:build
+
+      - name: Run packaged app smoke test
+        run: npm run smoke:desktop
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: banke-rasane-windows
+          path: |
+            release/*.exe
+            release/*.blockmap
+            release/latest.yml
+          if-no-files-found: error
+          retention-days: 14
