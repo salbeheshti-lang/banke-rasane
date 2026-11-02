@@ -128,7 +128,7 @@ async function main() {
     const normalizedSearch = await request('/api/shows/search?q=' + encodeURIComponent('یک برنامه'), { token });
     assert.equal(normalizedSearch.status, 200);
     assert.ok(normalizedSearch.data.shows.some((show) => show.num === 990000001),
-      'Persian Yeh/Kaf normalization must find legacy Arabic variants');
+      'Persian Yeh/Kaf normalization must find legacy Arabic variants. Response: ' + JSON.stringify(normalizedSearch.data));
 
     const updateShow = await request('/api/shows/990000001', {
       method: 'PUT', token, body: { summary: 'متن به‌روزشده برای آزمون' },
