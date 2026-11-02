@@ -47,6 +47,7 @@ if (process.env.DB_PATH && !existsSync(DB_PATH)) {
 
 const db = new Database(DB_PATH, { create: true });
 db.exec('PRAGMA journal_mode = WAL;');
+db.exec('PRAGMA recursive_triggers = ON;');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
