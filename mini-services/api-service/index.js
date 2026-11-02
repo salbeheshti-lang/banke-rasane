@@ -395,6 +395,14 @@ const server = Bun.serve({
 
     if (method === 'OPTIONS') return corsOptions(req);
 
+    // Private readiness handshake: prevents mistaking another local service for this API.
+    if (pathname === '/api/internal/ready' && method === 'GET') {
+      if (!process.env.BANKRESANEH_STARTUP_TOKEN || req.headers.get('x-bankresaneh-startup-token') !== process.env.BANKRESANEH_STARTUP_TOKEN) {
+        return json({ error: 'Not Found' }, 404, req);
+      }
+      return json({ status: 'ready' }, req);
+    }
+
     // ----- Health -----
     if (pathname === '/api/health' && method === 'GET') {
       return json({ status: 'ok', time: nowSec() }, req);
