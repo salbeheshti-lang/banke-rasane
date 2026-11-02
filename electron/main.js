@@ -315,14 +315,15 @@ app.whenReady().then(async () => {
     log('Auto-updater error: ' + err.message);
   });
 
-  // Check for updates (non-blocking)
-  try { autoUpdater.checkForUpdates().catch(err => log('Update check failed: ' + err.message)); }
-  catch(e) { log('Update check skipped: ' + e.message); }
-
   try {
     await startApiService();
     await startNextServer();
     createWindow();
+
+    // Check only after the renderer window exists so an early update response
+    // cannot be silently discarded by the update-available dialog handler.
+    try { autoUpdater.checkForUpdates().catch(err => log('Update check failed: ' + err.message)); }
+    catch(e) { log('Update check skipped: ' + e.message); }
   } catch(err) {
     log('FATAL: ' + err.message);
     dialog.showErrorBox('خطا در راه‌اندازی', 'خطا: ' + err.message + '\n\nفایل لاگ: ' + getLogPath());
