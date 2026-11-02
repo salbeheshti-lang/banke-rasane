@@ -68,6 +68,12 @@ async function main() {
   try {
     const health = await waitForApi(base, child, logs);
     assert.equal(health.status, 'ok');
+    const allowedCors = await fetch(base + '/api/health', { headers: { Origin: 'http://127.0.0.1:3000' } });
+    assert.equal(allowedCors.headers.get('access-control-allow-origin'), 'http://127.0.0.1:3000',
+      'configured frontend origin must pass CORS');
+    const rejectedCors = await fetch(base + '/api/health', { headers: { Origin: 'https://untrusted.example' } });
+    assert.equal(rejectedCors.headers.get('access-control-allow-origin'), '',
+      'unconfigured frontend origins must not pass CORS');
     assert.equal((await request('/api/profile')).status, 401, 'profile must require authentication');
 
     let login = await request('/api/auth/login', { method: 'POST', body: { username: 'admin', password: 'admin' } });
