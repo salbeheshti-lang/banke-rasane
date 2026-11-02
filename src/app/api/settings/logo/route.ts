@@ -1,20 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import sharp from 'sharp';
 
 export const runtime = 'nodejs';
 
 const LOGO_DIR = path.join(process.cwd(), 'public', 'uploads');
 const LOGO_FILE = path.join(LOGO_DIR, 'logo.png');
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_IMAGE_DIMENSION = 4096;
 
 /**
  * POST /api/settings/logo
- * Accepts a multipart/form-data upload with a single `file` field (image).
- * Persists the file to public/uploads/logo.png so it is:
- *   - served directly via /uploads/logo.png (for the in-app preview), and
- *   - read by /api/export-pdf to inline as base64 in the generated PDF.
- *
- * Returns JSON: { ok, path, url } on success.
+ * Accepts an image upload and normalizes it to PNG so the saved filename,
+ * preview URL, and data URL embedded in the PDF all use the same encoding.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -24,25 +23,47 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: 'فایلی ارسال نشده است' }, { status: 400 });
     }
 
-    // Basic size/type sanity check (allow up to ~5MB, image/* only).
-    const MAX = 5 * 1024 * 1024;
-    if (file.size > MAX) {
+    if (file.size <= 0) {
+      return NextResponse.json({ ok: false, error: 'فایل تصویری خالی است' }, { status: 400 });
+    }
+    if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json({ ok: false, error: 'حجم فایل بیش از ۵ مگابایت است' }, { status: 413 });
     }
-    if (!file.type.startsWith('image/')) {
-      return NextResponse.json({ ok: false, error: 'فقط فایل تصویری مجاز است' }, { status: 415 });
+
+    const input = Buffer.from(await file.arrayBuffer());
+    let metadata: sharp.Metadata;
+    try {
+      // Validate the actual image bytes, not the client-supplied MIME type.
+      metadata = await sharp(input, {
+        limitInputPixels: MAX_IMAGE_DIMENSION * MAX_IMAGE_DIMENSION,
+      }).metadata();
+    } catch {
+      return NextResponse.json({ ok: false, error: 'فایل تصویری معتبر نیست' }, { status: 415 });
     }
 
-    if (!fs.existsSync(LOGO_DIR)) fs.mkdirSync(LOGO_DIR, { recursive: true });
+    if (!metadata.width || !metadata.height ||
+        metadata.width > MAX_IMAGE_DIMENSION || metadata.height > MAX_IMAGE_DIMENSION) {
+      return NextResponse.json(
+        { ok: false, error: 'ابعاد تصویر باید حداکثر ۴۰۹۶ در ۴۰۹۶ پیکسل باشد' },
+        { status: 413 }
+      );
+    }
 
-    const buf = Buffer.from(await file.arrayBuffer());
-    fs.writeFileSync(LOGO_FILE, buf);
+    // Normalize JPEG, WebP, etc. into a valid PNG file.
+    const png = await sharp(input, {
+      limitInputPixels: MAX_IMAGE_DIMENSION * MAX_IMAGE_DIMENSION,
+    }).rotate().png().toBuffer();
+
+    if (!fs.existsSync(LOGO_DIR)) fs.mkdirSync(LOGO_DIR, { recursive: true });
+    const temporaryFile = `${LOGO_FILE}.tmp`;
+    fs.writeFileSync(temporaryFile, png);
+    fs.renameSync(temporaryFile, LOGO_FILE);
 
     return NextResponse.json({
       ok: true,
       path: LOGO_FILE,
       url: '/uploads/logo.png',
-      size: buf.length,
+      size: png.length,
     });
   } catch (error) {
     console.error('logo upload error:', error);
