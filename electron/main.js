@@ -120,7 +120,11 @@ async function startApiServer() {
   const bundledDb = path.join(process.resourcesPath || '', 'api-service', 'bankresaneh.sqlite');
   if (!fs.existsSync(dbPath) && fs.existsSync(bundledDb)) {
     fs.copyFileSync(bundledDb, dbPath);
-    log('Copied initial API database to user data');
+    const bundledWal = bundledDb + '-wal';
+    if (fs.existsSync(bundledWal)) {
+      fs.copyFileSync(bundledWal, dbPath + '-wal');
+    }
+    log('Copied initial API database and WAL to user data');
   }
 
   const standaloneDir = path.join(process.resourcesPath || '', 'next-service-dist');
