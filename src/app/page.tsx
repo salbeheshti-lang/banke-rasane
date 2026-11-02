@@ -93,6 +93,19 @@ function hasDecor(show: TalkShow): boolean {
   return true;
 }
 
+// Convert a #RRGGBB hex color to an `r, g, b` string (for use inside rgba()).
+// Falls back to "255,255,255" if the input is malformed.
+function hexToRgb(hex: string): string {
+  let h = (hex || '').trim();
+  if (h.startsWith('#')) h = h.slice(1);
+  if (h.length === 3) h = h.split('').map(c => c + c).join('');
+  if (h.length !== 6 || /[^0-9a-fA-F]/.test(h)) return '255,255,255';
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `${r}, ${g}, ${b}`;
+}
+
 // Real genres from Excel - 17 categories + technical decor view + 3 extras (PSA, deep observation, ads)
 const GENRES: Genre[] = [
   {
@@ -3301,6 +3314,7 @@ function ProgramsView({
           >
             {genres.filter(g => g.id !== 'decor' && g.id !== 'psa' && g.id !== 'deepobs' && g.id !== 'ads').map(g => {
               const isActive = g.id === genre.id;
+              const rgb = hexToRgb(g.color);
               return (
                 <button
                   key={g.id}
@@ -3313,11 +3327,14 @@ function ProgramsView({
                     boxShadow: `0 4px 14px ${g.color}66`,
                     scrollSnapAlign: 'center',
                   } : {
-                    background: 'rgba(255,255,255,0.12)',
-                    color: 'rgba(255,255,255,0.85)',
-                    border: '1px solid rgba(255,255,255,0.25)',
+                    // Ghost tint of the genre's own color — each chip hints its identity at rest,
+                    // and lights up to full saturation on hover. Way more alive than plain white glass.
+                    background: `rgba(${rgb}, 0.12)`,
+                    color: g.color,
+                    border: `1px solid rgba(${rgb}, 0.45)`,
                     backdropFilter: 'blur(8px)',
                     WebkitBackdropFilter: 'blur(8px)',
+                    boxShadow: `inset 0 0 0 1px rgba(${rgb}, 0.05)`,
                     scrollSnapAlign: 'center',
                   }}
                   onMouseEnter={(e) => {
@@ -3330,10 +3347,10 @@ function ProgramsView({
                   }}
                   onMouseLeave={(e) => {
                     if (!isActive) {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.12)';
-                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)';
-                      e.currentTarget.style.color = 'rgba(255,255,255,0.85)';
-                      e.currentTarget.style.boxShadow = 'none';
+                      e.currentTarget.style.background = `rgba(${rgb}, 0.12)`;
+                      e.currentTarget.style.borderColor = `rgba(${rgb}, 0.45)`;
+                      e.currentTarget.style.color = g.color;
+                      e.currentTarget.style.boxShadow = `inset 0 0 0 1px rgba(${rgb}, 0.05)`;
                     }
                   }}
                 >
