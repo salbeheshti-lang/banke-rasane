@@ -31,6 +31,9 @@ jobs:
       - name: Lint
         run: bun run lint
 
+      - name: API smoke runner syntax
+        run: node --check scripts/smoke-api.cjs
+
       - name: API integration smoke test
         run: node scripts/smoke-api.cjs
 
