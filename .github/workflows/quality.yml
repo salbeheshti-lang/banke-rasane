@@ -2,7 +2,7 @@ name: Quality checks
 
 on:
   push:
-    branches: [main]
+    branches: [main, fix/complete-v5.3.1-desktop]
   pull_request:
     branches: [main]
 
