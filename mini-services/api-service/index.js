@@ -620,10 +620,10 @@ const server = Bun.serve({
 
       const normalize = (value) => String(value || '').normalize('NFKC').toLowerCase()
         .replace(/[يى]/g, 'ی').replace(/ك/g, 'ک').replace(/[ۀة]/g, 'ه')
-        .replace(/[\\u064B-\\u065F\\u0670]/g, '').replace(/[\\u200c\\u200d\\uFEFF]/g, ' ')
+        .replace(/[\u064B-\u065F\u0670]/g, '').replace(/[\u200c\u200d\uFEFF]/g, ' ')
         .replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
         .replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
-        .replace(/[^\\p{L}\\p{N}]+/gu, ' ').replace(/\\s+/g, ' ').trim();
+        .replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim();
       const query = normalize(url.searchParams.get('q') || url.searchParams.get('search') || '');
       const category = normalize(url.searchParams.get('category') || '');
       const page = Math.max(1, Math.min(1000000, parseInt(url.searchParams.get('page') || '1', 10) || 1));
