@@ -596,10 +596,17 @@ const server = Bun.serve({
       if (!user) return json({ error: 'Unauthorized' }, 401, req);
       let body;
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
-      const updated = db.prepare(`
-        UPDATE users SET name = ?, job_title = ?, deputy = ?, avatar = ?, phone = ?
+      const username = String(body.username ?? user.username).trim();
+      if (username.length < 3 || username.length > 64) {
+        return json({ error: 'نام کاربری باید بین ۳ تا ۶۴ نویسه باشد' }, 400, req);
+      }
+      const usernameOwner = db.prepare('SELECT id FROM users WHERE username = ? AND id <> ?').get(username, user.id);
+      if (usernameOwner) return json({ error: 'این نام کاربری قبلاً استفاده شده است' }, 409, req);
+      db.prepare(`
+        UPDATE users SET username = ?, name = ?, job_title = ?, deputy = ?, avatar = ?, phone = ?
         WHERE id = ?
       `).run(
+        username,
         body.name ?? user.name,
         body.jobTitle ?? user.job_title,
         body.deputy ?? user.deputy,
