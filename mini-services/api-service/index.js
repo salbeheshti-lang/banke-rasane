@@ -395,12 +395,11 @@ function seedShows() {
     return;
   }
   console.log(`[seed] DB has ${existing.c} shows, JSON has ${shows.length} — inserting new entries`);
+  // Keep the seed insert aligned with the canonical column/value mapping.
+  // showToValues includes every current field (including tags and isFilm).
   const stmt = db.prepare(`
-    INSERT OR IGNORE INTO shows
-      (num, name, category, source, size, viewers, style, effects, layout,
-       elements, materials, colors, lighting, summary, descriptionFa,
-       youtube, imdb, wikipedia, socialPost, images, videos)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT OR IGNORE INTO shows (${SHOW_COLUMNS.join(', ')})
+    VALUES (${SHOW_COLUMNS.map(() => '?').join(', ')})
   `);
   let inserted = 0;
   const tx = db.transaction(() => {
