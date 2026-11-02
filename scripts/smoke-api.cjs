@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* eslint @typescript-eslint/no-require-imports: off */
 // End-to-end smoke test for the Bun API. Uses an isolated temporary SQLite DB.
 const { spawn } = require('node:child_process');
 const { mkdtempSync, rmSync } = require('node:fs');
