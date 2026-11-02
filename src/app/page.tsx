@@ -73,11 +73,35 @@ const TAG_LIBRARY: Record<string, TagSpec> = {
 // Default tag set for the "decor" view (or any genre without its own tags).
 const DEFAULT_GENRE_TAGS: TagSpec[] = [TAG_LIBRARY.style, TAG_LIBRARY.size, TAG_LIBRARY.viewers];
 
+// Categories that have NO analyzable decor — excluded from the "Decor" view.
+// (advertising, PSA, films/series, energy-saving ads, back-to-school ads, live streams)
+const NO_DECOR_CATEGORIES: string[] = [
+  'PSA (پیام خدمت عمومی)',
+  'آگهی‌های تبلیغاتی',
+  'صرفه‌جویی',          // PSA/ad-like
+  'مدرسه',              // back-to-school ads/teasers
+  'پخش زنده',           // live webcams (no studio decor)
+];
+// Shows whose category starts with one of these prefixes are also excluded from Decor
+const NO_DECOR_PREFIXES: string[] = [
+  'خارج از ژانر تاک‌شو:',  // competition/reality/documentary — not analyzable as decor
+];
+
+function hasDecor(show: TalkShow): boolean {
+  if (show.isFilm) return false;            // films/series have no TV-studio decor
+  const cat = show.category || '';
+  if (NO_DECOR_CATEGORIES.includes(cat)) return false;
+  for (const p of NO_DECOR_PREFIXES) {
+    if (cat.startsWith(p)) return false;
+  }
+  return true;
+}
+
 // Real genres from Excel - 17 categories + technical decor view + 3 extras (PSA, deep observation, ads)
 const GENRES: Genre[] = [
   {
     id: 'decor', key: 'decor', nameFa: 'دکور برنامه‌ها', name: 'Decor Analysis',
-    color: '#029048', description: 'همهٔ ۵۶۰ برنامه با تحلیل دکور و صحنه', filterFn: s => !s.isFilm,
+    color: '#029048', description: 'برنامه‌های قابل تحلیل از نظر دکور و صحنه', filterFn: hasDecor,
     tags: DEFAULT_GENRE_TAGS,
     presetTags: ['مدرن', 'مینیمال', 'چوب', 'تکنولوژی', 'گرم', 'لوکس', 'تاریک', 'روشن'],
     searchFields: ['name', 'summary', 'materials', 'colors'],
@@ -217,6 +241,95 @@ const GENRES: Genre[] = [
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.colors],
     presetTags: ['تبلیغاتی', 'تجاری', 'برندمحور', 'جذاب', 'کوتاه'],
     searchFields: ['name', 'summary', 'category', 'colors'],
+  },
+  // ----- 11 new genre categories (sarfjooyi, kasht, krismas, polisi, ramazan, etc.) -----
+  {
+    id: 'sarfjooyi', key: 'sarfjooyi', nameFa: 'صرفه‌جویی', name: 'Energy Saving',
+    color: '#0891b2', description: '۱۳ برنامه — آگاهی‌بخش صرفه‌جویی در انرژی و آب',
+    filterFn: s => s.category === 'صرفه‌جویی',
+    tags: [],  // No decor tags — these shows have no analyzable decor
+    presetTags: ['صرفه‌جویی', 'انرژی', 'آب', 'PSA', 'محیط زیست'],
+    searchFields: ['name', 'summary', 'tags'],
+  },
+  {
+    id: 'kasht', key: 'kasht', nameFa: 'کاشت درخت', name: 'Tree Planting',
+    color: '#16a34a', description: '۲۱ برنامه — باغبانی، کاشت درخت و سبک زندگی سبز',
+    filterFn: s => s.category === 'کاشت درخت',
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
+    presetTags: ['باغبانی', 'درخت', 'سبز', 'محیط زیست', 'سبک زندگی'],
+    searchFields: ['name', 'summary', 'materials', 'elements'],
+  },
+  {
+    id: 'krismas', key: 'krismas', nameFa: 'کریسمس', name: 'Christmas',
+    color: '#dc2626', description: '۱۵ برنامه — ویژه‌برنامه‌های کریسمس و سال نو',
+    filterFn: s => s.category === 'کریسمس',
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting],
+    presetTags: ['کریسمس', 'سال نو', 'موسیقی', 'رژه', 'ویژه'],
+    searchFields: ['name', 'summary', 'style', 'lighting'],
+  },
+  {
+    id: 'polisi', key: 'polisi', nameFa: 'پلیسی', name: 'Police',
+    color: '#1e3a8a', description: '۱۹ برنامه — مستند و رئالیتی‌شوی پلیسی',
+    filterFn: s => s.category === 'پلیسی',
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
+    presetTags: ['پلیسی', 'تحقیقی', 'رئالیتی', 'مستند', 'جنایی'],
+    searchFields: ['name', 'summary', 'tags'],
+  },
+  {
+    id: 'ramazan', key: 'ramazan', nameFa: 'رمضان', name: 'Ramadan',
+    color: '#b45309', description: '۶۳ برنامه — برنامه‌های ماه رمضان',
+    filterFn: s => s.category === 'رمضان',
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
+    presetTags: ['رمضان', 'زیارتی', 'مذهبی', 'سحری', 'آشپزی', 'خانواده', 'اندونزی', 'مالزی', 'قطر'],
+    searchFields: ['name', 'summary', 'tags'],
+  },
+  {
+    id: 'safar', key: 'safar', nameFa: 'سفر جاده‌ای', name: 'Road Trip',
+    color: '#c2410c', description: '۹۳ برنامه — ریلیتی‌شوی سفر و ماجراجویی',
+    filterFn: s => s.category === 'سفر جاده‌ای',
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
+    presetTags: ['سفر', 'جاده', 'ریلیتی', 'ماجراجویی', 'غذا', 'طبیعت'],
+    searchFields: ['name', 'summary', 'style', 'effects'],
+  },
+  {
+    id: 'madrese', key: 'madrese', nameFa: 'مدرسه', name: 'School',
+    color: '#0284c7', description: '۲۷ برنامه — آگهی و تیزر بازگشت به مدرسه',
+    filterFn: s => s.category === 'مدرسه',
+    tags: [],  // No decor tags — these are ads/PSAs
+    presetTags: ['مدرسه', 'آگهی', 'تیزر', 'PSA', 'فناوری'],
+    searchFields: ['name', 'summary', 'tags'],
+  },
+  {
+    id: 'naghd', key: 'naghd', nameFa: 'نقد فیلم', name: 'Film Review',
+    color: '#7c3aed', description: '۱۲ برنامه — تاک‌شو و مستند نقد فیلم',
+    filterFn: s => s.category === 'نقد فیلم',
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
+    presetTags: ['نقد', 'فیلم', 'سینما', 'تاک‌شو', 'مستند'],
+    searchFields: ['name', 'summary', 'style', 'layout'],
+  },
+  {
+    id: 'ghanun', key: 'ghanun', nameFa: 'قانون اساسی', name: 'Constitution',
+    color: '#475569', description: '۹ برنامه — مستند قانون اساسی کشورها',
+    filterFn: s => s.category === 'قانون اساسی',
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
+    presetTags: ['قانون', 'اساسی', 'مستند', 'تاریخی', 'سیاسی'],
+    searchFields: ['name', 'summary', 'style', 'layout'],
+  },
+  {
+    id: 'pakhsh', key: 'pakhsh', nameFa: 'پخش زنده', name: 'Live Stream',
+    color: '#0d9488', description: '۲۵ برنامه — پخش زنده دوربین‌های وب',
+    filterFn: s => s.category === 'پخش زنده',
+    tags: [],  // No decor tags — these are live streams with no studio
+    presetTags: ['زنده', 'دوربین', 'قطار', 'خیابان', 'حیات وحش', 'فضا', 'فرودگاه'],
+    searchFields: ['name', 'summary', 'tags'],
+  },
+  {
+    id: 'jasoosi', key: 'jasoosi', nameFa: 'جاسوسی', name: 'Spy',
+    color: '#1f2937', description: '۱۵۴ برنامه — مستند جاسوسی و عملیات اطلاعاتی',
+    filterFn: s => s.category === 'جاسوسی',
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting],
+    presetTags: ['جاسوسی', 'مستند', 'اطلاعاتی', 'جنگ سرد', 'عملیات'],
+    searchFields: ['name', 'summary', 'tags'],
   },
 ];
 
