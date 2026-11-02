@@ -2383,13 +2383,13 @@ function UserProfileModal({ user, onClose, showToast }: {
         style={{
           maxWidth: '440px',
           maxHeight: '90vh',
-          /* iPhone Contacts light grey glass — bright, not dark */
-          background: 'linear-gradient(180deg, rgba(120, 120, 128, 0.35) 0%, rgba(99, 99, 102, 0.3) 50%, rgba(72, 72, 74, 0.25) 100%)',
-          backdropFilter: 'blur(40px) saturate(180%) brightness(1.3)',
-          WebkitBackdropFilter: 'blur(40px) saturate(180%) brightness(1.3)',
+          /* iPhone light grey liquid glass — entire card bright */
+          background: 'linear-gradient(180deg, rgba(180, 180, 190, 0.45) 0%, rgba(160, 160, 170, 0.4) 50%, rgba(140, 140, 150, 0.35) 100%)',
+          backdropFilter: 'blur(40px) saturate(180%) brightness(1.4)',
+          WebkitBackdropFilter: 'blur(40px) saturate(180%) brightness(1.4)',
           borderRadius: '28px',
-          border: '1px solid rgba(255, 255, 255, 0.18)',
-          boxShadow: '0 24px 80px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
+          border: '1px solid rgba(255, 255, 255, 0.3)',
+          boxShadow: '0 24px 80px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
           overflow: 'hidden',
         }}
         onClick={(e) => e.stopPropagation()}
@@ -2415,7 +2415,7 @@ function UserProfileModal({ user, onClose, showToast }: {
           {/* Gradient overlay — bottom fades into grey card background */}
           <div style={{
             position: 'absolute', bottom: 0, left: 0, right: 0, height: '120px',
-            background: 'linear-gradient(180deg, transparent 0%, rgba(120, 120, 128, 0.5) 50%, rgba(120, 120, 128, 0.85) 100%)',
+            background: 'linear-gradient(180deg, transparent 0%, rgba(180, 180, 190, 0.5) 50%, rgba(180, 180, 190, 0.9) 100%)',
           }} />
           {/* Top bar buttons — overlay on image */}
           <div className="flex items-center justify-between p-4" style={{ position: 'absolute', top: 0, left: 0, right: 0 }}>
@@ -2540,10 +2540,10 @@ function ContactRow({ icon, label, value, editing, onChange, placeholder, dir }:
     <div style={{
       display: 'flex', alignItems: 'center', gap: '14px',
       padding: '14px 16px', borderRadius: '14px',
-      background: 'rgba(120, 120, 128, 0.35)',
-      backdropFilter: 'blur(10px) brightness(1.2)',
-      WebkitBackdropFilter: 'blur(10px) brightness(1.2)',
-      border: '1px solid rgba(255, 255, 255, 0.15)',
+      background: 'rgba(160, 160, 170, 0.4)',
+      backdropFilter: 'blur(10px) brightness(1.3)',
+      WebkitBackdropFilter: 'blur(10px) brightness(1.3)',
+      border: '1px solid rgba(255, 255, 255, 0.25)',
     }}>
       <span style={{ fontSize: '20px', flexShrink: 0 }}>{icon}</span>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -3248,7 +3248,7 @@ function ProgramsView({
 
       {/* Search & toolbar — mobile-friendly: full-width search, actions row, horizontally scrollable filter chips */}
       <div className="p-3 sm:p-4 mb-6 space-y-3" style={{
-        background: 'linear-gradient(90deg, rgba(8, 110, 90, 0.72) 0%, rgba(10, 125, 100, 0.68) 50%, rgba(12, 140, 110, 0.65) 100%)',
+        background: 'linear-gradient(90deg, rgba(5, 70, 58, 0.78) 0%, rgba(0, 85, 68, 0.74) 50%, rgba(8, 95, 78, 0.7) 100%)',
         backdropFilter: 'blur(24px) saturate(135%)',
         WebkitBackdropFilter: 'blur(24px) saturate(135%)',
         border: '1px solid rgba(255, 255, 255, 0.2)',
@@ -3285,44 +3285,6 @@ function ProgramsView({
             }}
           />
         </div>
-
-        {/* Genre breadcrumb bar — horizontal scrollable genre chips for quick navigation */}
-        {genre && genres && genres.length > 0 && (
-          <div className="flex items-center gap-2 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
-            <button
-              onClick={() => onNavigate('dashboard')}
-              className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap"
-              style={{
-                background: 'rgba(255,255,255,0.1)',
-                color: 'rgba(255,255,255,0.7)',
-                border: '1px solid rgba(255,255,255,0.15)',
-              }}
-            >
-              همه ژانرها
-            </button>
-            {genres.filter(g => g.id !== 'decor' && g.id !== 'psa' && g.id !== 'deepobs' && g.id !== 'ads').map(g => {
-              const isActive = g.id === genre.id;
-              return (
-                <button
-                  key={g.id}
-                  onClick={() => onGenreSelect(g)}
-                  className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap"
-                  style={isActive ? {
-                    background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
-                    color: '#fff',
-                    border: '1px solid rgba(255,255,255,0.3)',
-                  } : {
-                    background: 'rgba(255,255,255,0.08)',
-                    color: 'rgba(255,255,255,0.6)',
-                    border: '1px solid rgba(255,255,255,0.12)',
-                  }}
-                >
-                  {g.nameFa}
-                </button>
-              );
-            })}
-          </div>
-        )}
 
         {/* Actions row — view toggle + multi-select + Islamic filter */}
         <div className="flex items-center gap-2">
@@ -3501,6 +3463,46 @@ function ProgramsView({
           </div>
         )}
       </div>
+
+      {/* Genre breadcrumb bar — OUTSIDE search bar, horizontally scrollable */}
+      {genre && genres && genres.length > 0 && (
+        <div className="mb-4">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
+            <button
+              onClick={() => onNavigate('dashboard')}
+              className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap"
+              style={{
+                background: 'rgba(255,255,255,0.12)',
+                color: 'rgba(255,255,255,0.8)',
+                border: '1px solid rgba(255,255,255,0.2)',
+              }}
+            >
+              همه ژانرها
+            </button>
+            {genres.filter(g => g.id !== 'decor' && g.id !== 'psa' && g.id !== 'deepobs' && g.id !== 'ads').map(g => {
+              const isActive = g.id === genre.id;
+              return (
+                <button
+                  key={g.id}
+                  onClick={() => onGenreSelect(g)}
+                  className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap"
+                  style={isActive ? {
+                    background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
+                    color: '#fff',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                  } : {
+                    background: 'rgba(255,255,255,0.08)',
+                    color: 'rgba(255,255,255,0.6)',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                  }}
+                >
+                  {g.nameFa}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {filteredShows.length === 0 ? (
         <div className="text-center py-20" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>
