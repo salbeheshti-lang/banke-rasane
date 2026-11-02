@@ -7,8 +7,9 @@ const assert = require('node:assert/strict');
 
 const port = 3100 + Math.floor(Math.random() * 500);
 const base = 'http://127.0.0.1:' + port;
-const child = spawn(process.execPath, [path.resolve(__dirname, 'start-standalone.cjs')], {
-  cwd: path.resolve(__dirname, '..'),
+const serverPath = path.resolve(__dirname, '..', '.next', 'standalone', 'server.js');
+const child = spawn(process.execPath, [serverPath], {
+  cwd: path.dirname(serverPath),
   env: { ...process.env, PORT: String(port), HOSTNAME: '127.0.0.1', NODE_ENV: 'production' },
   stdio: ['ignore', 'pipe', 'pipe'],
 });
