@@ -304,7 +304,7 @@ app.whenReady().then(async () => {
   catch(e) { log('Update check skipped: ' + e.message); }
 
   try {
-    await startApiService().catch(e => log('API service warning: ' + e.message));
+    await startApiService();
     await startNextServer();
     createWindow();
   } catch(err) {
