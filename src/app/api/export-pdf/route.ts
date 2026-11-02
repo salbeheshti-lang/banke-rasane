@@ -1,10 +1,77 @@
 import { NextRequest, NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
 
 export const runtime = 'nodejs';
 
+/**
+ * Read a logo file from disk and return it as a data: URL (base64-inline).
+ * This is critical because the PDF report is rendered inside an `about:blank`
+ * window (window.open + document.write) where relative URLs like
+ * `/banke-rasane-logo.png` resolve to `about:blank/...` and never load.
+ * Inlining as base64 makes the logo self-contained and portable.
+ *
+ * Resolution order:
+ *   1. Custom logo uploaded by admin → public/uploads/logo.png
+ *   2. Default program logo            → public/banke-rasane-logo.png
+ *
+ * Returns an empty string (no <img> rendered) if neither file exists.
+ */
+function getLogoDataUrl(): string {
+  const candidates = [
+    path.join(process.cwd(), 'public', 'uploads', 'logo.png'),
+    path.join(process.cwd(), 'public', 'banke-rasane-logo.png'),
+  ];
+  for (const p of candidates) {
+    try {
+      if (fs.existsSync(p)) {
+        const buf = fs.readFileSync(p);
+        const b64 = buf.toString('base64');
+        return `data:image/png;base64,${b64}`;
+      }
+    } catch {
+      /* ignore — try next candidate */
+    }
+  }
+  return '';
+}
+
+/**
+ * Read persisted report settings (title / subtitle / organization) from disk.
+ * Stored as JSON at data/report-settings.json so admins can edit defaults
+ * without touching code. Returns sensible fallbacks if file is missing.
+ */
+function getReportSettings(): { title: string; subtitle: string; organization: string } {
+  try {
+    const f = path.join(process.cwd(), 'data', 'report-settings.json');
+    if (fs.existsSync(f)) {
+      const raw = fs.readFileSync(f, 'utf-8');
+      const parsed = JSON.parse(raw);
+      return {
+        title: parsed.title || 'گزارش جامع آرشیو برنامه‌های تلویزیونی',
+        subtitle: parsed.subtitle || 'بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی',
+        organization: parsed.organization || 'بانک رسانه',
+      };
+    }
+  } catch {
+    /* ignore — use defaults */
+  }
+  return {
+    title: 'گزارش جامع آرشیو برنامه‌های تلویزیونی',
+    subtitle: 'بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی',
+    organization: 'بانک رسانه',
+  };
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { shows, title, subtitle, organization } = await request.json();
+    const body = await request.json();
+    const shows = body.shows;
+    // Request body can override saved defaults (per-export customisation).
+    const saved = getReportSettings();
+    const title = body.title || saved.title;
+    const subtitle = body.subtitle || saved.subtitle;
+    const organization = body.organization || saved.organization;
 
     if (!shows || !Array.isArray(shows) || shows.length === 0) {
       return NextResponse.json({ error: 'No shows provided' }, { status: 400 });
@@ -12,9 +79,10 @@ export async function POST(request: NextRequest) {
 
     // Generate a professional multi-section HTML report
     const html = generatePDFHtml(shows, {
-      title: title || 'گزارش جامع آرشیو برنامه‌های تلویزیونی',
-      subtitle: subtitle || 'بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی',
-      organization: organization || 'بانک رسانه',
+      title,
+      subtitle,
+      organization,
+      logoDataUrl: getLogoDataUrl(),
     });
 
     return new NextResponse(html, {
@@ -37,6 +105,7 @@ interface PDFOptions {
   title: string;
   subtitle: string;
   organization: string;
+  logoDataUrl: string;
 }
 
 function generatePDFHtml(shows: any[], opts: PDFOptions): string {
@@ -126,13 +195,16 @@ function generatePDFHtml(shows: any[], opts: PDFOptions): string {
   // ---------- Sections ----------
 
   // COVER PAGE
+  const logoHtml = opts.logoDataUrl
+    ? `<img src="${opts.logoDataUrl}" alt="بانک رسانه" style="width: 96px; height: auto; display: block; margin: 0 auto;" />`
+    : '';
   const cover = `
     <section class="cover">
       <div class="cover-bg-deco"></div>
       <div class="cover-content">
         <div class="cover-brand">بانک رسانه</div>
         <div class="cover-logo-mark">
-          <img src="/banke-rasane-logo.png" alt="بانک رسانه" style="width: 80px; height: auto;" />
+          ${logoHtml}
         </div>
         <h1 class="cover-title">${escapeHtml(opts.title)}</h1>
         <p class="cover-subtitle">${escapeHtml(opts.subtitle)}</p>

@@ -794,7 +794,13 @@ export default function Home() {
   const [toast, setToast] = useState<string | null>(null);
   const [publishShows, setPublishShows] = useState<TalkShow[] | null>(null);
   const [showBotConfig, setShowBotConfig] = useState(false);
-  const [exportPreview, setExportPreview] = useState<{ shows: TalkShow[]; format: 'pdf' | 'excel' } | null>(null);
+  const [exportPreview, setExportPreview] = useState<{
+    shows: TalkShow[];
+    format: 'pdf' | 'excel';
+    title?: string;
+    subtitle?: string;
+    organization?: string;
+  } | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   // Navigation history so every view can navigate back to the previous one
   const [viewStack, setViewStack] = useState<Array<{ view: typeof currentView; genre: Genre | null }>>([]);
@@ -1031,7 +1037,7 @@ export default function Home() {
         {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} onShowClick={setSelectedShow} />}
         {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
-        {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} onExport={(shows, format) => setExportPreview({ shows, format })} />}
+        {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} onExport={(shows, format, meta) => setExportPreview({ shows, format, ...meta })} />}
         {currentView === 'add' && canEdit && <AddEditView talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setPresetCategory(undefined); setPresetGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} presetCategory={presetCategory} presetGenre={presetGenre} genres={genres} />}
         {currentView === 'add' && !canEdit && (
           <div className="premium-glass p-8 text-center">
@@ -1114,6 +1120,9 @@ export default function Home() {
         <ExportPreviewModal
           shows={exportPreview.shows}
           format={exportPreview.format}
+          title={exportPreview.title}
+          subtitle={exportPreview.subtitle}
+          organization={exportPreview.organization}
           onClose={() => setExportPreview(null)}
           onDownload={() => {
             showToast(`گزارش ${exportPreview.format.toUpperCase()} دانلود شد`);
@@ -5847,23 +5856,32 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
 // ============================================
 // EXPORT PREVIEW MODAL — preview PDF/Excel before download
 // ============================================
-function ExportPreviewModal({ shows, format, onClose, onDownload }: {
+function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitle, organization }: {
   shows: TalkShow[];
   format: 'pdf' | 'excel';
   onClose: () => void;
   onDownload: () => void;
+  title?: string;
+  subtitle?: string;
+  organization?: string;
 }) {
   const [downloading, setDownloading] = useState(false);
+
+  // Resolve the effective report metadata — caller-provided overrides win,
+  // otherwise we fall back to the canonical defaults used by the API.
+  const reportTitle = title || 'گزارش جامع آرشیو برنامه‌های تلویزیونی';
+  const reportSubtitle = subtitle || 'بانک رسانه — مرجع جامع برنامه‌های تلویزیونی بین‌المللی';
 
   const handleDownload = async () => {
     setDownloading(true);
     try {
       if (format === 'pdf') {
-        // Call API to generate professional PDF report
+        // Call API to generate professional PDF report — pass through any
+        // caller-provided overrides so the rendered PDF matches the preview.
         const res = await fetch('/api/export-pdf', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ shows }),
+          body: JSON.stringify({ shows, title, subtitle, organization }),
         });
         if (res.ok) {
           const html = await res.text();
@@ -5958,14 +5976,16 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
                 }}
               >
                 <div style={{ color: 'rgba(134, 239, 172, 0.6)', fontSize: '11px', letterSpacing: '4px', marginBottom: '12px' }}>بانک رسانه</div>
-                <div style={{ color: '#10b981', marginBottom: '10px', filter: 'drop-shadow(0 0 16px rgba(16, 185, 129, 0.5))' }}>
-                  <svg viewBox="0 0 64 64" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="2" style={{ display: 'inline-block' }}>
-                    <rect x="6" y="14" width="52" height="36" rx="4" />
-                    <path d="M6 22h52M14 14v-4M50 14v-4M20 32l10 6-10 6z" />
-                  </svg>
+                <div style={{ marginBottom: '10px', filter: 'drop-shadow(0 0 16px rgba(16, 185, 129, 0.5))' }}>
+                  {/* Real program logo instead of a generic film/tv SVG icon. */}
+                  <img
+                    src="/banke-rasane-logo.png"
+                    alt="بانک رسانه"
+                    style={{ width: '64px', height: 'auto', display: 'inline-block', borderRadius: '10px' }}
+                  />
                 </div>
-                <h3 className="text-xl font-black mb-2" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.4)' }}>گزارش جامع آرشیو برنامه‌های تلویزیونی</h3>
-                <p className="text-xs" style={{ color: 'rgba(134, 239, 172, 0.8)' }}>بانک رسانه — مرجع جامع برنامه‌های تلویزیونی بین‌المللی</p>
+                <h3 className="text-xl font-black mb-2" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.4)' }}>{reportTitle}</h3>
+                <p className="text-xs" style={{ color: 'rgba(134, 239, 172, 0.8)' }}>{reportSubtitle}</p>
                 <div
                   className="flex justify-center gap-4 mt-4 mx-auto"
                   style={{
@@ -6155,7 +6175,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
   talkShows: TalkShow[];
   uploadedShows: number[];
   showToast: (msg: string) => void;
-  onExport: (shows: TalkShow[], format: 'pdf' | 'excel') => void;
+  onExport: (shows: TalkShow[], format: 'pdf' | 'excel', meta?: { title?: string; subtitle?: string; organization?: string }) => void;
 }) {
   const stats = {
     total: talkShows.length,
@@ -6163,6 +6183,74 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
     uploaded: uploadedShows.length,
     genres: new Set(talkShows.map(s => s.category)).size,
     withImages: talkShows.filter(s => s.images && s.images.length > 0).length,
+  };
+
+  // ---------- Report defaults (title/subtitle/organization) ----------
+  // Loaded once from /api/settings/report so the admin can edit them once
+  // and every subsequent PDF export picks them up automatically.
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [rTitle, setRTitle] = useState('');
+  const [rSubtitle, setRSubtitle] = useState('');
+  const [rOrg, setROrg] = useState('');
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [logoVersion, setLogoVersion] = useState(0);          // cache-buster for the logo <img>
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  // Load persisted report defaults once on mount.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/settings/report');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        setRTitle(data.title || '');
+        setRSubtitle(data.subtitle || '');
+        setROrg(data.organization || '');
+      } catch { /* ignore — fields stay empty and the API falls back to its own defaults */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleSaveSettings = async () => {
+    setSavingSettings(true);
+    try {
+      const res = await fetch('/api/settings/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: rTitle, subtitle: rSubtitle, organization: rOrg }),
+      });
+      if (res.ok) {
+        showToast('تنظیمات گزارش ذخیره شد');
+      } else {
+        showToast('خطا در ذخیرهٔ تنظیمات');
+      }
+    } catch {
+      showToast('خطا در ارتباط با سرور');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const handleUploadLogo = async (file: File) => {
+    setUploadingLogo(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/settings/logo', { method: 'POST', body: fd });
+      if (res.ok) {
+        setLogoVersion(v => v + 1);    // force <img> to reload from new file
+        showToast('لوگوی گزارش به‌روزرسانی شد');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        showToast(data.error || 'خطا در آپلود لوگو');
+      }
+    } catch {
+      showToast('خطا در ارتباط با سرور');
+    } finally {
+      setUploadingLogo(false);
+    }
   };
 
   const reports = [
@@ -6197,9 +6285,145 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
       </div>
 
       <div className="premium-glass overflow-hidden">
-        <div className="p-5" style={{ borderBottom: '1px solid rgba(13, 124, 74, 0.1)' }}>
+        <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(13, 124, 74, 0.1)' }}>
           <h3 className="font-bold" style={{ color: '#f0fdf4' }}>گزارش‌های موجود</h3>
+          <button
+            onClick={() => setSettingsOpen(o => !o)}
+            className="text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"
+            style={{
+              background: settingsOpen ? 'rgba(16, 185, 129, 0.18)' : 'rgba(13, 124, 74, 0.1)',
+              color: settingsOpen ? '#10b981' : '#54D9C0',
+              border: '1px solid rgba(16, 185, 129, 0.35)',
+            }}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            تنظیمات گزارش
+          </button>
         </div>
+
+        {/* ---------- Report settings panel (collapsible) ---------- */}
+        {settingsOpen && (
+          <div className="p-5" style={{ borderBottom: '1px solid rgba(13, 124, 74, 0.1)', background: 'rgba(13, 124, 74, 0.04)' }}>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Logo upload — left column */}
+              <div className="flex flex-col items-center justify-start gap-3 p-4 rounded-xl" style={{ background: 'rgba(0,0,0,0.15)', border: '1px solid rgba(13, 124, 74, 0.2)' }}>
+                <div className="text-xs font-bold w-full text-right" style={{ color: '#54D9C0' }}>لوگوی گزارش</div>
+                <div
+                  className="w-24 h-24 rounded-xl flex items-center justify-center overflow-hidden"
+                  style={{ background: 'rgba(255,255,255,0.05)', border: '2px dashed rgba(16, 185, 129, 0.35)' }}
+                >
+                  {/* logoVersion cache-busts so a freshly uploaded logo re-renders
+                      immediately instead of serving the browser-cached old file. */}
+                  <img
+                    key={logoVersion}
+                    src={`/uploads/logo.png?v=${logoVersion}`}
+                    alt="لوگوی گزارش"
+                    style={{ width: '72px', height: 'auto', objectFit: 'contain' }}
+                    onError={(e) => {
+                      // Fall back to the default program logo if no custom logo exists yet.
+                      (e.currentTarget as HTMLImageElement).src = '/banke-rasane-logo.png';
+                    }}
+                  />
+                </div>
+                <label
+                  className="text-xs px-3 py-2 rounded-lg cursor-pointer flex items-center gap-1.5 transition-colors"
+                  style={{
+                    background: uploadingLogo ? 'rgba(115, 115, 115, 0.2)' : 'rgba(16, 185, 129, 0.18)',
+                    color: uploadingLogo ? 'rgba(244,255,255,0.5)' : '#10b981',
+                    border: '1px solid rgba(16, 185, 129, 0.35)',
+                  }}
+                >
+                  {uploadingLogo ? 'در حال آپلود...' : 'آپلود لوگوی جدید'}
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    style={{ display: 'none' }}
+                    disabled={uploadingLogo}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleUploadLogo(f);
+                      e.target.value = '';   // allow re-selecting same file
+                    }}
+                  />
+                </label>
+                <p className="text-[10px] leading-relaxed text-center" style={{ color: 'rgba(244, 255, 255, 0.5)' }}>
+                  PNG/JPG/WebP — حداکثر ۵ مگابایت<br />
+                  این لوگو روی کاور گزارش PDF نمایش داده می‌شود
+                </p>
+              </div>
+
+              {/* Text defaults — right two columns */}
+              <div className="lg:col-span-2 space-y-3">
+                <div>
+                  <label className="text-xs font-bold mb-1.5 block" style={{ color: '#54D9C0' }}>عنوان گزارش</label>
+                  <input
+                    type="text"
+                    value={rTitle}
+                    onChange={(e) => setRTitle(e.target.value)}
+                    placeholder="گزارش جامع آرشیو برنامه‌های تلویزیونی"
+                    className="w-full px-3 py-2 rounded-lg text-sm"
+                    style={{
+                      background: 'rgba(0,0,0,0.25)',
+                      color: '#f0fdf4',
+                      border: '1px solid rgba(13, 124, 74, 0.3)',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold mb-1.5 block" style={{ color: '#54D9C0' }}>زیرعنوان</label>
+                  <input
+                    type="text"
+                    value={rSubtitle}
+                    onChange={(e) => setRSubtitle(e.target.value)}
+                    placeholder="بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی"
+                    className="w-full px-3 py-2 rounded-lg text-sm"
+                    style={{
+                      background: 'rgba(0,0,0,0.25)',
+                      color: '#f0fdf4',
+                      border: '1px solid rgba(13, 124, 74, 0.3)',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold mb-1.5 block" style={{ color: '#54D9C0' }}>تهیه‌کننده / سازمان</label>
+                  <input
+                    type="text"
+                    value={rOrg}
+                    onChange={(e) => setROrg(e.target.value)}
+                    placeholder="بانک رسانه"
+                    className="w-full px-3 py-2 rounded-lg text-sm"
+                    style={{
+                      background: 'rgba(0,0,0,0.25)',
+                      color: '#f0fdf4',
+                      border: '1px solid rgba(13, 124, 74, 0.3)',
+                    }}
+                  />
+                </div>
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <button
+                    onClick={handleSaveSettings}
+                    disabled={savingSettings}
+                    className="text-sm px-4 py-2 rounded-lg transition-colors"
+                    style={{
+                      background: savingSettings ? 'rgba(115, 115, 115, 0.2)' : '#10b981',
+                      color: savingSettings ? 'rgba(244,255,255,0.5)' : '#ffffff',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {savingSettings ? 'در حال ذخیره...' : '✓ ذخیرهٔ تنظیمات'}
+                  </button>
+                </div>
+                <p className="text-[10px] leading-relaxed" style={{ color: 'rgba(244, 255, 255, 0.5)' }}>
+                  این مقادیر به‌عنوان متن پیش‌فرض روی کاور گزارش PDF نمایش داده می‌شوند و برای همهٔ خروجی‌های بعدی اعمال می‌شوند.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <table className="w-full">
           <thead>
             <tr style={{ background: 'rgba(13, 124, 74, 0.08)', borderBottom: '1px solid rgba(13, 124, 74, 0.2)' }}>
@@ -6243,7 +6467,13 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                       if (r.id === 1) shows = talkShows;
                       else if (r.id === 2) shows = talkShows.filter(s => uploadedShows.includes(s.num));
                       if (shows.length === 0) { showToast('برنامه‌ای برای این گزارش وجود ندارد'); return; }
-                      onExport(shows, r.type === 'pdf' ? 'pdf' : 'excel');
+                      // Pass through the currently-edited defaults so the PDF
+                      // preview + export reflect them even before saving.
+                      onExport(shows, r.type === 'pdf' ? 'pdf' : 'excel', {
+                        title: rTitle || undefined,
+                        subtitle: rSubtitle || undefined,
+                        organization: rOrg || undefined,
+                      });
                     }}
                   >
                     دانلود

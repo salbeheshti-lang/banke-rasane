@@ -55,3 +55,8 @@ tool-results/
 *.sqlite-shm
 .env
 !.env.example
+
+# Runtime user-uploaded content (report logo) and persisted settings
+# These are created at runtime and should not be committed.
+public/uploads/
+data/
