@@ -1118,11 +1118,11 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.08);
+  border-radius: 0;
+  background: transparent;
 }
 .analytics-list-row:hover .analytics-list-rank {
-  background: color-mix(in srgb, var(--row-color, #10b981) 15%, transparent);
+  background: transparent;
   color: var(--row-color, #10b981);
 }
 .analytics-list-dot {
@@ -1165,9 +1165,9 @@ html, body {
   font-weight: 700;
   color: var(--row-color, #00E5EF);
   text-align: left;
-  padding: 2px 6px;
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--row-color, #00E5EF) 15%, transparent);
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
   /* No box-shadow glow */
 }
 .theme-dark .analytics-card {
@@ -1189,8 +1189,8 @@ html, body {
   background: transparent;
   border: none;
 }
-.theme-dark .analytics-mini-row { background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(8px); }
-.theme-dark .analytics-list-rank { background: rgba(255, 255, 255, 0.1); color: rgba(244, 255, 255, 0.7); }
+.theme-dark .analytics-mini-row { background: transparent; backdrop-filter: blur(8px); }
+.theme-dark .analytics-list-rank { background: transparent; color: rgba(244, 255, 255, 0.7); }
 @keyframes donut-segment-grow {
   from {
     stroke-dasharray: 0 1000;
