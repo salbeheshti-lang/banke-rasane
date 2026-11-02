@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs';
-const OMDB_API_KEY = 'thewdb';
+const OMDB_API_KEY = process.env.OMDB_API_KEY || '';
 const UA = 'BankResaneh/2.0 (contact@bankrasaneh.ir)';
 
 function decodeHtml(s: string): string {
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     if (!url) return NextResponse.json({ error: 'URL الزامی است' }, { status: 400 });
     const info: Record<string,string> = {};
 
-    if (url.includes('imdb.com')) {
+    const parsedUrl = new URL(url);\n    if (!['www.imdb.com', 'imdb.com'].includes(parsedUrl.hostname) && !parsedUrl.hostname.endsWith('.wikipedia.org')) {\n      return NextResponse.json({ error: 'فقط لینک معتبر IMDb یا ویکی‌پدیا پشتیبانی می‌شود' }, { status: 400 });\n    }\n\n    if (parsedUrl.hostname.endsWith('imdb.com')) {\n      if (!OMDB_API_KEY) return NextResponse.json({ error: 'برای دریافت اطلاعات IMDb باید کلید OMDB_API_KEY روی سرور تنظیم شود' }, { status: 503 });
       const imdbMatch = url.match(/tt(\d+)/);
       if (imdbMatch) {
         const r = await fetchRetry(`https://www.omdbapi.com/?i=tt${imdbMatch[1]}&apikey=${OMDB_API_KEY}&plot=full`, {}, 1);
@@ -74,11 +74,21 @@ export async function POST(request: NextRequest) {
 
     if (url.includes('wikipedia.org')) {
       // Handle both /wiki/Page_Title and /w/index.php?search=query URLs
-      const wikiMatch = url.match(/\/wiki\/(.+?)(?:\?|#|$)/);
-      const searchMatch = url.match(/[?&]search=([^&]+)/);
-      if (wikiMatch) {
-        const pageTitle = decodeURIComponent(wikiMatch[1].replace(/_/g,' '));
-        const lang = url.match(/\/\/([a-z]{2})\.wikipedia/)?.[1] || 'en';
+      const wikiMatch = parsedUrl.pathname.match(/^\/wiki\/(.+)$/);
+      const searchTerm = parsedUrl.searchParams.get('search') || parsedUrl.searchParams.get('title');
+      const lang = parsedUrl.hostname.split('.')[0] || 'en';
+      let pageTitle = wikiMatch ? decodeURIComponent(wikiMatch[1].replace(/_/g, ' ')) : '';
+      if (!pageTitle && searchTerm) {
+        const searchResponse = await fetchRetry(
+          `https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(cleanQuery(searchTerm))}&format=json&utf8=1`,
+          { headers: { 'User-Agent': UA } }, 1
+        );
+        if (searchResponse?.ok) {
+          const searchData = await searchResponse.json();
+          pageTitle = searchData.query?.search?.[0]?.title || '';
+        }
+      }
+      if (pageTitle) {
         const r = await fetchRetry(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(pageTitle)}`, { headers: { 'User-Agent': UA } }, 1);
         if (r && r.ok) {
           const d = await r.json();
