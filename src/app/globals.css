@@ -87,6 +87,15 @@
   --card-accent-color: #0d7c4a;
   /* Genre-color — used by genre cards (dark base + tint overlay) */
   --genre-color: #10b981;
+
+  /* Analytics card — light theme: solid white glass with subtle green tint.
+     Was only defined in .theme-dark, so on light theme the card fell back to
+     transparent and looked washed-out / faded. */
+  --analytics-bg: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.92) 0%,
+    rgba(248, 252, 250, 0.88) 50%,
+    rgba(240, 252, 244, 0.90) 100%);
+  --analytics-border: rgba(13, 124, 74, 0.18);
 }
 
 /* Dark theme override — applied via .theme-dark on <html> */
@@ -1057,8 +1066,10 @@ html, body {
   width: 100%;
   padding: 10px 8px;
   border-radius: 14px;
-  background: rgba(13, 124, 74, 0.05);
-  border: 1px solid rgba(13, 124, 74, 0.10);
+  /* Light theme: solid white card so it stands out on cream background */
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(13, 124, 74, 0.18);
+  box-shadow: 0 2px 8px rgba(13, 124, 74, 0.06);
 }
 .analytics-mini-stat {
   flex: 1;
@@ -1067,20 +1078,21 @@ html, body {
 .analytics-mini-num {
   font-size: 17px;
   font-weight: 800;
-  color: var(--mini-color, #34d399);
+  color: var(--mini-color, #0d7c4a);
   line-height: 1.1;
   /* No glow — clean number */
 }
 .analytics-mini-label {
   font-size: 10px;
-  color: rgba(244, 255, 255, 0.75);
+  /* Dark text for light theme (was white → invisible on cream) */
+  color: rgba(26, 46, 26, 0.7);
   margin-top: 3px;
   font-weight: 600;
 }
 .analytics-mini-divider {
   width: 1px;
   height: 28px;
-  background: linear-gradient(180deg, transparent, rgba(13, 124, 74, 0.2), transparent);
+  background: linear-gradient(180deg, transparent, rgba(13, 124, 74, 0.25), transparent);
   margin: 0 4px;
 }
 .analytics-list-col {
@@ -1221,7 +1233,19 @@ html, body {
   background: transparent;
   border: none;
 }
-.theme-dark .analytics-mini-row { background: transparent; backdrop-filter: blur(8px); }
+.theme-dark .analytics-mini-row {
+  /* Was transparent → washed out. Give it a solid glass background so the
+     mini stats stay readable on the dark gradient backdrop. */
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1),
+    0 4px 16px rgba(0, 0, 0, 0.15);
+}
+.theme-dark .analytics-mini-label { color: rgba(244, 255, 255, 0.85); }
 .theme-dark .analytics-list-rank { background: transparent; color: rgba(244, 255, 255, 0.7); }
 @keyframes donut-segment-grow {
   from {
