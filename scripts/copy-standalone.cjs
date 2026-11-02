@@ -1,3 +1,4 @@
+/* eslint @typescript-eslint/no-require-imports: off */
 // Cross-platform copy of .next/static, public, and node_modules/next into .next/standalone
 const fs = require('fs');
 const path = require('path');
