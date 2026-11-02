@@ -1923,13 +1923,51 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
   onAddGenre?: (g: Genre) => void;
 }) {
   const [showAddGenre, setShowAddGenre] = useState(false);
-  const stats = [
-    { label: 'کل برنامه‌ها', value: talkShows.length, color: '#10b981', icon: 'film' },
-    { label: 'ژانرها', value: genres.length, color: '#2563eb', icon: 'tag' },
-    { label: 'آپلود شده در فضای مجازی', value: uploadedCount, color: '#7c3aed', icon: 'cloud' },
-    { label: 'با تصویر', value: talkShows.filter(s => s.images && s.images.length > 0).length, color: '#db2777', icon: 'image' },
-  ];
 
+  // ----- Analytics computation -----
+  // Build ranked genre list with counts and percentages.
+  const genreStats = useMemo(() => {
+    return genres
+      .map(g => ({ genre: g, count: talkShows.filter(g.filterFn).length, color: g.color }))
+      .filter(x => x.count > 0)
+      .sort((a, b) => b.count - a.count);
+  }, [genres, talkShows]);
+
+  const totalShows = talkShows.length;
+  const totalGenres = genres.length;
+  const withImages = talkShows.filter(s => s.images && s.images.length > 0).length;
+  const uploadedPct = totalShows > 0 ? Math.round((uploadedCount / totalShows) * 100) : 0;
+
+  // Donut chart geometry — 200×200 SVG, 16 segments max for readability
+  const DONUT_SIZE = 200;
+  const DONUT_STROKE = 26;
+  const DONUT_R = (DONUT_SIZE - DONUT_STROKE) / 2;          // 87
+  const DONUT_CIRC = 2 * Math.PI * DONUT_R;                  // ~546.6
+  const DONUT_CENTER = DONUT_SIZE / 2;                       // 100
+  const TOP_GENRES = genreStats.slice(0, 12);                // top 12 in donut
+  const OTHERS_COUNT = genreStats.slice(12).reduce((s, x) => s + x.count, 0);
+
+  const donutSegments = useMemo(() => {
+    const segs: { color: string; dash: number; offset: number; pct: number }[] = [];
+    let acc = 0;
+    const items = TOP_GENRES.map(g => ({ color: g.color, count: g.count }));
+    if (OTHERS_COUNT > 0) items.push({ color: '#6b7280', count: OTHERS_COUNT });
+    const total = items.reduce((s, x) => s + x.count, 0) || 1;
+    for (const it of items) {
+      const frac = it.count / total;
+      const dash = frac * DONUT_CIRC;
+      segs.push({
+        color: it.color,
+        dash,
+        offset: -acc * DONUT_CIRC,
+        pct: Math.round(frac * 100),
+      });
+      acc += frac;
+    }
+    return segs;
+  }, [TOP_GENRES, OTHERS_COUNT]);
+
+  // ----- Render -----
   return (
     <>
       <header className="mb-8 animate-fade-in">
@@ -1943,45 +1981,169 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
           </span>
         </div>
         <p style={{ color: '#8a8a7a' }}>
-          بانک اطلاعاتی {talkShows.length.toLocaleString('fa-IR')} برنامهٔ تلویزیونی در {genres.length} ژانر
+          بانک اطلاعاتی {totalShows.toLocaleString('fa-IR')} برنامهٔ تلویزیونی در {totalGenres} ژانر
         </p>
       </header>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {stats.map((s, i) => {
-          return (
-            <div
-              key={i}
-              className="premium-card animate-card-enter"
-              style={{
-                animationDelay: `${i * 80}ms`,
-                ['--card-accent-color' as string]: s.color,
-              }}
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center"
-                  style={{
-                    backgroundColor: `${s.color}22`,
-                    color: s.color,
-                    border: `1px solid ${s.color}55`,
-                    backdropFilter: 'blur(8px)',
-                  }}
-                >
-                  <StatIcon name={s.icon} />
-                </div>
-                <span className="text-sm font-medium" style={{ color: '#5a6b4a' }}>{s.label}</span>
+      {/* ====== ANALYTICS CARD — replaces the 4 small stat cards ====== */}
+      <div className="mb-8 animate-fade-in">
+        <div className="analytics-card">
+          <div className="analytics-card-glow" aria-hidden />
+          {/* Header */}
+          <div className="analytics-card-header">
+            <div className="analytics-card-header-left">
+              <div className="analytics-card-icon-badge">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                </svg>
               </div>
-              <div className="text-3xl font-black" style={{ color: '#1a2e1a' }}>
-                {s.value.toLocaleString('fa-IR')}
+              <div>
+                <div className="analytics-card-eyebrow">
+                  <span>بانک رسانه</span>
+                  <span className="analytics-card-brand-pill">آمار زنده</span>
+                </div>
+                <h2 className="analytics-card-title">نمای آماری کلی</h2>
+                <p className="analytics-card-subtitle">توزیع برنامه‌ها در ژانرهای مختلف</p>
               </div>
             </div>
-          );
-        })}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowAddGenre(true)}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
+                style={{
+                  background: 'rgba(16, 185, 129, 0.16)',
+                  color: '#34d399',
+                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                }}
+              >
+                + افزودن ژانر
+              </button>
+              {canEdit && (
+                <button
+                  onClick={onAdd}
+                  className="btn-enter-premium text-xs"
+                  style={{ padding: '6px 14px', fontSize: '12px' }}
+                >
+                  + افزودن برنامه
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Body: donut LEFT, list RIGHT on desktop */}
+          <div className="analytics-card-body">
+            {/* ----- DONUT COL ----- */}
+            <div className="analytics-donut-col">
+              <div className="analytics-donut-wrap">
+                <svg
+                  className="analytics-donut-svg"
+                  width={DONUT_SIZE}
+                  height={DONUT_SIZE}
+                  viewBox={`0 0 ${DONUT_SIZE} ${DONUT_SIZE}`}
+                >
+                  {/* Background ring */}
+                  <circle
+                    cx={DONUT_CENTER}
+                    cy={DONUT_CENTER}
+                    r={DONUT_R}
+                    fill="none"
+                    stroke="rgba(15, 64, 71, 0.18)"
+                    strokeWidth={DONUT_STROKE}
+                  />
+                  {/* Segments — rotate -90deg so they start at 12 o'clock */}
+                  <g transform={`rotate(-90 ${DONUT_CENTER} ${DONUT_CENTER})`}>
+                    {donutSegments.map((seg, i) => (
+                      <circle
+                        key={i}
+                        cx={DONUT_CENTER}
+                        cy={DONUT_CENTER}
+                        r={DONUT_R}
+                        fill="none"
+                        stroke={seg.color}
+                        strokeWidth={DONUT_STROKE}
+                        strokeDasharray={`${Math.max(seg.dash - 1.5, 0)} ${DONUT_CIRC}`}
+                        strokeDashoffset={seg.offset}
+                        strokeLinecap="round"
+                        style={{
+                          transition: 'stroke-dasharray 0.6s ease, stroke-dashoffset 0.6s ease',
+                          filter: `drop-shadow(0 0 6px ${seg.color}66)`,
+                        }}
+                      />
+                    ))}
+                  </g>
+                </svg>
+                <div className="analytics-donut-center">
+                  <div className="analytics-donut-center-num">
+                    {totalShows.toLocaleString('fa-IR')}
+                  </div>
+                  <div className="analytics-donut-center-label">برنامه</div>
+                  <div className="analytics-donut-center-growth">
+                    {totalGenres.toLocaleString('fa-IR')} ژانر
+                  </div>
+                </div>
+              </div>
+
+              {/* Mini stats row */}
+              <div className="analytics-mini-row">
+                <div className="analytics-mini-stat" style={{ ['--mini-color' as string]: '#34d399' }}>
+                  <div className="analytics-mini-num">{withImages.toLocaleString('fa-IR')}</div>
+                  <div className="analytics-mini-label">با تصویر</div>
+                </div>
+                <div className="analytics-mini-divider" />
+                <div className="analytics-mini-stat" style={{ ['--mini-color' as string]: '#60a5fa' }}>
+                  <div className="analytics-mini-num">{uploadedCount.toLocaleString('fa-IR')}</div>
+                  <div className="analytics-mini-label">آپلود شده</div>
+                </div>
+                <div className="analytics-mini-divider" />
+                <div className="analytics-mini-stat" style={{ ['--mini-color' as string]: '#f472b6' }}>
+                  <div className="analytics-mini-num">{uploadedPct.toLocaleString('fa-IR')}٪</div>
+                  <div className="analytics-mini-label">پوشش</div>
+                </div>
+              </div>
+            </div>
+
+            {/* ----- LIST COL ----- */}
+            <div className="analytics-list-col">
+              <div className="analytics-list-header">
+                <span>ژانرها</span>
+                <span className="analytics-list-header-count">
+                  {totalGenres.toLocaleString('fa-IR')} دسته
+                </span>
+              </div>
+              <div className="analytics-list-items">
+                {genreStats.slice(0, 8).map((g, i) => {
+                  const pct = totalShows > 0 ? Math.round((g.count / totalShows) * 100) : 0;
+                  return (
+                    <button
+                      key={g.genre.id}
+                      onClick={() => onGenreClick(g.genre)}
+                      className="analytics-list-row"
+                      style={{ ['--row-color' as string]: g.color }}
+                      title={g.genre.description}
+                    >
+                      <span className="analytics-list-rank">{(i + 1).toLocaleString('fa-IR')}</span>
+                      <span className="analytics-list-dot" />
+                      <span className="analytics-list-name">{g.genre.nameFa}</span>
+                      <span className="analytics-list-bar-wrap">
+                        <span
+                          className="analytics-list-bar"
+                          style={{ width: `${Math.min(pct, 100)}%` }}
+                        />
+                      </span>
+                      <span className="analytics-list-count">{g.count.toLocaleString('fa-IR')}</span>
+                      <span className="analytics-list-pct">{pct.toLocaleString('fa-IR')}٪</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <h2 className="text-xl font-bold" style={{ color: '#1a2e1a' }}>ژانرها</h2>
+        <h2 className="text-xl font-bold" style={{ color: '#1a2e1a' }}>همهٔ ژانرها</h2>
         <div className="flex items-center gap-2 flex-wrap">
           {isAdmin && onAddGenre && (
             <button
