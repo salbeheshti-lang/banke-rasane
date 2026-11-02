@@ -1401,11 +1401,12 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
           <Image
             src="/banke-rasane-logo.png"
             alt="بانک رسانه"
-            width={isMobile ? 90 : 130}
-            height={isMobile ? 24 : 34}
+            width={isMobile ? 110 : 160}
+            height={isMobile ? 30 : 42}
             priority
             style={{
-              filter: 'drop-shadow(0 2px 8px rgba(13, 124, 74, 0.25))',
+              /* Brighter, clearer logo — brighter shadow + slight brightness boost */
+              filter: 'drop-shadow(0 3px 10px rgba(0, 0, 0, 0.45)) drop-shadow(0 0 8px rgba(84, 217, 192, 0.25)) brightness(1.15) saturate(1.15)',
               flexShrink: 0,
             }}
           />

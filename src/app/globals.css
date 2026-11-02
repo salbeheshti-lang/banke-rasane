@@ -128,22 +128,23 @@
   --input-bg: rgba(255, 255, 255, 0.08);
   --input-border: rgba(255, 255, 255, 0.25);
 
-  /* Multi-point gradient background: emerald (left) → blue → pink (right) */
+  /* Multi-point gradient background: emerald (left) → blue → pink (right)
+     — one shade brighter, greens more vivid and saturated */
   --background: linear-gradient(90deg,
-    #003F34 0%,
-    #00634F 20%,
-    #078E7D 45%,
-    #54BBD0 75%,
-    #DDBDDC 100%);
+    #0A5547 0%,
+    #007A5E 18%,
+    #159E89 42%,
+    #6CC8DC 72%,
+    #E8CFE5 100%);
   --foreground: #f0fdf4;
 
-  /* Analytics card: real glass transparency (15-22% opacity) over background */
+  /* Analytics card: vibrant glass — more alive, more saturated tints */
   --analytics-bg: linear-gradient(135deg,
-    rgba(217, 242, 238, 0.18) 0%,
-    rgba(10, 128, 107, 0.15) 35%,
-    rgba(181, 221, 243, 0.15) 70%,
-    rgba(235, 201, 227, 0.18) 100%);
-  --analytics-border: rgba(255, 255, 255, 0.44);
+    rgba(180, 240, 220, 0.28) 0%,
+    rgba(34, 185, 154, 0.22) 30%,
+    rgba(120, 200, 230, 0.22) 65%,
+    rgba(235, 201, 227, 0.28) 100%);
+  --analytics-border: rgba(255, 255, 255, 0.5);
 
   /* Genre card: same emerald glass, slightly darker */
   --genre-card-bg: linear-gradient(135deg, rgba(7, 55, 48, 0.55) 0%, rgba(10, 70, 60, 0.45) 100%);
@@ -444,41 +445,43 @@ html, body {
 }
 
 /* ============================================
-   PREMIUM GENRE CARD — vibrant gradient cards (no glow behind numbers)
+   PREMIUM GENRE CARD — vibrant translucent glass cards (special & attractive)
    ============================================ */
 .premium-genre-card {
   position: relative;
-  border-radius: 22px;
+  border-radius: 24px;
   padding: 22px;
   cursor: pointer;
   overflow: hidden;
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   color: #ffffff;
-  /* Vibrant dual-tone gradient: bright genre color → deeper genre color */
+  /* Translucent vibrant glass — genre color shines through with real transparency */
   background:
     linear-gradient(145deg,
-      color-mix(in srgb, var(--genre-color, #006B50) 92%, white 8%) 0%,
-      var(--genre-color, #006B50) 45%,
-      color-mix(in srgb, var(--genre-color, #006B50) 65%, #073D35 35%) 100%);
-  border: 1px solid color-mix(in srgb, var(--genre-color, #006B50) 50%, rgba(255, 255, 255, 0.15));
+      color-mix(in srgb, var(--genre-color, #006B50) 65%, rgba(255, 255, 255, 0.25)) 0%,
+      color-mix(in srgb, var(--genre-color, #006B50) 80%, transparent) 50%,
+      color-mix(in srgb, var(--genre-color, #006B50) 55%, #073D35 45%) 100%);
+  border: 1px solid color-mix(in srgb, var(--genre-color, #006B50) 40%, rgba(255, 255, 255, 0.35));
   box-shadow:
-    0 8px 28px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    inset 0 -2px 8px rgba(0, 0, 0, 0.15);
+    0 8px 28px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -2px 12px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(8px) saturate(140%);
+  -webkit-backdrop-filter: blur(8px) saturate(140%);
 }
 
-/* Subtle top sheen — like light hitting glass (no radial glow) */
+/* Glass top sheen — diagonal light reflection */
 .premium-genre-card::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 50%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, transparent 100%);
+  height: 60%;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 100%);
   pointer-events: none;
   z-index: 0;
-  border-radius: 22px 22px 0 0;
+  border-radius: 24px 24px 0 0;
 }
 
 .premium-genre-card::after {
@@ -486,12 +489,12 @@ html, body {
 }
 
 .premium-genre-card:hover {
-  transform: translateY(-4px) scale(1.02);
-  border-color: color-mix(in srgb, var(--genre-color, #006B50) 60%, rgba(255, 255, 255, 0.3));
+  transform: translateY(-5px) scale(1.03);
+  border-color: color-mix(in srgb, var(--genre-color, #006B50) 55%, rgba(255, 255, 255, 0.5));
   box-shadow:
-    0 14px 36px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25),
-    inset 0 -2px 8px rgba(0, 0, 0, 0.2);
+    0 14px 36px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -2px 12px rgba(0, 0, 0, 0.2);
 }
 
 .premium-genre-card > * {
@@ -1222,44 +1225,34 @@ html, body {
   gap: 8px;
   padding: 10px 14px;
   border-radius: 16px;
-  background: rgba(219, 246, 243, 0.13);
-  border: 1px solid rgba(225, 250, 248, 0.24);
+  background: rgba(255, 255, 255, 0.18);
+  border: none;  /* No border / no highlight */
   cursor: pointer;
   transition: all 0.25s ease;
   text-align: right;
   white-space: nowrap;
   color: inherit;
   font: inherit;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 .analytics-genre-chip:hover {
-  background: color-mix(in srgb, var(--row-color, #00E5EF) 14%, rgba(219, 246, 243, 0.18));
-  border-color: color-mix(in srgb, var(--row-color, #00E5EF) 50%, transparent);
+  background: color-mix(in srgb, var(--row-color, #00E5EF) 20%, rgba(255, 255, 255, 0.22));
   transform: translateY(-2px);
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--row-color, #00E5EF) 25%, transparent);
+  /* No border, no glow — just lift */
 }
+/* Removed rank square badges — chips now show only name + meta */
 .analytics-genre-chip-rank {
-  font-size: 11px;
-  font-weight: 800;
-  color: rgba(244, 255, 255, 0.5);
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.08);
-  flex-shrink: 0;
+  display: none;
 }
 .analytics-genre-chip:hover .analytics-genre-chip-rank {
-  background: color-mix(in srgb, var(--row-color, #10b981) 15%, transparent);
-  color: var(--row-color, #10b981);
+  display: none;
 }
 .analytics-genre-chip-dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
   background: var(--row-color, #00E5EF);
-  /* No glow on dot */
   flex-shrink: 0;
 }
 .analytics-genre-chip-info {
@@ -1280,10 +1273,12 @@ html, body {
 .analytics-genre-chip-meta {
   font-size: 10px;
   font-weight: 600;
-  color: rgba(244, 255, 255, 0.6);
+  color: rgba(244, 255, 255, 0.7);
 }
 .theme-dark .analytics-genre-chip {
-  background: rgba(20, 35, 25, 0.5);
-  border-color: rgba(16, 185, 129, 0.12);
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 .theme-dark .analytics-genre-chip-name { color: #ecfdf5; }
