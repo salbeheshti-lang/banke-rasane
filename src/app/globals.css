@@ -177,18 +177,14 @@ html, body {
    APP CONTENT — warm cream with subtle olive depth
    ============================================ */
 .app-content {
-  background:
-    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(13, 124, 74, 0.06) 0%, transparent 50%),
-    linear-gradient(180deg, #f5f3ed 0%, #e8e4d8 50%, #f5f3ed 100%);
+  background: transparent;
   color: var(--text-primary);
   min-height: 100vh;
 }
 
-/* Dark theme app-content */
+/* Dark theme app-content — transparent so body emerald gradient shows through */
 .theme-dark .app-content {
-  background:
-    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
-    linear-gradient(180deg, #0d1f17 0%, #0a1a12 100%);
+  background: transparent;
   color: var(--text-primary);
 }
 
