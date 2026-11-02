@@ -2531,33 +2531,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                   </div>
                 ))}
               </div>
-              {/* Ranked list — top 5 below the strip */}
-              <div className="analytics-list-items" style={{ marginTop: '12px' }}>
-                {genreStats.slice(0, 5).map((g, i) => {
-                  const pct = totalShows > 0 ? Math.round((g.count / totalShows) * 100) : 0;
-                  return (
-                    <button
-                      key={g.genre.id}
-                      onClick={() => onGenreClick(g.genre)}
-                      className="analytics-list-row"
-                      style={{ ['--row-color' as string]: g.color }}
-                      title={g.genre.description}
-                    >
-                      <span className="analytics-list-rank">{(i + 1).toLocaleString('fa-IR')}</span>
-                      <span className="analytics-list-dot" />
-                      <span className="analytics-list-name">{g.genre.nameFa}</span>
-                      <span className="analytics-list-bar-wrap">
-                        <span
-                          className="analytics-list-bar"
-                          style={{ width: `${Math.min(pct, 100)}%` }}
-                        />
-                      </span>
-                      <span className="analytics-list-count">{g.count.toLocaleString('fa-IR')}</span>
-                      <span className="analytics-list-pct">{pct.toLocaleString('fa-IR')}٪</span>
-                    </button>
-                  );
-                })}
-              </div>
+              {/* No ranked list — only the 5 chips */}
             </div>
           </div>
         </div>
@@ -6030,12 +6004,13 @@ function SettingsModal({
   showToast: (msg: string) => void;
   onLogout: () => void;
 }) {
-  const [tab, setTab] = useState<'server' | 'users' | 'password'>('server');
+  const [tab, setTab] = useState<'profile' | 'users' | 'server' | 'password'>('profile');
 
   const tabs = [
-    { key: 'server' as const,   label: 'سرور',     icon: '🖥' },
-    { key: 'users' as const,    label: 'کاربران',  icon: '👥' },
-    { key: 'password' as const, label: 'رمز عبور', icon: '🔑' },
+    { key: 'profile' as const,  label: 'پروفایل من', icon: '👤' },
+    { key: 'users' as const,    label: 'کاربران',     icon: '👥' },
+    { key: 'server' as const,   label: 'سرور',         icon: '🖥' },
+    { key: 'password' as const, label: 'رمز عبور',     icon: '🔑' },
   ];
 
   return (
@@ -6047,14 +6022,15 @@ function SettingsModal({
       <div
         className="relative flex flex-col"
         style={{
-          width: 'min(720px, 96vw)',
+          width: 'min(640px, 96vw)',
           maxHeight: '90vh',
-          background: 'rgba(255, 255, 255, 0.95)',
-          backdropFilter: 'blur(20px) saturate(160%)',
-          WebkitBackdropFilter: 'blur(20px) saturate(160%)',
-          borderRadius: '24px',
-          border: '1px solid rgba(13, 124, 74, 0.15)',
-          boxShadow: '0 24px 80px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.6)',
+          /* Liquid glass — same as header */
+          background: 'linear-gradient(180deg, rgba(5, 80, 65, 0.82) 0%, rgba(0, 95, 75, 0.78) 50%, rgba(8, 110, 90, 0.75) 100%)',
+          backdropFilter: 'blur(28px) saturate(135%)',
+          WebkitBackdropFilter: 'blur(28px) saturate(135%)',
+          borderRadius: '28px',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          boxShadow: '0 24px 80px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
           overflow: 'hidden',
         }}
         onClick={(e) => e.stopPropagation()}
@@ -6062,19 +6038,14 @@ function SettingsModal({
         {/* Header */}
         <div
           className="flex items-center justify-between p-4 flex-shrink-0"
-          style={{
-            background: 'linear-gradient(180deg, #0a1f14 0%, #0d2218 100%)',
-            borderBottom: '1px solid rgba(13, 124, 74, 0.12)',
-          }}
+          style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.15)' }}
         >
-          <h2 className="text-lg font-bold" style={{ color: '#f0fdf4' }}>⚙ تنظیمات سیستم</h2>
+          <h2 className="text-lg font-bold" style={{ color: '#f0fdf4' }}>تنظیمات</h2>
           <button
             onClick={onClose}
-            aria-label="بستن تنظیمات"
+            aria-label="بستن"
             className="p-2 rounded-lg transition-colors"
-            style={{ color: 'rgba(244, 255, 255, 0.7)' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(220, 38, 38, 0.1)'; e.currentTarget.style.color = '#dc2626'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(244, 255, 255, 0.7)'; }}
+            style={{ color: 'rgba(255, 255, 255, 0.7)' }}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -6084,8 +6055,8 @@ function SettingsModal({
 
         {/* Tabs */}
         <div
-          className="flex items-center gap-1 p-2 flex-shrink-0"
-          style={{ background: 'rgba(13, 124, 74, 0.05)', borderBottom: '1px solid rgba(13, 124, 74, 0.12)' }}
+          className="flex items-center gap-1 p-2 flex-shrink-0 overflow-x-auto no-scrollbar"
+          style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}
         >
           {tabs.map((t) => {
             const active = tab === t.key;
@@ -6093,14 +6064,15 @@ function SettingsModal({
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition-all"
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap"
                 style={active ? {
-                  background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)', border: '1px solid rgba(255, 255, 255, 0.3)',
+                  background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
                   color: 'white',
-                  boxShadow: '0 4px 12px rgba(13, 124, 74, 0.3), inset 0 1px 0 rgba(13, 124, 74, 0.4)',
                 } : {
-                  color: 'rgba(255, 255, 255, 0.9)',
+                  color: 'rgba(255, 255, 255, 0.7)',
                   border: '1px solid transparent',
+                  background: 'transparent',
                 }}
               >
                 <span>{t.icon}</span>
@@ -6112,10 +6084,255 @@ function SettingsModal({
 
         {/* Body — scrollable */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6" style={{ maxHeight: 'calc(90vh - 130px)' }}>
-          {tab === 'server' && <SettingsServerTab showToast={showToast} />}
+          {tab === 'profile' && <ProfileTab currentUser={currentUser} showToast={showToast} />}
           {tab === 'users' && <SettingsUsersTab currentUser={currentUser} showToast={showToast} />}
+          {tab === 'server' && <SettingsServerTab showToast={showToast} />}
           {tab === 'password' && <SettingsPasswordTab currentUser={currentUser} showToast={showToast} onLogout={onLogout} />}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Tab: Profile (iPhone Contacts style) ---
+function ProfileTab({ currentUser, showToast }: { currentUser: User; showToast: (msg: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(currentUser.name || '');
+  const [phone, setPhone] = useState(currentUser.phone || '');
+  const [jobTitle, setJobTitle] = useState(currentUser.jobTitle || '');
+  const [deputy, setDeputy] = useState(currentUser.deputy || '');
+  const [avatar, setAvatar] = useState(currentUser.avatar || '');
+  const [saving, setSaving] = useState(false);
+
+  const roleLabels: Record<string, string> = { admin: 'مدیر سیستم', editor: 'ویراستار', viewer: 'بیننده' };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch(getApiUrl('api/auth/me'), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('bankresaneh_token')}` },
+        body: JSON.stringify({ name, phone, jobTitle, deputy, avatar }),
+      });
+      if (res.ok) {
+        showToast('پروفایل بروزرسانی شد');
+        setEditing(false);
+      } else {
+        showToast('خطا در بروزرسانی');
+      }
+    } catch {
+      showToast('خطا در ارتباط با سرور');
+    }
+    setSaving(false);
+  };
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAvatar(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Avatar — large square like iPhone Contacts */}
+      <div className="flex flex-col items-center gap-3">
+        <div
+          className="relative"
+          style={{ width: '120px', height: '120px' }}
+        >
+          {avatar ? (
+            <img
+              src={avatar}
+              alt={name}
+              style={{
+                width: '120px', height: '120px', borderRadius: '24px', objectFit: 'cover',
+                border: '3px solid rgba(255, 255, 255, 0.3)',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: '120px', height: '120px', borderRadius: '24px',
+                background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '48px', fontWeight: 900, color: '#fff',
+                border: '3px solid rgba(255, 255, 255, 0.3)',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+              }}
+            >
+              {(name || currentUser.username).charAt(0).toUpperCase()}
+            </div>
+          )}
+          {editing && (
+            <label
+              style={{
+                position: 'absolute', bottom: '-4px', right: '-4px',
+                width: '36px', height: '36px', borderRadius: '50%',
+                background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
+                border: '2px solid rgba(255, 255, 255, 0.4)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+              }}
+            >
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.66-.9l.82-1.2A2 2 0 0110.07 4h3.86a2 2 0 011.66.9l.82 1.2a2 2 0 001.66.9H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <input type="file" accept="image/*" onChange={handleAvatarUpload} style={{ display: 'none' }} />
+            </label>
+          )}
+        </div>
+        <div className="text-center">
+          <div style={{ fontSize: '20px', fontWeight: 800, color: '#f0fdf4' }}>{name || currentUser.username}</div>
+          <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '2px' }}>@{currentUser.username}</div>
+        </div>
+        <span
+          style={{
+            fontSize: '11px', fontWeight: 700, padding: '4px 12px', borderRadius: '999px',
+            background: currentUser.role === 'admin' ? 'rgba(220, 38, 38, 0.3)' : currentUser.role === 'editor' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(34, 185, 154, 0.3)',
+            color: currentUser.role === 'admin' ? '#fca5a5' : currentUser.role === 'editor' ? '#fcd34d' : '#54D9C0',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+          }}
+        >
+          {roleLabels[currentUser.role] || currentUser.role}
+        </span>
+      </div>
+
+      {/* Info fields — iPhone Contacts style rows */}
+      <div className="space-y-3">
+        <ProfileField
+          icon="👤"
+          label="نام نمایشی"
+          value={name}
+          isEditing={editing}
+          onChange={setName}
+          placeholder="نام و نام خانوادگی"
+        />
+        <ProfileField
+          icon="📱"
+          label="شماره همراه"
+          value={phone}
+          isEditing={editing}
+          onChange={setPhone}
+          placeholder="0912xxxxxxx"
+          dir="ltr"
+        />
+        <ProfileField
+          icon="💼"
+          label="عنوان شغلی"
+          value={jobTitle}
+          isEditing={editing}
+          onChange={setJobTitle}
+          placeholder="مثلاً: تهیه‌کننده"
+        />
+        <ProfileField
+          icon="🏢"
+          label="معاونت"
+          value={deputy}
+          isEditing={editing}
+          onChange={setDeputy}
+          placeholder="مثلاً: معاونت برنامه"
+        />
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex gap-3">
+        {editing ? (
+          <>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{
+                flex: 1, padding: '12px', borderRadius: '14px',
+                background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
+                color: '#fff', fontWeight: 700, fontSize: '14px',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                cursor: saving ? 'wait' : 'pointer',
+              }}
+            >
+              {saving ? 'در حال ذخیره...' : '✓ ذخیره'}
+            </button>
+            <button
+              onClick={() => { setEditing(false); setName(currentUser.name || ''); setPhone(currentUser.phone || ''); setJobTitle(currentUser.jobTitle || ''); setDeputy(currentUser.deputy || ''); setAvatar(currentUser.avatar || ''); }}
+              style={{
+                flex: 1, padding: '12px', borderRadius: '14px',
+                background: 'rgba(255, 255, 255, 0.1)',
+                color: 'rgba(255, 255, 255, 0.8)', fontWeight: 700, fontSize: '14px',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                cursor: 'pointer',
+              }}
+            >
+              انصراف
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={() => setEditing(true)}
+            style={{
+              width: '100%', padding: '12px', borderRadius: '14px',
+              background: 'rgba(255, 255, 255, 0.12)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              color: '#f0fdf4', fontWeight: 700, fontSize: '14px',
+              border: '1px solid rgba(255, 255, 255, 0.25)',
+              cursor: 'pointer',
+            }}
+          >
+            ✏️ ویرایش پروفایل
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Reusable profile field — iPhone Contacts style row
+function ProfileField({ icon, label, value, isEditing, onChange, placeholder, dir }: {
+  icon: string;
+  label: string;
+  value: string;
+  isEditing: boolean;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  dir?: string;
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex', alignItems: 'center', gap: '12px',
+        padding: '12px 14px', borderRadius: '14px',
+        background: 'rgba(255, 255, 255, 0.08)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        border: '1px solid rgba(255, 255, 255, 0.12)',
+      }}
+    >
+      <span style={{ fontSize: '18px', flexShrink: 0 }}>{icon}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.5)', marginBottom: '2px' }}>{label}</div>
+        {isEditing ? (
+          <input
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            dir={dir}
+            style={{
+              width: '100%', background: 'transparent', border: 'none', outline: 'none',
+              color: '#f0fdf4', fontSize: '14px', fontWeight: 600, fontFamily: 'inherit',
+              padding: 0,
+            }}
+          />
+        ) : (
+          <div style={{ fontSize: '14px', fontWeight: 600, color: '#f0fdf4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} dir={dir}>
+            {value || '—'}
+          </div>
+        )}
       </div>
     </div>
   );
