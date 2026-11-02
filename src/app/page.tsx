@@ -635,7 +635,6 @@ export default function Home() {
     // Load persisted overrides first, then merge them with the base JSON data.
     const saved = loadOverrides();
     // Hydrate browser-persisted state after client mount.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOverrides(saved);
     // Restore custom genres saved in a previous session.
     // eslint-disable-next-line react-hooks/set-state-in-effect
