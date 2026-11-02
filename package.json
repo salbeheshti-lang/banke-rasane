@@ -12,7 +12,8 @@
     "electron:build": "npm run build && npm run typecheck && electron-builder --win --x64 --publish never",
     "electron:dist": "npm run electron:build",
     "typecheck": "tsc --noEmit",
-    "desktop:win": "npm run electron:build"
+    "desktop:win": "npm run electron:build",
+    "smoke:desktop": "node scripts/smoke-electron.cjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
