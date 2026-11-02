@@ -29,6 +29,9 @@ jobs:
         env:
           DATABASE_URL: file:./db/custom.db
 
+      - name: Check Electron main-process syntax
+        run: node --check electron/main.js
+
       - name: Lint
         run: bun run lint
 
