@@ -1016,8 +1016,8 @@ export default function Home() {
 
       <main key={currentView} className={`animate-view-enter ${isMobile ? 'p-4 pt-20 pb-28' : 'p-8 pt-24'}`}>
         {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} onShowClick={setSelectedShow} />}
-        {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} />}
-        {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} />}
+        {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
+        {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} onExport={(shows, format) => setExportPreview({ shows, format })} />}
         {currentView === 'add' && canEdit && <AddEditView talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setPresetCategory(undefined); setPresetGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} presetCategory={presetCategory} presetGenre={presetGenre} genres={genres} />}
         {currentView === 'add' && !canEdit && (
@@ -1261,7 +1261,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 onClick={() => setShowPassword(!showPassword)}
                 aria-label={showPassword ? 'پنهان کردن رمز' : 'نمایش رمز'}
                 disabled={loading}
-                className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-colors"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-colors"
                 style={{ color: '#86efac', background: 'transparent' }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(13, 124, 74, 0.1)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
@@ -1452,18 +1452,16 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               title="بازگشت به صفحهٔ قبل"
               className="flex items-center gap-2 rounded-xl transition-all"
               style={{
-                background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
-                border: '1px solid rgba(13, 124, 74, 0.25)',
-                color: '#54D9C0',
+                background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                color: '#ffffff',
                 padding: isMobile ? '9px 12px' : '9px 16px',
-                boxShadow: '0 2px 8px rgba(13, 124, 74, 0.1), inset 0 1px 0 rgba(255,255,255,0.7)',
+                boxShadow: '0 4px 14px rgba(0, 107, 80, 0.4), inset 0 1px 0 rgba(255,255,255,0.3)',
                 minWidth: '44px',
                 minHeight: '44px',
                 fontWeight: 700,
                 fontSize: '14px',
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.8)'; e.currentTarget.style.transform = 'translateY(0)'; }}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -2130,43 +2128,8 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
   useEffect(() => {
     const el = trackRef.current;
     if (!el) return;
-    // Small delay to let DOM render
     const timer = setTimeout(() => handleScroll(), 100);
-
-    // Drag-to-scroll support
-    let isDown = false;
-    let startX: number;
-    let scrollLeftStart: number;
-
-    const handleMouseDown = (e: MouseEvent) => {
-      isDown = true;
-      el.style.cursor = 'grabbing';
-      startX = e.pageX - el.offsetLeft;
-      scrollLeftStart = el.scrollLeft;
-    };
-    const handleMouseLeave = () => { isDown = false; el.style.cursor = 'grab'; };
-    const handleMouseUp = () => { isDown = false; el.style.cursor = 'grab'; };
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDown) return;
-      e.preventDefault();
-      const x = e.pageX - el.offsetLeft;
-      const walk = (x - startX) * 1.5;
-      el.scrollLeft = scrollLeftStart - walk;
-    };
-
-    el.style.cursor = 'grab';
-    el.addEventListener('mousedown', handleMouseDown);
-    el.addEventListener('mouseleave', handleMouseLeave);
-    el.addEventListener('mouseup', handleMouseUp);
-    el.addEventListener('mousemove', handleMouseMove);
-
-    return () => {
-      clearTimeout(timer);
-      el.removeEventListener('mousedown', handleMouseDown);
-      el.removeEventListener('mouseleave', handleMouseLeave);
-      el.removeEventListener('mouseup', handleMouseUp);
-      el.removeEventListener('mousemove', handleMouseMove);
-    };
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [featuredShows]);
 
@@ -2420,10 +2383,10 @@ function UserProfileModal({ user, onClose, showToast }: {
         style={{
           maxWidth: '440px',
           maxHeight: '90vh',
-          /* iPhone Contacts grey glass — works in both light and dark */
-          background: 'linear-gradient(180deg, rgba(60, 60, 67, 0.6) 0%, rgba(44, 44, 46, 0.55) 50%, rgba(28, 28, 30, 0.5) 100%)',
-          backdropFilter: 'blur(40px) saturate(120%)',
-          WebkitBackdropFilter: 'blur(40px) saturate(120%)',
+          /* iPhone Contacts light grey glass — bright, not dark */
+          background: 'linear-gradient(180deg, rgba(120, 120, 128, 0.35) 0%, rgba(99, 99, 102, 0.3) 50%, rgba(72, 72, 74, 0.25) 100%)',
+          backdropFilter: 'blur(40px) saturate(180%) brightness(1.3)',
+          WebkitBackdropFilter: 'blur(40px) saturate(180%) brightness(1.3)',
           borderRadius: '28px',
           border: '1px solid rgba(255, 255, 255, 0.18)',
           boxShadow: '0 24px 80px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
@@ -2442,7 +2405,7 @@ function UserProfileModal({ user, onClose, showToast }: {
           ) : (
             <div style={{
               width: '100%', height: '100%',
-              background: 'linear-gradient(135deg, #3a3a3c 0%, #48484a 50%, #2c2c2e 100%)',
+              background: 'linear-gradient(135deg, #6e6e73 0%, #8e8e93 50%, #aeaeb2 100%)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '96px', fontWeight: 900, color: 'rgba(255, 255, 255, 0.9)',
             }}>
@@ -2452,7 +2415,7 @@ function UserProfileModal({ user, onClose, showToast }: {
           {/* Gradient overlay — bottom fades into grey card background */}
           <div style={{
             position: 'absolute', bottom: 0, left: 0, right: 0, height: '120px',
-            background: 'linear-gradient(180deg, transparent 0%, rgba(44, 44, 46, 0.6) 50%, rgba(44, 44, 46, 0.95) 100%)',
+            background: 'linear-gradient(180deg, transparent 0%, rgba(120, 120, 128, 0.5) 50%, rgba(120, 120, 128, 0.85) 100%)',
           }} />
           {/* Top bar buttons — overlay on image */}
           <div className="flex items-center justify-between p-4" style={{ position: 'absolute', top: 0, left: 0, right: 0 }}>
@@ -2577,10 +2540,10 @@ function ContactRow({ icon, label, value, editing, onChange, placeholder, dir }:
     <div style={{
       display: 'flex', alignItems: 'center', gap: '14px',
       padding: '14px 16px', borderRadius: '14px',
-      background: 'rgba(58, 58, 60, 0.6)',
-      backdropFilter: 'blur(10px)',
-      WebkitBackdropFilter: 'blur(10px)',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
+      background: 'rgba(120, 120, 128, 0.35)',
+      backdropFilter: 'blur(10px) brightness(1.2)',
+      WebkitBackdropFilter: 'blur(10px) brightness(1.2)',
+      border: '1px solid rgba(255, 255, 255, 0.15)',
     }}>
       <span style={{ fontSize: '20px', flexShrink: 0 }}>{icon}</span>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -3144,6 +3107,9 @@ function ProgramsView({
   onExport,
   canEdit,
   onAdd,
+  onGenreSelect,
+  onNavigate,
+  genres,
 }: {
   genre?: Genre;
   talkShows: TalkShow[];
@@ -3156,6 +3122,9 @@ function ProgramsView({
   onExport: (shows: TalkShow[], format: 'pdf' | 'excel') => void;
   canEdit: boolean;
   onAdd?: () => void;
+  onGenreSelect?: (g: Genre) => void;
+  onNavigate?: (v: 'dashboard' | 'programs' | 'reports' | 'add') => void;
+  genres?: Genre[];
 }) {
   const [search, setSearch] = useState('');
   const [view, setView] = useState<'grid' | 'list'>('grid');
@@ -3278,7 +3247,14 @@ function ProgramsView({
       )}
 
       {/* Search & toolbar — mobile-friendly: full-width search, actions row, horizontally scrollable filter chips */}
-      <div className="premium-glass p-3 sm:p-4 mb-6 space-y-3">
+      <div className="p-3 sm:p-4 mb-6 space-y-3" style={{
+        background: 'linear-gradient(90deg, rgba(8, 110, 90, 0.72) 0%, rgba(10, 125, 100, 0.68) 50%, rgba(12, 140, 110, 0.65) 100%)',
+        backdropFilter: 'blur(24px) saturate(135%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(135%)',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
+        borderRadius: '20px',
+        boxShadow: '0 4px 18px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.12)',
+      }}>
         {/* Search — full width on every screen size */}
         <div className="relative">
           <svg
@@ -3309,6 +3285,44 @@ function ProgramsView({
             }}
           />
         </div>
+
+        {/* Genre breadcrumb bar — horizontal scrollable genre chips for quick navigation */}
+        {genre && genres && genres.length > 0 && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
+            <button
+              onClick={() => onNavigate('dashboard')}
+              className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap"
+              style={{
+                background: 'rgba(255,255,255,0.1)',
+                color: 'rgba(255,255,255,0.7)',
+                border: '1px solid rgba(255,255,255,0.15)',
+              }}
+            >
+              همه ژانرها
+            </button>
+            {genres.filter(g => g.id !== 'decor' && g.id !== 'psa' && g.id !== 'deepobs' && g.id !== 'ads').map(g => {
+              const isActive = g.id === genre.id;
+              return (
+                <button
+                  key={g.id}
+                  onClick={() => onGenreSelect(g)}
+                  className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap"
+                  style={isActive ? {
+                    background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
+                    color: '#fff',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                  } : {
+                    background: 'rgba(255,255,255,0.08)',
+                    color: 'rgba(255,255,255,0.6)',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                  }}
+                >
+                  {g.nameFa}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Actions row — view toggle + multi-select + Islamic filter */}
         <div className="flex items-center gap-2">
@@ -3458,29 +3472,29 @@ function ProgramsView({
             </span>
             <button
               onClick={handleUploadSelected}
-              className="px-3 py-1.5 rounded-lg text-sm font-medium"
-              style={{ background: 'rgba(124, 58, 237, 0.15)', color: '#7c3aed', border: '1px solid rgba(124, 58, 237, 0.3)' }}
+              className="px-4 py-2 rounded-xl text-sm font-bold"
+              style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #9333ea 100%)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)', boxShadow: '0 4px 12px rgba(124, 58, 237, 0.4)' }}
             >
-              📱 انتشار در شبکه‌های اجتماعی
+              📱 انتشار
             </button>
             <button
               onClick={handlePDF}
-              className="px-3 py-1.5 rounded-lg text-sm font-medium"
-              style={{ background: 'rgba(220, 38, 38, 0.15)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.3)' }}
+              className="px-4 py-2 rounded-xl text-sm font-bold"
+              style={{ background: 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)', boxShadow: '0 4px 12px rgba(220, 38, 38, 0.4)' }}
             >
-              📄 گزارش PDF
+              📄 PDF
             </button>
             <button
               onClick={handleExcel}
-              className="px-3 py-1.5 rounded-lg text-sm font-medium"
-              style={{ background: 'rgba(13, 124, 74, 0.15)', color: '#54D9C0', border: '1px solid rgba(13, 124, 74, 0.3)' }}
+              className="px-4 py-2 rounded-xl text-sm font-bold"
+              style={{ background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)', boxShadow: '0 4px 12px rgba(0, 107, 80, 0.4)' }}
             >
-              📊 گزارش Excel
+              📊 Excel
             </button>
             <button
               onClick={() => { setSelectedIds([]); setSelectionMode(false); }}
-              className="px-3 py-1.5 rounded-lg text-sm font-medium"
-              style={{ background: 'rgba(107, 143, 122, 0.15)', color: 'rgba(255, 255, 255, 0.9)', border: '1px solid rgba(107, 143, 122, 0.3)' }}
+              className="px-4 py-2 rounded-xl text-sm font-bold"
+              style={{ background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)' }}
             >
               لغو
             </button>

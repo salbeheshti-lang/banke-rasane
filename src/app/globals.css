@@ -1319,13 +1319,12 @@ html, body {
 }
 .featured-carousel-track {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   overflow-x: auto;
-  /* Force one-card-at-a-time snap */
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  padding: 12px 25%;
+  padding: 16px 8px;
   scroll-behavior: smooth;
 }
 .featured-carousel-track::-webkit-scrollbar {
