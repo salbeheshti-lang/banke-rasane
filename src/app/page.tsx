@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
-import { api, setApiBase, getApiBase, User } from '@/lib/api';
+import { api, setApiBase, getApiBase, getApiUrl, getShowImageUrl, User } from '@/lib/api';
 
 // ============================================
 // TYPES
@@ -31,6 +31,7 @@ interface TalkShow {
   tags?: string[];
   images?: string[];
   videos?: string[];
+  isFilm?: boolean;
 }
 
 // A "section-specific tag" — derives a small badge label from a TalkShow field
@@ -66,6 +67,7 @@ const TAG_LIBRARY: Record<string, TagSpec> = {
   materials: { id: 'materials', label: s => s.materials || null },
   colors: { id: 'colors', label: s => s.colors || null },
   lighting: { id: 'lighting', label: s => s.lighting || null },
+  film: { id: 'film', label: s => s.isFilm ? 'سریال' : null },
 };
 
 // Default tag set for the "decor" view (or any genre without its own tags).
@@ -75,7 +77,7 @@ const DEFAULT_GENRE_TAGS: TagSpec[] = [TAG_LIBRARY.style, TAG_LIBRARY.size, TAG_
 const GENRES: Genre[] = [
   {
     id: 'decor', key: 'decor', nameFa: 'دکور برنامه‌ها', name: 'Decor Analysis',
-    color: '#029048', description: 'همهٔ ۵۶۰ برنامه با تحلیل دکور و صحنه', filterFn: () => true,
+    color: '#029048', description: 'همهٔ ۵۶۰ برنامه با تحلیل دکور و صحنه', filterFn: s => !s.isFilm,
     tags: DEFAULT_GENRE_TAGS,
     presetTags: ['مدرن', 'مینیمال', 'چوب', 'تکنولوژی', 'گرم', 'لوکس', 'تاریک', 'روشن'],
     searchFields: ['name', 'summary', 'materials', 'colors'],
@@ -423,7 +425,7 @@ function getVideoPlatformInfo(url: string): { name: string; icon: string; color:
 // ============================================
 // SHOW IMAGE GALLERY — displays all images for a show in modal
 // ============================================
-function ShowImageGallery({ images, showName }: { images: string[]; showName: string }) {
+function ShowImageGallery({ images, showNum, showName }: { images: string[]; showNum: number; showName: string }) {
   const [activeIdx, setActiveIdx] = useState(0);
   const [lightbox, setLightbox] = useState<string | null>(null);
 
@@ -632,6 +634,8 @@ export default function Home() {
   useEffect(() => {
     // Load persisted overrides first, then merge them with the base JSON data.
     const saved = loadOverrides();
+    // Hydrate browser-persisted state after client mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOverrides(saved);
     // Restore custom genres saved in a previous session.
     setCustomGenres(loadCustomGenres());
@@ -649,6 +653,7 @@ export default function Home() {
   useEffect(() => {
     const stored = typeof window !== 'undefined' ? localStorage.getItem('bankresaneh_token') : null;
     if (!stored) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAuthLoading(false);
       return;
     }
@@ -663,6 +668,7 @@ export default function Home() {
   // Recompute the merged list whenever overrides change (e.g. after an edit).
   useEffect(() => {
     if (baseShows.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTalkShows(applyOverrides(baseShows, overrides));
     }
   }, [baseShows, overrides]);
@@ -798,6 +804,18 @@ export default function Home() {
 
   if (!currentUser) {
     return <LoginScreen onLogin={handleLoginSuccess} />;
+  }
+
+  if (currentUser.mustChangePassword) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(135deg, #062d1b 0%, #0b5133 55%, #062d1b 100%)' }}>
+        <div className="w-full max-w-xl rounded-2xl p-5 sm:p-7" style={{ background: 'rgba(248, 251, 248, 0.97)', boxShadow: '0 24px 70px rgba(0,0,0,0.3)' }}>
+          <h2 className="text-xl font-bold mb-2" style={{ color: '#016035' }}>تغییر رمز اولیه</h2>
+          <p className="text-sm mb-5" style={{ color: '#4a5d52', lineHeight: 1.8 }}>برای ایمن‌سازی حساب، پیش از ورود به بانک رسانه باید رمز پیش‌فرض را تغییر دهید.</p>
+          <SettingsPasswordTab currentUser={currentUser} showToast={showToast} onLogout={handleLogout} />
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -1590,7 +1608,7 @@ function DrawerMenu({
 }
 
 function NavIcon({ name }: { name: string }) {
-  const icons: Record<string, JSX.Element> = {
+  const icons: Record<string, React.JSX.Element> = {
     home: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />,
     grid: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />,
     plus: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />,
@@ -1943,7 +1961,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
 }
 
 function StatIcon({ name }: { name: string }) {
-  const icons: Record<string, JSX.Element> = {
+  const icons: Record<string, React.JSX.Element> = {
     film: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />,
     tag: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />,
     cloud: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />,
@@ -1992,15 +2010,46 @@ function ProgramsView({
   const [filterViewers, setFilterViewers] = useState('all');
   const [filterStyle, setFilterStyle] = useState('all');
   const [islamicOnly, setIslamicOnly] = useState(false);
+  const [serverSearchResult, setServerSearchResult] = useState<{ query: string; shows: TalkShow[] } | null>(null);
+
+  // Use SQLite FTS for the complete archive; retain local search as an offline/typo fallback.
+  useEffect(() => {
+    const query = search.trim();
+    if (genre || query.length < 2) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      api.searchShows({ query, page: 1, limit: 100 })
+        .then((result) => {
+          if (cancelled) return;
+          setServerSearchResult({
+            query,
+            shows: result.shows as unknown as TalkShow[],
+          });
+        })
+        .catch(() => {
+          if (!cancelled) setServerSearchResult({ query, shows: [] });
+        });
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [genre, search]);
 
   const filteredShows = useMemo(() => {
-    let shows = [...talkShows];
+    const currentServerShows = !genre
+      && search.trim().length >= 2
+      && serverSearchResult?.query === search.trim()
+      ? serverSearchResult.shows
+      : null;
+    const useServerResults = !!currentServerShows?.length;
+    let shows = [...(useServerResults ? currentServerShows : talkShows)];
     if (genre) shows = shows.filter(genre.filterFn);
     if (filterSize !== 'all') shows = shows.filter(s => s.size === filterSize);
     if (filterViewers !== 'all') shows = shows.filter(s => s.viewers === filterViewers);
     if (filterStyle !== 'all') shows = shows.filter(s => s.style === filterStyle);
     if (islamicOnly) shows = shows.filter(s => detectCountries(s).length > 0);
-    if (search) {
+    if (search && !useServerResults) {
       const q = search.toLowerCase();
       // Section-specific search: use genre.searchFields if defined, else default to name+summary+category.
       const fields: (keyof TalkShow)[] = genre?.searchFields || ['name', 'summary', 'category'];
@@ -2017,7 +2066,7 @@ function ProgramsView({
       });
     }
     return shows;
-  }, [talkShows, genre, search, filterSize, filterViewers, filterStyle, islamicOnly]);
+  }, [talkShows, genre, search, filterSize, filterViewers, filterStyle, islamicOnly, serverSearchResult]);
 
   const handleUploadSelected = () => {
     const selectedShows = filteredShows.filter(s => selectedIds.includes(s.num));
@@ -2791,7 +2840,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
         <div className="p-6">
           {/* Image gallery — all images, not just the cover */}
           {show.images && show.images.length > 0 && (
-            <ShowImageGallery images={show.images} showName={show.name} />
+            <ShowImageGallery images={show.images} showNum={show.num} showName={show.name} />
           )}
 
           {/* Persian description */}
@@ -2972,6 +3021,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
           )}
 
           {/* Decor details */}
+          {!show.isFilm && (
           <div>
             <h4 className="font-bold mb-3" style={{ color: '#1a2e22' }}>مشخصات دکور و صحنه</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -2990,9 +3040,10 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
               </div>
             </div>
           </div>
+          )}
 
           {/* Decor summary */}
-          {show.summary && show.summary !== '—' && (
+          {!show.isFilm && show.summary && show.summary !== '—' && (
             <div className="mt-6 p-4 rounded-xl" style={{ background: `${thumb.accent}10`, border: `1px solid ${thumb.accent}25` }}>
               <h4 className="font-bold mb-2" style={{ color: '#1a2e22' }}>خلاصهٔ دکور</h4>
               <p style={{ color: '#4a5d52', lineHeight: 1.7 }}>{show.summary}</p>
@@ -3140,7 +3191,9 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
     }
     setFetching(true);
     try {
-      const res = await fetch('/api/fetch-show-info', {
+      const isGateway = typeof window !== 'undefined' && (window.location.port === '81' || window.location.port === '' || window.location.hostname.includes('space-z.ai') || window.location.port === '443');
+      const fetchUrl2 = isGateway ? `${window.location.origin}/api/fetch-show-info?XTransformPort=3000` : '/api/fetch-show-info';
+      const res = await fetch(fetchUrl2, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: fetchUrl }),
@@ -3390,6 +3443,14 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
           presetTags={presetGenre?.presetTags}
         />
 
+        {/* IMDb/Wikipedia links + Fetch image into DB */}
+        <ImdbWikiEditor
+          form={form}
+          setForm={setForm}
+          editingShow={editingShow}
+          showToast={showToast}
+        />
+
         {/* Video links section — multiple URLs */}
         <VideoLinksEditor
           videos={form.videos || []}
@@ -3483,7 +3544,7 @@ function FormSelect({ label, value, onChange, options }: {
 // IMAGE GALLERY EDITOR — up to 8 images per show
 // Supports both URL paste and file upload (base64 for offline storage)
 // ============================================
-function ImageGalleryEditor({ images, onChange, showToast }: {
+function ImageGalleryEditor({ images: imagesProp, onChange, showToast }: {
   images: string[];
   onChange: (imgs: string[]) => void;
   showToast: (msg: string) => void;
@@ -3491,8 +3552,11 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
   const [urlInput, setUrlInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Keep a ref to the latest images array so async FileReader callbacks always see current state
+  const images = Array.isArray(imagesProp) ? imagesProp : (() => { try { return JSON.parse(imagesProp as any || '[]'); } catch { return []; } })();
   const imagesRef = useRef<string[]>(images);
-  imagesRef.current = images;
+  useEffect(() => {
+    imagesRef.current = images;
+  }, [images]);
   const MAX_IMAGES = 8;
 
   const addUrl = () => {
@@ -3743,15 +3807,71 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
 }
 
 // ============================================
-// VIDEO LINKS EDITOR — multiple video URLs per show
 // ============================================
-function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: {
+// IMDB/WIKIPEDIA EDITOR — links + fetch image button
+// ============================================
+function ImdbWikiEditor({ form, setForm, editingShow, showToast }: {
+  form: any;
+  setForm: (f: any) => void;
+  editingShow: TalkShow | null;
+  showToast: (msg: string) => void;
+}) {
+  const [fetchingImage, setFetchingImage] = useState(false);
+
+  const handleFetchImage = async () => {
+    if (!editingShow) { showToast('ابتدا برنامه را ذخیره کنید'); return; }
+    setFetchingImage(true);
+    try {
+      const data = await api.fetchImage({
+        num: editingShow.num,
+        imdb: form.imdb || '',
+        wikipedia: form.wikipedia || '',
+        name: form.name || '',
+      });
+      if (data.error) showToast('خطا: ' + data.error);
+      else showToast('عکس دریافت شد (' + data.source + ', ' + (data.size/1024).toFixed(1) + ' KB)');
+    } catch (e: any) { showToast('خطا: ' + (e.message || 'نامشخص')); }
+    finally { setFetchingImage(false); }
+  };
+
+  return (
+    <div className="p-4 rounded-xl" style={{ background: 'rgba(99, 87, 255, 0.06)', border: '1px solid rgba(99, 87, 255, 0.2)' }}>
+      <h4 className="font-bold mb-3" style={{ color: '#1a2e1a' }}>🔗 لینک‌های IMDb و Wikipedia</h4>
+      <div className="space-y-3">
+        <div>
+          <label className="block text-sm font-bold mb-1.5" style={{ color: '#1a2e1a' }}>لینک IMDb</label>
+          <input type="text" dir="ltr" value={form.imdb || ''} onChange={(e) => setForm({ ...form, imdb: e.target.value })}
+            placeholder="https://www.imdb.com/title/tt1234567/"
+            style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(99, 87, 255, 0.2)', background: 'rgba(255, 255, 255, 0.8)', color: '#1a2e1a', fontSize: '14px', outline: 'none', textAlign: 'left', direction: 'ltr' }} />
+        </div>
+        <div>
+          <label className="block text-sm font-bold mb-1.5" style={{ color: '#1a2e1a' }}>لینک Wikipedia</label>
+          <input type="text" dir="ltr" value={form.wikipedia || ''} onChange={(e) => setForm({ ...form, wikipedia: e.target.value })}
+            placeholder="https://en.wikipedia.org/wiki/Silicon_Valley"
+            style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(99, 87, 255, 0.2)', background: 'rgba(255, 255, 255, 0.8)', color: '#1a2e1a', fontSize: '14px', outline: 'none', textAlign: 'left', direction: 'ltr' }} />
+        </div>
+        <button onClick={handleFetchImage} disabled={fetchingImage || !editingShow}
+          className="w-full py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
+          style={{ background: fetchingImage || !editingShow ? 'rgba(107, 143, 122, 0.3)' : 'linear-gradient(135deg, #9957FF 0%, #7C3AED 100%)', color: 'white', cursor: fetchingImage || !editingShow ? 'not-allowed' : 'pointer', boxShadow: fetchingImage || !editingShow ? 'none' : '0 4px 12px rgba(99, 87, 255, 0.3)' }}>
+          {fetchingImage ? (<><div className="w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(255,255,255,0.3)', borderTopColor: 'white' }}></div>در حال دریافت...</>) : (<>📥 دریافت عکس از IMDb/Wikipedia</>)}
+        </button>
+        {!editingShow && <p className="text-xs text-center" style={{ color: '#8a8a7a' }}>برای دریافت عکس، ابتدا برنامه را ذخیره کنید</p>}
+      </div>
+    </div>
+  );
+}
+
+
+function VideoLinksEditor({ videos: videosProp, youtube, onVideosChange, onYoutubeChange, canEdit, onOpenVideoEditor }: {
   videos: string[];
   youtube: string;
   onVideosChange: (vids: string[]) => void;
   onYoutubeChange: (url: string) => void;
+  canEdit?: boolean;
+  onOpenVideoEditor?: () => void;
 }) {
   const [urlInput, setUrlInput] = useState('');
+  const videos = Array.isArray(videosProp) ? videosProp : (() => { try { return JSON.parse(videosProp as any || '[]'); } catch { return []; } })();
 
   const addVideo = () => {
     if (!urlInput.trim()) return;
@@ -5252,10 +5372,11 @@ function SettingsModal({
   showToast: (msg: string) => void;
   onLogout: () => void;
 }) {
-  const [tab, setTab] = useState<'server' | 'users' | 'password'>('server');
+  const [tab, setTab] = useState<'server' | 'profile' | 'users' | 'password'>('server');
 
   const tabs = [
     { key: 'server' as const,   label: 'سرور',     icon: '🖥' },
+    { key: 'profile' as const,  label: 'پروفایل',  icon: '👤' },
     { key: 'users' as const,    label: 'کاربران',  icon: '👥' },
     { key: 'password' as const, label: 'رمز عبور', icon: '🔑' },
   ];
@@ -5333,6 +5454,7 @@ function SettingsModal({
         {/* Body — scrollable */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6" style={{ maxHeight: 'calc(90vh - 130px)' }}>
           {tab === 'server' && <SettingsServerTab showToast={showToast} />}
+          {tab === 'profile' && <SettingsProfileTab currentUser={currentUser} showToast={showToast} />}
           {tab === 'users' && <SettingsUsersTab currentUser={currentUser} showToast={showToast} />}
           {tab === 'password' && <SettingsPasswordTab currentUser={currentUser} showToast={showToast} onLogout={onLogout} />}
         </div>
@@ -5355,7 +5477,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
     setTesting(true);
     setTestResult(null);
     try {
-      const res = await fetch(`${url.replace(/\/+$/, '')}/api/health`, { method: 'GET' });
+      const res = await fetch(getApiUrl('api/health', url), { method: 'GET' });
       const data = await res.json();
       if (res.ok && data?.status === 'ok') {
         setTestResult({ ok: true, msg: 'اتصال برقرار شد ✓' });
@@ -5450,13 +5572,66 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
         style={{ background: 'rgba(2, 144, 72, 0.05)', border: '1px solid rgba(2, 144, 72, 0.15)', color: '#4a5d52', lineHeight: 1.7 }}
       >
         <strong>راهنما:</strong> آدرس وارد شده باید ریشهٔ سرویس API باشد (بدون مسیرهای <code dir="ltr">/api/...</code>).
-        اگر از گیتوی Caddy استفاده می‌کنید، می‌توانید آدرس نسبی وارد کنید. پس از ذخیره، توکن فعلی شما معتبر می‌ماند.
+        اگر از گیتوی Caddy استفاده می‌کنید، می‌توانید آدرس نسبی وارد کنید. برای امنیت، پس از تغییر سرور باید دوباره وارد شوید.
       </div>
     </div>
   );
 }
 
-// --- Tab 2: Users management ---
+// --- Tab 2: Profile editing ---
+function SettingsProfileTab({ currentUser, showToast }: { currentUser: User; showToast: (msg: string) => void }) {
+  const [profile, setProfile] = useState({
+    name: currentUser.name || '', jobTitle: currentUser.jobTitle || '',
+    deputy: currentUser.deputy || '', avatar: currentUser.avatar || '', phone: currentUser.phone || '',
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    api.getProfile()
+      .then(user => setProfile({
+        name: user.name || '', jobTitle: user.jobTitle || '', deputy: user.deputy || '',
+        avatar: user.avatar || '', phone: user.phone || '',
+      }))
+      .catch(e => showToast(e?.message || 'خطا در دریافت پروفایل'))
+      .finally(() => setLoading(false));
+  }, []);
+  const fields: Array<{ key: keyof typeof profile; label: string; placeholder: string; type?: string }> = [
+    { key: 'name', label: 'نام نمایشی', placeholder: 'نام و نام خانوادگی' },
+    { key: 'jobTitle', label: 'عنوان شغلی', placeholder: 'عنوان شغلی' },
+    { key: 'deputy', label: 'واحد / سمت', placeholder: 'واحد یا سمت سازمانی' },
+    { key: 'phone', label: 'شماره تماس', placeholder: 'شماره تماس', type: 'tel' },
+    { key: 'avatar', label: 'آدرس تصویر پروفایل', placeholder: 'https://...' },
+  ];
+  const save = async () => {
+    setSaving(true);
+    try { await api.updateProfile(profile); showToast('اطلاعات پروفایل ذخیره شد'); }
+    catch (e: any) { showToast(e?.message || 'خطا در ذخیره پروفایل'); }
+    finally { setSaving(false); }
+  };
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      <div>
+        <h3 className="text-base font-bold mb-1" style={{ color: '#1a2e22' }}>👤 اطلاعات پروفایل</h3>
+        <p className="text-sm" style={{ color: '#7a8a80' }}>اطلاعات نمایشی حساب کاربری خود را مدیریت کنید.</p>
+      </div>
+      {fields.map(field => (
+        <label key={field.key} className="block">
+          <span className="block text-sm font-bold mb-1.5" style={{ color: '#1a2e22' }}>{field.label}</span>
+          <input type={field.type || 'text'} dir={field.key === 'phone' || field.key === 'avatar' ? 'ltr' : 'rtl'}
+            value={profile[field.key]} onChange={e => setProfile(current => ({ ...current, [field.key]: e.target.value }))}
+            placeholder={field.placeholder} disabled={loading || saving}
+            style={{ width: '100%', background: 'white', border: '1px solid rgba(2,144,72,0.2)', borderRadius: '10px', padding: '11px 14px', color: '#1a2e22', fontSize: '14px', outline: 'none' }} />
+        </label>
+      ))}
+      <button onClick={save} disabled={loading || saving} className="px-4 py-2.5 rounded-xl text-sm font-bold"
+        style={{ background: loading || saving ? '#9ca3af' : 'linear-gradient(135deg, #029048 0%, #016035 100%)', color: 'white', opacity: loading || saving ? 0.7 : 1 }}>
+        {loading ? '⏳ در حال دریافت...' : saving ? '⏳ در حال ذخیره...' : '✓ ذخیره پروفایل'}
+      </button>
+    </div>
+  );
+}
+
+// --- Tab 3: Users management ---
 function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showToast: (msg: string) => void }) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -5482,6 +5657,10 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
   const handleCreate = async () => {
     if (!newUser.username.trim() || !newUser.password) {
       showToast('نام کاربری و رمز را وارد کنید');
+      return;
+    }
+    if (newUser.password.length < 8) {
+      showToast('رمز عبور باید حداقل ۸ کاراکتر باشد');
       return;
     }
     setCreating(true);
@@ -5582,7 +5761,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
           <input
             type="password"
             dir="ltr"
-            placeholder="رمز عبور (حداقل ۴ کاراکتر)"
+            placeholder="رمز عبور (حداقل ۸ کاراکتر)"
             value={newUser.password}
             onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
             style={{
@@ -5742,8 +5921,8 @@ function SettingsPasswordTab({
       showToast('هر سه فیلد را پر کنید');
       return;
     }
-    if (newPw.length < 4) {
-      showToast('رمز جدید باید حداقل ۴ کاراکتر باشد');
+    if (newPw.length < 8) {
+      showToast('رمز جدید باید حداقل ۸ کاراکتر باشد');
       return;
     }
     if (newPw !== confirmPw) {
