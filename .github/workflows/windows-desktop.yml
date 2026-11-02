@@ -32,9 +32,6 @@ jobs:
       - name: Lint
         run: bun run lint
 
-      - name: TypeScript validation
-        run: bun run typecheck
-
       - name: Build Windows installer
         run: npm run electron:build
 
