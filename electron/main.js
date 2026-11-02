@@ -92,26 +92,58 @@ function startNextServer() {
     nextServer = spawn(process.execPath, [serverPath], { cwd: staticDir, env, stdio: ['ignore','pipe','pipe'] });
 
     let output = '';
-    nextServer.stdout.on('data', (d) => { const t = d.toString().trim(); if(t) { log('[server] ' + t); output += t + '\n'; } });
-    nextServer.stderr.on('data', (d) => { const t = d.toString().trim(); if(t) { log('[err] ' + t); output += t + '\n'; } });
-    nextServer.on('error', (err) => { log('Process error: ' + err.message); reject(err); });
-    nextServer.on('exit', (code) => { log('Server exit code: ' + code); if(code !== 0 && code !== null) reject(new Error('Exit ' + code + ': ' + output)); });
-
+    let settled = false;
     let attempts = 0;
-    const interval = setInterval(() => {
+    let interval = null;
+
+    const finish = (err) => {
+      if (settled) return;
+      settled = true;
+      if (interval) clearInterval(interval);
+      if (err) reject(err);
+      else resolve();
+    };
+
+    nextServer.stdout.on('data', (d) => {
+      const t = d.toString().trim();
+      if (t) { log('[server] ' + t); output += t + '\\n'; }
+    });
+    nextServer.stderr.on('data', (d) => {
+      const t = d.toString().trim();
+      if (t) { log('[err] ' + t); output += t + '\\n'; }
+    });
+    nextServer.on('error', (err) => {
+      log('Process error: ' + err.message);
+      finish(err);
+    });
+    nextServer.on('exit', (code, signal) => {
+      log('Server exit code: ' + code + ', signal: ' + signal);
+      if (!settled) finish(new Error('Next.js server exited before becoming ready (code ' + code + ', signal ' + signal + ').\\nOutput: ' + output));
+    });
+
+    const probe = () => {
+      if (settled) return;
       attempts++;
-      http.get('http://127.0.0.1:' + NEXT_PORT, (res) => {
-        if (res.statusCode === 200 || res.statusCode === 302) {
-          clearInterval(interval); log('Server ready!'); resolve();
-        }
-      }).on('error', () => {
-        if (attempts >= 60) {
-          clearInterval(interval);
-          log('Server failed after 60 attempts. Output: ' + output);
-          reject(new Error('Server failed to start.\nOutput: ' + output));
+      const request = http.get(NEXT_URL, (res) => {
+        res.resume();
+        if (res.statusCode >= 200 && res.statusCode < 400) {
+          log('Server ready (HTTP ' + res.statusCode + ')');
+          finish();
+        } else if (attempts >= 60) {
+          finish(new Error('Next.js returned HTTP ' + res.statusCode + ' during startup.\\nOutput: ' + output));
         }
       });
-    }, 500);
+      request.setTimeout(2000, () => request.destroy(new Error('Startup probe timed out')));
+      request.on('error', () => {
+        if (attempts >= 60) {
+          log('Server failed after 60 attempts. Output: ' + output);
+          finish(new Error('Next.js server failed to start.\\nOutput: ' + output));
+        }
+      });
+    };
+
+    interval = setInterval(probe, 500);
+    probe();
   });
 }
 
@@ -133,21 +165,21 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  // Rotate the previous startup log before writing messages for this run.
+  try {
+    const logPath = getLogPath();
+    if (fs.existsSync(logPath)) {
+      fs.copyFileSync(logPath, logPath + '.prev');
+      fs.writeFileSync(logPath, '');
+    }
+  } catch (e) {}
+
   log('Starting بانک رسانه...');
   log('App: ' + app.getAppPath());
   log('UserData: ' + app.getPath('userData'));
   log('Exec: ' + process.execPath);
   log('Resources: ' + process.resourcesPath);
 
-  // Clear old log on each start (keep last start only)
-  try {
-    const logPath = getLogPath();
-    if (fs.existsSync(logPath)) {
-      const oldLog = fs.readFileSync(logPath, 'utf8');
-      fs.writeFileSync(logPath + '.prev', oldLog);
-      fs.writeFileSync(logPath, '');
-    }
-  } catch(e) {}
 
   // Debug: list resource files
   try {
