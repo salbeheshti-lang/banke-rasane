@@ -34,12 +34,12 @@ async function waitFor(url, label, timeoutMs = 90000) {
       throw new Error('Electron exited early with code ' + child.exitCode + ' while waiting for ' + label);
     }
     try {
-      const status = await getStatus(url);
-      if (status >= 200 && status < 400) {
-        process.stdout.write(label + ' ready (HTTP ' + status + ')\n');
-        return;
+      const response = await getResponse(url);
+      if (response.statusCode >= 200 && response.statusCode < 400) {
+        process.stdout.write(label + ' ready (HTTP ' + response.statusCode + ')\n');
+        return response;
       }
-      lastError = 'HTTP ' + status;
+      lastError = 'HTTP ' + response.statusCode;
     } catch (error) {
       lastError = error.message;
     }
@@ -52,7 +52,12 @@ async function waitFor(url, label, timeoutMs = 90000) {
   try {
     child.on('error', (error) => { process.stderr.write('Electron spawn error: ' + error.message + '\n'); });
     await waitFor('http://127.0.0.1:3000/', 'Next.js UI');
-    await waitFor('http://127.0.0.1:3002/api/health', 'Local API');
+    const apiHealth = await waitFor('http://127.0.0.1:3002/api/health', 'Local API');
+    const healthData = JSON.parse(apiHealth.body);
+    if (!Number.isFinite(healthData.showsCount) || healthData.showsCount < 1) {
+      throw new Error('API started but the archive database is empty.');
+    }
+    process.stdout.write('Archive database ready (' + healthData.showsCount + ' shows).\n');
     process.stdout.write('Packaged Electron smoke test passed.\n');
   } catch (error) {
     process.stderr.write(error.stack || error.message);
