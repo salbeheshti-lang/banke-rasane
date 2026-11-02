@@ -1321,18 +1321,17 @@ html, body {
   display: flex;
   gap: 8px;
   overflow-x: auto;
+  /* Force one-card-at-a-time snap */
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  padding: 8px 0;
+  padding: 12px 25%;
   scroll-behavior: smooth;
-  /* Center the initial view */
-  scroll-padding: 50%;
 }
 .featured-carousel-track::-webkit-scrollbar {
   display: none;
 }
-/* Smaller Netflix-style cards — center-focused scaling driven by scroll */
+/* Cards — center-focused scaling */
 .featured-card {
   flex: 0 0 140px;
   scroll-snap-align: center;

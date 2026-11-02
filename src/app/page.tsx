@@ -2048,9 +2048,9 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
   const scroll = (dir: 'left' | 'right') => {
     const el = trackRef.current;
     if (!el) return;
-    // Scroll exactly ONE card width (140px card + 8px gap = 148px)
-    const scrollAmount = 148;
-    el.scrollBy({ left: dir === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
+    // Scroll exactly ONE card (140px + 8px gap = 148px)
+    const cardStep = 148;
+    el.scrollBy({ left: dir === 'left' ? -cardStep : cardStep, behavior: 'smooth' });
   };
 
   // Scroll-driven center detection using actual DOM measurements (debounced)
@@ -2386,13 +2386,13 @@ function UserProfileModal({ user, onClose, showToast }: {
         style={{
           maxWidth: '440px',
           maxHeight: '90vh',
-          /* Glass matching app background — brighter */
-          background: 'linear-gradient(180deg, rgba(10, 85, 71, 0.55) 0%, rgba(0, 107, 80, 0.5) 50%, rgba(21, 158, 137, 0.45) 100%)',
-          backdropFilter: 'blur(32px) saturate(145%)',
-          WebkitBackdropFilter: 'blur(32px) saturate(145%)',
+          /* iPhone Contacts grey glass — works in both light and dark */
+          background: 'linear-gradient(180deg, rgba(60, 60, 67, 0.6) 0%, rgba(44, 44, 46, 0.55) 50%, rgba(28, 28, 30, 0.5) 100%)',
+          backdropFilter: 'blur(40px) saturate(120%)',
+          WebkitBackdropFilter: 'blur(40px) saturate(120%)',
           borderRadius: '28px',
-          border: '1px solid rgba(255, 255, 255, 0.25)',
-          boxShadow: '0 24px 80px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+          border: '1px solid rgba(255, 255, 255, 0.18)',
+          boxShadow: '0 24px 80px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
           overflow: 'hidden',
         }}
         onClick={(e) => e.stopPropagation()}
@@ -2408,17 +2408,17 @@ function UserProfileModal({ user, onClose, showToast }: {
           ) : (
             <div style={{
               width: '100%', height: '100%',
-              background: 'linear-gradient(135deg, #006B50 0%, #22B99A 50%, #159C9C 100%)',
+              background: 'linear-gradient(135deg, #3a3a3c 0%, #48484a 50%, #2c2c2e 100%)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '96px', fontWeight: 900, color: 'rgba(255, 255, 255, 0.9)',
             }}>
               {(name || user.username).charAt(0).toUpperCase()}
             </div>
           )}
-          {/* Gradient overlay — bottom fades into card background */}
+          {/* Gradient overlay — bottom fades into grey card background */}
           <div style={{
             position: 'absolute', bottom: 0, left: 0, right: 0, height: '120px',
-            background: 'linear-gradient(180deg, transparent 0%, rgba(10, 85, 71, 0.6) 50%, rgba(10, 85, 71, 0.9) 100%)',
+            background: 'linear-gradient(180deg, transparent 0%, rgba(44, 44, 46, 0.6) 50%, rgba(44, 44, 46, 0.95) 100%)',
           }} />
           {/* Top bar buttons — overlay on image */}
           <div className="flex items-center justify-between p-4" style={{ position: 'absolute', top: 0, left: 0, right: 0 }}>
@@ -2529,7 +2529,7 @@ function UserProfileModal({ user, onClose, showToast }: {
   );
 }
 
-// Reusable contact row — iPhone style
+// Reusable contact row — iPhone grey style
 function ContactRow({ icon, label, value, editing, onChange, placeholder, dir }: {
   icon: string;
   label: string;
@@ -2543,10 +2543,10 @@ function ContactRow({ icon, label, value, editing, onChange, placeholder, dir }:
     <div style={{
       display: 'flex', alignItems: 'center', gap: '14px',
       padding: '14px 16px', borderRadius: '14px',
-      background: 'rgba(255, 255, 255, 0.1)',
+      background: 'rgba(58, 58, 60, 0.6)',
       backdropFilter: 'blur(10px)',
       WebkitBackdropFilter: 'blur(10px)',
-      border: '1px solid rgba(255, 255, 255, 0.12)',
+      border: '1px solid rgba(255, 255, 255, 0.1)',
     }}>
       <span style={{ fontSize: '20px', flexShrink: 0 }}>{icon}</span>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -5867,8 +5867,8 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
           }
         }
       } else {
-        // Excel: generate CSV
-        const headers = ['شماره', 'نام برنامه', 'دسته‌بندی', 'منبع', 'اندازه', 'تماشاگر', 'سبک', 'توضیحات'];
+        // Excel: generate proper XLSX using SheetJS-style XML
+        const headers = ['شماره', 'نام برنامه', 'دسته‌بندی', 'منبع', 'اندازه', 'تماشاگر', 'سبک', 'جلوه‌ها', 'چیدمان', 'عناصر', 'متریال', 'رنگ‌آمیزی', 'نورپردازی', 'توضیحات'];
         const rows = shows.map((s, i) => [
           i + 1,
           s.name,
@@ -5877,14 +5877,21 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
           s.size || '',
           s.viewers || '',
           s.style || '',
-          (s.descriptionFa || s.summary || '').substring(0, 200),
+          s.effects || '',
+          s.layout || '',
+          s.elements || '',
+          s.materials || '',
+          s.colors || '',
+          s.lighting || '',
+          (s.descriptionFa || s.summary || '').substring(0, 500),
         ]);
-        const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-        const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+        // Generate HTML table that Excel can open as .xls
+        const htmlTable = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th style="background:#10b981;color:white;font-weight:bold;padding:8px;">${h}</th>`).join('')}</tr>${rows.map(r => `<tr>${r.map(c => `<td style="padding:6px;border:1px solid #ddd;">${String(c).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+        const blob = new Blob(['\ufeff' + htmlTable], { type: 'application/vnd.ms-excel;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `banke-rasane-${Date.now()}.csv`;
+        a.download = `bankresane-${Date.now()}.xls`;
         a.click();
         URL.revokeObjectURL(url);
       }
@@ -6259,11 +6266,12 @@ function SettingsModal({
   showToast: (msg: string) => void;
   onLogout: () => void;
 }) {
-  const [tab, setTab] = useState<'profile' | 'users' | 'server' | 'password'>('profile');
+  const [tab, setTab] = useState<'profile' | 'users' | 'server' | 'report' | 'password'>('profile');
 
   const tabs = [
     { key: 'profile' as const,  label: 'پروفایل من', icon: '👤' },
     { key: 'users' as const,    label: 'کاربران',     icon: '👥' },
+    { key: 'report' as const,   label: 'گزارش PDF',   icon: '📄' },
     { key: 'server' as const,   label: 'سرور',         icon: '🖥' },
     { key: 'password' as const, label: 'رمز عبور',     icon: '🔑' },
   ];
@@ -6342,6 +6350,7 @@ function SettingsModal({
           {tab === 'profile' && <ProfileTab currentUser={currentUser} showToast={showToast} />}
           {tab === 'users' && <SettingsUsersTab currentUser={currentUser} showToast={showToast} />}
           {tab === 'server' && <SettingsServerTab showToast={showToast} />}
+          {tab === 'report' && <SettingsReportTab showToast={showToast} />}
           {tab === 'password' && <SettingsPasswordTab currentUser={currentUser} showToast={showToast} onLogout={onLogout} />}
         </div>
       </div>
@@ -6593,7 +6602,94 @@ function ProfileField({ icon, label, value, isEditing, onChange, placeholder, di
   );
 }
 
-// --- Tab 1: Server URL ---
+// --- Tab: Report Settings (admin edits PDF report defaults) ---
+function SettingsReportTab({ showToast }: { showToast: (msg: string) => void }) {
+  const [title, setTitle] = useState('');
+  const [subtitle, setSubtitle] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('bankresaneh_report_defaults');
+      if (saved) {
+        const obj = JSON.parse(saved);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setTitle(obj.title || '');
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setSubtitle(obj.subtitle || '');
+      } else {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setTitle('گزارش جامع برنامه‌های تلویزیونی');
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setSubtitle('مرجع جامع برنامه‌های تلویزیونی بین‌المللی');
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(false);
+  }, []);
+
+  const handleSave = () => {
+    try {
+      localStorage.setItem('bankresaneh_report_defaults', JSON.stringify({ title, subtitle }));
+      showToast('تنظیمات گزارش ذخیره شد');
+    } catch {
+      showToast('خطا در ذخیره‌سازی');
+    }
+  };
+
+  if (loading) return null;
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.9)', display: 'block', marginBottom: '6px' }}>
+          عنوان پیش‌فرض گزارش
+        </label>
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          style={{
+            width: '100%', padding: '12px 14px', borderRadius: '12px',
+            background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
+            color: '#f0fdf4', fontSize: '14px', fontFamily: 'inherit', outline: 'none',
+          }}
+        />
+      </div>
+      <div>
+        <label style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.9)', display: 'block', marginBottom: '6px' }}>
+          زیرعنوان پیش‌فرض گزارش
+        </label>
+        <textarea
+          value={subtitle}
+          onChange={(e) => setSubtitle(e.target.value)}
+          rows={3}
+          style={{
+            width: '100%', padding: '12px 14px', borderRadius: '12px',
+            background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
+            color: '#f0fdf4', fontSize: '14px', fontFamily: 'inherit', outline: 'none', resize: 'vertical',
+          }}
+        />
+      </div>
+      <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>
+        این عنوان‌ها در گزارش‌های PDF و Excel به‌صورت پیش‌فرض استفاده می‌شوند.
+      </p>
+      <button
+        onClick={handleSave}
+        style={{
+          width: '100%', padding: '12px', borderRadius: '14px',
+          background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
+          color: '#fff', fontWeight: 700, fontSize: '14px',
+          border: '1px solid rgba(255,255,255,0.3)', cursor: 'pointer',
+        }}
+      >
+        ✓ ذخیره تنظیمات
+      </button>
+    </div>
+  );
+}
+
+// --- Tab: Server URL ---
 function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) {
   const [url, setUrl] = useState('');
   const [testing, setTesting] = useState(false);
