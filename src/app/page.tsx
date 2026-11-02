@@ -1434,7 +1434,7 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               title="بازگشت به صفحهٔ قبل"
               className="flex items-center gap-2 rounded-xl transition-all"
               style={{
-                background: 'rgba(255, 255, 255, 0.8)',
+                background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
                 border: '1px solid rgba(13, 124, 74, 0.25)',
                 color: '#54D9C0',
                 padding: isMobile ? '9px 12px' : '9px 16px',
@@ -1479,7 +1479,7 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
                   animation: 'pulse 2s ease-in-out infinite',
                 }}
               ></span>
-              <span style={{ color: '#99f6e4', fontSize: '12px' }}>متصل</span>
+              <span style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: '12px' }}>متصل</span>
             </div>
           )}
         </div>
@@ -1548,12 +1548,12 @@ function DrawerMenu({
         className="fixed top-0 right-0 bottom-0 animate-drawer-slide-in flex flex-col"
         style={{
           width: 'min(340px, 88vw)',
-          /* Drawer: same material as background but 2 shades darker */
-          background: 'linear-gradient(180deg, rgba(4, 50, 38, 0.88) 0%, rgba(0, 60, 48, 0.85) 50%, rgba(7, 90, 75, 0.82) 100%)',
-          backdropFilter: 'blur(40px) saturate(130%)',
-          WebkitBackdropFilter: 'blur(40px) saturate(130%)',
+          /* Drawer: SAME as header — 2 shades darker than bg, slightly glossy */
+          background: 'linear-gradient(90deg, rgba(5, 80, 65, 0.82) 0%, rgba(0, 95, 75, 0.78) 50%, rgba(8, 110, 90, 0.75) 100%)',
+          backdropFilter: 'blur(24px) saturate(135%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(135%)',
           borderLeft: '1px solid rgba(255, 255, 255, 0.2)',
-          boxShadow: '-16px 0 56px rgba(0, 0, 0, 0.3), inset 1px 0 0 rgba(255, 255, 255, 0.1)',
+          boxShadow: '-16px 0 56px rgba(0, 0, 0, 0.2), inset 1px 0 0 rgba(255, 255, 255, 0.12)',
           borderTopLeftRadius: '30px',
           borderBottomLeftRadius: '30px',
           overflow: 'hidden',
@@ -1700,17 +1700,21 @@ function DrawerMenu({
             <div
               className="mb-2 p-3 rounded-xl"
               style={{
-                background: 'rgba(255, 255, 255, 0.7)',
-                border: '1px solid rgba(13, 124, 74, 0.12)',
+                /* Liquid glass user card */
+                background: 'rgba(255, 255, 255, 0.12)',
+                backdropFilter: 'blur(16px) saturate(135%)',
+                WebkitBackdropFilter: 'blur(16px) saturate(135%)',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
+                boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.15)',
               }}
             >
               <div className="flex items-center gap-3">
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
                   style={{
-                    background: 'linear-gradient(135deg, rgba(13, 124, 74, 0.15) 0%, rgba(13, 124, 74, 0.05) 100%)',
-                    color: '#54D9C0',
-                    border: '1px solid rgba(13, 124, 74, 0.3)',
+                    background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
+                    color: '#ffffff',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
                     fontWeight: 700,
                     fontSize: '14px',
                   }}
@@ -1718,20 +1722,21 @@ function DrawerMenu({
                   {(currentUser.name || currentUser.username).charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm" style={{ color: '#54D9C0' }} title={currentUser.username}>
+                  <div className="font-bold text-sm" style={{ color: '#f0fdf4' }} title={currentUser.username}>
                     {currentUser.name || currentUser.username}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span
                       className="text-xs px-1.5 py-0.5 rounded-md font-bold"
                       style={{
-                        background: currentUser.role === 'admin' ? 'rgba(220, 38, 38, 0.25)' : currentUser.role === 'editor' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(13, 124, 74, 0.25)',
-                        color: currentUser.role === 'admin' ? '#fca5a5' : currentUser.role === 'editor' ? '#fcd34d' : '#0d7c4a',
+                        background: currentUser.role === 'admin' ? 'rgba(220, 38, 38, 0.3)' : currentUser.role === 'editor' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(34, 185, 154, 0.3)',
+                        color: currentUser.role === 'admin' ? '#fca5a5' : currentUser.role === 'editor' ? '#fcd34d' : '#54D9C0',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
                       }}
                     >
                       {roleLabel[currentUser.role] || currentUser.role}
                     </span>
-                    <span className="text-xs" style={{ color: 'rgba(244, 255, 255, 0.7)' }} dir="ltr">
+                    <span className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.7)' }} dir="ltr">
                       @{currentUser.username}
                     </span>
                   </div>
@@ -1905,13 +1910,13 @@ function MobileBottomNav({
         <div
           className="flex items-center justify-around no-scrollbar"
           style={{
-            /* Mobile nav: same material as background but 2 shades darker */
-            background: 'linear-gradient(90deg, rgba(4, 50, 38, 0.88) 0%, rgba(0, 60, 48, 0.85) 50%, rgba(7, 90, 75, 0.82) 100%)',
-            backdropFilter: 'blur(24px) saturate(130%)',
-            WebkitBackdropFilter: 'blur(24px) saturate(130%)',
+            /* Mobile nav: SAME as header */
+            background: 'linear-gradient(90deg, rgba(5, 80, 65, 0.82) 0%, rgba(0, 95, 75, 0.78) 50%, rgba(8, 110, 90, 0.75) 100%)',
+            backdropFilter: 'blur(24px) saturate(135%)',
+            WebkitBackdropFilter: 'blur(24px) saturate(135%)',
             border: '1px solid rgba(255, 255, 255, 0.2)',
             borderRadius: '30px',
-            boxShadow: '0 4px 18px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 4px 18px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.12)',
             padding: '8px',
           }}
         >
@@ -2663,13 +2668,15 @@ function ProgramsView({
             className="px-3 py-2 rounded-xl text-sm font-medium transition-all flex-shrink-0"
             title="فقط برنامه‌های مرتبط با کشورهای اسلامی"
             style={islamicOnly ? {
-              background: 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)',
+              background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
               color: 'white',
-              border: '1px solid rgba(13, 124, 74, 0.5)',
+              border: '1px solid rgba(255, 255, 255, 0.4)',
             } : {
-              background: 'rgba(255, 255, 255, 0.8)',
-              color: '#99f6e4',
-              border: '1px solid rgba(13, 124, 74, 0.15)',
+              background: 'rgba(255, 255, 255, 0.12)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              color: 'rgba(255, 255, 255, 0.9)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
             }}
           >
             🌍 اسلامی
@@ -2684,9 +2691,9 @@ function ProgramsView({
                 border: '1px solid rgba(13, 124, 74, 0.3)',
                 color: '#54D9C0',
               } : {
-                background: 'rgba(255, 255, 255, 0.8)',
+                background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
                 border: '1px solid rgba(13, 124, 74, 0.15)',
-                color: '#99f6e4',
+                color: 'rgba(255, 255, 255, 0.9)',
               }}
             >
               {selectionMode ? `✓ انتخاب (${selectedIds.length.toLocaleString('fa-IR')})` : 'انتخاب چندتایی'}
@@ -2722,11 +2729,11 @@ function ProgramsView({
                 onClick={() => setFilterSize(f.key)}
                 className="px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
                 style={filterSize === f.key ? {
-                  background: 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)',
+                  background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)', border: '1px solid rgba(255, 255, 255, 0.3)',
                   color: 'white',
                 } : {
-                  background: 'rgba(255, 255, 255, 0.8)',
-                  color: '#99f6e4',
+                  background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: 'rgba(255, 255, 255, 0.9)',
                 }}
               >
                 {f.label}
@@ -2747,11 +2754,11 @@ function ProgramsView({
                 onClick={() => setFilterStyle(f.key)}
                 className="px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
                 style={filterStyle === f.key ? {
-                  background: 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)',
+                  background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)', border: '1px solid rgba(255, 255, 255, 0.3)',
                   color: 'white',
                 } : {
-                  background: 'rgba(255, 255, 255, 0.8)',
-                  color: '#99f6e4',
+                  background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: 'rgba(255, 255, 255, 0.9)',
                 }}
               >
                 {f.label}
@@ -2792,7 +2799,7 @@ function ProgramsView({
             <button
               onClick={() => { setSelectedIds([]); setSelectionMode(false); }}
               className="px-3 py-1.5 rounded-lg text-sm font-medium"
-              style={{ background: 'rgba(107, 143, 122, 0.15)', color: '#99f6e4', border: '1px solid rgba(107, 143, 122, 0.3)' }}
+              style={{ background: 'rgba(107, 143, 122, 0.15)', color: 'rgba(255, 255, 255, 0.9)', border: '1px solid rgba(107, 143, 122, 0.3)' }}
             >
               لغو
             </button>
@@ -2967,7 +2974,7 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
               background: thumb.accent,
               borderColor: thumb.accent,
             } : {
-              background: 'rgba(255, 255, 255, 0.8)',
+              background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
               borderColor: `${thumb.accent}90`,
             }}
           >
@@ -3263,7 +3270,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
           {/* Persian description */}
           <div className="mb-6 p-4 rounded-xl" style={{ background: `${thumb.accent}10`, border: `1px solid ${thumb.accent}25` }}>
             <h4 className="font-bold mb-2" style={{ color: '#f0fdf4' }}>دربارهٔ برنامه</h4>
-            <p style={{ color: '#99f6e4', lineHeight: 1.8 }}>{show.descriptionFa}</p>
+            <p style={{ color: 'rgba(255, 255, 255, 0.9)', lineHeight: 1.8 }}>{show.descriptionFa}</p>
           </div>
 
           {/* Video links gallery */}
@@ -3287,7 +3294,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                       rel="noopener noreferrer"
                       className="flex items-center gap-3 p-3 rounded-xl transition-all"
                       style={{
-                        background: 'rgba(255, 255, 255, 0.8)',
+                        background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
                         border: `1px solid ${platform.color}30`,
                         textDecoration: 'none',
                       }}
@@ -3319,7 +3326,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                         </span>
                         <div
                           className="text-xs truncate"
-                          style={{ color: '#99f6e4', direction: 'ltr', textAlign: 'left' }}
+                          style={{ color: 'rgba(255, 255, 255, 0.9)', direction: 'ltr', textAlign: 'left' }}
                           title={url}
                         >
                           {url}
@@ -3422,7 +3429,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                 <button
                   onClick={() => setConfirmDelete(false)}
                   className="px-3 py-1.5 rounded-lg text-sm font-medium"
-                  style={{ background: 'rgba(107, 143, 122, 0.15)', color: '#99f6e4', border: '1px solid rgba(107, 143, 122, 0.3)' }}
+                  style={{ background: 'rgba(107, 143, 122, 0.15)', color: 'rgba(255, 255, 255, 0.9)', border: '1px solid rgba(107, 143, 122, 0.3)' }}
                 >
                   انصراف
                 </button>
@@ -3461,7 +3468,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
           {show.summary && show.summary !== '—' && (
             <div className="mt-6 p-4 rounded-xl" style={{ background: `${thumb.accent}10`, border: `1px solid ${thumb.accent}25` }}>
               <h4 className="font-bold mb-2" style={{ color: '#f0fdf4' }}>خلاصهٔ دکور</h4>
-              <p style={{ color: '#99f6e4', lineHeight: 1.7 }}>{show.summary}</p>
+              <p style={{ color: 'rgba(255, 255, 255, 0.9)', lineHeight: 1.7 }}>{show.summary}</p>
             </div>
           )}
 
@@ -3710,7 +3717,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
                 padding: '10px 16px',
                 borderRadius: '12px',
                 border: '1px solid rgba(13, 124, 74,0.15)',
-                background: 'rgba(255, 255, 255, 0.8)',
+                background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
                 color: '#f0fdf4',
                 fontFamily: 'inherit',
                 outline: 'none',
@@ -3803,7 +3810,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
               padding: '12px 16px',
               borderRadius: '12px',
               border: '1px solid rgba(13, 124, 74, 0.15)',
-              background: 'rgba(255, 255, 255, 0.8)',
+              background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
               color: '#f0fdf4',
               fontFamily: 'inherit',
               outline: 'none',
@@ -3824,7 +3831,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
               padding: '12px 16px',
               borderRadius: '12px',
               border: '1px solid rgba(13, 124, 74, 0.15)',
-              background: 'rgba(255, 255, 255, 0.8)',
+              background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
               color: '#f0fdf4',
               fontFamily: 'inherit',
               outline: 'none',
@@ -3866,7 +3873,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
           <button
             onClick={() => { setEditingShow(null); onDone(); }}
             className="px-6 py-3 rounded-xl text-sm font-medium"
-            style={{ background: 'rgba(107, 143, 122, 0.15)', color: '#99f6e4', border: '1px solid rgba(107, 143, 122, 0.3)' }}
+            style={{ background: 'rgba(107, 143, 122, 0.15)', color: 'rgba(255, 255, 255, 0.9)', border: '1px solid rgba(107, 143, 122, 0.3)' }}
           >
             انصراف
           </button>
@@ -3895,7 +3902,7 @@ function FormField({ label, value, onChange, placeholder }: {
           padding: '10px 16px',
           borderRadius: '12px',
           border: '1px solid rgba(13, 124, 74, 0.15)',
-          background: 'rgba(255, 255, 255, 0.8)',
+          background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
           color: '#f0fdf4',
           fontFamily: 'inherit',
           outline: 'none',
@@ -3922,7 +3929,7 @@ function FormSelect({ label, value, onChange, options }: {
           padding: '10px 16px',
           borderRadius: '12px',
           border: '1px solid rgba(13, 124, 74, 0.15)',
-          background: 'rgba(255, 255, 255, 0.8)',
+          background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
           color: '#f0fdf4',
           fontFamily: 'inherit',
           outline: 'none',
@@ -4244,7 +4251,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
             padding: '8px 12px',
             borderRadius: '10px',
             border: '1px solid rgba(13, 124, 74,0.15)',
-            background: 'rgba(255, 255, 255, 0.8)',
+            background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
             color: '#f0fdf4',
             fontFamily: 'inherit',
             outline: 'none',
@@ -4268,7 +4275,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
             padding: '10px 16px',
             borderRadius: '12px',
             border: '1px solid rgba(13, 124, 74,0.15)',
-            background: 'rgba(255, 255, 255, 0.8)',
+            background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
             color: '#f0fdf4',
             fontFamily: 'inherit',
             outline: 'none',
@@ -4302,7 +4309,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
               <div
                 key={idx}
                 className="flex items-center gap-3 p-2 rounded-xl"
-                style={{ background: 'rgba(255, 255, 255, 0.8)', border: '1px solid rgba(13, 124, 74,0.1)' }}
+                style={{ background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)', border: '1px solid rgba(13, 124, 74,0.1)' }}
               >
                 {/* Thumbnail or icon */}
                 <div
@@ -4325,7 +4332,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
                   </span>
                   <div
                     className="text-xs truncate"
-                    style={{ color: '#99f6e4', direction: 'ltr', textAlign: 'left' }}
+                    style={{ color: 'rgba(255, 255, 255, 0.9)', direction: 'ltr', textAlign: 'left' }}
                     title={url}
                   >
                     {url}
@@ -4474,7 +4481,7 @@ function TagsEditor({ tags, onChange, presetTags }: {
             padding: '10px 16px',
             borderRadius: '12px',
             border: '1px solid rgba(124, 58, 237, 0.2)',
-            background: 'rgba(255, 255, 255, 0.8)',
+            background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
             color: '#f0fdf4',
             fontFamily: 'inherit',
             outline: 'none',
@@ -4621,7 +4628,7 @@ function AddGenreModal({ onClose, onSave }: {
                 padding: '10px 16px',
                 borderRadius: '12px',
                 border: '1px solid rgba(13, 124, 74, 0.15)',
-                background: 'rgba(255, 255, 255, 0.8)',
+                background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
                 color: '#f0fdf4',
                 fontFamily: 'inherit',
                 outline: 'none',
@@ -4641,7 +4648,7 @@ function AddGenreModal({ onClose, onSave }: {
                 padding: '10px 16px',
                 borderRadius: '12px',
                 border: '1px solid rgba(13, 124, 74, 0.15)',
-                background: 'rgba(255, 255, 255, 0.8)',
+                background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
                 color: '#f0fdf4',
                 fontFamily: 'inherit',
                 outline: 'none',
@@ -4701,7 +4708,7 @@ function AddGenreModal({ onClose, onSave }: {
             <button
               onClick={onClose}
               className="px-6 py-3 rounded-xl text-sm font-medium"
-              style={{ background: 'rgba(107, 143, 122,0.15)', color: '#99f6e4', border: '1px solid rgba(107, 143, 122,0.3)' }}
+              style={{ background: 'rgba(107, 143, 122,0.15)', color: 'rgba(255, 255, 255, 0.9)', border: '1px solid rgba(107, 143, 122,0.3)' }}
             >
               انصراف
             </button>
@@ -5069,7 +5076,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
               <button
                 onClick={onClose}
                 className="px-6 py-3 rounded-xl text-sm font-medium"
-                style={{ background: 'rgba(107, 143, 122,0.15)', color: '#99f6e4', border: '1px solid rgba(107, 143, 122,0.3)' }}
+                style={{ background: 'rgba(107, 143, 122,0.15)', color: 'rgba(255, 255, 255, 0.9)', border: '1px solid rgba(107, 143, 122,0.3)' }}
               >
                 انصراف
               </button>
@@ -5187,7 +5194,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
                   padding: '10px 14px',
                   borderRadius: '12px',
                   border: '1px solid rgba(13, 124, 74,0.15)',
-                  background: 'rgba(255, 255, 255, 0.8)',
+                  background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
                   color: '#f0fdf4',
                   fontFamily: 'monospace',
                   outline: 'none',
@@ -5197,7 +5204,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
               <button
                 onClick={() => setShowToken(!showToken)}
                 className="px-3 rounded-xl text-sm font-medium"
-                style={{ background: 'rgba(107, 143, 122,0.15)', color: '#99f6e4', border: '1px solid rgba(107, 143, 122,0.3)' }}
+                style={{ background: 'rgba(107, 143, 122,0.15)', color: 'rgba(255, 255, 255, 0.9)', border: '1px solid rgba(107, 143, 122,0.3)' }}
               >
                 {showToken ? '🙈 پنهان' : '👁 نمایش'}
               </button>
@@ -5218,7 +5225,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
                 padding: '10px 14px',
                 borderRadius: '12px',
                 border: '1px solid rgba(13, 124, 74,0.15)',
-                background: 'rgba(255, 255, 255, 0.8)',
+                background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
                 color: '#f0fdf4',
                 fontFamily: 'monospace',
                 outline: 'none',
@@ -5448,7 +5455,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
                     >
                       <span
                         className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0"
-                        style={{ background: 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)', color: 'white', boxShadow: '0 2px 6px rgba(13, 124, 74, 0.3)' }}
+                        style={{ background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)', border: '1px solid rgba(255, 255, 255, 0.3)', color: 'white', boxShadow: '0 2px 6px rgba(13, 124, 74, 0.3)' }}
                       >
                         {s.n.toLocaleString('fa-IR')}
                       </span>
@@ -5457,7 +5464,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
                           <span className="text-sm">{s.icon}</span>
                           <span className="text-xs font-bold" style={{ color: '#f0fdf4' }}>{s.t}</span>
                         </div>
-                        <p className="text-xs leading-relaxed" style={{ color: '#99f6e4', fontSize: '10.5px' }}>
+                        <p className="text-xs leading-relaxed" style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: '10.5px' }}>
                           {s.desc}
                         </p>
                       </div>
@@ -5519,7 +5526,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
           {/* Excel preview */}
           {format === 'excel' && (
             <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(0,0,0,0.1)' }}>
-              <div className="p-3 text-center" style={{ background: 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)', color: 'white' }}>
+              <div className="p-3 text-center" style={{ background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)', border: '1px solid rgba(255, 255, 255, 0.3)', color: 'white' }}>
                 <div className="text-lg font-bold">بانک رسانه — خروجی Excel</div>
                 <div className="text-xs opacity-80">{shows.length.toLocaleString('fa-IR')} برنامه</div>
               </div>
@@ -5562,7 +5569,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload }: {
             <button
               onClick={onClose}
               className="px-6 py-3 rounded-xl text-sm font-medium"
-              style={{ background: 'rgba(107, 143, 122,0.15)', color: '#99f6e4', border: '1px solid rgba(107, 143, 122,0.3)' }}
+              style={{ background: 'rgba(107, 143, 122,0.15)', color: 'rgba(255, 255, 255, 0.9)', border: '1px solid rgba(107, 143, 122,0.3)' }}
             >
               انصراف
             </button>
@@ -5771,11 +5778,11 @@ function SettingsModal({
                 onClick={() => setTab(t.key)}
                 className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition-all"
                 style={active ? {
-                  background: 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)',
+                  background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)', border: '1px solid rgba(255, 255, 255, 0.3)',
                   color: 'white',
                   boxShadow: '0 4px 12px rgba(13, 124, 74, 0.3), inset 0 1px 0 rgba(13, 124, 74, 0.4)',
                 } : {
-                  color: '#99f6e4',
+                  color: 'rgba(255, 255, 255, 0.9)',
                   border: '1px solid transparent',
                 }}
               >
@@ -5846,7 +5853,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
           placeholder="http://localhost:3002"
           style={{
             width: '100%',
-            background: 'rgba(255, 255, 255, 0.8)',
+            background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
             border: '1px solid rgba(13, 124, 74, 0.25)',
             borderRadius: '12px',
             padding: '12px 16px',
@@ -5892,7 +5899,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
           onClick={handleSave}
           className="px-4 py-2 rounded-xl text-sm font-bold transition-all flex-1"
           style={{
-            background: 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)',
+            background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)', border: '1px solid rgba(255, 255, 255, 0.3)',
             color: 'white',
             boxShadow: '0 4px 12px rgba(13, 124, 74, 0.3)',
           }}
@@ -5903,7 +5910,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
 
       <div
         className="p-3 rounded-xl text-xs"
-        style={{ background: 'rgba(13, 124, 74, 0.05)', border: '1px solid rgba(13, 124, 74, 0.15)', color: '#99f6e4', lineHeight: 1.7 }}
+        style={{ background: 'rgba(13, 124, 74, 0.05)', border: '1px solid rgba(13, 124, 74, 0.15)', color: 'rgba(255, 255, 255, 0.9)', lineHeight: 1.7 }}
       >
         <strong>راهنما:</strong> آدرس وارد شده باید ریشهٔ سرویس API باشد (بدون مسیرهای <code dir="ltr">/api/...</code>).
         اگر از گیتوی Caddy استفاده می‌کنید، می‌توانید آدرس نسبی وارد کنید. پس از ذخیره، توکن فعلی شما معتبر می‌ماند.
@@ -6225,7 +6232,7 @@ function SettingsPasswordTab({
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
-    background: 'rgba(255, 255, 255, 0.8)',
+    background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
     border: '1px solid rgba(13, 124, 74, 0.25)',
     borderRadius: '12px',
     padding: '12px 48px 12px 16px',
@@ -6275,7 +6282,7 @@ function SettingsPasswordTab({
               type="button"
               onClick={() => setShowPw(!showPw)}
               className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-lg"
-              style={{ color: '#99f6e4', background: 'transparent' }}
+              style={{ color: 'rgba(255, 255, 255, 0.9)', background: 'transparent' }}
               aria-label={showPw ? 'پنهان کردن رمز' : 'نمایش رمز'}
             >
               {showPw ? (
