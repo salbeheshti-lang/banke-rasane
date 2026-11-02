@@ -179,7 +179,7 @@ async function main() {
     assert.ok(relaxedSearch.data.shows.some((show) => show.num === 990000001),
       'Multi-term search must relax to relevant matching terms when strict AND finds nothing.');
 
-    const emptySearch = await request('/api/shows/search?q=' + encodeURIComponent('عبارتکاملاًناموجود smokeprobe'), { token });
+    const emptySearch = await request('/api/shows/search?q=' + encodeURIComponent('عبارتکاملاًناموجود هیچواژه‌مشترکی'), { token });
     assert.equal(emptySearch.status, 200);
     assert.equal(emptySearch.data.pagination.total, 0, 'unmatched queries must return an empty result set');
 
