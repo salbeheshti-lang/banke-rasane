@@ -23,8 +23,11 @@ export async function POST(request: NextRequest) {
     if (!url) return NextResponse.json({ error: 'URL الزامی است' }, { status: 400 });
     const info: Record<string,string> = {};
 
-    const parsedUrl = new URL(url);
-    if (!['www.imdb.com', 'imdb.com'].includes(parsedUrl.hostname) && !parsedUrl.hostname.endsWith('.wikipedia.org')) {
+    let parsedUrl: URL;
+    try { parsedUrl = new URL(String(url)); }
+    catch { return NextResponse.json({ error: 'فرمت لینک معتبر نیست' }, { status: 400 }); }
+    if (!['http:', 'https:'].includes(parsedUrl.protocol) ||
+        (!['www.imdb.com', 'imdb.com'].includes(parsedUrl.hostname) && !parsedUrl.hostname.endsWith('.wikipedia.org'))) {
       return NextResponse.json({ error: 'فقط لینک معتبر IMDb یا ویکی‌پدیا پشتیبانی می‌شود' }, { status: 400 });
     }
 
