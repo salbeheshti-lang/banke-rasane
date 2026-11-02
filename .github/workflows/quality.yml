@@ -36,6 +36,9 @@ jobs:
       - name: API smoke runner syntax
         run: node --check scripts/smoke-api.cjs
 
+      - name: Client API-base smoke test
+        run: node scripts/smoke-client.cjs
+
       - name: API integration smoke test
         run: node scripts/smoke-api.cjs
 
