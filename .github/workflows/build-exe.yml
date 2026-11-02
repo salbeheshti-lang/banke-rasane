@@ -1,58 +1,59 @@
-name: Build Windows .exe
+name: Build Windows installer
+
 on:
   push:
     tags:
       - 'v*'
   workflow_dispatch:
+
+permissions:
+  contents: write
+
 jobs:
   build-windows:
     runs-on: windows-latest
-    timeout-minutes: 30
-    permissions:
-      contents: write
-      actions: write
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: '20'
-      - name: Install dependencies (npm)
-        run: npm install
-      - name: Install API service dependencies (npm)
-        run: cd mini-services/api-service && npm install && cd ../..
-      - name: Download Bun binary for Windows
-        shell: powershell
-        run: |
-          $url = "https://github.com/oven-sh/bun/releases/latest/download/bun-windows-x64.zip"
-          $output = "bun.zip"
-          Invoke-WebRequest -Uri $url -OutFile $output
-          Expand-Archive -Path $output -DestinationPath bun-temp -Force
-          New-Item -ItemType Directory -Force -Path electron/bun
-          Copy-Item bun-temp\bun-windows-x64\bun.exe electron/bun\bun.exe
-          Remove-Item -Recurse -Force bun-temp
-          Remove-Item bun.zip
-          Write-Host "Bun binary downloaded to electron/bun/bun.exe"
-      - name: Build Next.js
-        run: npx next build && node scripts/copy-standalone.cjs
-      - name: Build Electron installer
+          bun-version: 1.4.4
+
+      - name: Install dependencies
+        run: bun install --no-save
+
+      - name: Generate Prisma client
+        run: bunx prisma generate
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --win --x64 --publish always
+          DATABASE_URL: file:./db/custom.db
+
+      - name: Build and type-check installer
+        run: npm run electron:build
+
       - name: Verify and rename installer
-        shell: bash
+        shell: pwsh
         run: |
-          ls -la release/
-          SETUP=$(find release -maxdepth 1 -name "*Setup*.exe" -type f | head -1)
-          if [ -z "$SETUP" ]; then echo "No Setup.exe found"; exit 1; fi
-          cp "$SETUP" release/BankResaneh-Setup.exe
-          ls -la release/BankResaneh-Setup.exe
-      - uses: actions/upload-artifact@v4
+          $setup = Get-ChildItem release -Filter '*Setup*.exe' | Select-Object -First 1
+          if (-not $setup) { throw 'No Setup.exe was produced.' }
+          Copy-Item $setup.FullName 'release/BankResaneh-Setup.exe' -Force
+          if (-not (Test-Path 'release/latest.yml')) { throw 'electron-builder did not produce latest.yml for auto-update.' }
+          Get-ChildItem release
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
         with:
           name: BankResaneh-Windows-Setup
-          path: release/BankResaneh-Setup.exe
+          path: |
+            release/BankResaneh-Setup.exe
+            release/latest.yml
+            release/*.blockmap
           if-no-files-found: error
           retention-days: 90
-      - name: Attach to GitHub Release
+
+      - name: Attach installer to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
@@ -67,6 +68,5 @@ jobs:
             ## نصب
             ۱. فایل BankResaneh-Setup.exe را دانلود کنید.
             ۲. روی آن دابل‌کلیک کنید و مراحل نصب را دنبال کنید.
-            ۳. ورود: admin / admin
           draft: false
           prerelease: false
