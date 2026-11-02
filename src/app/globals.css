@@ -1172,14 +1172,15 @@ html, body {
   text-align: left;
 }
 .analytics-list-pct {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--row-color, #00E5EF);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--row-color, #54D9C0);
   text-align: left;
   padding: 0;
   border-radius: 0;
   background: transparent;
-  /* No box-shadow glow */
+  /* Matte, bright, readable */
+  filter: brightness(1.15) saturate(1.2);
 }
 .theme-dark .analytics-card {
   background: var(--analytics-bg);
@@ -1324,6 +1325,8 @@ html, body {
   -ms-overflow-style: none;
   padding: 8px 0;
   scroll-behavior: smooth;
+  /* Center the initial view */
+  scroll-padding: 50%;
 }
 .featured-carousel-track::-webkit-scrollbar {
   display: none;

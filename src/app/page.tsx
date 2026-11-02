@@ -782,6 +782,7 @@ export default function Home() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   // Settings modal (admin only)
   const [showSettings, setShowSettings] = useState(false);
+  const [showUserProfile, setShowUserProfile] = useState(false);
   // User-created custom genres (persisted to localStorage) — merged with GENRES.
   const [customGenres, setCustomGenres] = useState<Genre[]>([]);
   // When the user clicks "+ افزودن برنامه" from inside a genre view, that genre's
@@ -999,6 +1000,7 @@ export default function Home() {
         onGenreSelect={handleGenreSelect}
         onLogout={handleLogout}
         onOpenSettings={() => { setShowSettings(true); setDrawerOpen(false); }}
+        onOpenProfile={() => { setShowUserProfile(true); setDrawerOpen(false); }}
         currentUser={currentUser}
         isAdmin={isAdmin}
         talkShows={talkShows}
@@ -1075,6 +1077,15 @@ export default function Home() {
           onClose={() => setShowSettings(false)}
           showToast={showToast}
           onLogout={handleLogout}
+        />
+      )}
+
+      {/* User profile modal — for ALL users */}
+      {showUserProfile && currentUser && (
+        <UserProfileModal
+          user={currentUser}
+          onClose={() => setShowUserProfile(false)}
+          showToast={showToast}
         />
       )}
 
@@ -1503,6 +1514,7 @@ function DrawerMenu({
   onGenreSelect,
   onLogout,
   onOpenSettings,
+  onOpenProfile,
   currentUser,
   isAdmin,
   talkShows,
@@ -1515,6 +1527,7 @@ function DrawerMenu({
   onGenreSelect: (g: Genre) => void;
   onLogout: () => void;
   onOpenSettings: () => void;
+  onOpenProfile: () => void;
   currentUser: User | null;
   isAdmin: boolean;
   talkShows: TalkShow[];
@@ -1744,6 +1757,18 @@ function DrawerMenu({
               </div>
             </div>
           )}
+
+          {/* Profile button — for ALL users */}
+          <button
+            onClick={onOpenProfile}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all w-full mb-1"
+            style={{ color: '#f0fdf4' }}
+          >
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            <span className="font-medium text-sm">پروفایل من</span>
+          </button>
 
           {/* Settings button — admin only */}
           {isAdmin && (
@@ -2016,10 +2041,8 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
   const scroll = (dir: 'left' | 'right') => {
     const el = trackRef.current;
     if (!el) return;
-    // In RTL, scrollLeft is negative — left button scrolls forward (more negative)
-    const scrollAmount = CARDS_PER_PAGE * 148;
-    const currentLeft = el.scrollLeft;
-    // RTL: scroll right = scrollLeft increases (toward 0), scroll left = scrollLeft decreases
+    // Scroll exactly ONE card width (140px card + 8px gap = 148px)
+    const scrollAmount = 148;
     el.scrollBy({ left: dir === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
   };
 
@@ -2295,6 +2318,236 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ============================================
+// USER PROFILE MODAL — iPhone Contacts style (for all users)
+// ============================================
+function UserProfileModal({ user, onClose, showToast }: {
+  user: User;
+  onClose: () => void;
+  showToast: (msg: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(user.name || '');
+  const [phone, setPhone] = useState(user.phone || '');
+  const [jobTitle, setJobTitle] = useState(user.jobTitle || '');
+  const [deputy, setDeputy] = useState(user.deputy || '');
+  const [avatar, setAvatar] = useState(user.avatar || '');
+  const [saving, setSaving] = useState(false);
+
+  const roleLabels: Record<string, string> = { admin: 'مدیر سیستم', editor: 'ویراستار', viewer: 'بیننده' };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch(getApiUrl('api/auth/me'), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('bankresaneh_token')}` },
+        body: JSON.stringify({ name, phone, jobTitle, deputy, avatar }),
+      });
+      if (res.ok) {
+        showToast('پروفایل بروزرسانی شد');
+        setEditing(false);
+      } else {
+        showToast('خطا در بروزرسانی');
+      }
+    } catch {
+      showToast('خطا در ارتباط با سرور');
+    }
+    setSaving(false);
+  };
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setAvatar(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+      style={{ background: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(8px)' }}
+      onClick={onClose}
+    >
+      <div
+        className="relative flex flex-col w-full"
+        style={{
+          maxWidth: '440px',
+          maxHeight: '90vh',
+          /* Same glass as app background */
+          background: 'linear-gradient(180deg, rgba(5, 80, 65, 0.85) 0%, rgba(0, 95, 75, 0.8) 50%, rgba(8, 110, 90, 0.78) 100%)',
+          backdropFilter: 'blur(28px) saturate(135%)',
+          WebkitBackdropFilter: 'blur(28px) saturate(135%)',
+          borderRadius: '28px',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          boxShadow: '0 24px 80px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
+          overflow: 'hidden',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Top bar — back + edit */}
+        <div className="flex items-center justify-between p-4 flex-shrink-0">
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg"
+            style={{ color: 'rgba(255, 255, 255, 0.8)' }}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          {editing ? (
+            <button
+              onClick={() => { setEditing(false); setName(user.name || ''); setPhone(user.phone || ''); setJobTitle(user.jobTitle || ''); setDeputy(user.deputy || ''); setAvatar(user.avatar || ''); }}
+              style={{
+                padding: '6px 16px', borderRadius: '999px',
+                background: 'rgba(255, 255, 255, 0.12)',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
+                color: '#f0fdf4', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              انصراف
+            </button>
+          ) : (
+            <button
+              onClick={() => setEditing(true)}
+              style={{
+                padding: '6px 16px', borderRadius: '999px',
+                background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+              }}
+            >
+              ویرایش
+            </button>
+          )}
+        </div>
+
+        {/* Avatar — large square like iPhone Contacts */}
+        <div className="flex flex-col items-center gap-3 pb-4">
+          <div className="relative" style={{ width: '120px', height: '120px' }}>
+            {avatar ? (
+              <img src={avatar} alt={name} style={{
+                width: '120px', height: '120px', borderRadius: '28px', objectFit: 'cover',
+                border: '3px solid rgba(255, 255, 255, 0.3)', boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+              }} />
+            ) : (
+              <div style={{
+                width: '120px', height: '120px', borderRadius: '28px',
+                background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '48px', fontWeight: 900, color: '#fff',
+                border: '3px solid rgba(255, 255, 255, 0.3)', boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+              }}>
+                {(name || user.username).charAt(0).toUpperCase()}
+              </div>
+            )}
+            {editing && (
+              <label style={{
+                position: 'absolute', bottom: '-4px', right: '-4px',
+                width: '36px', height: '36px', borderRadius: '50%',
+                background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
+                border: '2px solid rgba(255, 255, 255, 0.4)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+              }}>
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.66-.9l.82-1.2A2 2 0 0110.07 4h3.86a2 2 0 011.66.9l.82 1.2a2 2 0 001.66.9H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <input type="file" accept="image/*" onChange={handleAvatarUpload} style={{ display: 'none' }} />
+              </label>
+            )}
+          </div>
+          {/* Name + role */}
+          <div className="text-center">
+            <div style={{ fontSize: '22px', fontWeight: 800, color: '#f0fdf4' }}>{name || user.username}</div>
+            <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '2px' }}>@{user.username}</div>
+          </div>
+          <span style={{
+            fontSize: '11px', fontWeight: 700, padding: '4px 14px', borderRadius: '999px',
+            background: user.role === 'admin' ? 'rgba(220, 38, 38, 0.3)' : user.role === 'editor' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(34, 185, 154, 0.3)',
+            color: user.role === 'admin' ? '#fca5a5' : user.role === 'editor' ? '#fcd34d' : '#54D9C0',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+          }}>
+            {roleLabels[user.role] || user.role}
+          </span>
+        </div>
+
+        {/* Contact details — iPhone style rows */}
+        <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-3">
+          <ContactRow icon="👤" label="نام نمایشی" value={name} editing={editing} onChange={setName} placeholder="نام و نام خانوادگی" />
+          <ContactRow icon="📱" label="شماره همراه" value={phone} editing={editing} onChange={setPhone} placeholder="0912xxxxxxx" dir="ltr" />
+          <ContactRow icon="💼" label="عنوان شغلی" value={jobTitle} editing={editing} onChange={setJobTitle} placeholder="مثلاً: تهیه‌کننده" />
+          <ContactRow icon="🏢" label="معاونت" value={deputy} editing={editing} onChange={setDeputy} placeholder="مثلاً: معاونت برنامه" />
+
+          {editing && (
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{
+                width: '100%', padding: '14px', borderRadius: '16px', marginTop: '8px',
+                background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
+                color: '#fff', fontWeight: 700, fontSize: '15px',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                cursor: saving ? 'wait' : 'pointer',
+                boxShadow: '0 4px 14px rgba(0, 107, 80, 0.4)',
+              }}
+            >
+              {saving ? 'در حال ذخیره...' : '✓ ذخیره پروفایل'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Reusable contact row — iPhone style
+function ContactRow({ icon, label, value, editing, onChange, placeholder, dir }: {
+  icon: string;
+  label: string;
+  value: string;
+  editing: boolean;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  dir?: string;
+}) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '14px',
+      padding: '14px 16px', borderRadius: '16px',
+      background: 'rgba(255, 255, 255, 0.1)',
+      backdropFilter: 'blur(10px)',
+      WebkitBackdropFilter: 'blur(10px)',
+      border: '1px solid rgba(255, 255, 255, 0.15)',
+    }}>
+      <span style={{ fontSize: '20px', flexShrink: 0 }}>{icon}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', marginBottom: '3px' }}>{label}</div>
+        {editing ? (
+          <input
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            dir={dir}
+            style={{
+              width: '100%', background: 'transparent', border: 'none', outline: 'none',
+              color: '#f0fdf4', fontSize: '15px', fontWeight: 600, fontFamily: 'inherit', padding: 0,
+            }}
+          />
+        ) : (
+          <div style={{ fontSize: '15px', fontWeight: 600, color: '#f0fdf4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} dir={dir}>
+            {value || '—'}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
