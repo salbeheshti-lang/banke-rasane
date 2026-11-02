@@ -153,6 +153,7 @@ async function startApiService() {
   const userData = app.getPath('userData');
   const dbDir = path.join(userData, 'db');
   const dbPath = path.join(dbDir, 'bankresaneh.sqlite');
+  const seedPath = path.join(process.resourcesPath || '', 'next-service-dist', 'public', 'talk-shows-data.json');
   fs.mkdirSync(dbDir, { recursive: true });
 
   // Seed the writable user database once. The tracked DB uses WAL mode, so
@@ -177,6 +178,7 @@ async function startApiService() {
       PORT: String(API_PORT),
       HOSTNAME: '127.0.0.1',
       DB_PATH: dbPath,
+      BANKRESANEH_SEED_PATH: seedPath,
       BANKRESANEH_STARTUP_TOKEN: STARTUP_TOKEN,
     },
     stdio: ['ignore', 'pipe', 'pipe'],
