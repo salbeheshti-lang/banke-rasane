@@ -657,12 +657,15 @@ const server = Bun.serve({
       if (!terms.length || !showsFtsAvailable || (terms.length && rows.length === 0 && total === 0)) {
         const conditions = [];
         const params = [];
+        const normalizedColumn = (column) =>
+          "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(COALESCE(" + column + ",'')), 'ي','ی'), 'ى','ی'), 'ك','ک'), 'ۀ','ه'), 'ة','ه'), char(8204), ' '), char(8205), ' ')";
         for (const term of terms) {
           const pattern = '%' + term + '%';
-          conditions.push('(name LIKE ? OR category LIKE ? OR summary LIKE ? OR descriptionFa LIKE ? OR source LIKE ? OR style LIKE ? OR effects LIKE ? OR layout LIKE ? OR elements LIKE ? OR materials LIKE ? OR colors LIKE ? OR lighting LIKE ?)');
+          conditions.push('(' + ['name', 'category', 'summary', 'descriptionFa', 'source', 'style', 'effects', 'layout', 'elements', 'materials', 'colors', 'lighting']
+            .map(column => normalizedColumn(column) + ' LIKE ?').join(' OR ') + ')');
           params.push(pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern);
         }
-        if (category) { conditions.push('LOWER(category) LIKE ?'); params.push('%' + category + '%'); }
+        if (category) { conditions.push(normalizedColumn('category') + ' LIKE ?'); params.push('%' + category + '%'); }
         const where = conditions.length ? ' WHERE ' + conditions.join(' AND ') : '';
         total = db.prepare('SELECT COUNT(*) AS total FROM shows' + where).get(...params).total;
         rows = db.prepare(`SELECT * FROM shows${where}
@@ -758,7 +761,18 @@ const server = Bun.serve({
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
       const target = getUserById(id);
       if (!target) return json({ error: 'user not found' }, 404, req);
-      db.prepare('UPDATE users SET name = ?, role = ? WHERE id = ?').run(body.name ?? target.name, body.role ?? target.role, id);
+      const nextRole = body.role ?? target.role;
+      if (!['admin', 'editor', 'viewer'].includes(nextRole)) {
+        return json({ error: 'invalid role' }, 400, req);
+      }
+      if (target.id === admin.id && nextRole !== 'admin') {
+        return json({ error: 'cannot change your own admin role' }, 400, req);
+      }
+      if (target.role === 'admin' && nextRole !== 'admin') {
+        const admins = db.prepare("SELECT COUNT(*) AS count FROM users WHERE role = 'admin'").get().count;
+        if (admins <= 1) return json({ error: 'at least one admin must remain' }, 409, req);
+      }
+      db.prepare('UPDATE users SET name = ?, role = ? WHERE id = ?').run(body.name ?? target.name, nextRole, id);
       return json(publicUser(getUserById(id), admin), req);
     }
 
@@ -767,8 +781,19 @@ const server = Bun.serve({
       const admin = requireRole(req, ['admin']);
       if (!admin) return json({ error: 'Unauthorized' }, 401, req);
       const id = parseInt(url.searchParams.get('id') || '0');
+      if (!Number.isInteger(id) || id < 1) return json({ error: 'valid user id required' }, 400, req);
       if (id === admin.id) return json({ error: 'cannot delete self' }, 400, req);
-      db.prepare('DELETE FROM users WHERE id = ?').run(id);
+      const target = getUserById(id);
+      if (!target) return json({ error: 'user not found' }, 404, req);
+      if (target.role === 'admin') {
+        const admins = db.prepare("SELECT COUNT(*) AS count FROM users WHERE role = 'admin'").get().count;
+        if (admins <= 1) return json({ error: 'at least one admin must remain' }, 409, req);
+      }
+      const removeUser = db.transaction(() => {
+        db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id);
+        db.prepare('DELETE FROM users WHERE id = ?').run(id);
+      });
+      removeUser();
       return json({ success: true }, req);
     }
 
