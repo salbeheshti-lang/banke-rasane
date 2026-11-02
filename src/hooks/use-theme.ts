@@ -40,8 +40,13 @@ export const themeNoFlashScript = `
 (function() {
   try {
     var t = localStorage.getItem('bankresaneh_theme') || 'dark';
-    document.documentElement.setAttribute('data-theme', t);
-    if (t === 'dark') document.documentElement.className = 'theme-dark';
+    if (t === 'light') {
+      document.documentElement.className = '';
+      document.documentElement.setAttribute('data-theme', 'light');
+    } else {
+      document.documentElement.className = 'theme-dark';
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
   } catch(e) {}
 })();
 `;

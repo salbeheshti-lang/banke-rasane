@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import { api, setApiBase, getApiBase, User } from '@/lib/api';
+import { useTheme } from '@/hooks/use-theme';
 
 // ============================================
 // TYPES
@@ -779,6 +780,9 @@ function applyOverrides(base: TalkShow[], o: Overrides): TalkShow[] {
 }
 
 export default function Home() {
+  const { theme, toggleTheme } = useTheme();
+  const [lang, setLang] = useState<'fa' | 'en'>('fa');
+  const toggleLang = () => setLang(l => l === 'fa' ? 'en' : 'fa');
   const [currentView, setCurrentView] = useState<'dashboard' | 'programs' | 'genre' | 'reports' | 'add'>('dashboard');
   const [selectedGenre, setSelectedGenre] = useState<Genre | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -1016,6 +1020,10 @@ export default function Home() {
         canGoBack={canGoBack}
         totalShows={talkShows.length}
         totalGenres={genres.length}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        lang={lang}
+        onToggleLang={toggleLang}
       />
 
       <DrawerMenu
@@ -1364,7 +1372,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
 // TOP APP BAR — fixed at top, hamburger (3-line) on the right,
 // logo + title in the center, visible on BOTH desktop and mobile
 // ============================================
-function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, totalShows, totalGenres }: {
+function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, totalShows, totalGenres, theme, onToggleTheme, lang, onToggleLang }: {
   onMenuClick: () => void;
   isMobile: boolean;
   currentView: string;
@@ -1372,6 +1380,10 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
   canGoBack: boolean;
   totalShows?: number;
   totalGenres?: number;
+  theme: 'light' | 'dark';
+  onToggleTheme: () => void;
+  lang: 'fa' | 'en';
+  onToggleLang: () => void;
 }) {
   const viewTitles: Record<string, string> = {
     dashboard: 'مرجع جامع برنامه‌های تلویزیونی بین‌المللی',
@@ -1465,8 +1477,59 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
           )}
         </div>
 
-        {/* Left placeholder: back button (when there is history), else status badge */}
-        <div style={{ minWidth: '44px', display: 'flex', justifyContent: 'flex-end' }}>
+        {/* Left: theme + language toggles, then back button (when there is history), else status badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '44px', justifyContent: 'flex-end' }}>
+          {/* Language toggle — FA/EN */}
+          <button
+            onClick={onToggleLang}
+            aria-label="تغییر زبان"
+            title={lang === 'fa' ? 'Switch to English' : 'تغییر به فارسی'}
+            className="flex items-center justify-center transition-all"
+            style={{
+              background: 'rgba(45, 212, 191, 0.1)',
+              border: '1px solid rgba(45, 212, 191, 0.25)',
+              color: '#5eead4',
+              borderRadius: '10px',
+              minWidth: '36px',
+              minHeight: '36px',
+              fontWeight: 800,
+              fontSize: '12px',
+              padding: '0 8px',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(45, 212, 191, 0.2)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(45, 212, 191, 0.1)'; }}
+          >
+            {lang === 'fa' ? 'EN' : 'فا'}
+          </button>
+
+          {/* Theme toggle — sun/moon */}
+          <button
+            onClick={onToggleTheme}
+            aria-label="تغییر تم"
+            title={theme === 'dark' ? 'حالت روشن' : 'حالت تیره'}
+            className="flex items-center justify-center transition-all"
+            style={{
+              background: 'rgba(45, 212, 191, 0.1)',
+              border: '1px solid rgba(45, 212, 191, 0.25)',
+              color: '#5eead4',
+              borderRadius: '10px',
+              minWidth: '36px',
+              minHeight: '36px',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(45, 212, 191, 0.2)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(45, 212, 191, 0.1)'; }}
+          >
+            {theme === 'dark' ? (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              </svg>
+            )}
+          </button>
+
           {canGoBack ? (
             <button
               onClick={onBack}
