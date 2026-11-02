@@ -1341,42 +1341,32 @@ html, body {
 .featured-carousel-track::-webkit-scrollbar {
   display: none;
 }
-/* Cards — center-focused scaling */
+/* Cards — Cover Flow style: one card visible, neighbors peek */
 .featured-card {
-  flex: 0 0 140px;
+  flex: 0 0 160px;
   scroll-snap-align: center;
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
   cursor: pointer;
-  transition: transform 0.2s ease-out, opacity 0.2s ease-out, border-color 0.2s, box-shadow 0.2s;
+  transition: transform 0.3s ease, opacity 0.3s ease, border-color 0.3s, box-shadow 0.3s;
   position: relative;
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(10px) saturate(130%);
-  -webkit-backdrop-filter: blur(10px) saturate(130%);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px) saturate(135%);
+  -webkit-backdrop-filter: blur(12px) saturate(135%);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
-  transform: scale(0.85);
-  opacity: 0.6;
-  transform-origin: center center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  transform: scale(0.75);
+  opacity: 0.4;
 }
-/* Center-focused: the card closest to viewport center gets full scale */
 .featured-card.is-center {
-  transform: scale(1.15);
+  transform: scale(1);
   opacity: 1;
   z-index: 10;
   border-color: rgba(255, 255, 255, 0.5);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
 }
-.featured-card.is-near {
-  transform: scale(1.0);
-  opacity: 0.85;
-  z-index: 5;
-}
-/* Hover only on center card */
 .featured-card.is-center:hover {
-  transform: scale(1.2);
-  border-color: rgba(255, 255, 255, 0.7);
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.5);
+  transform: scale(1.05);
 }
 .featured-card-thumb {
   width: 100%;

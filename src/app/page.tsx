@@ -2001,8 +2001,7 @@ function MobileNavBtn({ label, icon, active, onClick, highlight }: {
 }
 
 // ============================================
-// FEATURED CAROUSEL — Netflix-style featured programs row
-// Admin can add/remove featured shows
+// FEATURED CAROUSEL — Cover Flow style (one card at a time, dots below)
 // ============================================
 const FEATURED_KEY = 'bankresaneh_featured_shows_v1';
 
@@ -2011,100 +2010,75 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
   onShowClick: (s: TalkShow) => void;
   isAdmin: boolean;
 }) {
-  const trackRef = useRef<HTMLDivElement>(null);
   const [featuredNums, setFeaturedNums] = useState<number[]>([]);
   const [showPicker, setShowPicker] = useState(false);
   const [search, setSearch] = useState('');
-  const [centerIdx, setCenterIdx] = useState(0);
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const trackRef = useRef<HTMLDivElement>(null);
 
-  // How many cards per "page" — based on viewport
-  const CARDS_PER_PAGE = 6;
-
-  // Load featured shows from localStorage
   useEffect(() => {
     try {
       const raw = localStorage.getItem(FEATURED_KEY);
-      if (raw) {
-        const arr = JSON.parse(raw);
-        if (Array.isArray(arr)) setFeaturedNums(arr);
-      }
+      if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) setFeaturedNums(arr); }
     } catch {}
   }, []);
 
-  // Save to localStorage when changed
   const saveFeatured = (nums: number[]) => {
     setFeaturedNums(nums);
     try { localStorage.setItem(FEATURED_KEY, JSON.stringify(nums)); } catch {}
   };
 
   const featuredShows = useMemo(() => {
-    return featuredNums
-      .map(n => talkShows.find(s => s.num === n))
-      .filter((s): s is TalkShow => s !== undefined);
+    return featuredNums.map(n => talkShows.find(s => s.num === n)).filter((s): s is TalkShow => s !== undefined);
   }, [featuredNums, talkShows]);
 
-  const scroll = (dir: 'left' | 'right') => {
-    const el = trackRef.current;
-    if (!el) return;
-    // Scroll exactly ONE card (140px + 8px gap = 148px)
-    const cardStep = 148;
-    el.scrollBy({ left: dir === 'left' ? -cardStep : cardStep, behavior: 'smooth' });
-  };
+  useEffect(() => {
+    if (featuredNums.length === 0 && talkShows.length > 0) {
+      const defaults = talkShows.filter(s => s.images && s.images.length > 0).slice(0, 12).map(s => s.num);
+      if (defaults.length > 0) saveFeatured(defaults);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [talkShows]);
 
-  // Scroll-driven center detection using actual DOM measurements (debounced)
-  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const handleScroll = () => {
-    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
-    scrollTimeoutRef.current = setTimeout(() => {
-      const el = trackRef.current;
-      if (!el || featuredShows.length === 0) return;
-      // In RTL, scrollLeft is negative. Use absolute position for center calculation.
-      const containerCenter = Math.abs(el.scrollLeft) + el.clientWidth / 2;
-      const cards = el.querySelectorAll('.featured-card');
-      let closestIdx = 0;
-      let closestDist = Infinity;
-      cards.forEach((card, i) => {
-        const cardEl = card as HTMLElement;
-        // In RTL, offsetLeft is measured from right. Use absolute distance.
-        const cardCenter = Math.abs(cardEl.offsetLeft - el.clientWidth) + cardEl.offsetWidth / 2;
-        // Actually, let's use getBoundingClientRect relative to container
-        const cardRect = cardEl.getBoundingClientRect();
-        const elRect = el.getBoundingClientRect();
-        const cardCenterX = cardRect.left + cardRect.width / 2 - elRect.left;
-        const dist = Math.abs(cardCenterX - el.clientWidth / 2);
-        if (dist < closestDist) {
-          closestDist = dist;
-          closestIdx = i;
-        }
-      });
-      setCenterIdx(closestIdx);
-    }, 50);
-  };
-
-  // Scroll to a specific card (one dot = one card)
   const scrollToCard = (idx: number) => {
     const el = trackRef.current;
-    if (!el) return;
-    const cards = el.querySelectorAll('.featured-card');
-    const card = cards[idx] as HTMLElement;
+    if (!el || featuredShows.length === 0) return;
+    const clamped = Math.max(0, Math.min(featuredShows.length - 1, idx));
+    const cards = el.querySelectorAll('[data-card-idx]');
+    const card = cards[clamped] as HTMLElement;
     if (card) {
-      // Center the card in the viewport
       const elRect = el.getBoundingClientRect();
       const cardRect = card.getBoundingClientRect();
       const offset = cardRect.left - elRect.left - (el.clientWidth / 2 - card.offsetWidth / 2);
       el.scrollBy({ left: offset, behavior: 'smooth' });
     }
+    setCurrentIdx(clamped);
   };
 
-  const removeShow = (num: number) => {
-    saveFeatured(featuredNums.filter(n => n !== num));
+  const next = () => scrollToCard(currentIdx + 1);
+  const prev = () => scrollToCard(currentIdx - 1);
+
+  const scrollTO = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleScroll = () => {
+    if (scrollTO.current) clearTimeout(scrollTO.current);
+    scrollTO.current = setTimeout(() => {
+      const el = trackRef.current;
+      if (!el || featuredShows.length === 0) return;
+      const cards = el.querySelectorAll('[data-card-idx]');
+      let closestIdx = 0, closestDist = Infinity;
+      cards.forEach((card, i) => {
+        const cardEl = card as HTMLElement;
+        const elRect = el.getBoundingClientRect();
+        const cardRect = cardEl.getBoundingClientRect();
+        const dist = Math.abs((cardRect.left + cardRect.width / 2) - (elRect.left + el.clientWidth / 2));
+        if (dist < closestDist) { closestDist = dist; closestIdx = i; }
+      });
+      setCurrentIdx(closestIdx);
+    }, 80);
   };
 
-  const addShow = (num: number) => {
-    if (!featuredNums.includes(num)) {
-      saveFeatured([...featuredNums, num]);
-    }
-  };
+  const removeShow = (num: number) => saveFeatured(featuredNums.filter(n => n !== num));
+  const addShow = (num: number) => { if (!featuredNums.includes(num)) saveFeatured([...featuredNums, num]); };
 
   const filteredSearch = useMemo(() => {
     if (!search.trim()) return talkShows.slice(0, 30);
@@ -2112,221 +2086,68 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
     return talkShows.filter(s => s.name.toLowerCase().includes(q) || s.category.includes(search)).slice(0, 30);
   }, [search, talkShows]);
 
-  // Default: pick 8 interesting shows if empty
-  useEffect(() => {
-    if (featuredNums.length === 0 && talkShows.length > 0) {
-      const defaults = talkShows
-        .filter(s => s.images && s.images.length > 0)
-        .slice(0, 12)
-        .map(s => s.num);
-      if (defaults.length > 0) saveFeatured(defaults);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [talkShows]);
-
-  // Initialize center detection on mount
-  useEffect(() => {
-    const el = trackRef.current;
-    if (!el) return;
-    const timer = setTimeout(() => handleScroll(), 100);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [featuredShows]);
-
   return (
     <div className="featured-carousel">
       <div className="featured-carousel-header">
-        <span className="featured-carousel-title">
-          برنامه‌های منتخب
-        </span>
+        <span className="featured-carousel-title">برنامه‌های منتخب</span>
         <div className="featured-carousel-nav">
           {isAdmin && (
-            <button
-              onClick={() => setShowPicker(true)}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-              style={{
-                background: 'rgba(255, 255, 255, 0.12)',
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
-                border: '1px solid rgba(255, 255, 255, 0.25)',
-                color: 'rgba(255, 255, 255, 0.9)',
-              }}
-            >
-              + مدیریت
-            </button>
+            <button onClick={() => setShowPicker(true)} className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+              style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.9)' }}>+ مدیریت</button>
           )}
-          <button className="featured-nav-btn" onClick={() => scroll('right')} aria-label="قبلی">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
+          <button className="featured-nav-btn" onClick={prev} disabled={currentIdx === 0} aria-label="قبلی">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
           </button>
-          <button className="featured-nav-btn" onClick={() => scroll('left')} aria-label="بعدی">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
+          <button className="featured-nav-btn" onClick={next} disabled={currentIdx >= featuredShows.length - 1} aria-label="بعدی">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
           </button>
         </div>
       </div>
 
       {featuredShows.length === 0 ? (
-        <div className="featured-empty">
-          {isAdmin ? 'برنامه‌ای انتخاب نشده — روی «مدیریت» کلیک کنید' : 'برنامه‌ای موجود نیست'}
-        </div>
+        <div className="featured-empty">{isAdmin ? 'برنامه‌ای انتخاب نشده — روی «مدیریت» کلیک کنید' : 'برنامه‌ای موجود نیست'}</div>
       ) : (
         <>
-        <div className="featured-carousel-track" ref={trackRef} onScroll={handleScroll}>
-          {featuredShows.map((show, idx) => {
-            const thumb = getShowThumbnail(show);
-            const dist = Math.abs(idx - centerIdx);
-            const cardClass = dist === 0 ? 'is-center' : dist === 1 ? 'is-near' : '';
-            return (
-              <div
-                key={show.num}
-                className={`featured-card ${cardClass}`}
-                onClick={() => onShowClick(show)}
-              >
-                {isAdmin && (
-                  <button
-                    className="featured-card-remove"
-                    onClick={(e) => { e.stopPropagation(); removeShow(show.num); }}
-                    title="حذف از منتخب"
-                  >
-                    ×
-                  </button>
-                )}
-                {thumb.image ? (
-                  <img className="featured-card-thumb" src={thumb.image} alt={show.name} />
-                ) : (
-                  <div
-                    className="featured-card-thumb-placeholder"
-                    style={{ background: thumb.gradient }}
-                  >
-                    {show.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div className="featured-card-info">
-                  <div className="featured-card-name">{show.name}</div>
-                  <div className="featured-card-cat">{show.category}</div>
+          <div className="featured-carousel-track" ref={trackRef} onScroll={handleScroll}>
+            {featuredShows.map((show, idx) => {
+              const thumb = getShowThumbnail(show);
+              const isCenter = idx === currentIdx;
+              return (
+                <div key={show.num} data-card-idx={idx} className={`featured-card ${isCenter ? 'is-center' : ''}`}
+                  onClick={() => { if (isCenter) onShowClick(show); else scrollToCard(idx); }}>
+                  {isAdmin && <button className="featured-card-remove" onClick={(e) => { e.stopPropagation(); removeShow(show.num); }} title="حذف">×</button>}
+                  {thumb.image ? <img className="featured-card-thumb" src={thumb.image} alt={show.name} /> : <div className="featured-card-thumb-placeholder" style={{ background: thumb.gradient }}>{show.name.charAt(0).toUpperCase()}</div>}
+                  <div className="featured-card-info"><div className="featured-card-name">{show.name}</div><div className="featured-card-cat">{show.category}</div></div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* One dot per card — active dot = center card */}
-        {featuredShows.length > 1 && (
-          <div className="featured-dots">
-            {featuredShows.map((_, i) => (
-              <button
-                key={i}
-                className={`featured-dot ${i === centerIdx ? 'active' : ''}`}
-                onClick={() => scrollToCard(i)}
-                aria-label={`برنامه ${i + 1}`}
-              />
-            ))}
+              );
+            })}
           </div>
-        )}
+          {featuredShows.length > 1 && (
+            <div className="featured-dots">
+              {featuredShows.map((_, i) => (<button key={i} className={`featured-dot ${i === currentIdx ? 'active' : ''}`} onClick={() => scrollToCard(i)} aria-label={`برنامه ${i + 1}`} />))}
+            </div>
+          )}
         </>
       )}
 
-      {/* Admin picker modal */}
       {showPicker && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(4px)' }}
-          onClick={() => setShowPicker(false)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: 'linear-gradient(135deg, rgba(0, 60, 48, 0.95) 0%, rgba(8, 90, 75, 0.92) 100%)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255, 255, 255, 0.3)',
-              borderRadius: '20px',
-              padding: '20px',
-              maxWidth: '520px',
-              width: '100%',
-              maxHeight: '75vh',
-              overflowY: 'auto',
-              boxShadow: '0 12px 40px rgba(0, 0, 0, 0.4)',
-            }}
-          >
-            <h3 style={{ color: '#f0fdf4', marginBottom: '12px', fontWeight: 800, fontSize: '16px' }}>
-              مدیریت برنامه‌های منتخب
-            </h3>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="جستجوی برنامه..."
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                borderRadius: '12px',
-                background: 'rgba(255, 255, 255, 0.12)',
-                border: '1px solid rgba(255, 255, 255, 0.25)',
-                color: '#f0fdf4',
-                fontSize: '13px',
-                outline: 'none',
-                marginBottom: '12px',
-                fontFamily: 'inherit',
-              }}
-            />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={() => setShowPicker(false)}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: 'linear-gradient(135deg, rgba(0,60,48,0.95) 0%, rgba(8,90,75,0.92) 100%)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '20px', padding: '20px', maxWidth: '520px', width: '100%', maxHeight: '75vh', overflowY: 'auto', boxShadow: '0 12px 40px rgba(0,0,0,0.4)' }}>
+            <h3 style={{ color: '#f0fdf4', marginBottom: '12px', fontWeight: 800, fontSize: '16px' }}>مدیریت برنامه‌های منتخب</h3>
+            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="جستجوی برنامه..." style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: '#f0fdf4', fontSize: '13px', outline: 'none', marginBottom: '12px', fontFamily: 'inherit' }} />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', maxHeight: '400px', overflowY: 'auto' }}>
               {filteredSearch.map(show => {
-                const isFeatured = featuredNums.includes(show.num);
-                return (
-                  <button
-                    key={show.num}
-                    onClick={() => isFeatured ? removeShow(show.num) : addShow(show.num)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '8px 10px',
-                      borderRadius: '10px',
-                      cursor: 'pointer',
-                      background: isFeatured ? 'rgba(34, 185, 154, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-                      border: isFeatured ? '1px solid rgba(34, 185, 154, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
-                      color: '#f0fdf4',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      textAlign: 'right',
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    <span style={{ fontSize: '14px' }}>{isFeatured ? '✓' : '+'}</span>
-                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {show.name}
-                    </span>
-                  </button>
-                );
+                const isF = featuredNums.includes(show.num);
+                return (<button key={show.num} onClick={() => isF ? removeShow(show.num) : addShow(show.num)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 10px', borderRadius: '10px', cursor: 'pointer', background: isF ? 'rgba(34,185,154,0.2)' : 'rgba(255,255,255,0.05)', border: isF ? '1px solid rgba(34,185,154,0.4)' : '1px solid rgba(255,255,255,0.1)', color: '#f0fdf4', fontSize: '12px', fontWeight: 600, textAlign: 'right' }}><span style={{ fontSize: '14px' }}>{isF ? '✓' : '+'}</span><span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{show.name}</span></button>);
               })}
             </div>
-            <button
-              onClick={() => setShowPicker(false)}
-              style={{
-                marginTop: '12px',
-                width: '100%',
-                padding: '10px',
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
-                color: 'white',
-                fontWeight: 700,
-                border: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              ✓ تأیید
-            </button>
+            <button onClick={() => setShowPicker(false)} style={{ marginTop: '12px', width: '100%', padding: '10px', borderRadius: '12px', background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)', color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer' }}>✓ تأیید</button>
           </div>
         </div>
       )}
     </div>
   );
 }
-
-// ============================================
 // USER PROFILE MODAL — iPhone Contacts style (for all users)
 // ============================================
 function UserProfileModal({ user, onClose, showToast }: {
@@ -3467,19 +3288,17 @@ function ProgramsView({
       {/* Genre breadcrumb bar — white chips, hover=genre color, scrollable */}
       {genre && genres && genres.length > 0 && (
         <div className="mb-4">
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-1" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-1 no-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
             <button
               onClick={() => onNavigate('dashboard')}
               className="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap"
               style={{
-                background: 'rgba(255,255,255,0.15)',
-                color: '#ffffff',
-                border: '1px solid rgba(255,255,255,0.3)',
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
+                background: 'rgba(255,255,255,0.9)',
+                color: '#0A5547',
+                border: '1px solid rgba(255,255,255,0.5)',
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.25)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#ffffff'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.9)'; }}
             >
               همه ژانرها
             </button>
