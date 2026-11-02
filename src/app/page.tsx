@@ -5581,6 +5581,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
 // --- Tab 2: Profile editing ---
 function SettingsProfileTab({ currentUser, showToast }: { currentUser: User; showToast: (msg: string) => void }) {
   const [profile, setProfile] = useState({
+    username: currentUser.username || '',
     name: currentUser.name || '', jobTitle: currentUser.jobTitle || '',
     deputy: currentUser.deputy || '', avatar: currentUser.avatar || '', phone: currentUser.phone || '',
   });
@@ -5589,13 +5590,14 @@ function SettingsProfileTab({ currentUser, showToast }: { currentUser: User; sho
   useEffect(() => {
     api.getProfile()
       .then(user => setProfile({
-        name: user.name || '', jobTitle: user.jobTitle || '', deputy: user.deputy || '',
-        avatar: user.avatar || '', phone: user.phone || '',
+        username: user.username || '', name: user.name || '', jobTitle: user.jobTitle || '',
+        deputy: user.deputy || '', avatar: user.avatar || '', phone: user.phone || '',
       }))
       .catch(e => showToast(e?.message || 'خطا در دریافت پروفایل'))
       .finally(() => setLoading(false));
   }, []);
   const fields: Array<{ key: keyof typeof profile; label: string; placeholder: string; type?: string }> = [
+    { key: 'username', label: 'نام کاربری ورود', placeholder: 'نام کاربری جدید' },
     { key: 'name', label: 'نام نمایشی', placeholder: 'نام و نام خانوادگی' },
     { key: 'jobTitle', label: 'عنوان شغلی', placeholder: 'عنوان شغلی' },
     { key: 'deputy', label: 'واحد / سمت', placeholder: 'واحد یا سمت سازمانی' },
@@ -5604,8 +5606,15 @@ function SettingsProfileTab({ currentUser, showToast }: { currentUser: User; sho
   ];
   const save = async () => {
     setSaving(true);
-    try { await api.updateProfile(profile); showToast('اطلاعات پروفایل ذخیره شد'); }
-    catch (e: any) { showToast(e?.message || 'خطا در ذخیره پروفایل'); }
+    try {
+      const updated = await api.updateProfile(profile);
+      showToast(updated.username !== currentUser.username
+        ? 'نام کاربری تغییر کرد؛ صفحه برای اعمال تغییر بارگذاری می‌شود.'
+        : 'اطلاعات پروفایل ذخیره شد');
+      if (updated.username !== currentUser.username) {
+        setTimeout(() => window.location.reload(), 900);
+      }
+    } catch (e: any) { showToast(e?.message || 'خطا در ذخیره پروفایل'); }
     finally { setSaving(false); }
   };
   return (
@@ -5617,7 +5626,7 @@ function SettingsProfileTab({ currentUser, showToast }: { currentUser: User; sho
       {fields.map(field => (
         <label key={field.key} className="block">
           <span className="block text-sm font-bold mb-1.5" style={{ color: '#1a2e22' }}>{field.label}</span>
-          <input type={field.type || 'text'} dir={field.key === 'phone' || field.key === 'avatar' ? 'ltr' : 'rtl'}
+          <input type={field.type || 'text'} dir={field.key === 'phone' || field.key === 'avatar' || field.key === 'username' ? 'ltr' : 'rtl'}
             value={profile[field.key]} onChange={e => setProfile(current => ({ ...current, [field.key]: e.target.value }))}
             placeholder={field.placeholder} disabled={loading || saving}
             style={{ width: '100%', background: 'white', border: '1px solid rgba(2,144,72,0.2)', borderRadius: '10px', padding: '11px 14px', color: '#1a2e22', fontSize: '14px', outline: 'none' }} />
