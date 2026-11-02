@@ -106,11 +106,11 @@ function startNextServer() {
 
     nextServer.stdout.on('data', (d) => {
       const t = d.toString().trim();
-      if (t) { log('[server] ' + t); output += t + '\\n'; }
+      if (t) { log('[server] ' + t); output += t + '\n'; }
     });
     nextServer.stderr.on('data', (d) => {
       const t = d.toString().trim();
-      if (t) { log('[err] ' + t); output += t + '\\n'; }
+      if (t) { log('[err] ' + t); output += t + '\n'; }
     });
     nextServer.on('error', (err) => {
       log('Process error: ' + err.message);
@@ -118,7 +118,7 @@ function startNextServer() {
     });
     nextServer.on('exit', (code, signal) => {
       log('Server exit code: ' + code + ', signal: ' + signal);
-      if (!settled) finish(new Error('Next.js server exited before becoming ready (code ' + code + ', signal ' + signal + ').\\nOutput: ' + output));
+      if (!settled) finish(new Error('Next.js server exited before becoming ready (code ' + code + ', signal ' + signal + ').\nOutput: ' + output));
     });
 
     const probe = () => {
@@ -130,14 +130,14 @@ function startNextServer() {
           log('Server ready (HTTP ' + res.statusCode + ')');
           finish();
         } else if (attempts >= 60) {
-          finish(new Error('Next.js returned HTTP ' + res.statusCode + ' during startup.\\nOutput: ' + output));
+          finish(new Error('Next.js returned HTTP ' + res.statusCode + ' during startup.\nOutput: ' + output));
         }
       });
       request.setTimeout(2000, () => request.destroy(new Error('Startup probe timed out')));
       request.on('error', () => {
         if (attempts >= 60) {
           log('Server failed after 60 attempts. Output: ' + output);
-          finish(new Error('Next.js server failed to start.\\nOutput: ' + output));
+          finish(new Error('Next.js server failed to start.\nOutput: ' + output));
         }
       });
     };
