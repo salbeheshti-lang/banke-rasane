@@ -27,26 +27,29 @@ function log(msg) {
 
 // === Find the bundled Bun binary ===
 function getBunPath() {
-  // Check if bun is on PATH (dev mode)
-  try {
-    require('child_process').execSync('bun --version', { stdio: 'ignore' });
-    return 'bun';
-  } catch {}
-
-  // Check bundled bun binary in resources
+  // Prefer the exact runtime packaged with the application.
   const candidates = [
+    path.join(process.resourcesPath || '', 'bun-runtime', 'bin', 'bun.exe'),
     path.join(process.resourcesPath || '', 'bun', process.platform === 'win32' ? 'bun.exe' : 'bun'),
     path.join(process.resourcesPath || '', 'bun-win-x64', 'bun.exe'),
-    path.join(process.resourcesPath || '', 'bun', 'bun.exe'),
+    path.join(__dirname, '..', 'node_modules', '@oven', 'bun-windows-x64', 'bin', 'bun.exe'),
     path.join(__dirname, '..', 'node_modules', '.bin', process.platform === 'win32' ? 'bun.exe' : 'bun'),
+    path.join(__dirname, 'bun', 'bun.exe'),
   ];
-  for (const p of candidates) {
-    if (fs.existsSync(p)) {
-      log('Found bundled Bun: ' + p);
-      return p;
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      log('Found bundled Bun: ' + candidate);
+      return candidate;
     }
   }
-  log('Bun not found. API service will not start.');
+  // Allow PATH-based Bun only in development.
+  if (!app.isPackaged) {
+    try {
+      require('child_process').execSync('bun --version', { stdio: 'ignore' });
+      return 'bun';
+    } catch {}
+  }
+  log('Bun runtime not found.');
   return null;
 }
 
@@ -99,62 +102,86 @@ function getApiStaticDir() {
 }
 
 // === Start the API service (Bun on port 3002) ===
-function startApiService() {
+function waitForHttp(url, child, label, maxAttempts = 60) {
   return new Promise((resolve, reject) => {
-    const apiPath = getApiServicePath();
-    if (!apiPath) { log('API service not found — skipping'); resolve(); return; }
-
-    const bunPath = getBunPath();
-    if (!bunPath) { log('Bun not found — API service cannot start'); resolve(); return; }
-
-    const apiDir = getApiStaticDir();
-    const userData = app.getPath('userData');
-    const dbDir = path.join(userData, 'db');
-    const dbPath = path.join(dbDir, 'bankresaneh.sqlite');
-
-    try { if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true }); } catch(e) {}
-
-    // Copy bundled DB on first run
-    const bundledDb = path.join(apiDir, 'bankresaneh.sqlite');
-    if (!fs.existsSync(dbPath) && fs.existsSync(bundledDb)) {
-      try { fs.copyFileSync(bundledDb, dbPath); log('Copied initial API db'); } catch(e) {}
-    }
-
-    log('Starting API service with: ' + bunPath + ' ' + apiPath);
-    log('API cwd: ' + apiDir);
-    log('API db: ' + dbPath);
-
-    apiServer = spawn(bunPath, [apiPath], {
-      cwd: apiDir,
-      env: {
-        ...process.env,
-        NODE_ENV: 'production',
-        PORT: String(API_PORT),
-        DB_PATH: dbPath,
-      },
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-
-    apiServer.stdout.on('data', (d) => { const t = d.toString().trim(); if(t) log('[api] ' + t); });
-    apiServer.stderr.on('data', (d) => { const t = d.toString().trim(); if(t) log('[api err] ' + t); });
-    apiServer.on('error', (err) => { log('API process error: ' + err.message); });
-
     let attempts = 0;
-    const interval = setInterval(() => {
+    let settled = false;
+    let interval = null;
+    const finish = (error) => {
+      if (settled) return;
+      settled = true;
+      if (interval) clearInterval(interval);
+      if (error) reject(error);
+      else resolve();
+    };
+    child.once('error', (error) => finish(new Error(label + ' process error: ' + error.message)));
+    child.once('exit', (code, signal) => {
+      if (!settled) finish(new Error(label + ' exited before readiness (code ' + code + ', signal ' + signal + ')'));
+    });
+    const probe = () => {
+      if (settled) return;
       attempts++;
-      http.get('http://127.0.0.1:' + API_PORT + '/api/health', (res) => {
-        if (res.statusCode === 200) {
-          clearInterval(interval); log('API service ready!'); resolve();
-        }
-      }).on('error', () => {
-        if (attempts >= 60) {
-          clearInterval(interval);
-          log('API service failed to start after 60 attempts');
-          resolve(); // Don't reject — Next.js can still run
+      const request = http.get(url, (response) => {
+        response.resume();
+        if (response.statusCode >= 200 && response.statusCode < 400) {
+          log(label + ' ready (HTTP ' + response.statusCode + ')');
+          finish();
+        } else if (attempts >= maxAttempts) {
+          finish(new Error(label + ' returned HTTP ' + response.statusCode));
         }
       });
-    }, 500);
+      request.setTimeout(2000, () => request.destroy(new Error('Readiness probe timed out')));
+      request.on('error', () => {
+        if (attempts >= maxAttempts) finish(new Error(label + ' failed after ' + maxAttempts + ' attempts'));
+      });
+    };
+    interval = setInterval(probe, 500);
+    probe();
   });
+}
+
+// === Start the API service (Bun on port 3002) ===
+async function startApiService() {
+  const apiPath = getApiServicePath();
+  const bunPath = getBunPath();
+  if (!apiPath) throw new Error('API service file not found');
+  if (!bunPath) throw new Error('Bun runtime not found. The installer must include bun-runtime/bin/bun.exe');
+
+  const apiDir = getApiStaticDir();
+  const userData = app.getPath('userData');
+  const dbDir = path.join(userData, 'db');
+  const dbPath = path.join(dbDir, 'bankresaneh.sqlite');
+  fs.mkdirSync(dbDir, { recursive: true });
+
+  // Seed the writable user database once. The tracked DB uses WAL mode, so
+  // its WAL sidecar must accompany the main file to preserve committed rows.
+  const bundledDb = path.join(apiDir, 'bankresaneh.sqlite');
+  if (!fs.existsSync(dbPath) && fs.existsSync(bundledDb)) {
+    fs.copyFileSync(bundledDb, dbPath);
+    const bundledWal = bundledDb + '-wal';
+    if (fs.existsSync(bundledWal)) fs.copyFileSync(bundledWal, dbPath + '-wal');
+    log('Copied initial API database (including WAL when present)');
+  }
+
+  log('Starting API service with: ' + bunPath + ' ' + apiPath);
+  log('API cwd: ' + apiDir);
+  log('API db: ' + dbPath);
+
+  apiServer = spawn(bunPath, [apiPath], {
+    cwd: apiDir,
+    env: {
+      ...process.env,
+      NODE_ENV: 'production',
+      PORT: String(API_PORT),
+      HOSTNAME: '127.0.0.1',
+      DB_PATH: dbPath,
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+    windowsHide: true,
+  });
+  apiServer.stdout.on('data', (data) => { const value = data.toString().trim(); if (value) log('[api] ' + value); });
+  apiServer.stderr.on('data', (data) => { const value = data.toString().trim(); if (value) log('[api:err] ' + value); });
+  await waitForHttp('http://127.0.0.1:' + API_PORT + '/api/health', apiServer, 'API service');
 }
 
 // === Start the Next.js standalone server ===
@@ -162,7 +189,6 @@ function startNextServer() {
   return new Promise((resolve, reject) => {
     const serverPath = getNextServerPath();
     if (!serverPath) { reject(new Error('Next server file not found')); return; }
-
     const staticDir = getStaticDir();
     log('Starting Next server: ' + serverPath);
     log('Next cwd: ' + staticDir);
@@ -174,32 +200,25 @@ function startNextServer() {
       PORT: String(NEXT_PORT),
       HOSTNAME: '127.0.0.1',
     };
-
     nextServer = spawn(process.execPath, [serverPath], {
-      cwd: staticDir, env, stdio: ['ignore', 'pipe', 'pipe'],
+      cwd: staticDir,
+      env,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true,
     });
 
     let output = '';
-    nextServer.stdout.on('data', (d) => { const t = d.toString().trim(); if(t) { log('[next] ' + t); output += t + '\n'; } });
-    nextServer.stderr.on('data', (d) => { const t = d.toString().trim(); if(t) { log('[next err] ' + t); output += t + '\n'; } });
-    nextServer.on('error', (err) => { log('Next process error: ' + err.message); reject(err); });
-    nextServer.on('exit', (code) => { log('Next exit code: ' + code); if(code !== 0 && code !== null) reject(new Error('Exit ' + code + ': ' + output)); });
-
-    let attempts = 0;
-    const interval = setInterval(() => {
-      attempts++;
-      http.get('http://127.0.0.1:' + NEXT_PORT, (res) => {
-        if (res.statusCode === 200 || res.statusCode === 302) {
-          clearInterval(interval); log('Next server ready!'); resolve();
-        }
-      }).on('error', () => {
-        if (attempts >= 60) {
-          clearInterval(interval);
-          log('Next server failed after 60 attempts. Output: ' + output);
-          reject(new Error('Next server failed to start.\nOutput: ' + output));
-        }
-      });
-    }, 500);
+    nextServer.stdout.on('data', (data) => {
+      const value = data.toString().trim();
+      if (value) { log('[next] ' + value); output += value + '\n'; }
+    });
+    nextServer.stderr.on('data', (data) => {
+      const value = data.toString().trim();
+      if (value) { log('[next:err] ' + value); output += value + '\n'; }
+    });
+    waitForHttp('http://127.0.0.1:' + NEXT_PORT, nextServer, 'Next.js server')
+      .then(resolve)
+      .catch((error) => reject(new Error(error.message + '\nOutput: ' + output)));
   });
 }
 
@@ -221,6 +240,14 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  // Rotate the previous run's log before recording this startup.
+  try {
+    const logPath = getLogPath();
+    if (fs.existsSync(logPath)) {
+      fs.copyFileSync(logPath, logPath + '.prev');
+      fs.writeFileSync(logPath, '');
+    }
+  } catch (error) {}
   log('Starting بانک رسانه...');
   log('App: ' + app.getAppPath());
   log('UserData: ' + app.getPath('userData'));
@@ -296,6 +323,7 @@ ipcMain.handle('check-for-updates', async () => {
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 app.on('before-quit', () => {
-  if (nextServer) { nextServer.kill('SIGTERM'); setTimeout(() => { if(nextServer) nextServer.kill('SIGKILL'); }, 3000); }
-  if (apiServer)  { apiServer.kill('SIGTERM');  setTimeout(() => { if(apiServer)  apiServer.kill('SIGKILL');  }, 3000); }
+  for (const child of [apiServer, nextServer]) {
+    if (child && child.exitCode === null) child.kill();
+  }
 });
