@@ -367,12 +367,13 @@ function seedDefaultAdmin() {
 
 function seedShows() {
   const candidates = [
+    process.env.BANKRESANEH_SEED_PATH,
     resolve(import.meta.dir, 'talk-shows-data.json'),
     resolve(import.meta.dir, '../../public/talk-shows-data.json'),
     resolve(import.meta.dir, '../../../public/talk-shows-data.json'),
     resolve(process.resourcesPath || '', 'api-service', 'talk-shows-data.json'),
     resolve(process.resourcesPath || '', 'next-service-dist', 'public', 'talk-shows-data.json'),
-  ];
+  ].filter(Boolean);
   let jsonPath = null;
   for (const p of candidates) {
     if (existsSync(p)) { jsonPath = p; break; }
