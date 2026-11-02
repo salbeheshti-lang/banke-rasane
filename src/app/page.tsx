@@ -987,6 +987,8 @@ export default function Home() {
         currentView={currentView}
         onBack={goBack}
         canGoBack={canGoBack}
+        totalShows={talkShows.length}
+        totalGenres={genres.length}
       />
 
       <DrawerMenu
@@ -1322,12 +1324,14 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
 // TOP APP BAR — fixed at top, hamburger (3-line) on the right,
 // logo + title in the center, visible on BOTH desktop and mobile
 // ============================================
-function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack }: {
+function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, totalShows, totalGenres }: {
   onMenuClick: () => void;
   isMobile: boolean;
   currentView: string;
   onBack: () => void;
   canGoBack: boolean;
+  totalShows?: number;
+  totalGenres?: number;
 }) {
   const viewTitles: Record<string, string> = {
     dashboard: 'مرجع جامع برنامه‌های تلویزیونی بین‌المللی',
@@ -1408,13 +1412,13 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack }: {
           {!isMobile && (
             <div
               className="flex flex-col"
-              style={{ borderRight: '1px solid rgba(13, 124, 74, 0.15)', paddingRight: '12px' }}
+              style={{ borderRight: '1px solid rgba(84, 217, 192, 0.2)', paddingRight: '12px' }}
             >
-              <span style={{ color: '#ffffff', fontWeight: 800, fontSize: '15px', textShadow: '0 1px 4px rgba(0,0,0,0.5)', lineHeight: 1.2 }}>
-                {viewTitles[currentView] || 'بانک رسانه'}
+              <span style={{ color: '#f0fdf4', fontWeight: 800, fontSize: '14px', lineHeight: 1.2 }}>
+                مرجع جامع برنامه‌های تلویزیونی بین‌المللی
               </span>
-              <span style={{ color: '#8a8a7a', fontSize: '11px', marginTop: '2px' }}>
-                نسخه ۲.۰.۰
+              <span style={{ color: '#54D9C0', fontSize: '11px', marginTop: '2px' }}>
+                بانک رسانه — {totalShows?.toLocaleString('fa-IR') || '۰'} برنامه در {totalGenres?.toLocaleString('fa-IR') || '۰'} ژانر
               </span>
             </div>
           )}
@@ -2002,7 +2006,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
     return [];
   });
   const [showGenrePicker, setShowGenrePicker] = useState(false);
-  const STRIP_COUNT = 4;
+  const STRIP_COUNT = 5;
 
   // Use memo for default selection — computed from genreStats
   const defaultGenreIds = useMemo(
@@ -2047,21 +2051,6 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
   // ----- Render -----
   return (
     <>
-      <header className="mb-8 animate-fade-in">
-        <div className="flex items-center gap-3 mb-2 flex-wrap">
-          <h1 className="text-3xl font-bold" style={{ color: '#1a2e1a' }}>مرجع جامع برنامه‌های تلویزیونی بین‌المللی</h1>
-          <span
-            className="text-sm px-3 py-1 rounded-full"
-            style={{ background: 'rgba(13, 124, 74, 0.1)', color: '#0d7c4a' }}
-          >
-            بانک رسانه
-          </span>
-        </div>
-        <p style={{ color: '#8a8a7a' }}>
-          بانک اطلاعاتی {totalShows.toLocaleString('fa-IR')} برنامهٔ تلویزیونی در {totalGenres} ژانر
-        </p>
-      </header>
-
       {/* ====== ANALYTICS CARD — replaces the 4 small stat cards ====== */}
       <div className="mb-8 animate-fade-in">
         <div className="analytics-card">
@@ -2167,7 +2156,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                   }}
                   title="انتخاب ژانرهای دیگر"
                 >
-                  ⚙ تنظیم
+                  انتخاب ژانر
                 </button>
               </div>
               {/* Horizontal strip — exactly 4 chips */}
@@ -2175,7 +2164,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                 className="analytics-genre-strip"
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(4, 1fr)',
+                  gridTemplateColumns: 'repeat(5, 1fr)',
                   gap: '8px',
                   overflow: 'hidden',
                 }}
@@ -2284,7 +2273,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
               انتخاب ژانرهای نمایش داده‌شده
             </h3>
             <p style={{ color: '#7ba8a0', fontSize: '12px', marginBottom: '16px' }}>
-              حداکثر {STRIP_COUNT.toLocaleString('fa-IR')} ژانر را برای نمایش در نوار افقی انتخاب کنید
+              {STRIP_COUNT.toLocaleString('fa-IR')} ژانر برای نمایش در نوار افقی انتخاب کنید (برای حذف، دوباره کلیک کنید)
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
               {genreStats.map(g => {

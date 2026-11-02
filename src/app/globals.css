@@ -429,27 +429,41 @@ html, body {
 }
 
 /* ============================================
-   PREMIUM GENRE CARD — colored gradient card (no glow behind numbers)
+   PREMIUM GENRE CARD — vibrant gradient cards (no glow behind numbers)
    ============================================ */
 .premium-genre-card {
   position: relative;
-  border-radius: 20px;
+  border-radius: 22px;
   padding: 22px;
   cursor: pointer;
   overflow: hidden;
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   color: #ffffff;
-  /* Colored gradient background using genre color — vibrant but no glow */
-  background: linear-gradient(135deg, var(--genre-color, #006B50) 0%, color-mix(in srgb, var(--genre-color, #006B50) 60%, #073D35) 100%);
-  border: 1px solid color-mix(in srgb, var(--genre-color, #006B50) 35%, rgba(255, 255, 255, 0.1));
+  /* Vibrant dual-tone gradient: bright genre color → deeper genre color */
+  background:
+    linear-gradient(145deg,
+      color-mix(in srgb, var(--genre-color, #006B50) 92%, white 8%) 0%,
+      var(--genre-color, #006B50) 45%,
+      color-mix(in srgb, var(--genre-color, #006B50) 65%, #073D35 35%) 100%);
+  border: 1px solid color-mix(in srgb, var(--genre-color, #006B50) 50%, rgba(255, 255, 255, 0.15));
   box-shadow:
-    0 6px 20px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 8px 28px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -2px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* No accent lines, no overlay — keep card flat but colored */
+/* Subtle top sheen — like light hitting glass (no radial glow) */
 .premium-genre-card::before {
-  content: none;
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 22px 22px 0 0;
 }
 
 .premium-genre-card::after {
@@ -457,11 +471,12 @@ html, body {
 }
 
 .premium-genre-card:hover {
-  transform: translateY(-3px);
-  border-color: color-mix(in srgb, var(--genre-color, #006B50) 50%, rgba(255, 255, 255, 0.2));
+  transform: translateY(-4px) scale(1.02);
+  border-color: color-mix(in srgb, var(--genre-color, #006B50) 60%, rgba(255, 255, 255, 0.3));
   box-shadow:
-    0 10px 28px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    0 14px 36px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .premium-genre-card > * {
