@@ -399,8 +399,8 @@ function seedShows() {
     INSERT OR IGNORE INTO shows
       (num, name, category, source, size, viewers, style, effects, layout,
        elements, materials, colors, lighting, summary, descriptionFa,
-       youtube, imdb, wikipedia, socialPost, images, videos)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       youtube, imdb, wikipedia, socialPost, images, videos, tags, is_film)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   let inserted = 0;
   const tx = db.transaction(() => {
