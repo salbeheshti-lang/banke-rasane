@@ -109,6 +109,24 @@ async function main() {
     });
     assert.equal(invalidRole.status, 400, 'unknown roles must be rejected');
 
+    const validRoleUpdate = await request('/api/users?id=' + userId, {
+      method: 'PUT', token, body: { role: 'viewer' },
+    });
+    assert.equal(validRoleUpdate.status, 200);
+    assert.equal(validRoleUpdate.data.role, 'viewer');
+
+    const viewerLogin = await request('/api/auth/login', {
+      method: 'POST', body: { username: 'smoke-editor', password: 'SmokeUser-Password-53!' },
+    });
+    assert.equal(viewerLogin.status, 200, 'created viewer must be able to log in');
+    assert.equal((await request('/api/shows', { token: viewerLogin.data.token })).status, 200,
+      'viewer may read the archive');
+    assert.equal((await request('/api/users', { token: viewerLogin.data.token })).status, 401,
+      'viewer may not manage users');
+    assert.equal((await request('/api/shows', {
+      method: 'POST', token: viewerLogin.data.token, body: { num: 990000002, name: 'forbidden' },
+    })).status, 401, 'viewer may not add archive records');
+
     const selfDemotion = await request('/api/users?id=' + adminId, {
       method: 'PUT', token, body: { role: 'viewer' },
     });
