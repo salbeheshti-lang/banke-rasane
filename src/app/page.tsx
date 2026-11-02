@@ -1316,17 +1316,17 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
             </div>
           )}
 
-          {/* Submit — green liquid-glass button (same .btn-enter-white class) */}
+          {/* Submit — premium dark-green gradient button */}
           <button
             type="submit"
             disabled={loading}
-            className="btn-enter-white group"
+            className="btn-enter-premium group"
             style={{ marginTop: '8px' }}
           >
-            <span className="relative z-10 flex items-center gap-3 justify-center" style={{ color: '#0d7c4a' }}>
+            <span className="relative z-10 flex items-center gap-3 justify-center" style={{ color: '#ffffff' }}>
               {loading ? (
                 <>
-                  <div className="w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(13,124,74,0.35)', borderTopColor: '#0d7c4a' }}></div>
+                  <div className="w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(255,255,255,0.35)', borderTopColor: '#ffffff' }}></div>
                   <span>در حال ورود...</span>
                 </>
               ) : (
@@ -1335,7 +1335,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                   <svg
                     className="w-5 h-5 rtl-flip group-hover:-translate-x-1.5 transition-transform"
                     fill="none"
-                    stroke="#0d7c4a"
+                    stroke="#ffffff"
                     viewBox="0 0 24 24"
                     strokeWidth={2.5}
                   >
