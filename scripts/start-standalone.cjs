@@ -1,3 +1,4 @@
+/* eslint @typescript-eslint/no-require-imports: off */
 // Cross-platform launcher for the Next.js standalone server.
 const { spawn } = require('node:child_process');
 const path = require('node:path');
