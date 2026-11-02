@@ -72,11 +72,9 @@ const TAG_LIBRARY: Record<string, TagSpec> = {
 const DEFAULT_GENRE_TAGS: TagSpec[] = [TAG_LIBRARY.style, TAG_LIBRARY.size, TAG_LIBRARY.viewers];
 
 // Categories that have NO analyzable decor — excluded from the "Decor" view.
-// (advertising, PSA, films/series, energy-saving ads, back-to-school ads, live streams)
+// (advertising, PSA, films/series, back-to-school ads, live streams)
 const NO_DECOR_CATEGORIES: string[] = [
-  'PSA (پیام خدمت عمومی)',
-  'آگهی‌های تبلیغاتی',
-  'صرفه‌جویی',          // PSA/ad-like
+  'آگهی‌های تبلیغاتی',     // includes PSA + energy-saving ads
   'مدرسه',              // back-to-school ads/teasers
   'پخش زنده',           // live webcams (no studio decor)
 ];
@@ -217,14 +215,6 @@ const GENRES: Genre[] = [
     searchFields: ['name', 'summary', 'style', 'materials'],
   },
   {
-    id: 'psa', key: 'psa', nameFa: 'PSA (پیام خدمت عمومی)', name: 'Public Service Announcement',
-    color: '#10b981', description: 'پیام‌های آگاهی‌بخش و خدمت عمومی',
-    filterFn: s => s.category.includes('PSA') || s.category.includes('پیام خدمت'),
-    tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
-    presetTags: ['خدمت عمومی', 'آگاهی‌بخش', 'آموزشی', 'اجتماعی', 'کوتاه'],
-    searchFields: ['name', 'summary', 'category', 'descriptionFa'],
-  },
-  {
     id: 'deepobs', key: 'deepobs', nameFa: 'پایش تحلیلی', name: 'Deep Observation',
     color: '#7c3aed', description: 'تحلیل و رصد عمیق برنامه‌ها',
     filterFn: s => s.category.includes('پایش تحلیلی'),
@@ -258,21 +248,13 @@ const GENRES: Genre[] = [
   },
   {
     id: 'ads', key: 'ads', nameFa: 'آگهی‌های تبلیغاتی', name: 'Advertisements',
-    color: '#ea580c', description: 'تبلیغات و آگهی‌های تجاری',
+    color: '#ea580c', description: 'تبلیغات، آگهی‌ها و پیام‌های خدمت عمومی (PSA)',
     filterFn: s => s.category.includes('آگهی'),
-    tags: [TAG_LIBRARY.style, TAG_LIBRARY.colors],
-    presetTags: ['تبلیغاتی', 'تجاری', 'برندمحور', 'جذاب', 'کوتاه'],
-    searchFields: ['name', 'summary', 'category', 'colors'],
-  },
-  // ----- 11 new genre categories (sarfjooyi, kasht, krismas, polisi, ramazan, etc.) -----
-  {
-    id: 'sarfjooyi', key: 'sarfjooyi', nameFa: 'صرفه‌جویی', name: 'Energy Saving',
-    color: '#0891b2', description: '۱۳ برنامه — آگاهی‌بخش صرفه‌جویی در انرژی و آب',
-    filterFn: s => s.category === 'صرفه‌جویی',
     tags: [],
-    presetTags: ['صرفه‌جویی', 'انرژی', 'آب', 'PSA', 'محیط زیست'],
-    searchFields: ['name', 'summary', 'tags'],
+    presetTags: ['تبلیغاتی', 'تجاری', 'PSA', 'صرفه‌جویی انرژی', 'آگاهی‌بخش', 'کوتاه'],
+    searchFields: ['name', 'summary', 'category', 'colors', 'tags'],
   },
+  // ----- 11 new genre categories (kasht, krismas, polisi, ramazan, etc.) -----
   {
     id: 'kasht', key: 'kasht', nameFa: 'کاشت درخت', name: 'Tree Planting',
     color: '#16a34a', description: '۲۱ برنامه — باغبانی، کاشت درخت و سبک زندگی سبز',
@@ -355,40 +337,40 @@ const GENRES: Genre[] = [
   },
   // ----- 5 more new categories (zandan, ehda, tarikhi, radio, rusta) -----
   {
-    id: 'zandan', key: 'zandan', nameFa: 'زندان', name: 'Prison',
-    color: '#4b5563', description: '۱۷ برنامه — مستند و سریال زندان',
+    id: 'zandan', key: 'zandan', nameFa: 'زندان و اصلاح', name: 'Prison & Reform',
+    color: '#4b5563', description: '۱۸ برنامه — مستند و واقع‌نمای زندان و اصلاح',
     filterFn: s => s.category === 'زندان',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting],
     presetTags: ['زندان', 'مستند', 'سریال', 'اعدام', 'اصلاح'],
     searchFields: ['name', 'summary', 'tags'],
   },
   {
-    id: 'ehda', key: 'ehda', nameFa: 'اهدای عضو', name: 'Organ Donation',
-    color: '#dc2626', description: '۶۰ برنامه — سریال و فیلم پیوند اعضا',
+    id: 'ehda', key: 'ehda', nameFa: 'اهدا و پیوند اعضا', name: 'Organ Donation & Transplant',
+    color: '#dc2626', description: '۶۴ برنامه — سریال و فیلم پیوند و اهدای اعضا',
     filterFn: s => s.category === 'اهدای عضو',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
     presetTags: ['اهدای عضو', 'پزشکی', 'پیوند', 'بیمارستان', 'سریال', 'فیلم'],
     searchFields: ['name', 'summary', 'tags'],
   },
   {
-    id: 'tarikhi', key: 'tarikhi', nameFa: 'تاریخی', name: 'Historical',
-    color: '#b45309', description: '۱۵ برنامه — مستند و واقع‌نمای تاریخی',
+    id: 'tarikhi', key: 'tarikhi', nameFa: 'تاریخ و تمدن', name: 'History & Civilisation',
+    color: '#b45309', description: '۱۵ برنامه — مستند و بازسازی تاریخی',
     filterFn: s => s.category === 'تاریخی',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.materials],
     presetTags: ['تاریخی', 'مستند', 'واقع‌نما', 'بازسازی', 'تمدن'],
     searchFields: ['name', 'summary', 'tags'],
   },
   {
-    id: 'radio', key: 'radio', nameFa: 'رادیو تصویری', name: 'Radio & Visual Media',
-    color: '#7c3aed', description: '۵۰ برنامه — رادیو تصویری، پادکست، تاک‌شو',
+    id: 'radio', key: 'radio', nameFa: 'رادیو و پادکست', name: 'Radio & Podcast',
+    color: '#7c3aed', description: '۵۰ برنامه — رادیو تصویری، پادکست و رسانه شنیداری',
     filterFn: s => s.category === 'رادیو تصویری',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
     presetTags: ['رادیو', 'پادکست', 'تاک‌شو', 'موسیقی', 'خبری', 'طنز'],
     searchFields: ['name', 'summary', 'tags'],
   },
   {
-    id: 'rusta', key: 'rusta', nameFa: 'روستا', name: 'Rural & Village',
-    color: '#65a30d', description: '۹۵ برنامه — مستند و رئالیتی روستایی و کشاورزی',
+    id: 'rusta', key: 'rusta', nameFa: 'روستا و کشاورزی', name: 'Rural & Agriculture',
+    color: '#65a30d', description: '۴۴ برنامه — مستند و رئالیتی روستایی و کشاورزی',
     filterFn: s => s.category === 'روستا',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
     presetTags: ['روستا', 'کشاورزی', 'مزرعه', 'طبیعت', 'دامداری', 'واقع‌نما'],
@@ -2042,28 +2024,6 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                 <p className="analytics-card-subtitle">توزیع برنامه‌ها در ژانرهای مختلف</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowAddGenre(true)}
-                className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
-                style={{
-                  background: 'rgba(16, 185, 129, 0.16)',
-                  color: '#34d399',
-                  border: '1px solid rgba(16, 185, 129, 0.35)',
-                }}
-              >
-                + افزودن ژانر
-              </button>
-              {canEdit && (
-                <button
-                  onClick={onAdd}
-                  className="btn-enter-premium text-xs"
-                  style={{ padding: '6px 14px', fontSize: '12px' }}
-                >
-                  + افزودن برنامه
-                </button>
-              )}
-            </div>
           </div>
 
           {/* Body: donut LEFT, list RIGHT on desktop */}
@@ -2138,7 +2098,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
               </div>
             </div>
 
-            {/* ----- LIST COL ----- */}
+            {/* ----- HORIZONTAL GENRE STRIP — 5 visible, scrollable, selectable ----- */}
             <div className="analytics-list-col">
               <div className="analytics-list-header">
                 <span>ژانرها</span>
@@ -2146,7 +2106,48 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                   {totalGenres.toLocaleString('fa-IR')} دسته
                 </span>
               </div>
-              <div className="analytics-list-items">
+              {/* Horizontal scrollable strip of genre chips — 5 visible at a time */}
+              <div
+                className="analytics-genre-strip"
+                style={{
+                  display: 'flex',
+                  gap: '8px',
+                  overflowX: 'auto',
+                  paddingBottom: '8px',
+                  scrollbarWidth: 'thin',
+                  scrollSnapType: 'x mandatory',
+                }}
+              >
+                {genreStats.map((g, i) => {
+                  const pct = totalShows > 0 ? Math.round((g.count / totalShows) * 100) : 0;
+                  return (
+                    <button
+                      key={g.genre.id}
+                      onClick={() => onGenreClick(g.genre)}
+                      className="analytics-genre-chip"
+                      style={{
+                        ['--row-color' as string]: g.color,
+                        flex: '0 0 auto',
+                        scrollSnapAlign: 'start',
+                      }}
+                      title={g.genre.description}
+                    >
+                      <span className="analytics-genre-chip-rank">
+                        {(i + 1).toLocaleString('fa-IR')}
+                      </span>
+                      <span className="analytics-genre-chip-dot" />
+                      <span className="analytics-genre-chip-info">
+                        <span className="analytics-genre-chip-name">{g.genre.nameFa}</span>
+                        <span className="analytics-genre-chip-meta">
+                          {g.count.toLocaleString('fa-IR')} برنامه • {pct.toLocaleString('fa-IR')}٪
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Ranked list — top 8 below the strip */}
+              <div className="analytics-list-items" style={{ marginTop: '12px' }}>
                 {genreStats.slice(0, 8).map((g, i) => {
                   const pct = totalShows > 0 ? Math.round((g.count / totalShows) * 100) : 0;
                   return (

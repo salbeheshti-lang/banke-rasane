@@ -1145,12 +1145,9 @@ html, body {
   box-shadow: 0 0 8px color-mix(in srgb, var(--row-color, #00E5EF) 25%, transparent);
 }
 .theme-dark .analytics-card {
-  /* 2-3 shades lighter than page background (#0d1f17) — translucent teal glass */
-  background: linear-gradient(135deg, rgba(35, 60, 45, 0.85) 0%, rgba(28, 50, 38, 0.92) 100%);
-  border-color: rgba(16, 185, 129, 0.28);
-  box-shadow:
-    0 12px 40px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  background: linear-gradient(135deg, rgba(20, 35, 25, 0.85) 0%, rgba(15, 28, 20, 0.9) 100%);
+  border-color: rgba(16, 185, 129, 0.22);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
 }
 .theme-dark .analytics-card-title { color: #f0fdf4; }
 .theme-dark .analytics-card-subtitle { color: rgba(167, 243, 208, 0.7); }
@@ -1173,3 +1170,91 @@ html, body {
 @keyframes bar-grow {
   from { width: 0; }
 }
+
+/* ============================================
+   GENRE CHIP STRIP — horizontal scrollable chips in analytics card
+   ============================================ */
+.analytics-genre-strip {
+  scrollbar-color: rgba(16, 185, 129, 0.3) transparent;
+}
+.analytics-genre-strip::-webkit-scrollbar {
+  height: 6px;
+}
+.analytics-genre-strip::-webkit-scrollbar-track {
+  background: transparent;
+}
+.analytics-genre-strip::-webkit-scrollbar-thumb {
+  background: rgba(16, 185, 129, 0.25);
+  border-radius: 999px;
+}
+.analytics-genre-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: rgba(219, 246, 243, 0.13);
+  border: 1px solid rgba(225, 250, 248, 0.24);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-align: right;
+  white-space: nowrap;
+  color: inherit;
+  font: inherit;
+}
+.analytics-genre-chip:hover {
+  background: color-mix(in srgb, var(--row-color, #00E5EF) 14%, rgba(219, 246, 243, 0.18));
+  border-color: color-mix(in srgb, var(--row-color, #00E5EF) 50%, transparent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--row-color, #00E5EF) 25%, transparent);
+}
+.analytics-genre-chip-rank {
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(244, 255, 255, 0.5);
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+.analytics-genre-chip:hover .analytics-genre-chip-rank {
+  background: color-mix(in srgb, var(--row-color, #10b981) 15%, transparent);
+  color: var(--row-color, #10b981);
+}
+.analytics-genre-chip-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--row-color, #00E5EF);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--row-color, #00E5EF) 55%, transparent);
+  flex-shrink: 0;
+}
+.analytics-genre-chip-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.analytics-genre-chip-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #F4FFFF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+.analytics-genre-chip-meta {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(244, 255, 255, 0.6);
+}
+.theme-dark .analytics-genre-chip {
+  background: rgba(20, 35, 25, 0.5);
+  border-color: rgba(16, 185, 129, 0.12);
+}
+.theme-dark .analytics-genre-chip-name { color: #ecfdf5; }
