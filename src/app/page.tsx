@@ -2379,96 +2379,101 @@ function UserProfileModal({ user, onClose, showToast }: {
         style={{
           maxWidth: '440px',
           maxHeight: '90vh',
-          /* Same glass as app background */
-          background: 'linear-gradient(180deg, rgba(5, 80, 65, 0.85) 0%, rgba(0, 95, 75, 0.8) 50%, rgba(8, 110, 90, 0.78) 100%)',
-          backdropFilter: 'blur(28px) saturate(135%)',
-          WebkitBackdropFilter: 'blur(28px) saturate(135%)',
+          /* Brighter glass — matches app background material */
+          background: 'linear-gradient(180deg, rgba(10, 85, 71, 0.75) 0%, rgba(0, 107, 80, 0.7) 50%, rgba(21, 158, 137, 0.65) 100%)',
+          backdropFilter: 'blur(32px) saturate(140%)',
+          WebkitBackdropFilter: 'blur(32px) saturate(140%)',
           borderRadius: '28px',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
-          boxShadow: '0 24px 80px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
+          border: '1px solid rgba(255, 255, 255, 0.25)',
+          boxShadow: '0 24px 80px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
           overflow: 'hidden',
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top bar — back + edit */}
-        <div className="flex items-center justify-between p-4 flex-shrink-0">
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg"
-            style={{ color: 'rgba(255, 255, 255, 0.8)' }}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          {editing ? (
-            <button
-              onClick={() => { setEditing(false); setName(user.name || ''); setPhone(user.phone || ''); setJobTitle(user.jobTitle || ''); setDeputy(user.deputy || ''); setAvatar(user.avatar || ''); }}
-              style={{
-                padding: '6px 16px', borderRadius: '999px',
-                background: 'rgba(255, 255, 255, 0.12)',
-                border: '1px solid rgba(255, 255, 255, 0.25)',
-                color: '#f0fdf4', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-              }}
-            >
-              انصراف
-            </button>
+        {/* Full-width banner image at top — covers entire top of card */}
+        <div style={{ position: 'relative', width: '100%', height: '200px', flexShrink: 0 }}>
+          {avatar ? (
+            <img
+              src={avatar}
+              alt={name}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
           ) : (
+            <div style={{
+              width: '100%', height: '100%',
+              background: 'linear-gradient(135deg, #006B50 0%, #22B99A 50%, #159C9C 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '72px', fontWeight: 900, color: 'rgba(255, 255, 255, 0.9)',
+            }}>
+              {(name || user.username).charAt(0).toUpperCase()}
+            </div>
+          )}
+          {/* Gradient overlay for text readability */}
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: '80px',
+            background: 'linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.5) 100%)',
+          }} />
+          {/* Top bar buttons — overlay on image */}
+          <div className="flex items-center justify-between p-4" style={{ position: 'absolute', top: 0, left: 0, right: 0 }}>
             <button
-              onClick={() => setEditing(true)}
-              style={{
-                padding: '6px 16px', borderRadius: '999px',
-                background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
-              }}
+              onClick={onClose}
+              className="p-2 rounded-full"
+              style={{ background: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(8px)', color: '#fff' }}
             >
-              ویرایش
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
             </button>
+            {editing ? (
+              <button
+                onClick={() => { setEditing(false); setName(user.name || ''); setPhone(user.phone || ''); setJobTitle(user.jobTitle || ''); setDeputy(user.deputy || ''); setAvatar(user.avatar || ''); }}
+                style={{
+                  padding: '6px 16px', borderRadius: '999px',
+                  background: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                انصراف
+              </button>
+            ) : (
+              <button
+                onClick={() => setEditing(true)}
+                style={{
+                  padding: '6px 16px', borderRadius: '999px',
+                  background: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                ویرایش
+              </button>
+            )}
+          </div>
+          {/* Upload button — overlay on image bottom-right */}
+          {editing && (
+            <label style={{
+              position: 'absolute', bottom: '12px', left: '12px',
+              padding: '8px 14px', borderRadius: '999px',
+              background: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(8px)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              display: 'flex', alignItems: 'center', gap: '6px',
+              cursor: 'pointer', color: '#fff', fontSize: '12px', fontWeight: 600,
+            }}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.66-.9l.82-1.2A2 2 0 0110.07 4h3.86a2 2 0 011.66.9l.82 1.2a2 2 0 001.66.9H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              تغییر عکس
+              <input type="file" accept="image/*" onChange={handleAvatarUpload} style={{ display: 'none' }} />
+            </label>
           )}
         </div>
 
-        {/* Avatar — large square like iPhone Contacts */}
-        <div className="flex flex-col items-center gap-3 pb-4">
-          <div className="relative" style={{ width: '120px', height: '120px' }}>
-            {avatar ? (
-              <img src={avatar} alt={name} style={{
-                width: '120px', height: '120px', borderRadius: '28px', objectFit: 'cover',
-                border: '3px solid rgba(255, 255, 255, 0.3)', boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
-              }} />
-            ) : (
-              <div style={{
-                width: '120px', height: '120px', borderRadius: '28px',
-                background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '48px', fontWeight: 900, color: '#fff',
-                border: '3px solid rgba(255, 255, 255, 0.3)', boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
-              }}>
-                {(name || user.username).charAt(0).toUpperCase()}
-              </div>
-            )}
-            {editing && (
-              <label style={{
-                position: 'absolute', bottom: '-4px', right: '-4px',
-                width: '36px', height: '36px', borderRadius: '50%',
-                background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
-                border: '2px solid rgba(255, 255, 255, 0.4)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-              }}>
-                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.66-.9l.82-1.2A2 2 0 0110.07 4h3.86a2 2 0 011.66.9l.82 1.2a2 2 0 001.66.9H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <input type="file" accept="image/*" onChange={handleAvatarUpload} style={{ display: 'none' }} />
-              </label>
-            )}
-          </div>
-          {/* Name + role */}
-          <div className="text-center">
-            <div style={{ fontSize: '22px', fontWeight: 800, color: '#f0fdf4' }}>{name || user.username}</div>
-            <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '2px' }}>@{user.username}</div>
-          </div>
+        {/* Name + role — below the banner */}
+        <div className="flex flex-col items-center gap-2 pt-4 pb-3 flex-shrink-0">
+          <div style={{ fontSize: '24px', fontWeight: 800, color: '#f0fdf4' }}>{name || user.username}</div>
+          <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)' }}>@{user.username}</div>
           <span style={{
             fontSize: '11px', fontWeight: 700, padding: '4px 14px', borderRadius: '999px',
             background: user.role === 'admin' ? 'rgba(220, 38, 38, 0.3)' : user.role === 'editor' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(34, 185, 154, 0.3)',
@@ -2480,7 +2485,7 @@ function UserProfileModal({ user, onClose, showToast }: {
         </div>
 
         {/* Contact details — iPhone style rows */}
-        <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-3">
+        <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2">
           <ContactRow icon="👤" label="نام نمایشی" value={name} editing={editing} onChange={setName} placeholder="نام و نام خانوادگی" />
           <ContactRow icon="📱" label="شماره همراه" value={phone} editing={editing} onChange={setPhone} placeholder="0912xxxxxxx" dir="ltr" />
           <ContactRow icon="💼" label="عنوان شغلی" value={jobTitle} editing={editing} onChange={setJobTitle} placeholder="مثلاً: تهیه‌کننده" />
@@ -2521,11 +2526,11 @@ function ContactRow({ icon, label, value, editing, onChange, placeholder, dir }:
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: '14px',
-      padding: '14px 16px', borderRadius: '16px',
+      padding: '14px 16px', borderRadius: '14px',
       background: 'rgba(255, 255, 255, 0.1)',
       backdropFilter: 'blur(10px)',
       WebkitBackdropFilter: 'blur(10px)',
-      border: '1px solid rgba(255, 255, 255, 0.15)',
+      border: '1px solid rgba(255, 255, 255, 0.12)',
     }}>
       <span style={{ fontSize: '20px', flexShrink: 0 }}>{icon}</span>
       <div style={{ flex: 1, minWidth: 0 }}>
