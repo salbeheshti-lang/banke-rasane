@@ -24,6 +24,9 @@ jobs:
       - name: Install dependencies
         run: bun install --no-save
 
+      - name: TypeScript validation
+        run: bun run typecheck
+
       - name: Build Windows installer
         run: bun run desktop:win
 
