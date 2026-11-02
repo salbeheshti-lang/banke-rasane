@@ -149,6 +149,16 @@ async function main() {
     });
     assert.equal(createdShow.status, 200, 'editor-capable admin must create a show');
 
+    const imageImport = await request('/api/fetch-image', {
+      method: 'POST', token, body: {
+        num: 990000001, wikipedia: 'https://en.wikipedia.org/wiki/Albert_Einstein', name: 'Albert Einstein',
+      },
+    });
+    assert.equal(imageImport.status, 200, 'editor/admin must be able to import a Wikipedia image');
+    const storedImage = await fetch(base + '/api/image/990000001', { signal: AbortSignal.timeout(15000) });
+    assert.equal(storedImage.status, 200, 'imported image must be served from the API database');
+    assert.ok((storedImage.headers.get('content-type') || '').startsWith('image/'));
+
     const normalizedSearch = await request('/api/shows/search?q=' + encodeURIComponent('یک برنامه smokeprobe'), { token });
     assert.equal(normalizedSearch.status, 200);
     assert.ok(normalizedSearch.data.shows.some((show) => show.num === 990000001),
