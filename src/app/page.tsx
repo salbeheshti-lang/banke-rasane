@@ -2038,17 +2038,19 @@ function ProgramsView({
   }, [genre, search]);
 
   const filteredShows = useMemo(() => {
-    const currentServerResult = !genre
+    const currentServerShows = !genre
       && search.trim().length >= 2
       && serverSearchResult?.query === search.trim()
-      && serverSearchResult.shows.length > 0;
-    let shows = [...(currentServerResult ? serverSearchResult.shows : talkShows)];
+      ? serverSearchResult.shows
+      : null;
+    const useServerResults = !!currentServerShows?.length;
+    let shows = [...(useServerResults ? currentServerShows : talkShows)];
     if (genre) shows = shows.filter(genre.filterFn);
     if (filterSize !== 'all') shows = shows.filter(s => s.size === filterSize);
     if (filterViewers !== 'all') shows = shows.filter(s => s.viewers === filterViewers);
     if (filterStyle !== 'all') shows = shows.filter(s => s.style === filterStyle);
     if (islamicOnly) shows = shows.filter(s => detectCountries(s).length > 0);
-    if (search && !currentServerResult) {
+    if (search && !useServerResults) {
       const q = search.toLowerCase();
       // Section-specific search: use genre.searchFields if defined, else default to name+summary+category.
       const fields: (keyof TalkShow)[] = genre?.searchFields || ['name', 'summary', 'category'];
