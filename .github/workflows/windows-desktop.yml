@@ -35,6 +35,9 @@ jobs:
       - name: Build Windows installer
         run: npm run electron:build
 
+      - name: Run packaged app smoke test
+        run: npm run smoke:desktop
+
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
