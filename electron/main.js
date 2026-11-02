@@ -190,8 +190,8 @@ function startNextServer() {
     nextServer = spawn(process.execPath, [serverPath], { cwd: staticDir, env, stdio: ['ignore','pipe','pipe'] });
 
     let output = '';
-    nextServer.stdout.on('data', (d) => { const value = d.toString().trim(); if (value) { log('[server] ' + value); output += value + '\\n'; } });
-    nextServer.stderr.on('data', (d) => { const value = d.toString().trim(); if (value) { log('[server:err] ' + value); output += value + '\\n'; } });
+    nextServer.stdout.on('data', (d) => { const value = d.toString().trim(); if (value) { log('[server] ' + value); output += value + '\n'; } });
+    nextServer.stderr.on('data', (d) => { const value = d.toString().trim(); if (value) { log('[server:err] ' + value); output += value + '\n'; } });
     waitForHttp(NEXT_URL, nextServer, 'Next.js server')
       .then(resolve)
       .catch((err) => reject(new Error(err.message + '\\nOutput: ' + output)));
