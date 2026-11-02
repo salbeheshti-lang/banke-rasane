@@ -128,14 +128,15 @@
   --input-bg: rgba(255, 255, 255, 0.08);
   --input-border: rgba(255, 255, 255, 0.25);
 
-  /* Multi-point gradient background: emerald (left) → blue → pink (right)
-     — one shade brighter, greens more vivid, pink reduced */
-  --background: linear-gradient(90deg,
-    #0A5547 0%,
-    #007A5E 22%,
-    #159E89 48%,
-    #5CB8CC 78%,
-    #C8C2D8 100%);
+  /* Background: emerald (left) → blue (right) + pink only in bottom-right corner */
+  --background:
+    radial-gradient(ellipse 40% 35% at 90% 95%, rgba(200, 194, 216, 0.5) 0%, transparent 65%),
+    linear-gradient(90deg,
+      #0A5547 0%,
+      #007A5E 25%,
+      #159E89 55%,
+      #4DB8CC 85%,
+      #3A9DB0 100%);
   --foreground: #f0fdf4;
 
   /* Analytics card: vibrant glass — more alive, more saturated tints */
