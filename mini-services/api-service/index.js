@@ -626,12 +626,15 @@ const server = Bun.serve({
         .replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
         .replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
         .replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim();
-      const query = normalize(url.searchParams.get('q') || url.searchParams.get('search') || '');
+      const query = normalize(String(url.searchParams.get('q') || url.searchParams.get('search') || '').slice(0, 256));
       const category = normalize(url.searchParams.get('category') || '');
       const page = Math.max(1, Math.min(1000000, parseInt(url.searchParams.get('page') || '1', 10) || 1));
       const limit = Math.max(1, Math.min(100, parseInt(url.searchParams.get('limit') || '30', 10) || 30));
       const terms = query.split(' ').filter(Boolean).slice(0, 8);
       const offset = (page - 1) * limit;
+      if (!terms.length) {
+        return json({ shows: [], pagination: { page, limit, total: 0, totalPages: 0 }, query }, req);
+      }
       const categorySql = category ? ' AND LOWER(shows.category) LIKE ?' : '';
       const categoryParams = category ? ['%' + category + '%'] : [];
       let total = 0;
