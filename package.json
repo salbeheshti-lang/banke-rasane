@@ -90,5 +90,73 @@
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.5",
     "typescript": "^5"
+  },
+  "main": "electron/main.js",
+  "build": {
+    "appId": "com.banke.rasane",
+    "productName": "BankResaneh",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": ".next/standalone",
+        "to": "next-service-dist",
+        "filter": [
+          "**/*",
+          "!**/.DS_Store"
+        ]
+      },
+      {
+        "from": "mini-services/api-service",
+        "to": "api-service",
+        "filter": [
+          "index.js",
+          "package.json",
+          "bankresaneh.sqlite",
+          "talk-shows-data.json",
+          "download-images.js",
+          "download-all-images.bat"
+        ]
+      },
+      {
+        "from": "electron/bun",
+        "to": "bun",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "electron/icons",
+        "to": "icons",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "electron/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "unicode": true,
+      "installerIcon": "electron/icon.ico",
+      "uninstallerIcon": "electron/icon.ico",
+      "installerHeaderIcon": "electron/icon.ico"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "salbeheshti-lang",
+      "repo": "banke-rasane",
+      "releaseType": "release"
+    }
   }
 }
