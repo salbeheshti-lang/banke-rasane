@@ -7,6 +7,7 @@ const { spawn } = require('child_process');
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
+const { randomBytes } = require('crypto');
 
 let mainWindow = null;
 let nextServer = null;
@@ -14,6 +15,7 @@ let apiServer = null;
 const NEXT_PORT = 3000;
 const API_PORT = 3002;
 const NEXT_URL = `http://127.0.0.1:${NEXT_PORT}`;
+const STARTUP_TOKEN = randomBytes(32).toString('hex');
 
 function getLogPath() {
   return path.join(app.getPath('userData'), 'bankresaneh.log');
@@ -102,7 +104,7 @@ function getApiStaticDir() {
 }
 
 // === Start the API service (Bun on port 3002) ===
-function waitForHttp(url, child, label, maxAttempts = 60) {
+function waitForHttp(url, child, label, maxAttempts = 60, headers = {}) {
   return new Promise((resolve, reject) => {
     let attempts = 0;
     let settled = false;
@@ -121,7 +123,7 @@ function waitForHttp(url, child, label, maxAttempts = 60) {
     const probe = () => {
       if (settled) return;
       attempts++;
-      const request = http.get(url, (response) => {
+      const request = http.get(url, { headers }, (response) => {
         response.resume();
         if (response.statusCode >= 200 && response.statusCode < 400) {
           log(label + ' ready (HTTP ' + response.statusCode + ')');
@@ -175,13 +177,14 @@ async function startApiService() {
       PORT: String(API_PORT),
       HOSTNAME: '127.0.0.1',
       DB_PATH: dbPath,
+      BANKRESANEH_STARTUP_TOKEN: STARTUP_TOKEN,
     },
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: true,
   });
   apiServer.stdout.on('data', (data) => { const value = data.toString().trim(); if (value) log('[api] ' + value); });
   apiServer.stderr.on('data', (data) => { const value = data.toString().trim(); if (value) log('[api:err] ' + value); });
-  await waitForHttp('http://127.0.0.1:' + API_PORT + '/api/health', apiServer, 'API service');
+  await waitForHttp('http://127.0.0.1:' + API_PORT + '/api/internal/ready', apiServer, 'API service', 60, { 'x-bankresaneh-startup-token': STARTUP_TOKEN });
 }
 
 // === Start the Next.js standalone server ===
@@ -199,6 +202,7 @@ function startNextServer() {
       NODE_ENV: 'production',
       PORT: String(NEXT_PORT),
       HOSTNAME: '127.0.0.1',
+      BANKRESANEH_STARTUP_TOKEN: STARTUP_TOKEN,
     };
     nextServer = spawn(process.execPath, [serverPath], {
       cwd: staticDir,
@@ -216,7 +220,7 @@ function startNextServer() {
       const value = data.toString().trim();
       if (value) { log('[next:err] ' + value); output += value + '\n'; }
     });
-    waitForHttp('http://127.0.0.1:' + NEXT_PORT, nextServer, 'Next.js server')
+    waitForHttp('http://127.0.0.1:' + NEXT_PORT + '/api/internal/ready', nextServer, 'Next.js server', 60, { 'x-bankresaneh-startup-token': STARTUP_TOKEN })
       .then(resolve)
       .catch((error) => reject(new Error(error.message + '\nOutput: ' + output)));
   });
