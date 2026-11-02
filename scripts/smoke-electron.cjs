@@ -1,3 +1,4 @@
+/* eslint @typescript-eslint/no-require-imports: off */
 // Windows-only smoke test for the packaged Electron application.
 const { spawn, execFileSync } = require('node:child_process');
 const path = require('node:path');
