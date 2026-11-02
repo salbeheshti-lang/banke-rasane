@@ -12,7 +12,8 @@
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
     "desktop:dir": "npm run build && electron-builder --dir",
-    "desktop:win": "npm run build && electron-builder --win nsis"
+    "desktop:win": "npm run build && electron-builder --win nsis",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
