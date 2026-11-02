@@ -1,0 +1,164 @@
+/* eslint-disable no-console */
+// End-to-end smoke test for the Bun API. Uses an isolated temporary SQLite DB.
+const { spawn } = require('node:child_process');
+const { mkdtempSync, rmSync } = require('node:fs');
+const { tmpdir } = require('node:os');
+const { join, resolve } = require('node:path');
+const { createServer } = require('node:net');
+const assert = require('node:assert/strict');
+
+async function freePort() {
+  return new Promise((resolvePort, reject) => {
+    const server = createServer();
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const port = server.address().port;
+      server.close((error) => error ? reject(error) : resolvePort(port));
+    });
+  });
+}
+
+async function waitForApi(base, child, logs) {
+  const deadline = Date.now() + 30000;
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null) throw new Error('API exited early: ' + child.exitCode);
+    try {
+      const response = await fetch(base + '/api/health', { signal: AbortSignal.timeout(1500) });
+      if (response.ok) return await response.json();
+    } catch {}
+    await new Promise((resolveWait) => setTimeout(resolveWait, 300));
+  }
+  throw new Error('API readiness timeout. Output:\n' + logs.join('').slice(-6000));
+}
+
+async function main() {
+  const port = await freePort();
+  const tempDir = mkdtempSync(join(tmpdir(), 'bankresaneh-api-smoke-'));
+  const dbPath = join(tempDir, 'smoke.sqlite');
+  const base = 'http://127.0.0.1:' + port;
+  const logs = [];
+  const child = spawn(process.env.BUN_BIN || 'bun', [resolve('mini-services/api-service/index.js')], {
+    cwd: process.cwd(),
+    env: {
+      ...process.env,
+      PORT: String(port),
+      BANKRESANEH_HOST: '127.0.0.1',
+      DB_PATH: dbPath,
+      CORS_ORIGINS: 'http://127.0.0.1:3000',
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  child.stdout.on('data', (chunk) => logs.push(chunk.toString()));
+  child.stderr.on('data', (chunk) => logs.push(chunk.toString()));
+
+  const request = async (path, { method = 'GET', token, body } = {}) => {
+    const response = await fetch(base + path, {
+      method,
+      headers: {
+        ...(token ? { Authorization: 'Bearer ' + token } : {}),
+        ...(body ? { 'Content-Type': 'application/json' } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(10000),
+    });
+    const data = await response.json().catch(() => ({}));
+    return { status: response.status, data };
+  };
+
+  try {
+    const health = await waitForApi(base, child, logs);
+    assert.equal(health.status, 'ok');
+    assert.equal((await request('/api/profile')).status, 401, 'profile must require authentication');
+
+    let login = await request('/api/auth/login', { method: 'POST', body: { username: 'admin', password: 'admin' } });
+    assert.equal(login.status, 200, 'seed admin must be able to log in');
+    const initialToken = login.data.token;
+    const adminId = login.data.user.id;
+    assert.equal(login.data.user.mustChangePassword, true);
+
+    const passwordChange = await request('/api/auth/change-password', {
+      method: 'PUT', token: initialToken, body: { oldPassword: 'admin', newPassword: 'SmokeTest-Password-53!' },
+    });
+    assert.equal(passwordChange.status, 200, 'forced initial password change must work');
+
+    login = await request('/api/auth/login', {
+      method: 'POST', body: { username: 'admin', password: 'SmokeTest-Password-53!' },
+    });
+    assert.equal(login.status, 200, 'admin must log in after password change');
+    const token = login.data.token;
+
+    const profileUpdate = await request('/api/profile', {
+      method: 'PUT', token, body: {
+        name: 'API Smoke Admin', jobTitle: 'QA', deputy: 'Test', avatar: '', phone: '0000000000',
+      },
+    });
+    assert.equal(profileUpdate.status, 200);
+    assert.equal(profileUpdate.data.name, 'API Smoke Admin');
+    assert.equal(profileUpdate.data.phone, '0000000000');
+
+    const created = await request('/api/users', {
+      method: 'POST', token, body: {
+        username: 'smoke-editor', password: 'SmokeUser-Password-53!', role: 'editor', name: 'Smoke Editor',
+      },
+    });
+    assert.equal(created.status, 200, 'admin must create an editor');
+    const userId = created.data.id;
+
+    const invalidRole = await request('/api/users?id=' + userId, {
+      method: 'PUT', token, body: { role: 'superuser' },
+    });
+    assert.equal(invalidRole.status, 400, 'unknown roles must be rejected');
+
+    const selfDemotion = await request('/api/users?id=' + adminId, {
+      method: 'PUT', token, body: { role: 'viewer' },
+    });
+    assert.equal(selfDemotion.status, 400, 'admin must not demote their own account');
+
+    const selfDelete = await request('/api/users?id=' + adminId, { method: 'DELETE', token });
+    assert.equal(selfDelete.status, 400, 'admin must not delete their own account');
+
+    const createdShow = await request('/api/shows', {
+      method: 'POST', token, body: {
+        num: 990000001, name: 'آزمایش يک برنامه فارسی', category: 'آزمایش',
+        summary: 'رکورد آزمایشی برای جست‌وجوی فارسی',
+      },
+    });
+    assert.equal(createdShow.status, 200, 'editor-capable admin must create a show');
+
+    const normalizedSearch = await request('/api/shows/search?q=' + encodeURIComponent('یک برنامه'), { token });
+    assert.equal(normalizedSearch.status, 200);
+    assert.ok(normalizedSearch.data.shows.some((show) => show.num === 990000001),
+      'Persian Yeh/Kaf normalization must find legacy Arabic variants');
+
+    const updateShow = await request('/api/shows/990000001', {
+      method: 'PUT', token, body: { summary: 'متن به‌روزشده برای آزمون' },
+    });
+    assert.equal(updateShow.status, 200);
+    assert.equal(updateShow.data.summary, 'متن به‌روزشده برای آزمون');
+
+    const deleteShow = await request('/api/shows?num=990000001', { method: 'DELETE', token });
+    assert.equal(deleteShow.status, 200);
+
+    const deleteUser = await request('/api/users?id=' + userId, { method: 'DELETE', token });
+    assert.equal(deleteUser.status, 200);
+
+    const unauthSearch = await request('/api/shows/search?q=test');
+    assert.equal(unauthSearch.status, 401, 'search must require authentication');
+
+    console.log('API smoke passed: health, auth, password change, profile, user CRUD guards, Persian search, show CRUD, and access control.');
+  } catch (error) {
+    console.error(error);
+    console.error(logs.join('').slice(-6000));
+    process.exitCode = 1;
+  } finally {
+    child.kill();
+    await new Promise((resolveExit) => {
+      if (child.exitCode !== null) return resolveExit();
+      child.once('exit', resolveExit);
+      setTimeout(resolveExit, 3000);
+    });
+    try { rmSync(tempDir, { recursive: true, force: true }); } catch {}
+  }
+}
+
+main().catch((error) => { console.error(error); process.exitCode = 1; });
