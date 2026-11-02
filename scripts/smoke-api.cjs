@@ -174,6 +174,15 @@ async function main() {
     assert.ok(normalizedSearch.data.shows.some((show) => show.num === 990000001),
       'Persian Yeh/Kaf normalization must find legacy Arabic variants. Response: ' + JSON.stringify(normalizedSearch.data));
 
+    const relaxedSearch = await request('/api/shows/search?q=' + encodeURIComponent('یک برنامه واژه‌ناموجود smokeprobe'), { token });
+    assert.equal(relaxedSearch.status, 200);
+    assert.ok(relaxedSearch.data.shows.some((show) => show.num === 990000001),
+      'Multi-term search must relax to relevant matching terms when strict AND finds nothing.');
+
+    const emptySearch = await request('/api/shows/search?q=' + encodeURIComponent('عبارتکاملاًناموجود smokeprobe'), { token });
+    assert.equal(emptySearch.status, 200);
+    assert.equal(emptySearch.data.pagination.total, 0, 'unmatched queries must return an empty result set');
+
     const updateShow = await request('/api/shows/990000001', {
       method: 'PUT', token, body: { summary: 'متن به‌روزشده برای آزمون' },
     });
