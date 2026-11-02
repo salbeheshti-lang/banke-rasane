@@ -15,9 +15,9 @@ export function getApiBase(): string {
       // Behind gateway — use relative path with XTransformPort
       return `${window.location.origin}/?XTransformPort=3002`.replace(/\?.*/, '');
     }
-    return 'http://localhost:3002';
+    return 'http://127.0.0.1:3002';
   }
-  return 'http://localhost:3002';
+  return 'http://127.0.0.1:3002';
 }
 
 export function setApiBase(url: string): void {
