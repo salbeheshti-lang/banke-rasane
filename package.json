@@ -125,7 +125,8 @@
           "bankresaneh.sqlite",
           "talk-shows-data.json",
           "download-images.js",
-          "download-all-images.bat"
+          "download-all-images.bat",
+          "bankresaneh.sqlite-wal"
         ]
       },
       {
