@@ -1944,15 +1944,15 @@ function MobileNavBtn({ label, icon, active, onClick, highlight }: {
       onClick={onClick}
       className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all"
       style={{
-        background: active ? 'linear-gradient(135deg, rgba(13, 124, 74, 0.18) 0%, rgba(13, 124, 74, 0.08) 100%)' : 'transparent',
-        border: active ? '1px solid rgba(13, 124, 74, 0.35)' : '1px solid transparent',
+        background: active ? 'linear-gradient(135deg, rgba(34, 185, 154, 0.25) 0%, rgba(34, 185, 154, 0.1) 100%)' : 'transparent',
+        border: active ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid transparent',
         minWidth: '56px',
       }}
     >
       <svg
         className="w-6 h-6"
         fill="none"
-        stroke={active ? '#0d7c4a' : highlight ? '#0d7c4a' : '#8a8a7a'}
+        stroke={active ? '#ffffff' : 'rgba(255, 255, 255, 0.9)'}
         viewBox="0 0 24 24"
         style={{ filter: 'none' }}
       >
@@ -1963,7 +1963,7 @@ function MobileNavBtn({ label, icon, active, onClick, highlight }: {
         {icon === 'exit' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />}
         {icon === 'menu' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />}
       </svg>
-      <span className="text-xs font-medium" style={{ color: active ? '#10b981' : highlight ? '#0d7c4a' : '#8a8a7a' }}>
+      <span className="text-xs font-medium" style={{ color: active ? '#ffffff' : 'rgba(255, 255, 255, 0.8)' }}>
         {label}
       </span>
     </button>
@@ -1985,7 +1985,6 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
   const [featuredNums, setFeaturedNums] = useState<number[]>([]);
   const [showPicker, setShowPicker] = useState(false);
   const [search, setSearch] = useState('');
-  const [activePage, setActivePage] = useState(0);
   const [centerIdx, setCenterIdx] = useState(0);
 
   // How many cards per "page" — based on viewport
@@ -2017,34 +2016,56 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
   const scroll = (dir: 'left' | 'right') => {
     const el = trackRef.current;
     if (!el) return;
-    const scrollAmount = CARDS_PER_PAGE * 148; // card width + gap
+    // In RTL, scrollLeft is negative — left button scrolls forward (more negative)
+    const scrollAmount = CARDS_PER_PAGE * 148;
+    const currentLeft = el.scrollLeft;
+    // RTL: scroll right = scrollLeft increases (toward 0), scroll left = scrollLeft decreases
     el.scrollBy({ left: dir === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
   };
 
-  // Scroll-driven center detection: find which card is closest to viewport center
+  // Scroll-driven center detection using actual DOM measurements (debounced)
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleScroll = () => {
-    const el = trackRef.current;
-    if (!el) return;
-    const viewportCenter = el.scrollLeft + el.clientWidth / 2;
-    const cardWidth = 148; // 140px card + 8px gap
-    // Find card index closest to center
-    const idx = Math.round((viewportCenter - cardWidth / 2) / cardWidth);
-    const clampedIdx = Math.max(0, Math.min(featuredShows.length - 1, idx));
-    setCenterIdx(clampedIdx);
-    // Update page for dots
-    const page = Math.floor(clampedIdx / CARDS_PER_PAGE);
-    setActivePage(page);
+    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    scrollTimeoutRef.current = setTimeout(() => {
+      const el = trackRef.current;
+      if (!el || featuredShows.length === 0) return;
+      // In RTL, scrollLeft is negative. Use absolute position for center calculation.
+      const containerCenter = Math.abs(el.scrollLeft) + el.clientWidth / 2;
+      const cards = el.querySelectorAll('.featured-card');
+      let closestIdx = 0;
+      let closestDist = Infinity;
+      cards.forEach((card, i) => {
+        const cardEl = card as HTMLElement;
+        // In RTL, offsetLeft is measured from right. Use absolute distance.
+        const cardCenter = Math.abs(cardEl.offsetLeft - el.clientWidth) + cardEl.offsetWidth / 2;
+        // Actually, let's use getBoundingClientRect relative to container
+        const cardRect = cardEl.getBoundingClientRect();
+        const elRect = el.getBoundingClientRect();
+        const cardCenterX = cardRect.left + cardRect.width / 2 - elRect.left;
+        const dist = Math.abs(cardCenterX - el.clientWidth / 2);
+        if (dist < closestDist) {
+          closestDist = dist;
+          closestIdx = i;
+        }
+      });
+      setCenterIdx(closestIdx);
+    }, 50);
   };
 
-  const totalPages = Math.ceil(featuredShows.length / CARDS_PER_PAGE);
-
-  // Scroll to specific page when dot clicked
-  const scrollToPage = (page: number) => {
+  // Scroll to a specific card (one dot = one card)
+  const scrollToCard = (idx: number) => {
     const el = trackRef.current;
     if (!el) return;
-    const scrollAmount = page * CARDS_PER_PAGE * 148;
-    el.scrollTo({ left: scrollAmount, behavior: 'smooth' });
-    setActivePage(page);
+    const cards = el.querySelectorAll('.featured-card');
+    const card = cards[idx] as HTMLElement;
+    if (card) {
+      // Center the card in the viewport
+      const elRect = el.getBoundingClientRect();
+      const cardRect = card.getBoundingClientRect();
+      const offset = cardRect.left - elRect.left - (el.clientWidth / 2 - card.offsetWidth / 2);
+      el.scrollBy({ left: offset, behavior: 'smooth' });
+    }
   };
 
   const removeShow = (num: number) => {
@@ -2068,7 +2089,7 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
     if (featuredNums.length === 0 && talkShows.length > 0) {
       const defaults = talkShows
         .filter(s => s.images && s.images.length > 0)
-        .slice(0, 8)
+        .slice(0, 12)
         .map(s => s.num);
       if (defaults.length > 0) saveFeatured(defaults);
     }
@@ -2165,15 +2186,15 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
           })}
         </div>
 
-        {/* Netflix-style pagination dots */}
-        {totalPages > 1 && (
+        {/* One dot per card — active dot = center card */}
+        {featuredShows.length > 1 && (
           <div className="featured-dots">
-            {Array.from({ length: totalPages }).map((_, i) => (
+            {featuredShows.map((_, i) => (
               <button
                 key={i}
-                className={`featured-dot ${i === activePage ? 'active' : ''}`}
-                onClick={() => scrollToPage(i)}
-                aria-label={`صفحه ${i + 1}`}
+                className={`featured-dot ${i === centerIdx ? 'active' : ''}`}
+                onClick={() => scrollToCard(i)}
+                aria-label={`برنامه ${i + 1}`}
               />
             ))}
           </div>
@@ -2458,80 +2479,40 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
               </div>
             </div>
 
-            {/* ----- HORIZONTAL GENRE STRIP — 4 visible, selectable, + button to add more ----- */}
+            {/* ----- RANKED LIST — top 5 with rank/dot/name/bar/count/pct ----- */}
             <div className="analytics-list-col">
               <div className="analytics-list-header">
-                <span>ژانرهای منتخب</span>
-                <button
-                  onClick={() => setShowGenrePicker(true)}
-                  className="analytics-list-header-count"
-                  style={{
-                    cursor: 'pointer',
-                    background: 'rgba(84, 217, 192, 0.18)',
-                    color: '#54D9C0',
-                    border: '1px solid rgba(84, 217, 192, 0.3)',
-                  }}
-                  title="انتخاب ژانرهای دیگر"
-                >
-                  انتخاب ژانر
-                </button>
+                <span>برترین ژانرها</span>
+                <span className="analytics-list-header-count">
+                  {totalGenres.toLocaleString('fa-IR')} دسته
+                </span>
               </div>
-              {/* Horizontal strip — exactly 5 chips, no rank badges, no border */}
-              <div
-                className="analytics-genre-strip"
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(5, 1fr)',
-                  gap: '8px',
-                  overflow: 'hidden',
-                }}
-              >
-                {stripGenres.map((g) => {
+              <div className="analytics-list-items">
+                {genreStats.slice(0, 5).map((g, i) => {
                   const pct = totalShows > 0 ? Math.round((g.count / totalShows) * 100) : 0;
                   return (
                     <button
                       key={g.genre.id}
                       onClick={() => onGenreClick(g.genre)}
-                      className="analytics-genre-chip"
-                      style={{
-                        ['--row-color' as string]: g.color,
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '4px',
-                        padding: '12px 6px',
-                        textAlign: 'center',
-                      }}
+                      className="analytics-list-row"
+                      style={{ ['--row-color' as string]: g.color }}
                       title={g.genre.description}
                     >
-                      <span className="analytics-genre-chip-dot" style={{ marginBottom: '2px' }} />
-                      <span className="analytics-genre-chip-name" style={{ fontSize: '11px', maxWidth: 'none', textAlign: 'center' }}>
-                        {g.genre.nameFa}
+                      <span className="analytics-list-rank">{(i + 1).toLocaleString('fa-IR')}</span>
+                      <span className="analytics-list-dot" />
+                      <span className="analytics-list-name">{g.genre.nameFa}</span>
+                      <span className="analytics-list-bar-wrap">
+                        <span
+                          className="analytics-list-bar"
+                          style={{ width: `${Math.min(pct, 100)}%` }}
+                        />
                       </span>
-                      <span className="analytics-genre-chip-meta" style={{ textAlign: 'center' }}>
-                        {g.count.toLocaleString('fa-IR')} • {pct.toLocaleString('fa-IR')}٪
-                      </span>
+                      <span className="analytics-list-count">{g.count.toLocaleString('fa-IR')}</span>
+                      <span className="analytics-list-pct">{pct.toLocaleString('fa-IR')}٪</span>
                     </button>
                   );
                 })}
-                {/* Empty placeholder slots if fewer than 5 */}
-                {Array.from({ length: Math.max(0, STRIP_COUNT - stripGenres.length) }).map((_, i) => (
-                  <div
-                    key={`empty-${i}`}
-                    className="analytics-genre-chip"
-                    style={{
-                      opacity: 0.3,
-                      cursor: 'default',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      padding: '12px 6px',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                    }}
-                  >
-                    <span className="analytics-genre-chip-name" style={{ fontSize: '11px', opacity: 0.5 }}>—</span>
-                  </div>
-                ))}
               </div>
-              {/* No ranked list — only the 5 chips */}
             </div>
           </div>
         </div>
