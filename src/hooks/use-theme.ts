@@ -17,8 +17,8 @@ export function useTheme() {
     try {
       const saved = typeof window !== 'undefined' ? localStorage.getItem('bankresaneh_theme') : null;
       if (saved === 'dark' || saved === 'light') {
-        setThemeState(saved);
         applyTheme(saved);
+        Promise.resolve().then(() => setThemeState(saved));
       } else {
         applyTheme('light');
       }
