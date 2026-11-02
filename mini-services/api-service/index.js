@@ -13,12 +13,12 @@ import { createHash, randomBytes } from 'node:crypto';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 
-const PORT = 3002;
+const PORT = Number(process.env.PORT || 3002);
 
 // ---------------------------------------------------------------------------
 // DB setup
 // ---------------------------------------------------------------------------
-const DB_PATH = resolve(import.meta.dir, 'bankresaneh.sqlite');
+const DB_PATH = process.env.BANKRESANEH_DB_PATH || resolve(import.meta.dir, 'bankresaneh.sqlite');
 const db = new Database(DB_PATH, { create: true });
 db.exec('PRAGMA journal_mode = WAL;');
 
@@ -190,7 +190,7 @@ function getUserByToken(token) {
   const row = db.prepare('SELECT * FROM sessions WHERE token = ?').get(token);
   if (!row) return null;
   // Expired?
-  if (row.expires_at && row.expires_at < nowSec()) {
+  if (row.expires_at && row.expires_at <= nowSec()) {
     db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
     return null;
   }
@@ -244,6 +244,7 @@ function seedShows() {
   }
   // Try several candidate paths for the talk-shows JSON
   const candidates = [
+    process.env.BANKRESANEH_SEED_PATH,
     resolve(import.meta.dir, '../../public/talk-shows-data.json'),
     resolve(import.meta.dir, '../../../public/talk-shows-data.json'),
     '/home/z/my-project/public/talk-shows-data.json',
@@ -357,7 +358,7 @@ const server = Bun.serve({
       const oldPassword = String(body?.oldPassword || '');
       const newPassword = String(body?.newPassword || '');
       if (!oldPassword || !newPassword) return json({ error: 'رمز قدیمی و جدید را وارد کنید' }, 400);
-      if (newPassword.length < 4) return json({ error: 'رمز جدید باید حداقل ۴ کاراکتر باشد' }, 400);
+      if (newPassword.length < 8) return json({ error: 'رمز جدید باید حداقل ۸ کاراکتر باشد' }, 400);
       if (user.password_hash !== sha256(oldPassword)) {
         return json({ error: 'رمز فعلی نادرست است' }, 401);
       }
@@ -367,10 +368,44 @@ const server = Bun.serve({
       return json({ success: true });
     }
 
-    // ----- Shows: list -----
+    // ----- Shows: list / search / filter -----
+    if (pathname === '/api/shows' && method === 'GET') {
+      const search = String(url.searchParams.get('search') || '').trim();
+      const category = String(url.searchParams.get('category') || '').trim();
+      const requestedLimit = Number(url.searchParams.get('limit') || 0);
+      const where = [];
+      const values = [];
+      if (search) {
+        const term = '%' + search.replace(/[\\%_]/g, '\\    // ----- Shows: list -----
     if (pathname === '/api/shows' && method === 'GET') {
       const rows = db.prepare('SELECT * FROM shows ORDER BY num ASC').all();
       return json({ shows: rows.map(rowToShow) });
+    }') + '%';
+        where.push("(name LIKE ? ESCAPE '\\\\' OR category LIKE ? ESCAPE '\\\\' OR source LIKE ? ESCAPE '\\\\' OR summary LIKE ? ESCAPE '\\\\' OR descriptionFa LIKE ? ESCAPE '\\\\' OR imdb LIKE ? ESCAPE '\\\\' OR wikipedia LIKE ? ESCAPE '\\\\')");
+        values.push(term, term, term, term, term, term, term);
+      }
+      if (category) {
+        where.push('category = ?');
+        values.push(category);
+      }
+      const limit = Number.isFinite(requestedLimit) && requestedLimit > 0
+        ? Math.min(Math.floor(requestedLimit), 10000)
+        : 10000;
+      const sql = 'SELECT * FROM shows' +
+        (where.length ? ' WHERE ' + where.join(' AND ') : '') +
+        ' ORDER BY num ASC LIMIT ?';
+      values.push(limit);
+      const rows = db.prepare(sql).all(...values);
+      return json({ shows: rows.map(rowToShow), total: rows.length });
+    }
+
+    // ----- Stats -----
+    if (pathname === '/api/stats' && method === 'GET') {
+      const total = db.prepare('SELECT COUNT(*) AS total FROM shows').get()?.total || 0;
+      const categories = db.prepare(
+        "SELECT category, COUNT(*) AS count FROM shows GROUP BY category ORDER BY count DESC, category ASC"
+      ).all();
+      return json({ total, categories });
     }
 
     // ----- Shows: create -----
@@ -459,7 +494,7 @@ const server = Bun.serve({
       const role = ['admin', 'editor', 'viewer'].includes(body?.role) ? body.role : 'viewer';
       const name = String(body?.name || '');
       if (!username || !password) return json({ error: 'نام کاربری و رمز عبور را وارد کنید' }, 400);
-      if (password.length < 4) return json({ error: 'رمز باید حداقل ۴ کاراکتر باشد' }, 400);
+      if (password.length < 8) return json({ error: 'رمز باید حداقل ۸ کاراکتر باشد' }, 400);
       const exists = getUserByUsername(username);
       if (exists) return json({ error: 'این نام کاربری قبلاً ثبت شده است' }, 409);
       try {
@@ -495,7 +530,7 @@ const server = Bun.serve({
         const role = ['admin', 'editor', 'viewer'].includes(body?.role) ? body.role : target.role;
         const name = body?.name !== undefined ? String(body.name) : target.name;
         if (body?.password) {
-          if (String(body.password).length < 4) return json({ error: 'رمز باید حداقل ۴ کاراکتر باشد' }, 400);
+          if (String(body.password).length < 8) return json({ error: 'رمز باید حداقل ۸ کاراکتر باشد' }, 400);
           db.prepare('UPDATE users SET password_hash = ?, role = ?, name = ? WHERE id = ?')
             .run(sha256(String(body.password)), role, name, id);
         } else {
