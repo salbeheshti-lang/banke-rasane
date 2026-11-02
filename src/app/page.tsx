@@ -427,6 +427,7 @@ function detectCountries(show: TalkShow): string[] {
 // ============================================
 function findRelated(show: TalkShow, allShows: TalkShow[], limit = 6): TalkShow[] {
   const showElements = (show.elements || '').split(/[,،\s]+/).filter(Boolean);
+  const showTags = (show.tags || []);
   const candidates = allShows.filter(s => s.num !== show.num);
   const scored = candidates.map(s => {
     let score = 0;
@@ -437,6 +438,12 @@ function findRelated(show: TalkShow, allShows: TalkShow[], limit = 6): TalkShow[
       const intersection = showElements.filter(e => sElements.includes(e)).length;
       const union = new Set([...showElements, ...sElements]).size || 1;
       score += Math.round((intersection / union) * 3);
+    }
+    // Match by tags (sub-genres)
+    const sTags = (s.tags || []);
+    if (showTags.length > 0 && sTags.length > 0) {
+      const sharedTags = showTags.filter(t => sTags.includes(t)).length;
+      score += sharedTags * 2;
     }
     if (s.style === show.style) score += 2;
     if (s.effects === show.effects) score += 2;
@@ -1691,8 +1698,8 @@ function DrawerMenu({
                       ></div>
                       <span className="text-sm flex-1 text-right truncate">{g.nameFa}</span>
                       <span
-                        className="text-xs px-1.5 py-0.5 rounded-md font-bold"
-                        style={{ background: `${g.color}30`, color: g.color }}
+                        className="text-xs font-bold"
+                        style={{ color: g.color }}
                       >
                         {count.toLocaleString('fa-IR')}
                       </span>
@@ -2390,8 +2397,8 @@ function UserProfileModal({ user, onClose, showToast }: {
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Full-width banner image at top — covers entire top of card */}
-        <div style={{ position: 'relative', width: '100%', height: '200px', flexShrink: 0 }}>
+        {/* Full-width banner image — bigger, text overlays on it */}
+        <div style={{ position: 'relative', width: '100%', height: '280px', flexShrink: 0 }}>
           {avatar ? (
             <img
               src={avatar}
@@ -2403,15 +2410,15 @@ function UserProfileModal({ user, onClose, showToast }: {
               width: '100%', height: '100%',
               background: 'linear-gradient(135deg, #006B50 0%, #22B99A 50%, #159C9C 100%)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '72px', fontWeight: 900, color: 'rgba(255, 255, 255, 0.9)',
+              fontSize: '96px', fontWeight: 900, color: 'rgba(255, 255, 255, 0.9)',
             }}>
               {(name || user.username).charAt(0).toUpperCase()}
             </div>
           )}
-          {/* Gradient overlay for text readability */}
+          {/* Gradient overlay — covers bottom half for text readability */}
           <div style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0, height: '80px',
-            background: 'linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.5) 100%)',
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: '160px',
+            background: 'linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.65) 50%, rgba(0, 0, 0, 0.8) 100%)',
           }} />
           {/* Top bar buttons — overlay on image */}
           <div className="flex items-center justify-between p-4" style={{ position: 'absolute', top: 0, left: 0, right: 0 }}>
@@ -2450,10 +2457,10 @@ function UserProfileModal({ user, onClose, showToast }: {
               </button>
             )}
           </div>
-          {/* Upload button — overlay on image bottom-right */}
+          {/* Upload button */}
           {editing && (
             <label style={{
-              position: 'absolute', bottom: '12px', left: '12px',
+              position: 'absolute', top: '60px', left: '12px',
               padding: '8px 14px', borderRadius: '999px',
               background: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(8px)',
               border: '1px solid rgba(255, 255, 255, 0.3)',
@@ -2468,24 +2475,33 @@ function UserProfileModal({ user, onClose, showToast }: {
               <input type="file" accept="image/*" onChange={handleAvatarUpload} style={{ display: 'none' }} />
             </label>
           )}
-        </div>
-
-        {/* Name + role — below the banner */}
-        <div className="flex flex-col items-center gap-2 pt-4 pb-3 flex-shrink-0">
-          <div style={{ fontSize: '24px', fontWeight: 800, color: '#f0fdf4' }}>{name || user.username}</div>
-          <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)' }}>@{user.username}</div>
-          <span style={{
-            fontSize: '11px', fontWeight: 700, padding: '4px 14px', borderRadius: '999px',
-            background: user.role === 'admin' ? 'rgba(220, 38, 38, 0.3)' : user.role === 'editor' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(34, 185, 154, 0.3)',
-            color: user.role === 'admin' ? '#fca5a5' : user.role === 'editor' ? '#fcd34d' : '#54D9C0',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
+          {/* Name + role + username — overlaid ON the image */}
+          <div style={{
+            position: 'absolute', bottom: '16px', left: 0, right: 0,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+            padding: '0 16px',
           }}>
-            {roleLabels[user.role] || user.role}
-          </span>
+            <div style={{ fontSize: '26px', fontWeight: 800, color: '#ffffff', textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>
+              {name || user.username}
+            </div>
+            <div style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.85)', textShadow: '0 1px 4px rgba(0,0,0,0.6)' }}>
+              @{user.username}
+            </div>
+            <span style={{
+              fontSize: '12px', fontWeight: 700, padding: '5px 16px', borderRadius: '999px',
+              background: user.role === 'admin' ? 'rgba(220, 38, 38, 0.85)' : user.role === 'editor' ? 'rgba(245, 158, 11, 0.85)' : 'rgba(34, 185, 154, 0.85)',
+              color: '#fff',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              marginTop: '4px',
+              backdropFilter: 'blur(4px)',
+            }}>
+              {roleLabels[user.role] || user.role}
+            </span>
+          </div>
         </div>
 
-        {/* Contact details — iPhone style rows */}
-        <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2">
+        {/* Contact details — below the banner */}
+        <div className="flex-1 overflow-y-auto px-4 pt-4 pb-4 space-y-2">
           <ContactRow icon="👤" label="نام نمایشی" value={name} editing={editing} onChange={setName} placeholder="نام و نام خانوادگی" />
           <ContactRow icon="📱" label="شماره همراه" value={phone} editing={editing} onChange={setPhone} placeholder="0912xxxxxxx" dir="ltr" />
           <ContactRow icon="💼" label="عنوان شغلی" value={jobTitle} editing={editing} onChange={setJobTitle} placeholder="مثلاً: تهیه‌کننده" />

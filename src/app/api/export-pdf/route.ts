@@ -132,10 +132,7 @@ function generatePDFHtml(shows: any[], opts: PDFOptions): string {
       <div class="cover-content">
         <div class="cover-brand">بانک رسانه</div>
         <div class="cover-logo-mark">
-          <svg viewBox="0 0 64 64" width="64" height="64" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="6" y="14" width="52" height="36" rx="4" />
-            <path d="M6 22h52M14 14v-4M50 14v-4M20 32l10 6-10 6z" />
-          </svg>
+          <img src="/banke-rasane-logo.png" alt="بانک رسانه" style="width: 80px; height: auto;" />
         </div>
         <h1 class="cover-title">${escapeHtml(opts.title)}</h1>
         <p class="cover-subtitle">${escapeHtml(opts.subtitle)}</p>
@@ -290,7 +287,7 @@ function generatePDFHtml(shows: any[], opts: PDFOptions): string {
 
   // 3. STATISTICAL OVERVIEW
   const statCards = [
-    { label: 'کل برنامه‌ها', value: total, color: '#029048' },
+    { label: 'کل برنامه‌ها', value: total, color: '#10b981' },
     { label: 'دسته‌های ژانری', value: sortedCategories.length, color: '#2563eb' },
     { label: 'برنامه‌های با تصویر', value: bySource.pdf + bySource.web, color: '#7c3aed' },
     { label: 'برنامه‌های با تحلیل متنی', value: bySource.text, color: '#db2777' },
@@ -333,7 +330,7 @@ function generatePDFHtml(shows: any[], opts: PDFOptions): string {
           ['تصویر PDF', bySource.pdf],
           ['تصویر وب', bySource.web],
           ['تحلیل متنی', bySource.text],
-        ], '#029048', total)}
+        ], '#10b981', total)}
       </div>
 
       <h3 class="subsection-title">توزیع بر اساس اندازهٔ استودیو</h3>
@@ -373,7 +370,7 @@ function generatePDFHtml(shows: any[], opts: PDFOptions): string {
 
       <h3 class="subsection-title">نمودار توزیع کامل ژانرها</h3>
       <div class="bar-chart">
-        ${renderBarChart(sortedCategories.map(([k, v]) => [k, v.length]), '#029048', total)}
+        ${renderBarChart(sortedCategories.map(([k, v]) => [k, v.length]), '#10b981', total)}
       </div>
 
       <h3 class="subsection-title">معرفی تفصیلی دسته‌ها</h3>
@@ -418,7 +415,7 @@ function generatePDFHtml(shows: any[], opts: PDFOptions): string {
         <div class="decor-block">
           <h4 class="decor-block-title">عناصر صحنه (پرتکرارترین)</h4>
           <div class="bar-chart small">
-            ${topElements.length ? renderBarChart(topElements, '#029048', totalForPct(elementCounts)) : '<p class="empty-state">داده‌ای ثبت نشده است.</p>'}
+            ${topElements.length ? renderBarChart(topElements, '#10b981', totalForPct(elementCounts)) : '<p class="empty-state">داده‌ای ثبت نشده است.</p>'}
           </div>
         </div>
         <div class="decor-block">
@@ -735,13 +732,13 @@ body {
   gap: 14px;
   margin-bottom: 24px;
   padding-bottom: 16px;
-  border-bottom: 3px solid #029048;
+  border-bottom: 3px solid #10b981;
 }
 .section-num {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #029048 0%, #016035 100%);
+  background: linear-gradient(135deg, #10b981 0%, #0d7c4a 100%);
   color: white;
   display: flex;
   align-items: center;
@@ -754,17 +751,17 @@ body {
 .section-title {
   font-size: 24px;
   font-weight: 700;
-  color: #016035;
+  color: #0d7c4a;
   flex: 1;
 }
 
 .subsection-title {
   font-size: 16px;
   font-weight: 700;
-  color: #016035;
+  color: #0d7c4a;
   margin: 28px 0 14px 0;
   padding-right: 12px;
-  border-right: 4px solid #029048;
+  border-right: 4px solid #10b981;
 }
 
 .content-section p {
@@ -789,7 +786,7 @@ body {
   height: 28px;
   border-radius: 6px;
   background: rgba(2, 144, 72, 0.1);
-  color: #016035;
+  color: #0d7c4a;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -880,7 +877,7 @@ body {
 .method-icon { font-size: 24px; margin-bottom: 8px; }
 .method-card h4 {
   font-size: 14px;
-  color: #016035;
+  color: #0d7c4a;
   margin-bottom: 6px;
   font-weight: 700;
 }
@@ -904,7 +901,7 @@ body {
   width: 26px;
   height: 26px;
   border-radius: 6px;
-  background: #029048;
+  background: #10b981;
   color: white;
   display: flex;
   align-items: center;
@@ -920,7 +917,7 @@ body {
 }
 .genre-block-count {
   background: rgba(2, 144, 72, 0.1);
-  color: #016035;
+  color: #0d7c4a;
   padding: 3px 10px;
   border-radius: 12px;
   font-size: 11px;
@@ -940,7 +937,7 @@ body {
 }
 .genre-block-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #029048, #36b37e);
+  background: linear-gradient(90deg, #10b981, #22B99A);
   border-radius: 3px;
 }
 .genre-block-desc {
@@ -965,7 +962,7 @@ body {
 .decor-block-title {
   font-size: 14px;
   font-weight: 700;
-  color: #016035;
+  color: #0d7c4a;
   margin-bottom: 10px;
   padding-bottom: 8px;
   border-bottom: 1px solid #e0e8e4;
@@ -975,14 +972,14 @@ body {
 .highlight-box {
   background: linear-gradient(135deg, #f0f8f4 0%, #e8f4ee 100%);
   border: 1px solid #c8e0d4;
-  border-right: 4px solid #029048;
+  border-right: 4px solid #10b981;
   border-radius: 12px;
   padding: 16px 20px;
   margin: 24px 0;
 }
 .highlight-title {
   font-weight: 700;
-  color: #016035;
+  color: #0d7c4a;
   margin-bottom: 10px;
   font-size: 14px;
 }
@@ -999,7 +996,7 @@ body {
   content: '✓';
   position: absolute;
   right: 0;
-  color: #029048;
+  color: #10b981;
   font-weight: 700;
 }
 
@@ -1026,7 +1023,7 @@ body {
   width: 28px;
   height: 28px;
   border-radius: 6px;
-  background: #029048;
+  background: #10b981;
   color: white;
   display: flex;
   align-items: center;
@@ -1086,7 +1083,7 @@ body {
 }
 .tag {
   background: rgba(2, 144, 72, 0.08);
-  color: #016035;
+  color: #0d7c4a;
   padding: 2px 8px;
   border-radius: 10px;
   font-size: 10px;
@@ -1176,7 +1173,7 @@ body {
 }
 .alpha-num {
   background: rgba(2, 144, 72, 0.1);
-  color: #016035;
+  color: #0d7c4a;
   padding: 2px 6px;
   border-radius: 4px;
   font-weight: 700;
