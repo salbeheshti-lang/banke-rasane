@@ -119,13 +119,13 @@ async function main() {
 
     const createdShow = await request('/api/shows', {
       method: 'POST', token, body: {
-        num: 990000001, name: 'آزمایش يک برنامه فارسی', category: 'آزمایش',
+        num: 990000001, name: 'آزمایش يک برنامه smokeprobe', category: 'آزمایش',
         summary: 'رکورد آزمایشی برای جست‌وجوی فارسی',
       },
     });
     assert.equal(createdShow.status, 200, 'editor-capable admin must create a show');
 
-    const normalizedSearch = await request('/api/shows/search?q=' + encodeURIComponent('یک برنامه'), { token });
+    const normalizedSearch = await request('/api/shows/search?q=' + encodeURIComponent('یک برنامه smokeprobe'), { token });
     assert.equal(normalizedSearch.status, 200);
     assert.ok(normalizedSearch.data.shows.some((show) => show.num === 990000001),
       'Persian Yeh/Kaf normalization must find legacy Arabic variants. Response: ' + JSON.stringify(normalizedSearch.data));
