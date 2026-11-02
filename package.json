@@ -9,8 +9,10 @@
     "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
     "lint": "eslint .",
     "electron:dev": "electron electron/main.js",
-    "electron:build": "npx next build && node scripts/copy-standalone.cjs && electron-builder --win --x64 --publish never",
-    "electron:dist": "electron-builder --win --x64 --publish never"
+    "electron:build": "bun run typecheck && bun run build && electron-builder --win --x64 --publish never",
+    "electron:dist": "electron-builder --win --x64 --publish never",
+    "typecheck": "tsc --noEmit",
+    "desktop:win": "bun run electron:build"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -92,7 +94,8 @@
     "tw-animate-css": "^1.3.5",
     "typescript": "^5",
     "electron": "^33.0.0",
-    "electron-builder": "^26.0.0"
+    "electron-builder": "^26.0.0",
+    "@oven/bun-windows-x64": "1.4.4"
   },
   "build": {
     "appId": "com.banke.rasane",
@@ -119,19 +122,13 @@
           "index.js",
           "package.json",
           "bankresaneh.sqlite",
-          "talk-shows-data.json"
+          "talk-shows-data.json",
+          "bankresaneh.sqlite-wal"
         ]
       },
       {
-        "from": "electron/icons",
-        "to": "icons",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "electron/bun",
-        "to": "bun",
+        "from": "node_modules/@oven/bun-windows-x64",
+        "to": "bun-runtime",
         "filter": [
           "**/*"
         ]
