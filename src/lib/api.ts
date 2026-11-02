@@ -8,7 +8,7 @@ function defaultApiBase(): string {
     const currentHost = window.location.hostname;
     if (currentPort === '81' || currentPort === '' || currentPort === '443' || currentHost.includes('space-z.ai')) return window.location.origin;
   }
-  return 'http://localhost:3002';
+  return 'http://127.0.0.1:3002';
 }
 
 export function getApiBase(): string {
