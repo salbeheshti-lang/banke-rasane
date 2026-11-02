@@ -2006,15 +2006,42 @@ function ProgramsView({
   const [filterViewers, setFilterViewers] = useState('all');
   const [filterStyle, setFilterStyle] = useState('all');
   const [islamicOnly, setIslamicOnly] = useState(false);
+  const [serverSearchShows, setServerSearchShows] = useState<TalkShow[] | null>(null);
+
+  // Use SQLite FTS for the complete archive; retain local search as an offline/typo fallback.
+  useEffect(() => {
+    const query = search.trim();
+    if (genre || query.length < 2) {
+      setServerSearchShows(null);
+      return;
+    }
+    let cancelled = false;
+    setServerSearchShows(null);
+    const timer = setTimeout(() => {
+      api.searchShows({ query, page: 1, limit: 100 })
+        .then((result) => {
+          if (cancelled) return;
+          setServerSearchShows(result.shows.length ? result.shows as unknown as TalkShow[] : null);
+        })
+        .catch(() => {
+          if (!cancelled) setServerSearchShows(null);
+        });
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [genre, search]);
 
   const filteredShows = useMemo(() => {
-    let shows = [...talkShows];
+    const useServerResults = !genre && search.trim().length >= 2 && serverSearchShows !== null;
+    let shows = [...(useServerResults ? serverSearchShows : talkShows)];
     if (genre) shows = shows.filter(genre.filterFn);
     if (filterSize !== 'all') shows = shows.filter(s => s.size === filterSize);
     if (filterViewers !== 'all') shows = shows.filter(s => s.viewers === filterViewers);
     if (filterStyle !== 'all') shows = shows.filter(s => s.style === filterStyle);
     if (islamicOnly) shows = shows.filter(s => detectCountries(s).length > 0);
-    if (search) {
+    if (search && !useServerResults) {
       const q = search.toLowerCase();
       // Section-specific search: use genre.searchFields if defined, else default to name+summary+category.
       const fields: (keyof TalkShow)[] = genre?.searchFields || ['name', 'summary', 'category'];
@@ -2031,7 +2058,7 @@ function ProgramsView({
       });
     }
     return shows;
-  }, [talkShows, genre, search, filterSize, filterViewers, filterStyle, islamicOnly]);
+  }, [talkShows, genre, search, filterSize, filterViewers, filterStyle, islamicOnly, serverSearchShows]);
 
   const handleUploadSelected = () => {
     const selectedShows = filteredShows.filter(s => selectedIds.includes(s.num));
