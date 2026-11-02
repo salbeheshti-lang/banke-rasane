@@ -248,7 +248,7 @@ function seedShows() {
     resolve(import.meta.dir, '../../public/talk-shows-data.json'),
     resolve(import.meta.dir, '../../../public/talk-shows-data.json'),
     '/home/z/my-project/public/talk-shows-data.json',
-  ];
+  ].filter(Boolean);
   let path = null;
   for (const p of candidates) {
     if (existsSync(p)) { path = p; break; }
@@ -303,6 +303,7 @@ seedShows();
 // ---------------------------------------------------------------------------
 const server = Bun.serve({
   port: PORT,
+  hostname: process.env.HOSTNAME || '127.0.0.1',
   async fetch(req) {
     const url = new URL(req.url);
     const { pathname } = url;
