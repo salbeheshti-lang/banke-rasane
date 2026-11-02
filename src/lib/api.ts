@@ -98,6 +98,18 @@ export const api = {
     if (typeof window !== 'undefined') localStorage.removeItem(TOKEN_KEY);
   },
   async getShows() { return request(getApiUrl('api/shows')); },
+  async searchShows(params: { query?: string; category?: string; page?: number; limit?: number }) {
+    const query = new URLSearchParams();
+    if (params.query) query.set('q', params.query);
+    if (params.category) query.set('category', params.category);
+    query.set('page', String(Math.max(1, params.page || 1)));
+    query.set('limit', String(Math.min(100, Math.max(1, params.limit || 30))));
+    return request<{
+      shows: Show[];
+      pagination: { page: number; limit: number; total: number; totalPages: number };
+      query: string;
+    }>(getApiUrl('api/shows/search?' + query.toString()));
+  },
   async saveShow(show: any) { return request(getApiUrl('api/shows'), { method: 'POST', body: JSON.stringify(show) }); },
   async deleteShow(num: number) { return request(getApiUrl('api/shows?num=' + encodeURIComponent(num)), { method: 'DELETE' }); },
   async fetchImage(data: { num: number; imdb?: string; wikipedia?: string; name?: string }) {
