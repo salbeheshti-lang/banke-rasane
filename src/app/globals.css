@@ -91,22 +91,33 @@
 
 /* Dark theme override — applied via .theme-dark on <html> */
 .theme-dark {
-  --bg-deep: #1a3c34;
-  --bg-mid: #5a8a80;
-  --glass-bg: rgba(20, 35, 25, 0.8);
-  --glass-bg-strong: rgba(20, 35, 25, 0.85);
-  --glass-bg-modal: rgba(15, 28, 20, 0.95);
-  --glass-bg-drawer: rgba(15, 28, 20, 0.9);
-  --glass-bg-topbar: rgba(13, 25, 18, 0.85);
-  --glass-border: rgba(16, 185, 129, 0.15);
-  --glass-border-strong: rgba(16, 185, 129, 0.4);
+  /* Main background: dark green (top) → teal (bottom) — matches reference image */
+  --bg-deep: #0d3d33;
+  --bg-mid: #2e7d8a;
+  /* Header & menus: 1-2 shades darker than main bg, rounded, liquid glass */
+  --bg-header: #0a2e26;
+  --bg-header-2: #0b3329;
+  /* Glass surfaces */
+  --glass-bg: rgba(20, 60, 50, 0.55);
+  --glass-bg-strong: rgba(20, 60, 50, 0.7);
+  --glass-bg-modal: rgba(10, 30, 25, 0.92);
+  --glass-bg-drawer: rgba(10, 30, 25, 0.88);
+  --glass-bg-topbar: rgba(10, 46, 38, 0.88);
+  --glass-border: rgba(45, 212, 191, 0.18);
+  --glass-border-strong: rgba(45, 212, 191, 0.4);
+  --glass-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, transparent 50%);
   --text-primary: #f0fdf4;
-  --text-secondary: #86efac;
-  --text-muted: #6b8f7a;
-  --input-bg: rgba(255, 255, 255, 0.05);
-  --input-border: rgba(16, 185, 129, 0.2);
-  --background: linear-gradient(180deg, #1a3c34 0%, #5a8a80 100%);
+  --text-secondary: #99f6e4;
+  --text-muted: #6b9b94;
+  --input-bg: rgba(255, 255, 255, 0.06);
+  --input-border: rgba(45, 212, 191, 0.25);
+  --background: linear-gradient(180deg, #0d3d33 0%, #1a5558 50%, #2e7d8a 100%);
   --foreground: #f0fdf4;
+  /* Analytics card: 3 shades LIGHTER than main bg */
+  --analytics-bg: linear-gradient(135deg, rgba(35, 95, 85, 0.65) 0%, rgba(45, 110, 100, 0.55) 100%);
+  --analytics-border: rgba(45, 212, 191, 0.32);
+  /* Genre card: liquid glass with deep tint */
+  --genre-card-bg: linear-gradient(135deg, rgba(15, 60, 50, 0.7) 0%, rgba(20, 70, 60, 0.55) 100%);
 }
 
 * { box-sizing: border-box; }
@@ -794,25 +805,26 @@ html, body {
    ============================================ */
 .analytics-card {
   position: relative;
-  border-radius: 30px;
+  border-radius: 28px;
   padding: 24px;
   overflow: hidden;
-  /* Premium Frosted Glass per reference — translucent teal */
-  background: rgba(205, 239, 237, 0.13);
-  backdrop-filter: blur(22px) saturate(135%);
-  -webkit-backdrop-filter: blur(22px) saturate(135%);
-  border: 1px solid rgba(220, 250, 248, 0.30);
+  /* Liquid Glass — 3 shades LIGHTER than main bg, translucent teal */
+  background: var(--analytics-bg, rgba(35, 95, 85, 0.55));
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  border: 1px solid var(--analytics-border, rgba(45, 212, 191, 0.32));
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.24),
-    0 18px 45px rgba(8, 40, 45, 0.14);
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08),
+    0 18px 50px rgba(0, 30, 25, 0.25);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   isolation: isolate;
 }
 .analytics-card:hover {
-  border-color: rgba(16, 185, 129, 0.32);
+  border-color: rgba(45, 212, 191, 0.5);
   box-shadow:
-    0 14px 48px rgba(13, 124, 74, 0.14),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 22px 60px rgba(0, 30, 25, 0.3);
 }
 .analytics-card-glow {
   position: absolute !important;
@@ -1146,9 +1158,12 @@ html, body {
   box-shadow: 0 0 8px color-mix(in srgb, var(--row-color, #00E5EF) 25%, transparent);
 }
 .theme-dark .analytics-card {
-  background: linear-gradient(135deg, rgba(20, 35, 25, 0.85) 0%, rgba(15, 28, 20, 0.9) 100%);
-  border-color: rgba(16, 185, 129, 0.22);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  background: var(--analytics-bg);
+  border-color: var(--analytics-border);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1),
+    0 18px 50px rgba(0, 30, 25, 0.4);
 }
 .theme-dark .analytics-card-title { color: #f0fdf4; }
 .theme-dark .analytics-card-subtitle { color: rgba(167, 243, 208, 0.7); }

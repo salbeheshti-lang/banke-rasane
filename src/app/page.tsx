@@ -1333,11 +1333,14 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack }: {
     <header
       className="fixed top-0 left-0 right-0 z-40"
       style={{
-        background: 'linear-gradient(180deg, #0a1f14 0%, #0d2218 100%)',
-        backdropFilter: 'blur(20px) saturate(160%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(160%)',
-        borderBottom: '1px solid rgba(13, 124, 74, 0.1)',
-        boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)',
+        /* Header: 1-2 shades DARKER than main bg, liquid glass, rounded bottom corners */
+        background: 'linear-gradient(180deg, rgba(10, 46, 38, 0.92) 0%, rgba(11, 51, 41, 0.88) 100%)',
+        backdropFilter: 'blur(24px) saturate(150%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(150%)',
+        borderBottom: '1px solid rgba(45, 212, 191, 0.18)',
+        boxShadow: '0 4px 20px rgba(0, 30, 25, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06)',
+        borderBottomLeftRadius: '20px',
+        borderBottomRightRadius: '20px',
       }}
     >
       <div
@@ -1352,21 +1355,23 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack }: {
         <button
           onClick={onMenuClick}
           aria-label="باز کردن منو"
-          className="flex flex-col justify-center items-center p-2.5 rounded-xl transition-all"
+          className="flex flex-col justify-center items-center p-2.5 transition-all"
           style={{
-            background: 'rgba(13, 124, 74, 0.08)',
-            border: '1px solid rgba(13, 124, 74, 0.2)',
-            color: '#0d7c4a',
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 8px rgba(13, 124, 74, 0.08)',
+            /* Liquid glass button — rounded */
+            background: 'rgba(45, 212, 191, 0.1)',
+            border: '1px solid rgba(45, 212, 191, 0.25)',
+            color: '#5eead4',
+            borderRadius: '14px',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12), 0 2px 10px rgba(0, 30, 25, 0.15)',
             minWidth: '44px',
             minHeight: '44px',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(13, 124, 74, 0.15)';
+            e.currentTarget.style.background = 'rgba(45, 212, 191, 0.2)';
             e.currentTarget.style.transform = 'translateY(-1px)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(13, 124, 74, 0.08)';
+            e.currentTarget.style.background = 'rgba(45, 212, 191, 0.1)';
             e.currentTarget.style.transform = 'translateY(0)';
           }}
         >
@@ -1529,18 +1534,21 @@ function DrawerMenu({
         className="fixed top-0 right-0 bottom-0 animate-drawer-slide-in flex flex-col"
         style={{
           width: 'min(340px, 88vw)',
-          background: 'rgba(10, 25, 18, 0.85)',
-          backdropFilter: 'blur(30px) saturate(140%)',
-          WebkitBackdropFilter: 'blur(30px) saturate(140%)',
-          borderLeft: '1px solid rgba(13, 124, 74, 0.15)',
-          boxShadow: '-16px 0 56px rgba(0, 0, 0, 0.1), inset 1px 0 0 rgba(255, 255, 255, 0.4)',
+          /* Drawer: 1-2 shades DARKER than main bg, liquid glass, rounded left corners */
+          background: 'linear-gradient(180deg, rgba(10, 46, 38, 0.92) 0%, rgba(11, 51, 41, 0.88) 100%)',
+          backdropFilter: 'blur(30px) saturate(150%)',
+          WebkitBackdropFilter: 'blur(30px) saturate(150%)',
+          borderLeft: '1px solid rgba(45, 212, 191, 0.2)',
+          boxShadow: '-16px 0 56px rgba(0, 30, 25, 0.3), inset 1px 0 0 rgba(255, 255, 255, 0.06)',
+          borderTopLeftRadius: '24px',
+          borderBottomLeftRadius: '24px',
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drawer header — logo + close */}
         <div
           className="p-4 flex items-center justify-between flex-shrink-0"
-          style={{ borderBottom: '1px solid rgba(13, 124, 74, 0.1)' }}
+          style={{ borderBottom: '1px solid rgba(45, 212, 191, 0.12)' }}
         >
           <Image
             src="/banke-rasane-logo.png"
