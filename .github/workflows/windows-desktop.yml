@@ -2,7 +2,7 @@ name: Windows desktop build
 
 on:
   push:
-    branches: [fix/complete-v5.3.1-desktop]
+    branches: [fix/complete-v5.3.1-mainline]
   pull_request:
     branches: [main]
   workflow_dispatch:
