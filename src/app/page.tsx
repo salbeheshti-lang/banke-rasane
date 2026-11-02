@@ -2132,7 +2132,41 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
     if (!el) return;
     // Small delay to let DOM render
     const timer = setTimeout(() => handleScroll(), 100);
-    return () => clearTimeout(timer);
+
+    // Drag-to-scroll support
+    let isDown = false;
+    let startX: number;
+    let scrollLeftStart: number;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      isDown = true;
+      el.style.cursor = 'grabbing';
+      startX = e.pageX - el.offsetLeft;
+      scrollLeftStart = el.scrollLeft;
+    };
+    const handleMouseLeave = () => { isDown = false; el.style.cursor = 'grab'; };
+    const handleMouseUp = () => { isDown = false; el.style.cursor = 'grab'; };
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - el.offsetLeft;
+      const walk = (x - startX) * 1.5;
+      el.scrollLeft = scrollLeftStart - walk;
+    };
+
+    el.style.cursor = 'grab';
+    el.addEventListener('mousedown', handleMouseDown);
+    el.addEventListener('mouseleave', handleMouseLeave);
+    el.addEventListener('mouseup', handleMouseUp);
+    el.addEventListener('mousemove', handleMouseMove);
+
+    return () => {
+      clearTimeout(timer);
+      el.removeEventListener('mousedown', handleMouseDown);
+      el.removeEventListener('mouseleave', handleMouseLeave);
+      el.removeEventListener('mouseup', handleMouseUp);
+      el.removeEventListener('mousemove', handleMouseMove);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [featuredShows]);
 
@@ -2998,6 +3032,104 @@ function StatIcon({ name }: { name: string }) {
 }
 
 // ============================================
+// GENRE FILE ATTACHMENT — admin uploads PDF/Excel, all users can download
+// ============================================
+function GenreFileAttachment({ genreId, genreName, canEdit }: {
+  genreId: string;
+  genreName: string;
+  canEdit: boolean;
+}) {
+  const STORAGE_KEY = `bankresaneh_genre_file_${genreId}`;
+  const [fileData, setFileData] = useState<{ name: string; type: string; data: string } | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setFileData(JSON.parse(raw));
+      }
+    } catch {}
+  }, [STORAGE_KEY]);
+
+  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('حداکثر حجم فایل ۵ مگابایت');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const data = { name: file.name, type: file.type, data: reader.result as string };
+      setFileData(data);
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {
+        alert('خطا در ذخیره — حجم فایل زیاد است');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDownload = () => {
+    if (!fileData) return;
+    const a = document.createElement('a');
+    a.href = fileData.data;
+    a.download = fileData.name;
+    a.click();
+  };
+
+  const handleDelete = () => {
+    setFileData(null);
+    localStorage.removeItem(STORAGE_KEY);
+  };
+
+  return (
+    <div className="flex items-center gap-2 mt-3 flex-wrap">
+      {fileData ? (
+        <>
+          <button
+            onClick={handleDownload}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+            style={{
+              background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
+              color: '#fff',
+              border: '1px solid rgba(255,255,255,0.3)',
+            }}
+          >
+            {fileData.type.includes('pdf') ? '📄' : '📊'} دانلود {fileData.name.length > 20 ? fileData.name.substring(0, 20) + '...' : fileData.name}
+          </button>
+          {canEdit && (
+            <button
+              onClick={handleDelete}
+              className="px-2 py-1.5 rounded-lg text-xs transition-all"
+              style={{
+                background: 'rgba(220, 38, 38, 0.2)',
+                color: '#fca5a5',
+                border: '1px solid rgba(220, 38, 38, 0.3)',
+              }}
+            >
+              🗑 حذف
+            </button>
+          )}
+        </>
+      ) : canEdit ? (
+        <label
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
+          style={{
+            background: 'rgba(255,255,255,0.1)',
+            color: 'rgba(255,255,255,0.8)',
+            border: '1px solid rgba(255,255,255,0.2)',
+          }}
+        >
+          📎 آپلود PDF/Excel
+          <input type="file" accept=".pdf,.xls,.xlsx,.csv" onChange={handleUpload} style={{ display: 'none' }} />
+        </label>
+      ) : null}
+    </div>
+  );
+}
+
+// ============================================
 // PROGRAMS VIEW — with search, filter, select, upload, PDF/Excel
 // ============================================
 function ProgramsView({
@@ -3137,6 +3269,9 @@ function ProgramsView({
                 )}
               </div>
               <p style={{ color: 'rgba(255, 255, 255, 0.85)' }} className="text-sm mt-1">{genre.description}</p>
+
+              {/* Genre file attachment — admin uploads, all users download */}
+              <GenreFileAttachment genreId={genre.id} genreName={genre.nameFa} canEdit={canEdit} />
             </div>
           </div>
         </div>
@@ -6809,7 +6944,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [newUser, setNewUser] = useState({ username: '', password: '', role: 'viewer', name: '' });
+  const [newUser, setNewUser] = useState({ username: '', password: '', role: 'viewer', name: '', jobTitle: '', deputy: '', phone: '' });
   const [creating, setCreating] = useState(false);
 
   const load = async () => {
@@ -6839,9 +6974,12 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
         password: newUser.password,
         role: newUser.role,
         name: newUser.name,
+        jobTitle: newUser.jobTitle,
+        deputy: newUser.deputy,
+        phone: newUser.phone,
       });
       showToast(`کاربر «${newUser.username}» ساخته شد`);
-      setNewUser({ username: '', password: '', role: 'viewer', name: '' });
+      setNewUser({ username: '', password: '', role: 'viewer', name: '', jobTitle: '', deputy: '', phone: '' });
       await load();
     } catch (e: any) {
       showToast(e?.message || 'خطا در ایجاد کاربر');
@@ -6890,7 +7028,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
       {/* Add new user form */}
       <div
         className="p-4 rounded-xl"
-        style={{ background: 'rgba(13, 124, 74, 0.05)', border: '1px solid rgba(13, 124, 74, 0.15)' }}
+        style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)' }}
       >
         <h4 className="font-bold text-sm mb-3" style={{ color: '#f0fdf4' }}>＋ افزودن کاربر جدید</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
@@ -6901,8 +7039,8 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
             value={newUser.username}
             onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
             style={{
-              background: 'white',
-              border: '1px solid rgba(13, 124, 74, 0.2)',
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.2)',
               borderRadius: '10px',
               padding: '10px 14px',
               fontSize: '14px',
@@ -6914,12 +7052,12 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
           />
           <input
             type="text"
-            placeholder="نام نمایشی (اختیاری)"
+            placeholder="نام نمایشی (نام و نام خانوادگی)"
             value={newUser.name}
             onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
             style={{
-              background: 'white',
-              border: '1px solid rgba(13, 124, 74, 0.2)',
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.2)',
               borderRadius: '10px',
               padding: '10px 14px',
               fontSize: '14px',
@@ -6934,8 +7072,8 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
             value={newUser.password}
             onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
             style={{
-              background: 'white',
-              border: '1px solid rgba(13, 124, 74, 0.2)',
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.2)',
               borderRadius: '10px',
               padding: '10px 14px',
               fontSize: '14px',
@@ -6945,12 +7083,60 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
               direction: 'ltr',
             }}
           />
+          <input
+            type="tel"
+            dir="ltr"
+            placeholder="شماره همراه (0912xxxxxxx)"
+            value={newUser.phone}
+            onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
+            style={{
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              borderRadius: '10px',
+              padding: '10px 14px',
+              fontSize: '14px',
+              color: '#f0fdf4',
+              outline: 'none',
+              textAlign: 'left',
+              direction: 'ltr',
+            }}
+          />
+          <input
+            type="text"
+            placeholder="عنوان شغلی (مثلاً: تهیه‌کننده)"
+            value={newUser.jobTitle}
+            onChange={(e) => setNewUser({ ...newUser, jobTitle: e.target.value })}
+            style={{
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              borderRadius: '10px',
+              padding: '10px 14px',
+              fontSize: '14px',
+              color: '#f0fdf4',
+              outline: 'none',
+            }}
+          />
+          <input
+            type="text"
+            placeholder="معاونت (مثلاً: معاونت برنامه)"
+            value={newUser.deputy}
+            onChange={(e) => setNewUser({ ...newUser, deputy: e.target.value })}
+            style={{
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              borderRadius: '10px',
+              padding: '10px 14px',
+              fontSize: '14px',
+              color: '#f0fdf4',
+              outline: 'none',
+            }}
+          />
           <select
             value={newUser.role}
             onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
             style={{
-              background: 'white',
-              border: '1px solid rgba(13, 124, 74, 0.2)',
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.2)',
               borderRadius: '10px',
               padding: '10px 14px',
               fontSize: '14px',
