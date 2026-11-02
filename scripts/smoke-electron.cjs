@@ -2,6 +2,7 @@
 // Windows-only smoke test for the packaged Electron application.
 const { spawn, execFileSync } = require('node:child_process');
 const path = require('node:path');
+const fs = require('node:fs');
 const http = require('node:http');
 
 const executable = path.resolve(__dirname, '..', 'release', 'win-unpacked', 'BankResaneh.exe');
@@ -65,6 +66,22 @@ async function waitFor(url, label, timeoutMs = 90000) {
 
 (async () => {
   try {
+    // Verify electron-builder embedded the GitHub update feed in the installed app.
+    const releaseDir = path.resolve(__dirname, '..', 'release');
+    const updateConfigPath = path.join(releaseDir, 'win-unpacked', 'resources', 'app-update.yml');
+    const latestManifestPath = path.join(releaseDir, 'latest.yml');
+    if (!fs.existsSync(updateConfigPath)) throw new Error('Packaged app is missing resources/app-update.yml.');
+    const updateConfig = fs.readFileSync(updateConfigPath, 'utf8');
+    for (const expected of ['provider: github', 'owner: salbeheshti-lang', 'repo: banke-rasane']) {
+      if (!updateConfig.includes(expected)) throw new Error('Invalid updater configuration: missing ' + expected);
+    }
+    if (!fs.existsSync(latestManifestPath)) throw new Error('Build output is missing latest.yml update manifest.');
+    const latestManifest = fs.readFileSync(latestManifestPath, 'utf8');
+    if (!latestManifest.includes('version:') || !latestManifest.includes('sha512:')) {
+      throw new Error('Update manifest is incomplete.');
+    }
+    process.stdout.write('Packaged auto-update metadata verified.\n');
+
     await waitFor('http://127.0.0.1:3000/', 'Next.js UI');
     const apiHealth = await waitFor('http://127.0.0.1:3002/api/health', 'Local API');
     const healthData = JSON.parse(apiHealth.body);
