@@ -11,11 +11,15 @@ const child = spawn(executable, ['--disable-gpu', '--no-sandbox'], {
   env: { ...process.env, ELECTRON_DISABLE_SECURITY_WARNINGS: 'true' },
 });
 
-function getStatus(url) {
+function getResponse(url) {
   return new Promise((resolve, reject) => {
     const request = http.get(url, (response) => {
-      response.resume();
-      resolve(response.statusCode || 0);
+      const chunks = [];
+      response.on('data', (chunk) => chunks.push(chunk));
+      response.on('end', () => resolve({
+        statusCode: response.statusCode || 0,
+        body: Buffer.concat(chunks).toString('utf8'),
+      }));
     });
     request.setTimeout(2500, () => request.destroy(new Error('request timeout')));
     request.on('error', reject);
