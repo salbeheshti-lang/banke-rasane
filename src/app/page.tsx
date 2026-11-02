@@ -1548,14 +1548,14 @@ function DrawerMenu({
         className="fixed top-0 right-0 bottom-0 animate-drawer-slide-in flex flex-col"
         style={{
           width: 'min(340px, 88vw)',
-          /* Drawer: dark emerald glass panel, rounded left corners */
-          background: 'linear-gradient(180deg, rgba(0, 61, 43, 0.94) 0%, rgba(0, 75, 57, 0.9) 50%, rgba(12, 68, 65, 0.92) 100%)',
-          backdropFilter: 'blur(30px) saturate(150%)',
-          WebkitBackdropFilter: 'blur(30px) saturate(150%)',
-          borderLeft: '1px solid rgba(61, 223, 176, 0.32)',
-          boxShadow: '-16px 0 56px rgba(0, 30, 27, 0.4), inset 1px 0 0 rgba(255, 255, 255, 0.08)',
-          borderTopLeftRadius: '24px',
-          borderBottomLeftRadius: '24px',
+          /* Drawer: same emerald glass as header with blue/pink tints */
+          background: 'linear-gradient(180deg, rgba(0, 90, 72, 0.92) 0%, rgba(8, 127, 107, 0.88) 50%, rgba(22, 143, 135, 0.85) 100%)',
+          backdropFilter: 'blur(30px) saturate(140%)',
+          WebkitBackdropFilter: 'blur(30px) saturate(140%)',
+          borderLeft: '1px solid rgba(255, 255, 255, 0.3)',
+          boxShadow: '-16px 0 56px rgba(0, 30, 27, 0.4), inset 1px 0 0 rgba(255, 255, 255, 0.1)',
+          borderTopLeftRadius: '30px',
+          borderBottomLeftRadius: '30px',
           overflow: 'hidden',
         }}
         onClick={(e) => e.stopPropagation()}
@@ -1835,12 +1835,13 @@ function MobileBottomNav({
           <div
             className="fixed bottom-0 left-0 right-0 p-4 animate-slide-up-nav"
             style={{
-              background: 'linear-gradient(180deg, #0a1f14 0%, #0d2218 100%)',
-              backdropFilter: 'blur(26px) saturate(160%)',
-              WebkitBackdropFilter: 'blur(26px) saturate(160%)',
-              borderTop: '1px solid rgba(13, 124, 74, 0.15)',
-              borderRadius: '24px 24px 0 0',
-              boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.5)',
+              /* Same emerald glass as header */
+              background: 'linear-gradient(90deg, rgba(0, 90, 72, 0.92) 0%, rgba(8, 127, 107, 0.88) 40%, rgba(22, 143, 135, 0.82) 65%, rgba(169, 214, 231, 0.65) 88%, rgba(230, 198, 224, 0.6) 100%)',
+              backdropFilter: 'blur(28px) saturate(140%)',
+              WebkitBackdropFilter: 'blur(28px) saturate(140%)',
+              borderTop: '1px solid rgba(255, 255, 255, 0.3)',
+              borderRadius: '30px 30px 0 0',
+              boxShadow: '0 -8px 30px rgba(0, 30, 25, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
               paddingBottom: '32px',
               maxHeight: '70vh',
               overflowY: 'auto',
@@ -1904,12 +1905,13 @@ function MobileBottomNav({
         <div
           className="flex items-center justify-around no-scrollbar"
           style={{
-            background: 'linear-gradient(180deg, #0a1f14 0%, #0d2218 100%)',
-            backdropFilter: 'blur(24px) saturate(160%)',
-            WebkitBackdropFilter: 'blur(24px) saturate(160%)',
-            border: '1px solid rgba(13, 124, 74, 0.15)',
-            borderRadius: '22px',
-            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.5)',
+            /* Same emerald glass as header — blue/pink tint on right */
+            background: 'linear-gradient(90deg, rgba(0, 90, 72, 0.82) 0%, rgba(8, 127, 107, 0.78) 40%, rgba(22, 143, 135, 0.72) 65%, rgba(169, 214, 231, 0.55) 88%, rgba(230, 198, 224, 0.5) 100%)',
+            backdropFilter: 'blur(24px) saturate(140%)',
+            WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            borderRadius: '30px',
+            boxShadow: '0 4px 18px rgba(0, 30, 25, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
             padding: '8px',
           }}
         >
@@ -2160,7 +2162,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                   انتخاب ژانر
                 </button>
               </div>
-              {/* Horizontal strip — exactly 4 chips */}
+              {/* Horizontal strip — exactly 5 chips, no rank badges, no border */}
               <div
                 className="analytics-genre-strip"
                 style={{
@@ -2170,7 +2172,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                   overflow: 'hidden',
                 }}
               >
-                {stripGenres.map((g, i) => {
+                {stripGenres.map((g) => {
                   const pct = totalShows > 0 ? Math.round((g.count / totalShows) * 100) : 0;
                   return (
                     <button
@@ -2180,39 +2182,38 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                       style={{
                         ['--row-color' as string]: g.color,
                         flexDirection: 'column',
-                        alignItems: 'stretch',
+                        alignItems: 'center',
                         gap: '4px',
-                        padding: '10px 8px',
+                        padding: '12px 6px',
+                        textAlign: 'center',
                       }}
                       title={g.genre.description}
                     >
-                      <span className="analytics-genre-chip-rank">
-                        {(i + 1).toLocaleString('fa-IR')}
-                      </span>
+                      <span className="analytics-genre-chip-dot" style={{ marginBottom: '2px' }} />
                       <span className="analytics-genre-chip-name" style={{ fontSize: '11px', maxWidth: 'none', textAlign: 'center' }}>
                         {g.genre.nameFa}
                       </span>
                       <span className="analytics-genre-chip-meta" style={{ textAlign: 'center' }}>
-                        {g.count.toLocaleString('fa-IR')} ({pct.toLocaleString('fa-IR')}٪)
+                        {g.count.toLocaleString('fa-IR')} • {pct.toLocaleString('fa-IR')}٪
                       </span>
                     </button>
                   );
                 })}
-                {/* Empty placeholder slots if fewer than 4 */}
+                {/* Empty placeholder slots if fewer than 5 */}
                 {Array.from({ length: Math.max(0, STRIP_COUNT - stripGenres.length) }).map((_, i) => (
                   <div
                     key={`empty-${i}`}
                     className="analytics-genre-chip"
                     style={{
-                      opacity: 0.4,
+                      opacity: 0.3,
                       cursor: 'default',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      padding: '10px 8px',
-                      background: 'rgba(255, 255, 255, 0.03)',
+                      padding: '12px 6px',
+                      background: 'rgba(255, 255, 255, 0.05)',
                     }}
                   >
-                    <span className="analytics-genre-chip-name" style={{ fontSize: '11px', opacity: 0.5 }}>خالی</span>
+                    <span className="analytics-genre-chip-name" style={{ fontSize: '11px', opacity: 0.5 }}>—</span>
                   </div>
                 ))}
               </div>
@@ -2339,16 +2340,18 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
       )}
 
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <h2 className="text-xl font-bold" style={{ color: '#1a2e1a' }}>همهٔ ژانرها</h2>
+        <h2 className="text-xl font-bold" style={{ color: '#f0fdf4' }}>همهٔ ژانرها</h2>
         <div className="flex items-center gap-2 flex-wrap">
           {isAdmin && onAddGenre && (
             <button
               onClick={() => setShowAddGenre(true)}
-              className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+              className="px-4 py-2 rounded-xl text-sm font-bold transition-all"
               style={{
-                background: 'rgba(13, 124, 74, 0.12)',
-                color: '#0d7c4a',
-                border: '1px solid rgba(13, 124, 74, 0.3)',
+                /* Visible add-genre button — emerald glass with white border */
+                background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
+                color: '#ffffff',
+                border: '1px solid rgba(255, 255, 255, 0.4)',
+                boxShadow: '0 4px 14px rgba(0, 107, 80, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
               }}
             >
               + افزودن ژانر
@@ -2526,10 +2529,10 @@ function ProgramsView({
   return (
     <>
       <header className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-1" style={{ color: '#1a2e1a' }}>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-1" style={{ color: '#f0fdf4' }}>
           {genre ? genre.nameFa : 'همهٔ برنامه‌ها'}
         </h1>
-        <p style={{ color: '#8a8a7a' }}>
+        <p style={{ color: '#99f6e4' }}>
           {filteredShows.length.toLocaleString('fa-IR')} برنامه
           {genre && ` • ${genre.description}`}
         </p>
@@ -2537,19 +2540,26 @@ function ProgramsView({
 
       {genre && (
         <div
-          className="premium-card mb-6 p-6"
+          className="premium-glass mb-6 p-6"
           style={{
-            ['--card-accent-color' as string]: gc,
+            /* Bright glass card for genre header — visible & readable */
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.08) 100%)',
+            backdropFilter: 'blur(20px) saturate(135%)',
+            WebkitBackdropFilter: 'blur(20px) saturate(135%)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            borderRadius: '24px',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
           }}
         >
           <div className="flex items-center gap-4 relative z-10">
             <div
               className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center text-3xl sm:text-4xl font-black"
               style={{
-                backgroundColor: `${gc}30`,
-                color: gc,
-                border: `1px solid ${gc}70`,
-                boxShadow: `0 6px 20px ${gc}45`,
+                /* Bright colored icon container — visible */
+                backgroundColor: gc,
+                color: '#ffffff',
+                border: '1px solid rgba(255, 255, 255, 0.4)',
+                boxShadow: '0 6px 20px rgba(0, 0, 0, 0.3)',
               }}
             >
               <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -2558,7 +2568,7 @@ function ProgramsView({
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-3 flex-wrap">
-                <h2 className="text-xl sm:text-2xl font-bold mb-1" style={{ color: '#1a2e1a' }}>{genre.nameFa}</h2>
+                <h2 className="text-xl sm:text-2xl font-bold mb-1" style={{ color: '#ffffff' }}>{genre.nameFa}</h2>
                 {canEdit && onAdd && (
                   <button
                     onClick={onAdd}
@@ -2569,7 +2579,7 @@ function ProgramsView({
                   </button>
                 )}
               </div>
-              <p style={{ color: '#5a6b4a' }} className="text-sm mt-1">{genre.description}</p>
+              <p style={{ color: 'rgba(255, 255, 255, 0.85)' }} className="text-sm mt-1">{genre.description}</p>
             </div>
           </div>
         </div>

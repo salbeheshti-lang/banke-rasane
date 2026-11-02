@@ -445,7 +445,7 @@ html, body {
 }
 
 /* ============================================
-   PREMIUM GENRE CARD — vibrant translucent glass cards (special & attractive)
+   PREMIUM GENRE CARD — vibrant, alive, special (NOT dull)
    ============================================ */
 .premium-genre-card {
   position: relative;
@@ -455,30 +455,28 @@ html, body {
   overflow: hidden;
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   color: #ffffff;
-  /* Translucent vibrant glass — genre color shines through with real transparency */
+  /* Vibrant saturated gradient — bright genre color, fully alive */
   background:
     linear-gradient(145deg,
-      color-mix(in srgb, var(--genre-color, #006B50) 65%, rgba(255, 255, 255, 0.25)) 0%,
-      color-mix(in srgb, var(--genre-color, #006B50) 80%, transparent) 50%,
-      color-mix(in srgb, var(--genre-color, #006B50) 55%, #073D35 45%) 100%);
-  border: 1px solid color-mix(in srgb, var(--genre-color, #006B50) 40%, rgba(255, 255, 255, 0.35));
+      color-mix(in srgb, var(--genre-color, #006B50) 88%, white 12%) 0%,
+      var(--genre-color, #006B50) 40%,
+      color-mix(in srgb, var(--genre-color, #006B50) 75%, #073D35 25%) 100%);
+  border: 1px solid color-mix(in srgb, var(--genre-color, #006B50) 60%, rgba(255, 255, 255, 0.3));
   box-shadow:
-    0 8px 28px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    inset 0 -2px 12px rgba(0, 0, 0, 0.18);
-  backdrop-filter: blur(8px) saturate(140%);
-  -webkit-backdrop-filter: blur(8px) saturate(140%);
+    0 10px 30px color-mix(in srgb, var(--genre-color, #006B50) 30%, rgba(0, 0, 0, 0.35)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -3px 12px rgba(0, 0, 0, 0.2);
 }
 
-/* Glass top sheen — diagonal light reflection */
+/* Vivid diagonal top sheen — like sunlight hitting glass */
 .premium-genre-card::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 60%;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 100%);
+  height: 65%;
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.08) 35%, transparent 100%);
   pointer-events: none;
   z-index: 0;
   border-radius: 24px 24px 0 0;
@@ -489,12 +487,12 @@ html, body {
 }
 
 .premium-genre-card:hover {
-  transform: translateY(-5px) scale(1.03);
-  border-color: color-mix(in srgb, var(--genre-color, #006B50) 55%, rgba(255, 255, 255, 0.5));
+  transform: translateY(-5px) scale(1.04);
+  border-color: color-mix(in srgb, var(--genre-color, #006B50) 70%, rgba(255, 255, 255, 0.5));
   box-shadow:
-    0 14px 36px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    inset 0 -2px 12px rgba(0, 0, 0, 0.2);
+    0 16px 40px color-mix(in srgb, var(--genre-color, #006B50) 35%, rgba(0, 0, 0, 0.4)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -3px 12px rgba(0, 0, 0, 0.25);
 }
 
 .premium-genre-card > * {
@@ -1090,18 +1088,17 @@ html, body {
   align-items: center;
   gap: 8px;
   padding: 9px 10px;
-  border-radius: 18px;
-  background: rgba(219, 246, 243, 0.13);
-  border: 1px solid rgba(225, 250, 248, 0.24);
+  border-radius: 14px;
+  background: transparent;
+  border: none;  /* No dark border / no highlight */
   cursor: pointer;
   transition: all 0.25s ease;
   text-align: right;
 }
 .analytics-list-row:hover {
-  background: color-mix(in srgb, var(--row-color, #00E5EF) 14%, rgba(219, 246, 243, 0.18));
-  border-color: color-mix(in srgb, var(--row-color, #00E5EF) 50%, transparent);
+  background: color-mix(in srgb, var(--row-color, #00E5EF) 10%, transparent);
   transform: translateX(-3px);
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--row-color, #00E5EF) 25%, transparent);
+  /* No border, no box-shadow glow */
 }
 .analytics-list-row-muted {
   cursor: default;
@@ -1109,6 +1106,7 @@ html, body {
 }
 .analytics-list-row-muted:hover {
   transform: none;
+  background: transparent;
 }
 .analytics-list-rank {
   font-size: 11px;
@@ -1188,11 +1186,11 @@ html, body {
 .theme-dark .analytics-list-name { color: #ecfdf5; }
 .theme-dark .analytics-list-count { color: #ecfdf5; }
 .theme-dark .analytics-list-row {
-  background: rgba(20, 35, 25, 0.5);
-  border-color: rgba(16, 185, 129, 0.12);
+  background: transparent;
+  border: none;
 }
-.theme-dark .analytics-mini-row { background: rgba(16, 185, 129, 0.05); }
-.theme-dark .analytics-list-rank { background: rgba(16, 185, 129, 0.10); color: rgba(167, 243, 208, 0.7); }
+.theme-dark .analytics-mini-row { background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(8px); }
+.theme-dark .analytics-list-rank { background: rgba(255, 255, 255, 0.1); color: rgba(244, 255, 255, 0.7); }
 @keyframes donut-segment-grow {
   from {
     stroke-dasharray: 0 1000;
