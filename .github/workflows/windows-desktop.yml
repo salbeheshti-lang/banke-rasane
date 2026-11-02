@@ -3,6 +3,8 @@ name: Windows desktop build
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [fix/complete-v5.3.1-mainline]
   workflow_dispatch:
 
 permissions:
