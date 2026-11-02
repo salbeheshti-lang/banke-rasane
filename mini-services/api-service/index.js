@@ -659,20 +659,29 @@ const server = Bun.serve({
       let rows = [];
 
       if (terms.length && showsFtsAvailable) {
-        const match = terms.map(term => '"' + term.replace(/"/g, '""') + '"*').join(' AND ');
-        try {
-          total = db.prepare(`SELECT COUNT(*) AS total FROM shows_fts JOIN shows ON shows.num = shows_fts.rowid WHERE shows_fts MATCH ?${categorySql}`).get(match, ...categoryParams).total;
-          rows = db.prepare(`SELECT shows.* FROM shows_fts JOIN shows ON shows.num = shows_fts.rowid
+        // Prefer all query terms, but relax to OR when the strict phrase is too restrictive.
+        const strictMatch = terms.map(term => '"' + term.replace(/"/g, '""') + '"*').join(' AND ');
+        const relaxedMatch = terms.map(term => '"' + term.replace(/"/g, '""') + '"*').join(' OR ');
+        const rankedSearch = (match) => {
+          const count = db.prepare(`SELECT COUNT(*) AS total FROM shows_fts JOIN shows ON shows.num = shows_fts.rowid WHERE shows_fts MATCH ?${categorySql}`).get(match, ...categoryParams).total;
+          const resultRows = db.prepare(`SELECT shows.* FROM shows_fts JOIN shows ON shows.num = shows_fts.rowid
             WHERE shows_fts MATCH ?${categorySql}
             ORDER BY bm25(shows_fts, 12, 8, 6, 5, 3, 3, 3, 3, 3, 2, 2, 2),
               CASE WHEN LOWER(shows.name) = ? THEN 0 WHEN LOWER(shows.name) LIKE ? THEN 1 ELSE 2 END,
               shows.num ASC LIMIT ? OFFSET ?`).all(match, ...categoryParams, query, query + '%', limit, offset);
+          return { count, resultRows };
+        };
+        try {
+          let ranked = rankedSearch(strictMatch);
+          if (ranked.count === 0 && terms.length > 1) ranked = rankedSearch(relaxedMatch);
+          total = ranked.count;
+          rows = ranked.resultRows;
         } catch (error) {
-          console.warn('[search] FTS query failed; using SQL fallback:', error.message);
+          console.warn('[search] FTS query failed; using normalized SQL fallback:', error.message);
         }
       }
 
-      if (!terms.length || !showsFtsAvailable || (terms.length && rows.length === 0 && total === 0)) {
+      if (!terms.length || !showsFtsAvailable || (terms.length && total === 0)) {
         const conditions = [];
         const params = [];
         const normalizedColumn = (column) =>
