@@ -2014,6 +2014,7 @@ function ProgramsView({
     query: string;
     shows: TalkShow[];
     pagination: { page: number; limit: number; total: number; totalPages: number };
+    failed?: boolean;
   } | null>(null);
   const [visibleCount, setVisibleCount] = useState(60);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -2035,7 +2036,7 @@ function ProgramsView({
         })
         .catch(() => {
           if (!cancelled) setServerSearchResult({
-            query, shows: [], pagination: { page: 1, limit: 100, total: 0, totalPages: 0 },
+            query, shows: [], pagination: { page: 1, limit: 100, total: 0, totalPages: 0 }, failed: true,
           });
         });
     }, 250);
@@ -2064,7 +2065,8 @@ function ProgramsView({
   const filteredShows = useMemo(() => {
     const hasCurrentServerResults = !genre
       && search.trim().length >= 2
-      && serverSearchResult?.query === search.trim();
+      && serverSearchResult?.query === search.trim()
+      && !serverSearchResult.failed;
     const currentServerShows = hasCurrentServerResults ? serverSearchResult!.shows : null;
     // An empty server response is authoritative; do not silently replace it with a
     // different, incomplete client-side result set.
