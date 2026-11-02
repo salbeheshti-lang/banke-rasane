@@ -3464,18 +3464,22 @@ function ProgramsView({
         )}
       </div>
 
-      {/* Genre breadcrumb bar — OUTSIDE search bar, horizontally scrollable */}
+      {/* Genre breadcrumb bar — white chips, hover=genre color, scrollable */}
       {genre && genres && genres.length > 0 && (
         <div className="mb-4">
-          <div className="flex items-center gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-1" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
             <button
               onClick={() => onNavigate('dashboard')}
-              className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap"
+              className="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap"
               style={{
-                background: 'rgba(255,255,255,0.12)',
-                color: 'rgba(255,255,255,0.8)',
-                border: '1px solid rgba(255,255,255,0.2)',
+                background: 'rgba(255,255,255,0.15)',
+                color: '#ffffff',
+                border: '1px solid rgba(255,255,255,0.3)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
               }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.25)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; }}
             >
               همه ژانرها
             </button>
@@ -3485,15 +3489,32 @@ function ProgramsView({
                 <button
                   key={g.id}
                   onClick={() => onGenreSelect(g)}
-                  className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap"
+                  className="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap"
                   style={isActive ? {
-                    background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
-                    color: '#fff',
-                    border: '1px solid rgba(255,255,255,0.3)',
+                    background: g.color,
+                    color: '#ffffff',
+                    border: `1px solid ${g.color}`,
+                    boxShadow: `0 4px 12px ${g.color}55`,
                   } : {
-                    background: 'rgba(255,255,255,0.08)',
-                    color: 'rgba(255,255,255,0.6)',
-                    border: '1px solid rgba(255,255,255,0.12)',
+                    background: 'rgba(255,255,255,0.15)',
+                    color: '#ffffff',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.background = g.color;
+                      e.currentTarget.style.borderColor = g.color;
+                      e.currentTarget.style.boxShadow = `0 4px 12px ${g.color}55`;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }
                   }}
                 >
                   {g.nameFa}
