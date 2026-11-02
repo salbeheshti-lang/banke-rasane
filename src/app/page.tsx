@@ -376,6 +376,14 @@ const GENRES: Genre[] = [
     presetTags: ['روستا', 'کشاورزی', 'مزرعه', 'طبیعت', 'دامداری', 'واقع‌نما'],
     searchFields: ['name', 'summary', 'tags'],
   },
+  {
+    id: 'ketab', key: 'ketab', nameFa: 'کتاب و کتاب‌خوانی', name: 'Books & Literature',
+    color: '#92400e', description: '۳۰ برنامه — تاک‌شو، مستند و مسابقه ادبی',
+    filterFn: s => s.category === 'کتاب و کتاب‌خوانی',
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
+    presetTags: ['کتاب', 'ادبی', 'مصاحبه', 'باشگاه کتاب', 'مستند', 'مسابقه', 'کودک'],
+    searchFields: ['name', 'summary', 'tags'],
+  },
 ];
 
 // ============================================
