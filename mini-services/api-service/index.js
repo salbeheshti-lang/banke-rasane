@@ -151,6 +151,40 @@ addColumnIfMissing('shows', 'image_source', "TEXT NOT NULL DEFAULT ''");
 addColumnIfMissing('shows', 'is_film', 'INTEGER NOT NULL DEFAULT 0');
 addColumnIfMissing('shows', 'tags', "TEXT NOT NULL DEFAULT '[]'");
 
+// Full-text search index for the archive. Triggers keep it in sync with show edits.
+let showsFtsAvailable = false;
+try {
+  const hadShowsFts = !!db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'shows_fts'").get();
+  db.exec(`
+    CREATE VIRTUAL TABLE IF NOT EXISTS shows_fts USING fts5(
+      name, category, summary, descriptionFa, source, style, effects, layout,
+      elements, materials, colors, lighting,
+      content='shows', content_rowid='num',
+      tokenize='unicode61 remove_diacritics 2',
+      prefix='2 3'
+    );
+    CREATE TRIGGER IF NOT EXISTS shows_fts_ai AFTER INSERT ON shows BEGIN
+      INSERT INTO shows_fts(rowid, name, category, summary, descriptionFa, source, style, effects, layout, elements, materials, colors, lighting)
+      VALUES (new.num, new.name, new.category, new.summary, new.descriptionFa, new.source, new.style, new.effects, new.layout, new.elements, new.materials, new.colors, new.lighting);
+    END;
+    CREATE TRIGGER IF NOT EXISTS shows_fts_ad AFTER DELETE ON shows BEGIN
+      INSERT INTO shows_fts(shows_fts, rowid, name, category, summary, descriptionFa, source, style, effects, layout, elements, materials, colors, lighting)
+      VALUES ('delete', old.num, old.name, old.category, old.summary, old.descriptionFa, old.source, old.style, old.effects, old.layout, old.elements, old.materials, old.colors, old.lighting);
+    END;
+    CREATE TRIGGER IF NOT EXISTS shows_fts_au AFTER UPDATE ON shows BEGIN
+      INSERT INTO shows_fts(shows_fts, rowid, name, category, summary, descriptionFa, source, style, effects, layout, elements, materials, colors, lighting)
+      VALUES ('delete', old.num, old.name, old.category, old.summary, old.descriptionFa, old.source, old.style, old.effects, old.layout, old.elements, old.materials, old.colors, old.lighting);
+      INSERT INTO shows_fts(rowid, name, category, summary, descriptionFa, source, style, effects, layout, elements, materials, colors, lighting)
+      VALUES (new.num, new.name, new.category, new.summary, new.descriptionFa, new.source, new.style, new.effects, new.layout, new.elements, new.materials, new.colors, new.lighting);
+    END;
+  `);
+  if (!hadShowsFts) db.exec("INSERT INTO shows_fts(shows_fts) VALUES ('rebuild')");
+  showsFtsAvailable = true;
+} catch (error) {
+  console.warn('[search] FTS5 unavailable; using SQL fallback:', error.message);
+}
+
+
 // ---------------------------------------------------------------------------
 // CORS — allow any localhost/127.0.0.1 port + space-z.ai preview gateway
 // ---------------------------------------------------------------------------
@@ -576,6 +610,65 @@ const server = Bun.serve({
       db.prepare('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?').run(hashPassword(newPassword), user.id);
       db.prepare('DELETE FROM sessions WHERE user_id = ?').run(user.id);
       return json({ success: true }, req);
+    }
+
+    // ----- Persian full-text archive search with bounded pagination -----
+    if (pathname === '/api/shows/search' && method === 'GET') {
+      const user = requireRole(req, ['admin', 'editor', 'viewer']);
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+
+      const normalize = (value) => String(value || '').normalize('NFKC').toLowerCase()
+        .replace(/[يى]/g, 'ی').replace(/ك/g, 'ک').replace(/[ۀة]/g, 'ه')
+        .replace(/[\\u064B-\\u065F\\u0670]/g, '').replace(/[\\u200c\\u200d\\uFEFF]/g, ' ')
+        .replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
+        .replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+        .replace(/[^\\p{L}\\p{N}]+/gu, ' ').replace(/\\s+/g, ' ').trim();
+      const query = normalize(url.searchParams.get('q') || url.searchParams.get('search') || '');
+      const category = normalize(url.searchParams.get('category') || '');
+      const page = Math.max(1, Math.min(1000000, parseInt(url.searchParams.get('page') || '1', 10) || 1));
+      const limit = Math.max(1, Math.min(100, parseInt(url.searchParams.get('limit') || '30', 10) || 30));
+      const terms = query.split(' ').filter(Boolean).slice(0, 8);
+      const offset = (page - 1) * limit;
+      const categorySql = category ? ' AND LOWER(shows.category) LIKE ?' : '';
+      const categoryParams = category ? ['%' + category + '%'] : [];
+      let total = 0;
+      let rows = [];
+
+      if (terms.length && showsFtsAvailable) {
+        const match = terms.map(term => '"' + term.replace(/"/g, '""') + '"*').join(' AND ');
+        try {
+          total = db.prepare(`SELECT COUNT(*) AS total FROM shows_fts JOIN shows ON shows.num = shows_fts.rowid WHERE shows_fts MATCH ?${categorySql}`).get(match, ...categoryParams).total;
+          rows = db.prepare(`SELECT shows.* FROM shows_fts JOIN shows ON shows.num = shows_fts.rowid
+            WHERE shows_fts MATCH ?${categorySql}
+            ORDER BY bm25(shows_fts, 12, 8, 6, 5, 3, 3, 3, 3, 3, 2, 2, 2),
+              CASE WHEN LOWER(shows.name) = ? THEN 0 WHEN LOWER(shows.name) LIKE ? THEN 1 ELSE 2 END,
+              shows.num ASC LIMIT ? OFFSET ?`).all(match, ...categoryParams, query, query + '%', limit, offset);
+        } catch (error) {
+          console.warn('[search] FTS query failed; using SQL fallback:', error.message);
+        }
+      }
+
+      if (!terms.length || !showsFtsAvailable || (terms.length && rows.length === 0 && total === 0)) {
+        const conditions = [];
+        const params = [];
+        for (const term of terms) {
+          const pattern = '%' + term + '%';
+          conditions.push('(name LIKE ? OR category LIKE ? OR summary LIKE ? OR descriptionFa LIKE ? OR source LIKE ? OR style LIKE ? OR effects LIKE ? OR layout LIKE ? OR elements LIKE ? OR materials LIKE ? OR colors LIKE ? OR lighting LIKE ?)');
+          params.push(pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern);
+        }
+        if (category) { conditions.push('LOWER(category) LIKE ?'); params.push('%' + category + '%'); }
+        const where = conditions.length ? ' WHERE ' + conditions.join(' AND ') : '';
+        total = db.prepare('SELECT COUNT(*) AS total FROM shows' + where).get(...params).total;
+        rows = db.prepare(`SELECT * FROM shows${where}
+          ORDER BY CASE WHEN LOWER(name) = ? THEN 0 WHEN LOWER(name) LIKE ? THEN 1 ELSE 2 END, num ASC
+          LIMIT ? OFFSET ?`).all(...params, query, query + '%', limit, offset);
+      }
+
+      return json({
+        shows: rows.map(rowToShow),
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+        query,
+      }, req);
     }
 
     // ----- Shows: list -----
