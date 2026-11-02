@@ -51,7 +51,7 @@ async function waitFor(url, label, timeoutMs = 90000) {
     try {
       const response = await getResponse(url);
       if (response.statusCode >= 200 && response.statusCode < 400) {
-        process.stdout.write(label + ' ready (HTTP ' + response.statusCode + ')\\n');
+        process.stdout.write(label + ' ready (HTTP ' + response.statusCode + ')\n');
         return response;
       }
       lastError = 'HTTP ' + response.statusCode;
@@ -60,7 +60,7 @@ async function waitFor(url, label, timeoutMs = 90000) {
     }
     await new Promise((resolve) => setTimeout(resolve, 750));
   }
-  throw new Error(label + ' did not become ready: ' + lastError + '\\nElectron output:\\n' + (childOutput || '(no process output captured)'));
+  throw new Error(label + ' did not become ready: ' + lastError + '\nElectron output:\n' + (childOutput || '(no process output captured)'));
 }
 
 (async () => {
@@ -71,13 +71,13 @@ async function waitFor(url, label, timeoutMs = 90000) {
     if (!Number.isFinite(healthData.showsCount) || healthData.showsCount < 1) {
       throw new Error('API started but the archive database is empty.');
     }
-    process.stdout.write('Archive database ready (' + healthData.showsCount + ' shows).\\n');
+    process.stdout.write('Archive database ready (' + healthData.showsCount + ' shows).\n');
     const searchProbe = await getResponse('http://127.0.0.1:3002/api/shows/search?q=bank');
     if (searchProbe.statusCode !== 401) {
       throw new Error('Archive search endpoint did not enforce authentication (HTTP ' + searchProbe.statusCode + ').');
     }
-    process.stdout.write('Archive search endpoint is reachable and protected.\\n');
-    process.stdout.write('Packaged Electron smoke test passed.\\n');
+    process.stdout.write('Archive search endpoint is reachable and protected.\n');
+    process.stdout.write('Packaged Electron smoke test passed.\n');
   } catch (error) {
     process.stderr.write(error.stack || error.message);
     process.exitCode = 1;
