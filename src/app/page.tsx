@@ -1345,14 +1345,14 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
     <header
       className="fixed top-0 left-0 right-0 z-40"
       style={{
-        /* Thin elegant emerald glass header with subtle pink reflection on the right */
-        background: 'linear-gradient(110deg, rgba(0, 61, 48, 0.78) 0%, rgba(0, 80, 64, 0.7) 60%, rgba(0, 70, 56, 0.72) 85%, rgba(50, 30, 40, 0.55) 100%)',
-        backdropFilter: 'blur(20px) saturate(140%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(140%)',
-        borderBottom: '1px solid rgba(84, 217, 192, 0.22)',
-        boxShadow: '0 4px 18px rgba(0, 30, 25, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
-        borderBottomLeftRadius: '18px',
-        borderBottomRightRadius: '18px',
+        /* Header: medium emerald glass with blue/pink tints on right, 18-25% opacity */
+        background: 'linear-gradient(90deg, rgba(0, 90, 72, 0.82) 0%, rgba(8, 127, 107, 0.78) 40%, rgba(22, 143, 135, 0.72) 65%, rgba(169, 214, 231, 0.55) 88%, rgba(230, 198, 224, 0.5) 100%)',
+        backdropFilter: 'blur(24px) saturate(140%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.3)',
+        boxShadow: '0 4px 18px rgba(0, 30, 25, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
+        borderBottomLeftRadius: '30px',
+        borderBottomRightRadius: '30px',
         overflow: 'hidden',
       }}
     >
