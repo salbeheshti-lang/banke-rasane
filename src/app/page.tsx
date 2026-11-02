@@ -1668,7 +1668,7 @@ function DrawerMenu({
                         className="w-2.5 h-2.5 rounded-full flex-shrink-0 group-hover:scale-125 transition-transform"
                         style={{
                           backgroundColor: g.color,
-                          boxShadow: `0 0 10px ${g.color}`,
+                          /* No glow on dot in drawer */
                         }}
                       ></div>
                       <span className="text-sm flex-1 text-right truncate">{g.nameFa}</span>
@@ -1942,7 +1942,7 @@ function MobileNavBtn({ label, icon, active, onClick, highlight }: {
         fill="none"
         stroke={active ? '#0d7c4a' : highlight ? '#0d7c4a' : '#8a8a7a'}
         viewBox="0 0 24 24"
-        style={{ filter: active ? 'drop-shadow(0 0 6px rgba(13, 124, 74, 0.4))' : 'none' }}
+        style={{ filter: 'none' }}
       >
         {icon === 'home' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />}
         {icon === 'grid' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />}
@@ -2088,7 +2088,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                         strokeLinecap="round"
                         style={{
                           transition: 'stroke-dasharray 0.6s ease, stroke-dashoffset 0.6s ease',
-                          filter: `drop-shadow(0 0 6px ${seg.color}66)`,
+                          /* No drop-shadow glow on donut segments */
                         }}
                       />
                     ))}
@@ -2249,11 +2249,10 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                 <div
                   className="w-14 h-14 rounded-2xl flex items-center justify-center"
                   style={{
-                    backgroundColor: `${g.color}30`,
+                    /* Clean icon — subtle tint only, no glow */
+                    backgroundColor: 'rgba(255, 255, 255, 0.06)',
                     color: g.color,
-                    border: `1px solid ${g.color}80`,
-                    backdropFilter: 'blur(8px)',
-                    boxShadow: `0 0 20px ${g.color}60`,
+                    border: `1px solid ${g.color}55`,
                   }}
                 >
                   <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>

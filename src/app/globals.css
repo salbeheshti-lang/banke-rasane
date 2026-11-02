@@ -274,38 +274,32 @@ html, body {
   overflow: hidden;
   background: linear-gradient(135deg, #0d7c4a 0%, #0a6b40 60%, #065f3a 100%);
   border: 1px solid rgba(16, 185, 129, 0.45);
+  /* Clean shadow — no colored glow */
   box-shadow:
-    0 10px 36px rgba(13, 124, 74, 0.4),
-    0 4px 12px rgba(13, 124, 74, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   letter-spacing: 0.5px;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .btn-enter-premium:hover {
-  transform: translateY(-2px) scale(1.02);
+  transform: translateY(-2px);
   box-shadow:
-    0 16px 52px rgba(13, 124, 74, 0.55),
-    0 6px 20px rgba(13, 124, 74, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+    0 8px 20px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
   background: linear-gradient(135deg, #10b981 0%, #0d7c4a 60%, #0a6b40 100%);
 }
 
 .btn-enter-premium:active {
-  transform: translateY(0) scale(1);
+  transform: translateY(0);
 }
 
 .theme-dark .btn-enter-premium {
   background: linear-gradient(135deg, #10b981 0%, #059669 60%, #047857 100%);
   border-color: rgba(52, 211, 153, 0.45);
   box-shadow:
-    0 10px 36px rgba(16, 185, 129, 0.5),
-    0 4px 12px rgba(16, 185, 129, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .theme-dark .btn-enter-premium:hover {
@@ -440,9 +434,7 @@ html, body {
 }
 
 /* ============================================
-   PREMIUM GENRE CARD — DARK with genre color tint + glow
-   Base color: #0d1f17 (dark green-black)
-   Overlay: linear-gradient with var(--genre-color) at low opacity
+   PREMIUM GENRE CARD — clean glass panel, NO glow / NO highlight behind numbers
    ============================================ */
 .premium-genre-card {
   position: relative;
@@ -452,50 +444,29 @@ html, body {
   overflow: hidden;
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   color: #ffffff;
-  /* Dark base background */
-  background: linear-gradient(135deg, var(--genre-color, #10b981) 0%, color-mix(in srgb, var(--genre-color, #10b981) 50%, #0a1a12) 50%, color-mix(in srgb, var(--genre-color, #10b981) 20%, #06120a) 100%);
-  border: 1px solid color-mix(in srgb, var(--genre-color, #10b981) 40%, transparent);
+  /* Clean translucent dark glass — no color glow */
+  background: linear-gradient(135deg, rgba(12, 30, 25, 0.78) 0%, rgba(8, 22, 18, 0.85) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow:
-    0 12px 40px color-mix(in srgb, var(--genre-color, #10b981) 50%, transparent),
-    0 4px 12px color-mix(in srgb, var(--genre-color, #10b981) 15%, transparent),
-    inset 0 1px 0 color-mix(in srgb, var(--genre-color, #10b981) 12%, transparent);
+    0 8px 24px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-/* Genre-color overlay (top → transparent) */
+/* Remove all glow / accent lines — clean flat card */
 .premium-genre-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 100%;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--genre-color, #10b981) 25%, transparent) 0%, color-mix(in srgb, var(--genre-color, #10b981) 8%, transparent) 70%, transparent 100%);
-  pointer-events: none;
-  z-index: 0;
-  border-radius: 20px;
+  content: none;
 }
 
-/* Subtle inner glow line at the top */
 .premium-genre-card::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent 0%, var(--genre-color, #10b981) 50%, transparent 100%);
-  pointer-events: none;
-  z-index: 3;
-  opacity: 0.6;
+  content: none;
 }
 
 .premium-genre-card:hover {
-  transform: translateY(-4px) scale(1.03);
-  border-color: color-mix(in srgb, var(--genre-color, #10b981) 50%, transparent);
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--genre-color, #10b981) 35%, rgba(255, 255, 255, 0.1));
   box-shadow:
-    0 12px 40px color-mix(in srgb, var(--genre-color, #10b981) 28%, transparent),
-    0 4px 16px color-mix(in srgb, var(--genre-color, #10b981) 18%, transparent),
-    0 2px 8px rgba(0, 0, 0, 0.4);
+    0 12px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .premium-genre-card > * {
@@ -999,7 +970,7 @@ html, body {
   color: #FFFFFF;
   line-height: 1;
   letter-spacing: -0.02em;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 0 16px rgba(0, 229, 239, 0.3);
+  /* No glow / no text-shadow — clean number */
 }
 .analytics-donut-center-label {
   font-size: 12px;
@@ -1041,7 +1012,7 @@ html, body {
   font-weight: 800;
   color: var(--mini-color, #34d399);
   line-height: 1.1;
-  text-shadow: 0 0 12px color-mix(in srgb, var(--mini-color, #34d399) 40%, transparent);
+  /* No glow — clean number */
 }
 .analytics-mini-label {
   font-size: 10px;
@@ -1154,10 +1125,8 @@ html, body {
 .analytics-list-bar {
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg,
-    var(--row-color, #00E5EF),
-    color-mix(in srgb, var(--row-color, #00E5EF), white 28%));
-  box-shadow: 0 0 12px color-mix(in srgb, var(--row-color, #00E5EF) 42%, transparent);
+  background: var(--row-color, #00E5EF);
+  /* No glow on bar */
 }
 .analytics-list-count {
   font-size: 12px;
@@ -1172,8 +1141,8 @@ html, body {
   text-align: left;
   padding: 2px 6px;
   border-radius: 6px;
-  background: color-mix(in srgb, var(--row-color, #00E5EF) 18%, transparent);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--row-color, #00E5EF) 25%, transparent);
+  background: color-mix(in srgb, var(--row-color, #00E5EF) 15%, transparent);
+  /* No box-shadow glow */
 }
 .theme-dark .analytics-card {
   background: var(--analytics-bg);
@@ -1264,7 +1233,7 @@ html, body {
   height: 10px;
   border-radius: 50%;
   background: var(--row-color, #00E5EF);
-  box-shadow: 0 0 10px color-mix(in srgb, var(--row-color, #00E5EF) 55%, transparent);
+  /* No glow on dot */
   flex-shrink: 0;
 }
 .analytics-genre-chip-info {
