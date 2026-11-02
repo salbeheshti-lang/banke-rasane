@@ -441,7 +441,8 @@ const server = Bun.serve({
 
     // ----- Health -----
     if (pathname === '/api/health' && method === 'GET') {
-      return json({ status: 'ok', time: nowSec() }, req);
+      const showsCount = db.prepare('SELECT COUNT(*) AS count FROM shows').get()?.count || 0;
+      return json({ status: 'ok', time: nowSec(), showsCount }, req);
     }
 
     // ----- Image serving -----
