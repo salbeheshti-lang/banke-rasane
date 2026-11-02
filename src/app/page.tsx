@@ -3285,23 +3285,20 @@ function ProgramsView({
         )}
       </div>
 
-      {/* Genre breadcrumb bar — white chips, hover=genre color, scrollable */}
+      {/* Genre breadcrumb bar — professional scrollable chips */}
       {genre && genres && genres.length > 0 && (
         <div className="mb-4">
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-1 no-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
-            <button
-              onClick={() => onNavigate('dashboard')}
-              className="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap"
-              style={{
-                background: 'rgba(255,255,255,0.9)',
-                color: '#0A5547',
-                border: '1px solid rgba(255,255,255,0.5)',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = '#ffffff'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.9)'; }}
-            >
-              همه ژانرها
-            </button>
+          <div
+            className="flex items-center gap-2 overflow-x-auto pb-2 pt-1"
+            style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'rgba(255,255,255,0.3) transparent',
+              WebkitOverflowScrolling: 'touch',
+              scrollBehavior: 'smooth',
+              scrollSnapType: 'x proximity',
+              paddingBottom: '8px',
+            }}
+          >
             {genres.filter(g => g.id !== 'decor' && g.id !== 'psa' && g.id !== 'deepobs' && g.id !== 'ads').map(g => {
               const isActive = g.id === genre.id;
               return (
@@ -3313,25 +3310,29 @@ function ProgramsView({
                     background: g.color,
                     color: '#ffffff',
                     border: `1px solid ${g.color}`,
-                    boxShadow: `0 4px 12px ${g.color}55`,
+                    boxShadow: `0 4px 14px ${g.color}66`,
+                    scrollSnapAlign: 'center',
                   } : {
-                    background: 'rgba(255,255,255,0.15)',
-                    color: '#ffffff',
-                    border: '1px solid rgba(255,255,255,0.3)',
+                    background: 'rgba(255,255,255,0.12)',
+                    color: 'rgba(255,255,255,0.85)',
+                    border: '1px solid rgba(255,255,255,0.25)',
                     backdropFilter: 'blur(8px)',
                     WebkitBackdropFilter: 'blur(8px)',
+                    scrollSnapAlign: 'center',
                   }}
                   onMouseEnter={(e) => {
                     if (!isActive) {
                       e.currentTarget.style.background = g.color;
                       e.currentTarget.style.borderColor = g.color;
-                      e.currentTarget.style.boxShadow = `0 4px 12px ${g.color}55`;
+                      e.currentTarget.style.color = '#ffffff';
+                      e.currentTarget.style.boxShadow = `0 4px 14px ${g.color}66`;
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!isActive) {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
-                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.12)';
+                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)';
+                      e.currentTarget.style.color = 'rgba(255,255,255,0.85)';
                       e.currentTarget.style.boxShadow = 'none';
                     }
                   }}
