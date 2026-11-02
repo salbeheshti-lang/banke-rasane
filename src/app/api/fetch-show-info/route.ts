@@ -23,7 +23,13 @@ export async function POST(request: NextRequest) {
     if (!url) return NextResponse.json({ error: 'URL الزامی است' }, { status: 400 });
     const info: Record<string,string> = {};
 
-    const parsedUrl = new URL(url);\n    if (!['www.imdb.com', 'imdb.com'].includes(parsedUrl.hostname) && !parsedUrl.hostname.endsWith('.wikipedia.org')) {\n      return NextResponse.json({ error: 'فقط لینک معتبر IMDb یا ویکی‌پدیا پشتیبانی می‌شود' }, { status: 400 });\n    }\n\n    if (parsedUrl.hostname.endsWith('imdb.com')) {\n      if (!OMDB_API_KEY) return NextResponse.json({ error: 'برای دریافت اطلاعات IMDb باید کلید OMDB_API_KEY روی سرور تنظیم شود' }, { status: 503 });
+    const parsedUrl = new URL(url);
+    if (!['www.imdb.com', 'imdb.com'].includes(parsedUrl.hostname) && !parsedUrl.hostname.endsWith('.wikipedia.org')) {
+      return NextResponse.json({ error: 'فقط لینک معتبر IMDb یا ویکی‌پدیا پشتیبانی می‌شود' }, { status: 400 });
+    }
+
+    if (parsedUrl.hostname.endsWith('imdb.com')) {
+      if (!OMDB_API_KEY) return NextResponse.json({ error: 'برای دریافت اطلاعات IMDb باید کلید OMDB_API_KEY روی سرور تنظیم شود' }, { status: 503 });
       const imdbMatch = url.match(/tt(\d+)/);
       if (imdbMatch) {
         const r = await fetchRetry(`https://www.omdbapi.com/?i=tt${imdbMatch[1]}&apikey=${OMDB_API_KEY}&plot=full`, {}, 1);
