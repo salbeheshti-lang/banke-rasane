@@ -148,13 +148,15 @@
       #3A9DB0 100%);
   --foreground: #f0fdf4;
 
-  /* Analytics card: vibrant glass — more alive, more saturated tints */
+  /* Analytics card: vibrant glass — more alive, more saturated tints.
+     Previously 0.22-0.28 opacity → too transparent, looked washed out.
+     Upped to 0.45-0.55 so the card has a visible glass surface. */
   --analytics-bg: linear-gradient(135deg,
-    rgba(180, 240, 220, 0.28) 0%,
-    rgba(34, 185, 154, 0.22) 30%,
-    rgba(120, 200, 230, 0.22) 65%,
-    rgba(235, 201, 227, 0.28) 100%);
-  --analytics-border: rgba(255, 255, 255, 0.5);
+    rgba(180, 240, 220, 0.55) 0%,
+    rgba(34, 185, 154, 0.45) 30%,
+    rgba(120, 200, 230, 0.45) 65%,
+    rgba(235, 201, 227, 0.55) 100%);
+  --analytics-border: rgba(255, 255, 255, 0.6);
 
   /* Genre card: same emerald glass, slightly darker */
   --genre-card-bg: linear-gradient(135deg, rgba(7, 55, 48, 0.55) 0%, rgba(10, 70, 60, 0.45) 100%);
@@ -1234,18 +1236,18 @@ html, body {
   border: none;
 }
 .theme-dark .analytics-mini-row {
-  /* Was transparent → washed out. Give it a solid glass background so the
-     mini stats stay readable on the dark gradient backdrop. */
-  background: rgba(255, 255, 255, 0.22);
-  backdrop-filter: blur(12px) saturate(150%);
-  -webkit-backdrop-filter: blur(12px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  /* Solid glass card — visible against dark gradient backdrop.
+     Was transparent before, making the stats look washed-out. */
+  background: rgba(255, 255, 255, 0.38);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.25),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.1),
-    0 4px 16px rgba(0, 0, 0, 0.15);
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.12),
+    0 6px 20px rgba(0, 0, 0, 0.18);
 }
-.theme-dark .analytics-mini-label { color: rgba(244, 255, 255, 0.85); }
+.theme-dark .analytics-mini-label { color: rgba(26, 46, 26, 0.75); font-weight: 700; }
 .theme-dark .analytics-list-rank { background: transparent; color: rgba(244, 255, 255, 0.7); }
 @keyframes donut-segment-grow {
   from {
