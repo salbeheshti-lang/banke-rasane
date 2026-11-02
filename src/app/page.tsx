@@ -1986,6 +1986,7 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
   const [showPicker, setShowPicker] = useState(false);
   const [search, setSearch] = useState('');
   const [activePage, setActivePage] = useState(0);
+  const [centerIdx, setCenterIdx] = useState(0);
 
   // How many cards per "page" — based on viewport
   const CARDS_PER_PAGE = 6;
@@ -2020,11 +2021,18 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
     el.scrollBy({ left: dir === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
   };
 
-  // Track scroll position to update active dot
+  // Scroll-driven center detection: find which card is closest to viewport center
   const handleScroll = () => {
     const el = trackRef.current;
     if (!el) return;
-    const page = Math.round(el.scrollLeft / (CARDS_PER_PAGE * 148));
+    const viewportCenter = el.scrollLeft + el.clientWidth / 2;
+    const cardWidth = 148; // 140px card + 8px gap
+    // Find card index closest to center
+    const idx = Math.round((viewportCenter - cardWidth / 2) / cardWidth);
+    const clampedIdx = Math.max(0, Math.min(featuredShows.length - 1, idx));
+    setCenterIdx(clampedIdx);
+    // Update page for dots
+    const page = Math.floor(clampedIdx / CARDS_PER_PAGE);
     setActivePage(page);
   };
 
@@ -2066,6 +2074,16 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [talkShows]);
+
+  // Initialize center detection on mount
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    // Small delay to let DOM render
+    const timer = setTimeout(() => handleScroll(), 100);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [featuredShows]);
 
   return (
     <div className="featured-carousel">
@@ -2109,12 +2127,14 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
       ) : (
         <>
         <div className="featured-carousel-track" ref={trackRef} onScroll={handleScroll}>
-          {featuredShows.map(show => {
+          {featuredShows.map((show, idx) => {
             const thumb = getShowThumbnail(show);
+            const dist = Math.abs(idx - centerIdx);
+            const cardClass = dist === 0 ? 'is-center' : dist === 1 ? 'is-near' : '';
             return (
               <div
                 key={show.num}
-                className="featured-card"
+                className={`featured-card ${cardClass}`}
                 onClick={() => onShowClick(show)}
               >
                 {isAdmin && (
