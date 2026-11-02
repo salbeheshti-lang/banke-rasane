@@ -7,8 +7,11 @@ const fs = require('fs');
 
 let mainWindow = null;
 let nextServer = null;
+let apiServer = null;
 const NEXT_PORT = 3000;
+const API_PORT = 3002;
 const NEXT_URL = `http://127.0.0.1:${NEXT_PORT}`;
+const API_URL = `http://127.0.0.1:${API_PORT}/api/health`;
 
 function getLogPath() {
   return path.join(app.getPath('userData'), 'bankresaneh.log');
@@ -45,6 +48,101 @@ function getStaticDir() {
     if (fs.existsSync(path.join(p, 'server.js'))) { log('Static dir: ' + p); return p; }
   }
   return paths[0];
+}
+
+function getApiServerPath() {
+  const candidates = [
+    path.join(process.resourcesPath || '', 'api-service', 'index.js'),
+    path.join(__dirname, '..', 'mini-services', 'api-service', 'index.js'),
+  ];
+  return candidates.find((p) => fs.existsSync(p)) || null;
+}
+
+function getBunExecutable() {
+  const candidates = [
+    path.join(process.resourcesPath || '', 'bun-runtime', 'bin', 'bun.exe'),
+    path.join(process.resourcesPath || '', 'bun-runtime', 'bun.exe'),
+    path.join(process.resourcesPath || '', 'bun', 'bun.exe'),
+    path.join(__dirname, '..', 'node_modules', '@oven', 'bun-windows-x64', 'bin', 'bun.exe'),
+    path.join(__dirname, 'bun', 'bun.exe'),
+  ];
+  return candidates.find((p) => fs.existsSync(p)) || null;
+}
+
+function waitForHttp(url, child, label, maxAttempts = 60) {
+  return new Promise((resolve, reject) => {
+    let attempts = 0;
+    let settled = false;
+    let interval = null;
+    const finish = (err) => {
+      if (settled) return;
+      settled = true;
+      if (interval) clearInterval(interval);
+      if (err) reject(err);
+      else resolve();
+    };
+    child.once('error', (err) => finish(new Error(label + ' process error: ' + err.message)));
+    child.once('exit', (code, signal) => {
+      if (!settled) finish(new Error(label + ' exited before readiness (code ' + code + ', signal ' + signal + ')'));
+    });
+    const probe = () => {
+      if (settled) return;
+      attempts++;
+      const req = http.get(url, (res) => {
+        res.resume();
+        if (res.statusCode >= 200 && res.statusCode < 400) {
+          log(label + ' ready (HTTP ' + res.statusCode + ')');
+          finish();
+        } else if (attempts >= maxAttempts) {
+          finish(new Error(label + ' returned HTTP ' + res.statusCode));
+        }
+      });
+      req.setTimeout(2000, () => req.destroy(new Error('Readiness probe timed out')));
+      req.on('error', () => {
+        if (attempts >= maxAttempts) finish(new Error(label + ' did not become ready after ' + maxAttempts + ' attempts'));
+      });
+    };
+    interval = setInterval(probe, 500);
+    probe();
+  });
+}
+
+async function startApiServer() {
+  const apiPath = getApiServerPath();
+  const bunPath = getBunExecutable();
+  if (!apiPath) throw new Error('API service file not found');
+  if (!bunPath) throw new Error('Bundled Bun runtime not found. Expected bun-runtime/bin/bun.exe');
+
+  const userData = app.getPath('userData');
+  const apiDataDir = path.join(userData, 'api-service');
+  fs.mkdirSync(apiDataDir, { recursive: true });
+  const dbPath = path.join(apiDataDir, 'bankresaneh.sqlite');
+  const bundledDb = path.join(process.resourcesPath || '', 'api-service', 'bankresaneh.sqlite');
+  if (!fs.existsSync(dbPath) && fs.existsSync(bundledDb)) {
+    fs.copyFileSync(bundledDb, dbPath);
+    log('Copied initial API database to user data');
+  }
+
+  const standaloneDir = path.join(process.resourcesPath || '', 'next-service-dist');
+  const seedPath = path.join(standaloneDir, 'public', 'talk-shows-data.json');
+  const env = {
+    ...process.env,
+    PORT: String(API_PORT),
+    HOSTNAME: '127.0.0.1',
+    BANKRESANEH_DB_PATH: dbPath,
+    BANKRESANEH_SEED_PATH: seedPath,
+  };
+  log('Starting API service: ' + apiPath);
+  log('API database: ' + dbPath);
+  apiServer = spawn(bunPath, [apiPath], {
+    cwd: apiDataDir,
+    env,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    windowsHide: true,
+  });
+  apiServer.stdout.on('data', (d) => { const value = d.toString().trim(); if (value) log('[api] ' + value); });
+  apiServer.stderr.on('data', (d) => { const value = d.toString().trim(); if (value) log('[api:err] ' + value); });
+  await waitForHttp(API_URL, apiServer, 'API service');
 }
 
 function startNextServer() {
@@ -92,58 +190,11 @@ function startNextServer() {
     nextServer = spawn(process.execPath, [serverPath], { cwd: staticDir, env, stdio: ['ignore','pipe','pipe'] });
 
     let output = '';
-    let settled = false;
-    let attempts = 0;
-    let interval = null;
-
-    const finish = (err) => {
-      if (settled) return;
-      settled = true;
-      if (interval) clearInterval(interval);
-      if (err) reject(err);
-      else resolve();
-    };
-
-    nextServer.stdout.on('data', (d) => {
-      const t = d.toString().trim();
-      if (t) { log('[server] ' + t); output += t + '\n'; }
-    });
-    nextServer.stderr.on('data', (d) => {
-      const t = d.toString().trim();
-      if (t) { log('[err] ' + t); output += t + '\n'; }
-    });
-    nextServer.on('error', (err) => {
-      log('Process error: ' + err.message);
-      finish(err);
-    });
-    nextServer.on('exit', (code, signal) => {
-      log('Server exit code: ' + code + ', signal: ' + signal);
-      if (!settled) finish(new Error('Next.js server exited before becoming ready (code ' + code + ', signal ' + signal + ').\nOutput: ' + output));
-    });
-
-    const probe = () => {
-      if (settled) return;
-      attempts++;
-      const request = http.get(NEXT_URL, (res) => {
-        res.resume();
-        if (res.statusCode >= 200 && res.statusCode < 400) {
-          log('Server ready (HTTP ' + res.statusCode + ')');
-          finish();
-        } else if (attempts >= 60) {
-          finish(new Error('Next.js returned HTTP ' + res.statusCode + ' during startup.\nOutput: ' + output));
-        }
-      });
-      request.setTimeout(2000, () => request.destroy(new Error('Startup probe timed out')));
-      request.on('error', () => {
-        if (attempts >= 60) {
-          log('Server failed after 60 attempts. Output: ' + output);
-          finish(new Error('Next.js server failed to start.\nOutput: ' + output));
-        }
-      });
-    };
-
-    interval = setInterval(probe, 500);
-    probe();
+    nextServer.stdout.on('data', (d) => { const value = d.toString().trim(); if (value) { log('[server] ' + value); output += value + '\\n'; } });
+    nextServer.stderr.on('data', (d) => { const value = d.toString().trim(); if (value) { log('[server:err] ' + value); output += value + '\\n'; } });
+    waitForHttp(NEXT_URL, nextServer, 'Next.js server')
+      .then(resolve)
+      .catch((err) => reject(new Error(err.message + '\\nOutput: ' + output)));
   });
 }
 
@@ -192,6 +243,7 @@ app.whenReady().then(async () => {
   } catch(e) { log('Debug error: ' + e.message); }
 
   try {
+    await startApiServer();
     await startNextServer();
     createWindow();
   } catch(err) {
@@ -202,4 +254,13 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
-app.on('before-quit', () => { if (nextServer) { nextServer.kill('SIGTERM'); setTimeout(() => { if(nextServer) nextServer.kill('SIGKILL'); }, 3000); } });
+app.on('before-quit', () => {
+  for (const child of [apiServer, nextServer]) {
+    if (child && !child.killed) child.kill('SIGTERM');
+  }
+  setTimeout(() => {
+    for (const child of [apiServer, nextServer]) {
+      if (child && child.exitCode === null) child.kill('SIGKILL');
+    }
+  }, 3000).unref?.();
+});
