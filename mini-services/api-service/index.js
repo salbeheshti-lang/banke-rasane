@@ -478,7 +478,7 @@ const server = Bun.serve({
       const showName = String(body?.name || '');
       if (!Number.isFinite(num) || num < 1) return json({ error: 'invalid show number' }, 400, req);
 
-      const OMDB_API_KEY = 'thewdb';
+      const OMDB_API_KEY = process.env.OMDB_API_KEY || '';
       const UA = 'BankResaneh/2.0 (contact@bankrasaneh.ir)';
       const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
@@ -493,11 +493,23 @@ const server = Bun.serve({
 
       let imageUrl = null, source = '';
       const direct = imdbUrl?.match(/tt(\d+)/);
-      if (direct) {
+      if (direct && OMDB_API_KEY) {
         const r = await fetchRetry(`https://www.omdbapi.com/?i=tt${direct[1]}&apikey=${OMDB_API_KEY}`,{},1);
         if (r && r.ok) { const d = await r.json(); if (d.Response==='True' && d.Poster && d.Poster!=='N/A') { imageUrl=d.Poster; source='omdb'; } }
       }
-      if (!imageUrl && showName) {
+      // Prefer the exact Wikipedia page supplied by the editor before falling back to a name search.
+      if (!imageUrl && wikiUrl) {
+        try {
+          const parsedWiki = new URL(wikiUrl);
+          const wikiTitle = parsedWiki.pathname.match(/^\/wiki\/(.+)$/)?.[1];
+          const wikiLang = parsedWiki.hostname.split('.')[0];
+          if (parsedWiki.hostname.endsWith('.wikipedia.org') && wikiTitle) {
+            const r = await fetchRetry(`https://${wikiLang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(decodeURIComponent(wikiTitle).replace(/_/g, ' '))}`,{headers:{'User-Agent':UA}},1);
+            if (r && r.ok) { const d = await r.json(); const img = d.originalimage?.source || d.thumbnail?.source; if (img) { imageUrl=img; source='wikipedia-'+wikiLang; } }
+          }
+        } catch (e) { console.warn('[fetch-image] invalid Wikipedia URL:', e.message); }
+      }
+      if (!imageUrl && showName && OMDB_API_KEY) {
         const q = cleanQ(showName);
         if (q) {
           const r = await fetchRetry(`https://www.omdbapi.com/?s=${encodeURIComponent(q)}&apikey=${OMDB_API_KEY}`,{},1);
