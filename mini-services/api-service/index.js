@@ -376,12 +376,8 @@ const server = Bun.serve({
       const where = [];
       const values = [];
       if (search) {
-        const term = '%' + search.replace(/[\\%_]/g, '\\    // ----- Shows: list -----
-    if (pathname === '/api/shows' && method === 'GET') {
-      const rows = db.prepare('SELECT * FROM shows ORDER BY num ASC').all();
-      return json({ shows: rows.map(rowToShow) });
-    }') + '%';
-        where.push("(name LIKE ? ESCAPE '\\\\' OR category LIKE ? ESCAPE '\\\\' OR source LIKE ? ESCAPE '\\\\' OR summary LIKE ? ESCAPE '\\\\' OR descriptionFa LIKE ? ESCAPE '\\\\' OR imdb LIKE ? ESCAPE '\\\\' OR wikipedia LIKE ? ESCAPE '\\\\')");
+        const term = '%' + search + '%';
+        where.push('(name LIKE ? OR category LIKE ? OR source LIKE ? OR summary LIKE ? OR descriptionFa LIKE ? OR imdb LIKE ? OR wikipedia LIKE ?)');
         values.push(term, term, term, term, term, term, term);
       }
       if (category) {
@@ -402,12 +398,9 @@ const server = Bun.serve({
     // ----- Stats -----
     if (pathname === '/api/stats' && method === 'GET') {
       const total = db.prepare('SELECT COUNT(*) AS total FROM shows').get()?.total || 0;
-      const categories = db.prepare(
-        "SELECT category, COUNT(*) AS count FROM shows GROUP BY category ORDER BY count DESC, category ASC"
-      ).all();
+      const categories = db.prepare('SELECT category, COUNT(*) AS count FROM shows GROUP BY category ORDER BY count DESC, category ASC').all();
       return json({ total, categories });
     }
-
     // ----- Shows: create -----
     if (pathname === '/api/shows' && method === 'POST') {
       const { user, ok, status, error } = requireRole(req, ['admin', 'editor']);
