@@ -653,8 +653,9 @@ const server = Bun.serve({
       if (!terms.length) {
         return json({ shows: [], pagination: { page, limit, total: 0, totalPages: 0 }, query }, req);
       }
-      const categorySql = category ? ' AND LOWER(shows.category) LIKE ?' : '';
-      const categoryParams = category ? ['%' + category + '%'] : [];
+      const escapeLike = (value) => value.replace(/[%_\\\\]/g, (character) => '\\\\' + character);
+      const categorySql = category ? " AND LOWER(shows.category) LIKE ? ESCAPE '\\\\'" : '';
+      const categoryParams = category ? ['%' + escapeLike(category) + '%'] : [];
       let total = 0;
       let rows = [];
 
@@ -687,7 +688,7 @@ const server = Bun.serve({
         const normalizedColumn = (column) =>
           "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(COALESCE(" + column + ",'')), 'ي','ی'), 'ى','ی'), 'ك','ک'), 'ۀ','ه'), 'ة','ه'), char(8204), ' '), char(8205), ' ')";
         for (const term of terms) {
-          const pattern = '%' + term + '%';
+          const pattern = '%' + escapeLike(term) + '%';
           conditions.push('(' + ['name', 'category', 'summary', 'descriptionFa', 'source', 'style', 'effects', 'layout', 'elements', 'materials', 'colors', 'lighting']
             .map(column => normalizedColumn(column) + ' LIKE ?').join(' OR ') + ')');
           params.push(pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern);
