@@ -2037,32 +2037,39 @@ function ProgramsView({
   }, [genre, search]);
 
   const filteredShows = useMemo(() => {
-    const currentServerShows = !genre
+    const hasCurrentServerResults = !genre
       && search.trim().length >= 2
-      && serverSearchResult?.query === search.trim()
-      ? serverSearchResult.shows
-      : null;
-    const useServerResults = !!currentServerShows?.length;
-    let shows = [...(useServerResults ? currentServerShows : talkShows)];
+      && serverSearchResult?.query === search.trim();
+    const currentServerShows = hasCurrentServerResults ? serverSearchResult!.shows : null;
+    // An empty server response is authoritative; do not silently replace it with a
+    // different, incomplete client-side result set.
+    const useServerResults = hasCurrentServerResults;
+    let shows = [...(useServerResults ? currentServerShows! : talkShows)];
     if (genre) shows = shows.filter(genre.filterFn);
     if (filterSize !== 'all') shows = shows.filter(s => s.size === filterSize);
     if (filterViewers !== 'all') shows = shows.filter(s => s.viewers === filterViewers);
     if (filterStyle !== 'all') shows = shows.filter(s => s.style === filterStyle);
     if (islamicOnly) shows = shows.filter(s => detectCountries(s).length > 0);
     if (search && !useServerResults) {
-      const q = search.toLowerCase();
+      const normalizeSearchText = (value: string) => value.normalize('NFKC').toLowerCase()
+        .replace(/[يى]/g, 'ی').replace(/ك/g, 'ک').replace(/[ۀة]/g, 'ه')
+        .replace(/[\u064B-\u065F\u0670]/g, '').replace(/[\u200c\u200d\uFEFF]/g, ' ')
+        .replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
+        .replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+        .replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim();
+      const queryTerms = normalizeSearchText(search).split(' ').filter(Boolean);
       // Section-specific search: use genre.searchFields if defined, else default to name+summary+category.
       const fields: (keyof TalkShow)[] = genre?.searchFields || ['name', 'summary', 'category'];
       shows = shows.filter(s => {
-        for (const f of fields) {
-          const v = s[f];
-          if (typeof v === 'string') {
-            if (v.toLowerCase().includes(q) || v.includes(search)) return true;
-          } else if (Array.isArray(v)) {
-            if (v.some(item => String(item).toLowerCase().includes(q) || String(item).includes(search))) return true;
-          }
-        }
-        return false;
+        const searchableValues = fields.flatMap((field) => {
+          const value = s[field];
+          if (typeof value === 'string') return [normalizeSearchText(value)];
+          if (Array.isArray(value)) return value.map(item => normalizeSearchText(String(item)));
+          return [];
+        });
+        // Match all terms within a field first; if that fails, allow partial term overlap.
+        return searchableValues.some(value => queryTerms.every(term => value.includes(term)))
+          || searchableValues.some(value => queryTerms.some(term => value.includes(term)));
       });
     }
     return shows;
