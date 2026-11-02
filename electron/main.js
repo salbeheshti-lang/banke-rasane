@@ -178,6 +178,7 @@ async function startApiService() {
       NODE_ENV: 'production',
       PORT: String(API_PORT),
       HOSTNAME: '127.0.0.1',
+      BANKRESANEH_HOST: '127.0.0.1',
       DB_PATH: dbPath,
       BANKRESANEH_SEED_PATH: seedPath,
       BANKRESANEH_STARTUP_TOKEN: STARTUP_TOKEN,
