@@ -45,5 +45,8 @@ jobs:
       - name: Production build
         run: bun run build
 
+      - name: Metadata import smoke test
+        run: node scripts/smoke-metadata.cjs
+
       - name: Type check
         run: bun run typecheck
