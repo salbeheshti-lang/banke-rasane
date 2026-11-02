@@ -9,7 +9,7 @@
     "start": "node scripts/start-standalone.cjs",
     "lint": "eslint .",
     "electron:dev": "electron electron/main.js",
-    "electron:build": "npm run typecheck && npm run build && electron-builder --win --x64 --publish never",
+    "electron:build": "npm run build && npm run typecheck && electron-builder --win --x64 --publish never",
     "electron:dist": "npm run electron:build",
     "typecheck": "tsc --noEmit",
     "desktop:win": "npm run electron:build"
