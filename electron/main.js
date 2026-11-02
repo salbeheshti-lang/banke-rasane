@@ -198,7 +198,7 @@ function startNextServer() {
     nextServer.stderr.on('data', (d) => { const value = d.toString().trim(); if (value) { log('[server:err] ' + value); output += value + '\n'; } });
     waitForHttp(NEXT_URL, nextServer, 'Next.js server')
       .then(resolve)
-      .catch((err) => reject(new Error(err.message + '\\nOutput: ' + output)));
+      .catch((err) => reject(new Error(err.message + '\nOutput: ' + output)));
   });
 }
 
