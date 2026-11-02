@@ -91,33 +91,48 @@
 
 /* Dark theme override — applied via .theme-dark on <html> */
 .theme-dark {
-  /* Main background: dark green (top) → teal (bottom) — matches reference image */
-  --bg-deep: #0d3d33;
-  --bg-mid: #2e7d8a;
-  /* Header & menus: 1-2 shades darker than main bg, rounded, liquid glass */
-  --bg-header: #0a2e26;
-  --bg-header-2: #0b3329;
+  /* ===== Premium layered background — radial lights on linear base ===== */
+  --bg-base: #073F3B;
+  --bg-deep: #064B4B;
+  --teal: #159C9C;
+  --cyan: #38A9B1;
+  --pink: #D38EAF;
+  --purple: #9277B5;
+  --sage: #70B7A8;
+  --emerald-dark: #003F30;
+
   /* Glass surfaces */
-  --glass-bg: rgba(20, 60, 50, 0.55);
-  --glass-bg-strong: rgba(20, 60, 50, 0.7);
-  --glass-bg-modal: rgba(10, 30, 25, 0.92);
-  --glass-bg-drawer: rgba(10, 30, 25, 0.88);
-  --glass-bg-topbar: rgba(10, 46, 38, 0.88);
-  --glass-border: rgba(45, 212, 191, 0.18);
-  --glass-border-strong: rgba(45, 212, 191, 0.4);
+  --glass-bg: rgba(20, 60, 55, 0.55);
+  --glass-bg-strong: rgba(20, 60, 55, 0.7);
+  --glass-bg-modal: rgba(7, 40, 38, 0.92);
+  --glass-bg-drawer: rgba(0, 50, 40, 0.9);
+  --glass-bg-topbar: rgba(0, 55, 44, 0.88);
+  --glass-border: rgba(61, 223, 176, 0.32);
+  --glass-border-strong: rgba(61, 223, 176, 0.55);
   --glass-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, transparent 50%);
+
   --text-primary: #f0fdf4;
   --text-secondary: #99f6e4;
-  --text-muted: #6b9b94;
+  --text-muted: #7ba8a0;
   --input-bg: rgba(255, 255, 255, 0.06);
-  --input-border: rgba(45, 212, 191, 0.25);
-  --background: linear-gradient(180deg, #0d3d33 0%, #1a5558 50%, #2e7d8a 100%);
+  --input-border: rgba(61, 223, 176, 0.25);
+
+  /* Layered background: teal/pink/purple radial lights on emerald-teal linear base */
+  --background:
+    radial-gradient(ellipse 65% 55% at 58% 18%, rgba(39, 180, 171, 0.55) 0%, rgba(21, 156, 156, 0.25) 42%, transparent 78%),
+    radial-gradient(ellipse 55% 60% at 5% 38%, rgba(39, 139, 160, 0.38) 0%, transparent 75%),
+    radial-gradient(ellipse 55% 48% at 95% 80%, rgba(211, 142, 175, 0.55) 0%, rgba(211, 142, 175, 0.20) 48%, transparent 80%),
+    radial-gradient(ellipse 55% 40% at 48% 100%, rgba(146, 119, 181, 0.32) 0%, transparent 75%),
+    radial-gradient(ellipse 55% 45% at 5% 100%, rgba(112, 183, 168, 0.45) 0%, transparent 78%),
+    linear-gradient(135deg, #073F3B 0%, #075A58 45%, #176B70 100%);
   --foreground: #f0fdf4;
-  /* Analytics card: 3 shades LIGHTER than main bg */
-  --analytics-bg: linear-gradient(135deg, rgba(35, 95, 85, 0.65) 0%, rgba(45, 110, 100, 0.55) 100%);
-  --analytics-border: rgba(45, 212, 191, 0.32);
+
+  /* Analytics card: 3 shades LIGHTER than bg-base, liquid glass with emerald tint */
+  --analytics-bg: linear-gradient(135deg, rgba(45, 110, 95, 0.55) 0%, rgba(55, 130, 110, 0.45) 100%);
+  --analytics-border: rgba(61, 223, 176, 0.4);
+
   /* Genre card: liquid glass with deep tint */
-  --genre-card-bg: linear-gradient(135deg, rgba(15, 60, 50, 0.7) 0%, rgba(20, 70, 60, 0.55) 100%);
+  --genre-card-bg: linear-gradient(135deg, rgba(15, 60, 50, 0.6) 0%, rgba(20, 70, 60, 0.45) 100%);
 }
 
 * { box-sizing: border-box; }
@@ -131,6 +146,9 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
   background: var(--background, var(--bg-deep));
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
   color: var(--text-primary);
   min-height: 100vh;
 }

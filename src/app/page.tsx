@@ -256,7 +256,7 @@ const GENRES: Genre[] = [
   },
   // ----- 11 new genre categories (kasht, krismas, polisi, ramazan, etc.) -----
   {
-    id: 'kasht', key: 'kasht', nameFa: 'کاشت درخت', name: 'Tree Planting',
+    id: 'kasht', key: 'kasht', nameFa: 'درختکاری', name: 'Tree Planting',
     color: '#16a34a', description: '۲۱ برنامه — باغبانی، کاشت درخت و سبک زندگی سبز',
     filterFn: s => s.category === 'کاشت درخت',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
@@ -280,7 +280,7 @@ const GENRES: Genre[] = [
     searchFields: ['name', 'summary', 'tags'],
   },
   {
-    id: 'ramazan', key: 'ramazan', nameFa: 'رمضان', name: 'Ramadan',
+    id: 'ramazan', key: 'ramazan', nameFa: 'برنامه‌های ماه مبارک رمضان', name: 'Ramadan Programs',
     color: '#b45309', description: '۶۳ برنامه — برنامه‌های ماه رمضان',
     filterFn: s => s.category === 'رمضان',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
@@ -288,7 +288,7 @@ const GENRES: Genre[] = [
     searchFields: ['name', 'summary', 'tags'],
   },
   {
-    id: 'safar', key: 'safar', nameFa: 'سفر جاده‌ای', name: 'Road Trip',
+    id: 'safar', key: 'safar', nameFa: 'سفرنامه و ماجراجویی', name: 'Travel & Adventure',
     color: '#c2410c', description: '۹۳ برنامه — ریلیتی‌شوی سفر و ماجراجویی',
     filterFn: s => s.category === 'سفر جاده‌ای',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
@@ -296,7 +296,7 @@ const GENRES: Genre[] = [
     searchFields: ['name', 'summary', 'style', 'effects'],
   },
   {
-    id: 'madrese', key: 'madrese', nameFa: 'مدرسه', name: 'School',
+    id: 'madrese', key: 'madrese', nameFa: 'مدرسه و دانش‌آموزی', name: 'School & Students',
     color: '#0284c7', description: '۲۷ برنامه — آگهی و تیزر بازگشت به مدرسه',
     filterFn: s => s.category === 'مدرسه',
     tags: [],
@@ -328,7 +328,7 @@ const GENRES: Genre[] = [
     searchFields: ['name', 'summary', 'tags'],
   },
   {
-    id: 'jasoosi', key: 'jasoosi', nameFa: 'جاسوسی', name: 'Spy',
+    id: 'jasoosi', key: 'jasoosi', nameFa: 'ستون پنجم', name: 'The Fifth Column',
     color: '#1f2937', description: '۱۵۴ برنامه — مستند جاسوسی و عملیات اطلاعاتی',
     filterFn: s => s.category === 'جاسوسی',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting],
@@ -382,6 +382,14 @@ const GENRES: Genre[] = [
     filterFn: s => s.category === 'کتاب و کتاب‌خوانی',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
     presetTags: ['کتاب', 'ادبی', 'مصاحبه', 'باشگاه کتاب', 'مستند', 'مسابقه', 'کودک'],
+    searchFields: ['name', 'summary', 'tags'],
+  },
+  {
+    id: 'sarmaye', key: 'sarmaye', nameFa: 'سرمایه‌گذاری در تولید', name: 'Investment in Production',
+    color: '#0e7490', description: 'برنامه‌های مرتبط با سرمایه‌گذاری و تولید محتوا',
+    filterFn: s => s.category === 'سرمایه‌گذاری در تولید',
+    tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
+    presetTags: ['سرمایه‌گذاری', 'تولید', 'اقتصاد', 'صنعت', 'کارآفرینی'],
     searchFields: ['name', 'summary', 'tags'],
   },
 ];
@@ -1333,14 +1341,15 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack }: {
     <header
       className="fixed top-0 left-0 right-0 z-40"
       style={{
-        /* Header: 1-2 shades DARKER than main bg, liquid glass, rounded bottom corners */
-        background: 'linear-gradient(180deg, rgba(10, 46, 38, 0.92) 0%, rgba(11, 51, 41, 0.88) 100%)',
+        /* Glass header — dark emerald panel on layered background */
+        background: 'linear-gradient(110deg, rgba(0, 61, 43, 0.92) 0%, rgba(0, 75, 57, 0.86) 50%, rgba(12, 68, 65, 0.88) 100%)',
         backdropFilter: 'blur(24px) saturate(150%)',
         WebkitBackdropFilter: 'blur(24px) saturate(150%)',
-        borderBottom: '1px solid rgba(45, 212, 191, 0.18)',
-        boxShadow: '0 4px 20px rgba(0, 30, 25, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06)',
-        borderBottomLeftRadius: '20px',
-        borderBottomRightRadius: '20px',
+        borderBottom: '1px solid rgba(61, 223, 176, 0.32)',
+        boxShadow: '0 10px 35px rgba(0, 30, 27, 0.35), 0 0 25px rgba(0, 215, 160, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.12)',
+        borderBottomLeftRadius: '24px',
+        borderBottomRightRadius: '24px',
+        overflow: 'hidden',
       }}
     >
       <div
@@ -1534,14 +1543,15 @@ function DrawerMenu({
         className="fixed top-0 right-0 bottom-0 animate-drawer-slide-in flex flex-col"
         style={{
           width: 'min(340px, 88vw)',
-          /* Drawer: 1-2 shades DARKER than main bg, liquid glass, rounded left corners */
-          background: 'linear-gradient(180deg, rgba(10, 46, 38, 0.92) 0%, rgba(11, 51, 41, 0.88) 100%)',
+          /* Drawer: dark emerald glass panel, rounded left corners */
+          background: 'linear-gradient(180deg, rgba(0, 61, 43, 0.94) 0%, rgba(0, 75, 57, 0.9) 50%, rgba(12, 68, 65, 0.92) 100%)',
           backdropFilter: 'blur(30px) saturate(150%)',
           WebkitBackdropFilter: 'blur(30px) saturate(150%)',
-          borderLeft: '1px solid rgba(45, 212, 191, 0.2)',
-          boxShadow: '-16px 0 56px rgba(0, 30, 25, 0.3), inset 1px 0 0 rgba(255, 255, 255, 0.06)',
+          borderLeft: '1px solid rgba(61, 223, 176, 0.32)',
+          boxShadow: '-16px 0 56px rgba(0, 30, 27, 0.4), inset 1px 0 0 rgba(255, 255, 255, 0.08)',
           borderTopLeftRadius: '24px',
           borderBottomLeftRadius: '24px',
+          overflow: 'hidden',
         }}
         onClick={(e) => e.stopPropagation()}
       >
