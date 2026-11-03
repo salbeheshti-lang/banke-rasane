@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { themeNoFlashScript } from "@/hooks/use-theme";
+import { langNoFlashScript } from "@/lib/i18n-context";
 
 export const metadata: Metadata = {
   title: "بانک رسانه",
@@ -18,6 +19,7 @@ export default function RootLayout({
         <link rel="preload" href="/fonts/Vazirmatn-Regular.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
         <link rel="preload" href="/fonts/Vazirmatn-Bold.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
         <script dangerouslySetInnerHTML={{ __html: themeNoFlashScript }} />
+        <script dangerouslySetInnerHTML={{ __html: langNoFlashScript }} />
       </head>
       <body className="antialiased">
         {children}

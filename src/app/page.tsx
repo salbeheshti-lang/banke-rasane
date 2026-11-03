@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import { api, setApiBase, getApiBase, User } from '@/lib/api';
 import { useTheme } from '@/hooks/use-theme';
+import { LangProvider, useLang } from '@/lib/i18n-context';
 
 // ============================================
 // TYPES
@@ -780,9 +781,21 @@ function applyOverrides(base: TalkShow[], o: Overrides): TalkShow[] {
 }
 
 export default function Home() {
+  // LangProvider wraps the whole app so every component can call useLang()
+  // to get the current language + t() translation function.
+  return (
+    <LangProvider>
+      <HomeInner />
+    </LangProvider>
+  );
+}
+
+function HomeInner() {
   const { theme, toggleTheme } = useTheme();
-  const [lang, setLang] = useState<'fa' | 'en'>('fa');
-  const toggleLang = () => setLang(l => l === 'fa' ? 'en' : 'fa');
+  // Language is now managed globally via LangContext (see i18n-context.tsx).
+  // The toggle button calls toggleLang() which switches fa ↔ en and updates
+  // <html lang/dir> + persists to localStorage.
+  const { lang, toggleLang, t } = useLang();
   const [currentView, setCurrentView] = useState<'dashboard' | 'programs' | 'genre' | 'reports' | 'add'>('dashboard');
   const [selectedGenre, setSelectedGenre] = useState<Genre | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -1133,7 +1146,7 @@ export default function Home() {
           organization={exportPreview.organization}
           onClose={() => setExportPreview(null)}
           onDownload={() => {
-            showToast(`گزارش ${exportPreview.format.toUpperCase()} دانلود شد`);
+            showToast(t('export.downloaded'));
             setExportPreview(null);
           }}
         />
@@ -1169,6 +1182,7 @@ export default function Home() {
 // LOGIN SCREEN — real auth (username + password)
 // ============================================
 function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
+  const { t } = useLang();
   const [isReady, setIsReady] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -1183,7 +1197,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
     if (loading) return;
     setError(null);
     if (!username.trim() || !password) {
-      setError('نام کاربری و رمز عبور را وارد کنید');
+      setError(t('login.errorEmpty'));
       return;
     }
     setLoading(true);
@@ -1191,7 +1205,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
       const data = await api.login(username.trim(), password);
       onLogin(data.user);
     } catch (err: any) {
-      setError(err?.message || 'ورود ناموفق بود');
+      setError(err?.message || t('login.errorFailed'));
     } finally {
       setLoading(false);
     }
@@ -1217,7 +1231,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
           >
             <Image
               src="/banke-rasane-logo.png"
-              alt="بانک رسانه"
+              alt={t('app.title')}
               width={360}
               height={196}
               priority
@@ -1230,7 +1244,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
           {/* Username */}
           <div>
             <label htmlFor="login-username" className="block text-sm font-bold mb-2" style={{ color: 'rgba(134, 239, 172, 0.9)' }}>
-              نام کاربری
+              {t('login.username')}
             </label>
             <input
               id="login-username"
@@ -1260,7 +1274,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
           {/* Password with show/hide */}
           <div>
             <label htmlFor="login-password" className="block text-sm font-bold mb-2" style={{ color: 'rgba(134, 239, 172, 0.9)' }}>
-              رمز عبور
+              {t('login.password')}
             </label>
             <div className="relative">
               <input
@@ -1289,7 +1303,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? 'پنهان کردن رمز' : 'نمایش رمز'}
+                aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
                 disabled={loading}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-colors"
                 style={{ color: '#0d7c4a', background: 'transparent' }}
@@ -1335,11 +1349,11 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
               {loading ? (
                 <>
                   <div className="w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(255,255,255,0.35)', borderTopColor: '#ffffff' }}></div>
-                  <span>در حال ورود...</span>
+                  <span>{t('login.loading')}</span>
                 </>
               ) : (
                 <>
-                  <span>ورود به برنامه</span>
+                  <span>{t('login.submit')}</span>
                   <svg
                     className="w-5 h-5 rtl-flip group-hover:-translate-x-1.5 transition-transform"
                     fill="none"
@@ -1385,12 +1399,13 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
   lang: 'fa' | 'en';
   onToggleLang: () => void;
 }) {
+  const { t } = useLang();
   const viewTitles: Record<string, string> = {
-    dashboard: 'مرجع جامع برنامه‌های تلویزیونی بین‌المللی',
-    programs: 'همهٔ برنامه‌ها',
-    genre: 'برنامه‌های ژانر',
-    reports: 'گزارش‌ها',
-    add: 'افزودن / ویرایش برنامه',
+    dashboard: t('app.tagline'),
+    programs: t('view.programs'),
+    genre: t('programs.genrePrograms'),
+    reports: t('view.reports'),
+    add: t('view.add') + ' / ' + t('common.edit'),
   };
 
   return (
@@ -1419,7 +1434,7 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
         {/* Hamburger button — 3 lines — opens the drawer from the right */}
         <button
           onClick={onMenuClick}
-          aria-label="باز کردن منو"
+          aria-label={t('nav.openMenu')}
           className="flex flex-col justify-center items-center p-2.5 transition-all"
           style={{
             /* Liquid glass button — rounded */
@@ -1452,7 +1467,7 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
         >
           <Image
             src="/banke-rasane-logo.png"
-            alt="بانک رسانه"
+            alt={t('app.title')}
             width={isMobile ? 110 : 160}
             height={isMobile ? 30 : 42}
             priority
@@ -1468,10 +1483,10 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               style={{ borderRight: '1px solid rgba(84, 217, 192, 0.2)', paddingRight: '12px' }}
             >
               <span style={{ color: '#f0fdf4', fontWeight: 800, fontSize: '14px', lineHeight: 1.2 }}>
-                مرجع جامع برنامه‌های تلویزیونی بین‌المللی
+                {t('app.tagline')}
               </span>
               <span style={{ color: '#54D9C0', fontSize: '11px', marginTop: '2px' }}>
-                بانک رسانه — {totalShows?.toLocaleString('fa-IR') || '۰'} برنامه در {totalGenres?.toLocaleString('fa-IR') || '۰'} ژانر
+                {t('app.title')} — {totalShows?.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US') || '0'} {t('dashboard.programs')} {t('dashboard.stripTitle').includes('ژانر') ? 'در' : 'in'} {totalGenres?.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US') || '0'} {t('drawer.genres')}
               </span>
             </div>
           )}
@@ -1482,7 +1497,7 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
           {/* Language toggle — FA/EN */}
           <button
             onClick={onToggleLang}
-            aria-label="تغییر زبان"
+            aria-label={t('nav.toggleLang')}
             title={lang === 'fa' ? 'Switch to English' : 'تغییر به فارسی'}
             className="flex items-center justify-center transition-all"
             style={{
@@ -1505,8 +1520,8 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
           {/* Theme toggle — sun/moon */}
           <button
             onClick={onToggleTheme}
-            aria-label="تغییر تم"
-            title={theme === 'dark' ? 'حالت روشن' : 'حالت تیره'}
+            aria-label={t('nav.toggleTheme')}
+            title={theme === 'dark' ? t('nav.theme.light') : t('nav.theme.dark')}
             className="flex items-center justify-center transition-all"
             style={{
               background: 'rgba(45, 212, 191, 0.1)',
@@ -1533,8 +1548,8 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
           {canGoBack ? (
             <button
               onClick={onBack}
-              aria-label="بازگشت به صفحهٔ قبل"
-              title="بازگشت به صفحهٔ قبل"
+              aria-label={t('nav.back')}
+              title={t('nav.back')}
               className="flex items-center gap-2 rounded-xl transition-all"
               style={{
                 background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
@@ -1551,7 +1566,7 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
-              {!isMobile && <span>بازگشت</span>}
+              {!isMobile && <span>{t('nav.backShort')}</span>}
             </button>
           ) : isMobile ? (
             <span
@@ -1562,7 +1577,7 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
                 border: '1px solid rgba(13, 124, 74, 0.2)',
               }}
             >
-              بانک رسانه
+              {t('app.title')}
             </span>
           ) : (
             <div
@@ -1580,7 +1595,7 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
                   animation: 'pulse 2s ease-in-out infinite',
                 }}
               ></span>
-              <span style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: '12px' }}>متصل</span>
+              <span style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: '12px' }}>{t('app.connected')}</span>
             </div>
           )}
         </div>
@@ -1623,22 +1638,23 @@ function DrawerMenu({
   talkShows: TalkShow[];
   genres?: Genre[];
 }) {
+  const { t, lang } = useLang();
   const [genresExpanded, setGenresExpanded] = useState(true);
 
   const navItems = [
-    { key: 'dashboard', label: 'آرشیو', icon: 'home', desc: 'صفحهٔ اصلی و ژانرها' },
-    { key: 'programs', label: 'همهٔ برنامه‌ها', icon: 'grid', desc: 'لیست کامل ۵۶۰ برنامه' },
-    { key: 'add', label: 'افزودن برنامه', icon: 'plus', desc: 'افزودن یا ویرایش برنامه' },
-    { key: 'reports', label: 'گزارش‌ها', icon: 'reports', desc: 'آمار و خروجی' },
+    { key: 'dashboard', label: t('view.dashboard'), icon: 'home', desc: t('view.dashboard.desc') },
+    { key: 'programs', label: t('view.programs'), icon: 'grid', desc: t('view.programs.desc') + ' — ' + (talkShows.length).toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US') + ' ' + t('dashboard.programs') },
+    { key: 'add', label: t('view.add'), icon: 'plus', desc: t('view.add.desc') },
+    { key: 'reports', label: t('view.reports'), icon: 'reports', desc: t('view.reports.desc') },
   ] as const;
 
   // Don't render anything if not open — keeps DOM clean
   if (!open) return null;
 
   const roleLabel: Record<string, string> = {
-    admin: 'مدیر سیستم',
-    editor: 'ویراستار',
-    viewer: 'بیننده',
+    admin: t('settings.role.admin'),
+    editor: t('settings.role.editor'),
+    viewer: t('settings.role.viewer'),
   };
 
   return (
@@ -1670,7 +1686,7 @@ function DrawerMenu({
         >
           <Image
             src="/banke-rasane-logo.png"
-            alt="بانک رسانه"
+            alt={t('app.title')}
             width={130}
             height={34}
             priority
@@ -1682,8 +1698,8 @@ function DrawerMenu({
             style={{ color: 'rgba(244, 255, 255, 0.7)' }}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(220, 38, 38, 0.1)'; e.currentTarget.style.color = '#dc2626'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(244, 255, 255, 0.7)'; }}
-            title="بستن منو"
-            aria-label="بستن منو"
+            title={t('drawer.close')}
+            aria-label={t('drawer.close')}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1743,7 +1759,7 @@ function DrawerMenu({
               className="flex items-center justify-between w-full px-3 mb-2 text-xs font-bold uppercase tracking-wider"
               style={{ color: 'rgba(138, 138, 122, 0.85)' }}
             >
-              <span>ژانرها ({genres.length})</span>
+              <span>{t('drawer.genres')} ({genres.length.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US')})</span>
               <svg
                 className="w-4 h-4 transition-transform"
                 style={{ transform: genresExpanded ? 'rotate(0deg)' : 'rotate(-90deg)' }}
@@ -1779,12 +1795,12 @@ function DrawerMenu({
                           /* No glow on dot in drawer */
                         }}
                       ></div>
-                      <span className="text-sm flex-1 text-right truncate">{g.nameFa}</span>
+                      <span className="text-sm flex-1 text-right truncate">{lang === 'fa' ? g.nameFa : g.name}</span>
                       <span
                         className="text-xs font-bold"
                         style={{ color: g.color }}
                       >
-                        {count.toLocaleString('fa-IR')}
+                        {count.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US')}
                       </span>
                     </button>
                   );
@@ -1857,7 +1873,7 @@ function DrawerMenu({
             <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
-            <span className="font-medium text-sm">پروفایل من</span>
+            <span className="font-medium text-sm">{t('profile.title')}</span>
           </button>
 
           {/* Settings button — admin only */}
@@ -1879,7 +1895,7 @@ function DrawerMenu({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-              <span className="font-medium text-sm">⚙ تنظیمات</span>
+              <span className="font-medium text-sm">⚙ {t('settings.title')}</span>
             </button>
           )}
 
@@ -1897,7 +1913,7 @@ function DrawerMenu({
             }}
           >
             <NavIcon name="exit" />
-            <span className="font-medium text-sm">خروج از حساب</span>
+            <span className="font-medium text-sm">{t('drawer.logout')}</span>
           </button>
         </div>
       </aside>
@@ -1969,7 +1985,7 @@ function MobileBottomNav({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg" style={{ color: '#f0fdf4' }}>ژانرها ({genres.length})</h3>
+              <h3 className="font-bold text-lg" style={{ color: '#f0fdf4' }}>{t('drawer.genres')} ({genres.length.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US')})</h3>
               <button
                 onClick={() => setShowGenres(false)}
                 className="p-2 rounded-lg"
@@ -2038,7 +2054,7 @@ function MobileBottomNav({
           <MobileNavBtn label="منو" icon="menu" active={false} onClick={onOpenDrawer} highlight />
           <MobileNavBtn label="آرشیو" icon="home" active={currentView === 'dashboard'} onClick={() => onNavigate('dashboard')} />
           <MobileNavBtn label="برنامه‌ها" icon="grid" active={currentView === 'programs'} onClick={() => onNavigate('programs')} />
-          <MobileNavBtn label="ژانرها" icon="genre" active={showGenres} onClick={() => setShowGenres(!showGenres)} highlight />
+          <MobileNavBtn label={t('drawer.genres')} icon="genre" active={showGenres} onClick={() => setShowGenres(!showGenres)} highlight />
           <MobileNavBtn label="افزودن" icon="plus" active={currentView === 'add'} onClick={() => onNavigate('add')} />
           <MobileNavBtn label="خروج" icon="exit" active={false} onClick={onLogout} />
         </div>
@@ -2178,19 +2194,19 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
         <div className="featured-carousel-nav">
           {isAdmin && (
             <button onClick={() => setShowPicker(true)} className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-              style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.9)' }}>+ مدیریت</button>
+              style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.9)' }}>+ {t('dashboard.manageStrip')}</button>
           )}
-          <button className="featured-nav-btn" onClick={prev} disabled={currentIdx === 0} aria-label="قبلی">
+          <button className="featured-nav-btn" onClick={prev} disabled={currentIdx === 0} aria-label={t('dashboard.prev')}>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
           </button>
-          <button className="featured-nav-btn" onClick={next} disabled={currentIdx >= featuredShows.length - 1} aria-label="بعدی">
+          <button className="featured-nav-btn" onClick={next} disabled={currentIdx >= featuredShows.length - 1} aria-label={t('dashboard.next')}>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
           </button>
         </div>
       </div>
 
       {featuredShows.length === 0 ? (
-        <div className="featured-empty">{isAdmin ? 'برنامه‌ای انتخاب نشده — روی «مدیریت» کلیک کنید' : 'برنامه‌ای موجود نیست'}</div>
+        <div className="featured-empty">{isAdmin ? (lang === 'fa' ? 'برنامه‌ای انتخاب نشده — روی «' + t('dashboard.manageStrip') + '» کلیک کنید' : 'No programs selected — click "' + t('dashboard.manageStrip') + '"') : (lang === 'fa' ? 'برنامه‌ای موجود نیست' : 'No programs available')}</div>
       ) : (
         <>
           <div className="featured-carousel-track" ref={trackRef} onScroll={handleScroll}>
@@ -2490,6 +2506,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
   onAddGenre?: (g: Genre) => void;
   onShowClick?: (s: TalkShow) => void;
 }) {
+  const { t, lang } = useLang();
   const [showAddGenre, setShowAddGenre] = useState(false);
 
   // ----- Analytics computation -----
@@ -3032,6 +3049,7 @@ function ProgramsView({
   onNavigate?: (v: 'dashboard' | 'programs' | 'reports' | 'add') => void;
   genres?: Genre[];
 }) {
+  const { t, lang } = useLang();
   const [search, setSearch] = useState('');
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [selectionMode, setSelectionMode] = useState(false);
@@ -3094,10 +3112,10 @@ function ProgramsView({
     <>
       <header className="mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold mb-1" style={{ color: '#f0fdf4' }}>
-          {genre ? genre.nameFa : 'همهٔ برنامه‌ها'}
+          {genre ? (lang === 'fa' ? genre.nameFa : genre.name) : t('programs.allPrograms')}
         </h1>
         <p style={{ color: '#99f6e4' }}>
-          {filteredShows.length.toLocaleString('fa-IR')} برنامه
+          {filteredShows.length.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US')} {t('programs.count')}
           {genre && ` • ${genre.description}`}
         </p>
       </header>
@@ -3174,7 +3192,7 @@ function ProgramsView({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={`جستجو در ${genre ? genre.nameFa : 'همهٔ برنامه‌ها'}...`}
+            placeholder={`${t('programs.searchPlaceholder')} ${genre ? (lang === 'fa' ? genre.nameFa : genre.name) : t('programs.allPrograms')}...`}
             style={{
               /* Glass search box matching the theme */
               background: 'rgba(255, 255, 255, 0.12)',
@@ -3259,7 +3277,7 @@ function ProgramsView({
                 color: 'rgba(255, 255, 255, 0.9)',
               }}
             >
-              {selectionMode ? `✓ انتخاب (${selectedIds.length.toLocaleString('fa-IR')})` : 'انتخاب چندتایی'}
+              {selectionMode ? `✓ ${t('common.ok')} (${selectedIds.length.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US')})` : t('programs.selectMultiple')}
             </button>
           )}
           {!canEdit && (
@@ -3436,7 +3454,7 @@ function ProgramsView({
 
       {filteredShows.length === 0 ? (
         <div className="text-center py-20" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>
-          <p>برنامه‌ای یافت نشد</p>
+          <p>{t('programs.noResults')}</p>
         </div>
       ) : view === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -3479,7 +3497,7 @@ function ProgramsView({
       {filteredShows.length > 60 && (
         <div className="text-center mt-8" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>
           <p className="text-sm">
-            نمایش ۶۰ برنامه از {filteredShows.length.toLocaleString('fa-IR')} • برای مشاهده همه، جستجو را فیلتر کنید
+            {t('programs.showing60')} {filteredShows.length.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US')} • {lang === 'fa' ? 'برای مشاهده همه، جستجو را فیلتر کنید' : 'To view all, filter your search'}
           </p>
         </div>
       )}
@@ -5928,12 +5946,13 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
   subtitle?: string;
   organization?: string;
 }) {
+  const { t, lang } = useLang();
   const [downloading, setDownloading] = useState(false);
 
   // Resolve the effective report metadata — caller-provided overrides win,
   // otherwise we fall back to the canonical defaults used by the API.
-  const reportTitle = title || 'گزارش جامع آرشیو برنامه‌های تلویزیونی';
-  const reportSubtitle = subtitle || 'بانک رسانه — مرجع جامع برنامه‌های تلویزیونی بین‌المللی';
+  const reportTitle = title || t('reports.report1Title');
+  const reportSubtitle = subtitle || t('app.tagline');
 
   const handleDownload = async () => {
     setDownloading(true);
@@ -5999,7 +6018,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
         {/* Header */}
         <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(13, 124, 74,0.1)' }}>
           <h2 className="text-xl font-bold" style={{ color: '#f0fdf4' }}>
-            {format === 'pdf' ? '📄 پیش‌نمایش گزارش PDF' : '📊 پیش‌نمایش گزارش Excel'}
+            {format === 'pdf' ? '📄 ' + t('export.previewPDF') : '📊 ' + t('export.previewExcel')}
           </h2>
           <button onClick={onClose} className="p-2 rounded-lg" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -6013,16 +6032,16 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
           <div className="mb-4 p-4 rounded-xl" style={{ background: 'rgba(13, 124, 74,0.08)', border: '1px solid rgba(13, 124, 74,0.2)' }}>
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm" style={{ color: '#99f6e4' }}>تعداد برنامه‌ها</div>
-                <div className="text-2xl font-bold" style={{ color: '#54D9C0' }}>{shows.length.toLocaleString('fa-IR')}</div>
+                <div className="text-sm" style={{ color: '#99f6e4' }}>{t('export.programCount')}</div>
+                <div className="text-2xl font-bold" style={{ color: '#54D9C0' }}>{shows.length.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US')}</div>
               </div>
               <div>
-                <div className="text-sm" style={{ color: '#99f6e4' }}>فرمت</div>
+                <div className="text-sm" style={{ color: '#99f6e4' }}>{t('export.format')}</div>
                 <div className="text-2xl font-bold" style={{ color: format === 'pdf' ? '#dc2626' : '#0d7c4a' }}>{format.toUpperCase()}</div>
               </div>
               <div>
-                <div className="text-sm" style={{ color: '#99f6e4' }}>تاریخ</div>
-                <div className="text-2xl font-bold" style={{ color: '#f0fdf4' }}>{new Date().toLocaleDateString('fa-IR')}</div>
+                <div className="text-sm" style={{ color: '#99f6e4' }}>{t('export.date')}</div>
+                <div className="text-2xl font-bold" style={{ color: '#f0fdf4' }}>{new Date().toLocaleDateString(lang === 'fa' ? 'fa-IR' : 'en-US')}</div>
               </div>
             </div>
           </div>
@@ -6038,12 +6057,12 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
                   color: 'white',
                 }}
               >
-                <div style={{ color: 'rgba(134, 239, 172, 0.6)', fontSize: '11px', letterSpacing: '4px', marginBottom: '12px' }}>بانک رسانه</div>
+                <div style={{ color: 'rgba(134, 239, 172, 0.6)', fontSize: '11px', letterSpacing: '4px', marginBottom: '12px' }}>{t('app.title')}</div>
                 <div style={{ marginBottom: '10px', filter: 'drop-shadow(0 0 16px rgba(16, 185, 129, 0.5))' }}>
                   {/* Real program logo instead of a generic film/tv SVG icon. */}
                   <img
                     src="/banke-rasane-logo.png"
-                    alt="بانک رسانه"
+                    alt={t('app.title')}
                     style={{ width: '64px', height: 'auto', display: 'inline-block', borderRadius: '10px' }}
                   />
                 </div>
@@ -6209,20 +6228,20 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
               disabled={downloading}
               className="btn-enter-premium flex-1"
             >
-              {downloading ? '⏳ در حال تولید...' : `⬇ دانلود فایل ${format.toUpperCase()}`}
+              {downloading ? t('common.loading') : `⬇ ${format === 'pdf' ? t('export.downloadPDF') : t('export.downloadExcel')}`}
             </button>
             <button
               onClick={onClose}
               className="px-6 py-3 rounded-xl text-sm font-medium"
               style={{ background: 'rgba(107, 143, 122,0.15)', color: 'rgba(255, 255, 255, 0.9)', border: '1px solid rgba(107, 143, 122,0.3)' }}
             >
-              انصراف
+              {t('common.cancel')}
             </button>
           </div>
           {format === 'pdf' && (
             <p className="mt-3 text-xs text-center" style={{ color: 'rgba(244, 255, 255, 0.7)', lineHeight: 1.7 }}>
               گزارش شامل ۸ بخش است: صفحهٔ عنوان، فهرست مطالب، خلاصهٔ اجرایی، روش تحقیق، نمای آماری، تحلیل ژانرها، تحلیل دکور، و معرفی تفصیلی برنامه‌ها.<br />
-              پس از کلیک روی دانلود، پنجره چاپ باز می‌شود — مقاس «A4» و «Save as PDF» را انتخاب کنید.
+              {lang === 'fa' ? 'پس از کلیک روی دانلود، پنجره چاپ باز می‌شود — مقاس «A4» و «Save as PDF» را انتخاب کنید.' : 'After clicking download, the print dialog opens — select A4 size and "Save as PDF".'}
             </p>
           )}
         </div>
@@ -6240,6 +6259,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
   showToast: (msg: string) => void;
   onExport: (shows: TalkShow[], format: 'pdf' | 'excel', meta?: { title?: string; subtitle?: string; organization?: string }) => void;
 }) {
+  const { t, lang } = useLang();
   const stats = {
     total: talkShows.length,
     text: talkShows.filter(s => s.source === 'متن').length,
@@ -6285,9 +6305,9 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
         body: JSON.stringify({ title: rTitle, subtitle: rSubtitle, organization: rOrg }),
       });
       if (res.ok) {
-        showToast('تنظیمات گزارش ذخیره شد');
+        showToast(t('reports.settingsSaved'));
       } else {
-        showToast('خطا در ذخیرهٔ تنظیمات');
+        showToast(t('reports.settingsError'));
       }
     } catch {
       showToast('خطا در ارتباط با سرور');
@@ -6304,10 +6324,10 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
       const res = await fetch('/api/settings/logo', { method: 'POST', body: fd });
       if (res.ok) {
         setLogoVersion(v => v + 1);    // force <img> to reload from new file
-        showToast('لوگوی گزارش به‌روزرسانی شد');
+        showToast(t('reports.logoUpdated'));
       } else {
         const data = await res.json().catch(() => ({}));
-        showToast(data.error || 'خطا در آپلود لوگو');
+        showToast(data.error || t('reports.logoUploadError'));
       }
     } catch {
       showToast('خطا در ارتباط با سرور');
@@ -6317,39 +6337,39 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
   };
 
   const reports = [
-    { id: 1, title: 'گزارش کامل همهٔ برنامه‌ها', type: 'pdf', count: stats.total, date: '۱۴۰۴/۰۸/۲۵' },
-    { id: 2, title: 'گزارش برنامه‌های آپلود شده در فضای مجازی', type: 'excel', count: stats.uploaded, date: '۱۴۰۴/۰۸/۲۵' },
+    { id: 1, title: t('reports.report1Title'), type: 'pdf', count: stats.total, date: '۱۴۰۴/۰۸/۲۵' },
+    { id: 2, title: t('reports.report2Title'), type: 'excel', count: stats.uploaded, date: '۱۴۰۴/۰۸/۲۵' },
   ];
 
   return (
     <>
       <header className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-2" style={{ color: '#f0fdf4' }}>گزارش‌ها</h1>
-        <p style={{ color: 'rgba(244, 255, 255, 0.7)' }}>آمار و گزارش‌های بانک رسانه</p>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2" style={{ color: '#f0fdf4' }}>{t('reports.title')}</h1>
+        <p style={{ color: 'rgba(244, 255, 255, 0.7)' }}>{t('reports.subtitle')}</p>
       </header>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="premium-glass p-5">
-          <div className="text-3xl font-black mb-1" style={{ color: '#10b981' }}>{stats.total.toLocaleString('fa-IR')}</div>
-          <div style={{ color: '#99f6e4' }} className="text-sm">کل برنامه‌ها</div>
+          <div className="text-3xl font-black mb-1" style={{ color: '#10b981' }}>{stats.total.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US')}</div>
+          <div style={{ color: '#99f6e4' }} className="text-sm">{t('reports.total')}</div>
         </div>
         <div className="premium-glass p-5">
-          <div className="text-3xl font-black mb-1" style={{ color: '#7c3aed' }}>{stats.uploaded.toLocaleString('fa-IR')}</div>
-          <div style={{ color: '#99f6e4' }} className="text-sm">آپلود شده</div>
+          <div className="text-3xl font-black mb-1" style={{ color: '#7c3aed' }}>{stats.uploaded.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US')}</div>
+          <div style={{ color: '#99f6e4' }} className="text-sm">{t('reports.uploaded')}</div>
         </div>
         <div className="premium-glass p-5">
-          <div className="text-3xl font-black mb-1" style={{ color: '#dc2626' }}>{stats.genres.toLocaleString('fa-IR')}</div>
-          <div style={{ color: '#99f6e4' }} className="text-sm">ژانرها</div>
+          <div className="text-3xl font-black mb-1" style={{ color: '#dc2626' }}>{stats.genres.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US')}</div>
+          <div style={{ color: '#99f6e4' }} className="text-sm">{t('reports.genres')}</div>
         </div>
         <div className="premium-glass p-5">
-          <div className="text-3xl font-black mb-1" style={{ color: '#2563eb' }}>{stats.withImages.toLocaleString('fa-IR')}</div>
-          <div style={{ color: '#99f6e4' }} className="text-sm">با تصویر</div>
+          <div className="text-3xl font-black mb-1" style={{ color: '#2563eb' }}>{stats.withImages.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US')}</div>
+          <div style={{ color: '#99f6e4' }} className="text-sm">{t('reports.withImages')}</div>
         </div>
       </div>
 
       <div className="premium-glass overflow-hidden">
         <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(13, 124, 74, 0.1)' }}>
-          <h3 className="font-bold" style={{ color: '#f0fdf4' }}>گزارش‌های موجود</h3>
+          <h3 className="font-bold" style={{ color: '#f0fdf4' }}>{t('reports.available')}</h3>
           <button
             onClick={() => setSettingsOpen(o => !o)}
             className="text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"
@@ -6363,7 +6383,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            تنظیمات گزارش
+            {t('reports.reportSettings')}
           </button>
         </div>
 
@@ -6373,7 +6393,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {/* Logo upload — left column */}
               <div className="flex flex-col items-center justify-start gap-3 p-4 rounded-xl" style={{ background: 'rgba(0,0,0,0.15)', border: '1px solid rgba(13, 124, 74, 0.2)' }}>
-                <div className="text-xs font-bold w-full text-right" style={{ color: '#54D9C0' }}>لوگوی گزارش</div>
+                <div className="text-xs font-bold w-full text-right" style={{ color: '#54D9C0' }}>{t('reports.reportLogo')}</div>
                 <div
                   className="w-24 h-24 rounded-xl flex items-center justify-center overflow-hidden"
                   style={{ background: 'rgba(255,255,255,0.05)', border: '2px dashed rgba(16, 185, 129, 0.35)' }}
@@ -6383,7 +6403,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                   <img
                     key={logoVersion}
                     src={`/uploads/logo.png?v=${logoVersion}`}
-                    alt="لوگوی گزارش"
+                    alt={t('reports.reportLogo')}
                     style={{ width: '72px', height: 'auto', objectFit: 'contain' }}
                     onError={(e) => {
                       // Fall back to the default program logo if no custom logo exists yet.
@@ -6399,7 +6419,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                     border: '1px solid rgba(16, 185, 129, 0.35)',
                   }}
                 >
-                  {uploadingLogo ? 'در حال آپلود...' : 'آپلود لوگوی جدید'}
+                  {uploadingLogo ? t('reports.uploading') : t('reports.uploadLogo')}
                   <input
                     type="file"
                     accept="image/png,image/jpeg,image/webp,image/svg+xml"
@@ -6414,14 +6434,14 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                 </label>
                 <p className="text-[10px] leading-relaxed text-center" style={{ color: 'rgba(244, 255, 255, 0.5)' }}>
                   PNG/JPG/WebP — حداکثر ۵ مگابایت<br />
-                  این لوگو روی کاور گزارش PDF نمایش داده می‌شود
+                  {t('reports.logoHint')}
                 </p>
               </div>
 
               {/* Text defaults — right two columns */}
               <div className="lg:col-span-2 space-y-3">
                 <div>
-                  <label className="text-xs font-bold mb-1.5 block" style={{ color: '#54D9C0' }}>عنوان گزارش</label>
+                  <label className="text-xs font-bold mb-1.5 block" style={{ color: '#54D9C0' }}>{t('reports.reportTitle')}</label>
                   <input
                     type="text"
                     value={rTitle}
@@ -6436,7 +6456,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold mb-1.5 block" style={{ color: '#54D9C0' }}>زیرعنوان</label>
+                  <label className="text-xs font-bold mb-1.5 block" style={{ color: '#54D9C0' }}>{t('reports.reportSubtitle')}</label>
                   <input
                     type="text"
                     value={rSubtitle}
@@ -6451,7 +6471,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold mb-1.5 block" style={{ color: '#54D9C0' }}>تهیه‌کننده / سازمان</label>
+                  <label className="text-xs font-bold mb-1.5 block" style={{ color: '#54D9C0' }}>{t('reports.organization')}</label>
                   <input
                     type="text"
                     value={rOrg}
@@ -6476,7 +6496,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                       fontWeight: 700,
                     }}
                   >
-                    {savingSettings ? 'در حال ذخیره...' : '✓ ذخیرهٔ تنظیمات'}
+                    {savingSettings ? t('reports.saving') : '✓ ' + t('reports.saveSettings')}
                   </button>
                 </div>
                 <p className="text-[10px] leading-relaxed" style={{ color: 'rgba(244, 255, 255, 0.5)' }}>
@@ -6491,11 +6511,11 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
           <thead>
             <tr style={{ background: 'rgba(13, 124, 74, 0.08)', borderBottom: '1px solid rgba(13, 124, 74, 0.2)' }}>
               <th className="text-right p-4 text-xs font-bold" style={{ color: '#99f6e4' }}>#</th>
-              <th className="text-right p-4 text-xs font-bold" style={{ color: '#99f6e4' }}>عنوان</th>
-              <th className="text-right p-4 text-xs font-bold hidden sm:table-cell" style={{ color: '#99f6e4' }}>نوع</th>
-              <th className="text-right p-4 text-xs font-bold" style={{ color: '#99f6e4' }}>تعداد</th>
-              <th className="text-right p-4 text-xs font-bold hidden sm:table-cell" style={{ color: '#99f6e4' }}>تاریخ</th>
-              <th className="text-right p-4 text-xs font-bold" style={{ color: '#99f6e4' }}>عملیات</th>
+              <th className="text-right p-4 text-xs font-bold" style={{ color: '#99f6e4' }}>{t('reports.reportTitle')}</th>
+              <th className="text-right p-4 text-xs font-bold hidden sm:table-cell" style={{ color: '#99f6e4' }}>{t('reports.type')}</th>
+              <th className="text-right p-4 text-xs font-bold" style={{ color: '#99f6e4' }}>{t('reports.count')}</th>
+              <th className="text-right p-4 text-xs font-bold hidden sm:table-cell" style={{ color: '#99f6e4' }}>{t('reports.date')}</th>
+              <th className="text-right p-4 text-xs font-bold" style={{ color: '#99f6e4' }}>{t('reports.actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -6529,7 +6549,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                       let shows: TalkShow[] = [];
                       if (r.id === 1) shows = talkShows;
                       else if (r.id === 2) shows = talkShows.filter(s => uploadedShows.includes(s.num));
-                      if (shows.length === 0) { showToast('برنامه‌ای برای این گزارش وجود ندارد'); return; }
+                      if (shows.length === 0) { showToast(t('reports.noPrograms')); return; }
                       // Pass through the currently-edited defaults so the PDF
                       // preview + export reflect them even before saving.
                       onExport(shows, r.type === 'pdf' ? 'pdf' : 'excel', {
@@ -6539,7 +6559,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                       });
                     }}
                   >
-                    دانلود
+                    {t('reports.download')}
                   </button>
                 </td>
               </tr>
