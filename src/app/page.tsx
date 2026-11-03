@@ -7152,6 +7152,10 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
       showToast('نام کاربری و رمز را وارد کنید');
       return;
     }
+    if (newUser.password.length < 8) {
+      showToast('رمز عبور باید حداقل ۸ کاراکتر باشد');
+      return;
+    }
     setCreating(true);
     try {
       await api.createUser({
@@ -7253,7 +7257,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
           <input
             type="password"
             dir="ltr"
-            placeholder="رمز عبور (حداقل ۴ کاراکتر)"
+            placeholder="رمز عبور (حداقل ۸ کاراکتر)"
             value={newUser.password}
             onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
             style={{
@@ -7320,19 +7324,20 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
             value={newUser.role}
             onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
             style={{
-              background: 'rgba(255,255,255,0.1)',
-              border: '1px solid rgba(255,255,255,0.2)',
+              background: 'rgba(255,255,255,0.15)',
+              border: '1px solid rgba(255,255,255,0.35)',
               borderRadius: '10px',
               padding: '10px 14px',
               fontSize: '14px',
               color: '#f0fdf4',
               outline: 'none',
               fontFamily: 'inherit',
+              cursor: 'pointer',
             }}
           >
-            <option value="viewer">بیننده</option>
-            <option value="editor">ویراستار</option>
-            <option value="admin">مدیر</option>
+            <option value="viewer" style={{ background: '#0a1f14', color: '#f0fdf4' }}>بیننده (فقط مشاهده)</option>
+            <option value="editor" style={{ background: '#0a1f14', color: '#f0fdf4' }}>ویراستار (افزودن/ویرایش)</option>
+            <option value="admin" style={{ background: '#0a1f14', color: '#f0fdf4' }}>مدیر (دسترسی کامل)</option>
           </select>
         </div>
         <button
