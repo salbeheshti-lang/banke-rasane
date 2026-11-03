@@ -3654,7 +3654,7 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
           )}
         </div>
 
-        <h3 className="font-bold text-sm leading-snug mb-2 line-clamp-2" style={{ direction: 'ltr', textAlign: 'right', color: '#f0fdf4' }}>
+        <h3 className="font-bold text-sm leading-snug mb-2 line-clamp-2" style={{ direction: 'rtl', textAlign: 'right', color: '#f0fdf4' }}>
           {show.name}
         </h3>
 
@@ -3783,7 +3783,7 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
             </span>
           )}
         </div>
-        <h3 className="font-bold text-sm mb-1 truncate" style={{ direction: 'ltr', textAlign: 'right', color: '#f0fdf4' }}>{show.name}</h3>
+        <h3 className="font-bold text-sm mb-1 truncate" style={{ direction: 'rtl', textAlign: 'right', color: '#f0fdf4' }}>{show.name}</h3>
         <p className="text-xs truncate" style={{ color: '#99f6e4' }}>{show.summary && show.summary !== '—' ? show.summary : show.category}</p>
         {(genreTags.length > 0 || userTags.length > 0) && (
           <div className="flex items-center gap-1 flex-wrap mt-1.5">
