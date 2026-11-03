@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
-import { api, setApiBase, getApiBase, User } from '@/lib/api';
+import { api, setApiBase, getApiBase, getApiUrl, User } from '@/lib/api';
 import { useTheme } from '@/hooks/use-theme';
 import { LangProvider, useLang } from '@/lib/i18n-context';
 
@@ -30,6 +30,7 @@ interface TalkShow {
   wikipedia: string;
   socialPost: string;
   country?: string;
+  isFilm?: boolean;
   tags?: string[];
   images?: string[];
   videos?: string[];
@@ -1958,6 +1959,7 @@ function MobileBottomNav({
   talkShows: TalkShow[];
   genres?: Genre[];
 }) {
+  const { t, lang } = useLang();
   const [showGenres, setShowGenres] = useState(false);
 
   return (
@@ -2045,7 +2047,6 @@ function MobileBottomNav({
             background: 'linear-gradient(90deg, rgba(5, 80, 65, 0.82) 0%, rgba(0, 95, 75, 0.78) 50%, rgba(8, 110, 90, 0.75) 100%)',
             backdropFilter: 'blur(24px) saturate(135%)',
             WebkitBackdropFilter: 'blur(24px) saturate(135%)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
             borderRadius: '30px',
             boxShadow: '0 4px 18px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.12)',
             padding: '8px',
@@ -2109,8 +2110,9 @@ const FEATURED_KEY = 'bankresaneh_featured_shows_v1';
 function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
   talkShows: TalkShow[];
   onShowClick: (s: TalkShow) => void;
-  isAdmin: boolean;
+  isAdmin?: boolean;
 }) {
+  const { t, lang } = useLang();
   const [featuredNums, setFeaturedNums] = useState<number[]>([]);
   const [showPicker, setShowPicker] = useState(false);
   const [search, setSearch] = useState('');
@@ -3175,7 +3177,6 @@ function ProgramsView({
         background: 'linear-gradient(90deg, rgba(5, 70, 58, 0.78) 0%, rgba(0, 85, 68, 0.74) 50%, rgba(8, 95, 78, 0.7) 100%)',
         backdropFilter: 'blur(24px) saturate(135%)',
         WebkitBackdropFilter: 'blur(24px) saturate(135%)',
-        border: '1px solid rgba(255, 255, 255, 0.2)',
         borderRadius: '20px',
         boxShadow: '0 4px 18px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.12)',
       }}>
@@ -3257,7 +3258,6 @@ function ProgramsView({
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)',
               color: 'rgba(255, 255, 255, 0.9)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
             }}
           >
             🌍 اسلامی
@@ -3272,7 +3272,7 @@ function ProgramsView({
                 border: '1px solid rgba(13, 124, 74, 0.3)',
                 color: '#54D9C0',
               } : {
-                background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
+                background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
                 border: '1px solid rgba(13, 124, 74, 0.15)',
                 color: 'rgba(255, 255, 255, 0.9)',
               }}
@@ -3313,7 +3313,7 @@ function ProgramsView({
                   background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)', border: '1px solid rgba(255, 255, 255, 0.3)',
                   color: 'white',
                 } : {
-                  background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
+                  background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
                   color: 'rgba(255, 255, 255, 0.9)',
                 }}
               >
@@ -3338,7 +3338,7 @@ function ProgramsView({
                   background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)', border: '1px solid rgba(255, 255, 255, 0.3)',
                   color: 'white',
                 } : {
-                  background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
+                  background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
                   color: 'rgba(255, 255, 255, 0.9)',
                 }}
               >
@@ -3408,7 +3408,7 @@ function ProgramsView({
               return (
                 <button
                   key={g.id}
-                  onClick={() => onGenreSelect(g)}
+                  onClick={() => onGenreSelect?.(g)}
                   className="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap"
                   style={isActive ? {
                     background: g.color,
@@ -3619,7 +3619,7 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
               background: thumb.accent,
               borderColor: thumb.accent,
             } : {
-              background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
+              background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
               borderColor: `${thumb.accent}90`,
             }}
           >
@@ -3939,7 +3939,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
                       rel="noopener noreferrer"
                       className="flex items-center gap-3 p-3 rounded-xl transition-all"
                       style={{
-                        background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
+                        background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
                         border: `1px solid ${platform.color}30`,
                         textDecoration: 'none',
                       }}
@@ -4362,7 +4362,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
                 padding: '10px 16px',
                 borderRadius: '12px',
                 border: '1px solid rgba(13, 124, 74,0.15)',
-                background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
+                background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
                 color: '#f0fdf4',
                 fontFamily: 'inherit',
                 outline: 'none',
@@ -4455,7 +4455,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
               padding: '12px 16px',
               borderRadius: '12px',
               border: '1px solid rgba(13, 124, 74, 0.15)',
-              background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
+              background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
               color: '#f0fdf4',
               fontFamily: 'inherit',
               outline: 'none',
@@ -4476,7 +4476,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
               padding: '12px 16px',
               borderRadius: '12px',
               border: '1px solid rgba(13, 124, 74, 0.15)',
-              background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
+              background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
               color: '#f0fdf4',
               fontFamily: 'inherit',
               outline: 'none',
@@ -4547,7 +4547,7 @@ function FormField({ label, value, onChange, placeholder }: {
           padding: '10px 16px',
           borderRadius: '12px',
           border: '1px solid rgba(13, 124, 74, 0.15)',
-          background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
+          background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
           color: '#f0fdf4',
           fontFamily: 'inherit',
           outline: 'none',
@@ -4574,7 +4574,7 @@ function FormSelect({ label, value, onChange, options }: {
           padding: '10px 16px',
           borderRadius: '12px',
           border: '1px solid rgba(13, 124, 74, 0.15)',
-          background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
+          background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
           color: '#f0fdf4',
           fontFamily: 'inherit',
           outline: 'none',
@@ -4896,7 +4896,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
             padding: '8px 12px',
             borderRadius: '10px',
             border: '1px solid rgba(13, 124, 74,0.15)',
-            background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
+            background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
             color: '#f0fdf4',
             fontFamily: 'inherit',
             outline: 'none',
@@ -4920,7 +4920,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
             padding: '10px 16px',
             borderRadius: '12px',
             border: '1px solid rgba(13, 124, 74,0.15)',
-            background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
+            background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
             color: '#f0fdf4',
             fontFamily: 'inherit',
             outline: 'none',
@@ -4954,7 +4954,7 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
               <div
                 key={idx}
                 className="flex items-center gap-3 p-2 rounded-xl"
-                style={{ background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)', border: '1px solid rgba(13, 124, 74,0.1)' }}
+                style={{ background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(13, 124, 74, 0.1)' }}
               >
                 {/* Thumbnail or icon */}
                 <div
@@ -5126,7 +5126,7 @@ function TagsEditor({ tags, onChange, presetTags }: {
             padding: '10px 16px',
             borderRadius: '12px',
             border: '1px solid rgba(124, 58, 237, 0.2)',
-            background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
+            background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
             color: '#f0fdf4',
             fontFamily: 'inherit',
             outline: 'none',
@@ -5273,7 +5273,7 @@ function AddGenreModal({ onClose, onSave }: {
                 padding: '10px 16px',
                 borderRadius: '12px',
                 border: '1px solid rgba(13, 124, 74, 0.15)',
-                background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
+                background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
                 color: '#f0fdf4',
                 fontFamily: 'inherit',
                 outline: 'none',
@@ -5293,7 +5293,7 @@ function AddGenreModal({ onClose, onSave }: {
                 padding: '10px 16px',
                 borderRadius: '12px',
                 border: '1px solid rgba(13, 124, 74, 0.15)',
-                background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
+                background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
                 color: '#f0fdf4',
                 fontFamily: 'inherit',
                 outline: 'none',
@@ -5839,7 +5839,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
                   padding: '10px 14px',
                   borderRadius: '12px',
                   border: '1px solid rgba(13, 124, 74,0.15)',
-                  background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
+                  background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
                   color: '#f0fdf4',
                   fontFamily: 'monospace',
                   outline: 'none',
@@ -5870,7 +5870,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
                 padding: '10px 14px',
                 borderRadius: '12px',
                 border: '1px solid rgba(13, 124, 74,0.15)',
-                background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
+                background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
                 color: '#f0fdf4',
                 fontFamily: 'monospace',
                 outline: 'none',
@@ -6614,7 +6614,6 @@ function SettingsModal({
           backdropFilter: 'blur(28px) saturate(135%)',
           WebkitBackdropFilter: 'blur(28px) saturate(135%)',
           borderRadius: '28px',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
           boxShadow: '0 24px 80px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
           overflow: 'hidden',
         }}
@@ -6782,7 +6781,6 @@ function ProfileTab({ currentUser, showToast }: { currentUser: User; showToast: 
             fontSize: '11px', fontWeight: 700, padding: '4px 12px', borderRadius: '999px',
             background: currentUser.role === 'admin' ? 'rgba(220, 38, 38, 0.3)' : currentUser.role === 'editor' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(34, 185, 154, 0.3)',
             color: currentUser.role === 'admin' ? '#fca5a5' : currentUser.role === 'editor' ? '#fcd34d' : '#54D9C0',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
           }}
         >
           {roleLabels[currentUser.role] || currentUser.role}
@@ -7060,7 +7058,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
           placeholder="http://localhost:3002"
           style={{
             width: '100%',
-            background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
+            background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
             border: '1px solid rgba(13, 124, 74, 0.25)',
             borderRadius: '12px',
             padding: '12px 16px',
@@ -7490,7 +7488,7 @@ function SettingsPasswordTab({
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
-    background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.2)',
+    background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
     border: '1px solid rgba(13, 124, 74, 0.25)',
     borderRadius: '12px',
     padding: '12px 48px 12px 16px',
