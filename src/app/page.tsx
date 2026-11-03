@@ -5651,7 +5651,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
                   width: '100%',
                   padding: '12px 16px',
                   border: 'none',
-                  background: 'white',
+                  background: 'rgba(255, 255, 255, 0.10)',
                   color: '#f0fdf4',
                   fontFamily: 'inherit',
                   outline: 'none',
