@@ -155,7 +155,21 @@ async function startApiService() {
   const userData = app.getPath('userData');
   const dbDir = path.join(userData, 'db');
   const dbPath = path.join(dbDir, 'bankresaneh.sqlite');
-  const seedPath = path.join(process.resourcesPath || '', 'next-service-dist', 'public', 'talk-shows-data.json');
+
+  // Seed path: look in the same directory as the Next.js server (wherever it
+  // was found — could be resources/next-service-dist or resources/app/.next/standalone).
+  // Fallback to the old hardcoded path.
+  const nextServerDir = getStaticDir();
+  const seedCandidates = [
+    path.join(nextServerDir, 'public', 'talk-shows-data.json'),
+    path.join(process.resourcesPath || '', 'next-service-dist', 'public', 'talk-shows-data.json'),
+    path.join(process.resourcesPath || '', 'app', '.next', 'standalone', 'public', 'talk-shows-data.json'),
+  ];
+  let seedPath = seedCandidates[1]; // fallback
+  for (const sp of seedCandidates) {
+    if (fs.existsSync(sp)) { seedPath = sp; break; }
+  }
+  log('Seed path: ' + seedPath);
   fs.mkdirSync(dbDir, { recursive: true });
 
   // Seed the writable user database once. The tracked DB uses WAL mode, so

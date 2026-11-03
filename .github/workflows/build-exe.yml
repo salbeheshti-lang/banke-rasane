@@ -136,26 +136,54 @@ jobs:
           }
 
           # ============================================================
-          # Test: start the Next.js server briefly to confirm it boots
+          # Test: start the Next.js server with correct PORT + HOSTNAME
+          # and REQUIRE an actual HTTP response (not just "process alive")
           # ============================================================
-          Write-Host "=== Testing Next.js server startup (10s timeout) ==="
-          $port = 3457
-          $proc = Start-Process -FilePath "node" -ArgumentList $serverPath -PassThru -WindowStyle Hidden
-          Start-Sleep -Seconds 8
-          try {
-            $response = Invoke-WebRequest -Uri "http://127.0.0.1:$port/" -TimeoutSec 5 -UseBasicParsing
-            Write-Host "  Server responded with HTTP $($response.StatusCode)"
-          } catch {
-            Write-Host "  Server did not respond (may be expected if DB not seeded)"
-            # Check if process is still running
+          Write-Host "=== Testing Next.js server startup (strict HTTP check) ==="
+          $testPort = "3457"
+          $testHost = "127.0.0.1"
+
+          # Start server with explicit PORT + HOSTNAME env vars so it listens
+          # on the port we will probe. Next.js standalone reads these from env.
+          $env:PORT = $testPort
+          $env:HOSTNAME = $testHost
+          $env:NODE_ENV = "production"
+
+          $proc = Start-Process -FilePath "node" `
+            -ArgumentList $serverPath `
+            -PassThru -WindowStyle Hidden `
+            -WorkingDirectory $serverDir
+
+          $serverReady = $false
+          $maxAttempts = 20
+          for ($i = 1; $i -le $maxAttempts; $i++) {
+            Start-Sleep -Seconds 2
             if ($proc.HasExited) {
-              Write-Host "  ✗ Server process exited (code: $($proc.ExitCode))"
-              throw "FATAL: Next.js server crashed during startup test"
-            } else {
-              Write-Host "  Server is running but didn't respond (acceptable — DB may be missing)"
+              Write-Host "  ✗ Server process exited early (code: $($proc.ExitCode))"
+              throw "FATAL: Next.js server crashed during startup (exit code $($proc.ExitCode))"
+            }
+            try {
+              $response = Invoke-WebRequest -Uri "http://$testHost`:$testPort/" -TimeoutSec 3 -UseBasicParsing
+              Write-Host "  ✓ Server responded with HTTP $($response.StatusCode) (attempt $i)"
+              $serverReady = $true
+              break
+            } catch {
+              Write-Host "  Attempt ${i}: no response yet (waiting...)"
             }
           }
+
+          if (-not $serverReady) {
+            # Kill the process before failing
+            if (-not $proc.HasExited) { $proc.Kill() }
+            Write-Host "  ✗ FATAL: Server did not respond after $maxAttempts attempts ($($maxAttempts * 2) seconds)"
+            throw "FATAL: Next.js server did not produce an HTTP response — build cannot be released"
+          }
+
           if (-not $proc.HasExited) { $proc.Kill() }
+          # Clean up env
+          Remove-Item Env:\PORT -ErrorAction SilentlyContinue
+          Remove-Item Env:\HOSTNAME -ErrorAction SilentlyContinue
+          Remove-Item Env:\NODE_ENV -ErrorAction SilentlyContinue
 
           Write-Host "=== All checks passed ==="
 
