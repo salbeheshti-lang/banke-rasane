@@ -66,9 +66,20 @@ jobs:
           # AND node_modules/next/package.json in the SAME directory?
           # IMPORTANT: order must match electron/main.js getNextServerPath() —
           # next-service-dist is checked FIRST by the app, so test it FIRST here too.
+          # The standalone payload must exist only once. electron/main.js
+          # launches the canonical extraResources copy under next-service-dist.
+          $canonicalServerPath = "release\win-unpacked\resources\next-service-dist\server.js"
+          $duplicateServerPath = "release\win-unpacked\resources\app\.next\standalone\server.js"
+
+          if (-not (Test-Path $canonicalServerPath)) {
+            throw "FATAL: Canonical Next.js server missing from resources\next-service-dist"
+          }
+          if (Test-Path $duplicateServerPath) {
+            throw "FATAL: Duplicate Next.js standalone payload found under resources\app\.next\standalone"
+          }
+
           $serverCandidates = @(
-            "release\win-unpacked\resources\next-service-dist\server.js",
-            "release\win-unpacked\resources\app\.next\standalone\server.js"
+            $canonicalServerPath
           )
 
           $serverPath = $null
