@@ -67,8 +67,8 @@ jobs:
           # IMPORTANT: order must match electron/main.js getNextServerPath() —
           # next-service-dist is checked FIRST by the app, so test it FIRST here too.
           $serverCandidates = @(
-            "release\win-unpacked\resources\next-service-dist\server.js",
-            "release\win-unpacked\resources\app\.next\standalone\server.js"
+            "release\win-unpacked\resources\app\.next\standalone\server.js",
+            "release\win-unpacked\resources\next-service-dist\server.js"
           )
 
           $serverPath = $null

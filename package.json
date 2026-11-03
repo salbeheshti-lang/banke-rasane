@@ -1,6 +1,6 @@
 {
   "name": "banke-rasane",
-  "version": "5.3.6",
+  "version": "5.3.8",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
@@ -113,13 +113,6 @@
       "package.json"
     ],
     "extraResources": [
-      {
-        "from": ".next/standalone",
-        "to": "next-service-dist",
-        "filter": [
-          "**/*"
-        ]
-      },
       {
         "from": "mini-services/api-service",
         "to": "api-service",

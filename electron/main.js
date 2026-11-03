@@ -59,10 +59,11 @@ function getBunPath() {
 // === Locate the Next.js standalone server.js ===
 function getNextServerPath() {
   const paths = [
-    // extraResources destination (resources/next-service-dist/server.js)
-    path.join(process.resourcesPath || '', 'next-service-dist', 'server.js'),
-    // asar:false app files (resources/app/.next/standalone/server.js)
+    // PRIMARY: asar:false app files (resources/app/.next/standalone/server.js)
+    // This is the canonical location — files always copies correctly (unlike extraResources).
     path.join(process.resourcesPath || '', 'app', '.next', 'standalone', 'server.js'),
+    // FALLBACK: extraResources destination (resources/next-service-dist/server.js)
+    path.join(process.resourcesPath || '', 'next-service-dist', 'server.js'),
     // dev fallback
     path.join(__dirname, '..', '.next', 'standalone', 'server.js'),
   ];
