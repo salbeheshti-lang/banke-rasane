@@ -146,11 +146,18 @@ jobs:
           $testHost = "127.0.0.1"
 
           # Find the packaged Electron binary (the .exe that users will run)
-          $electronExe = Get-ChildItem "release\win-unpacked" -Filter "*.exe" | Select-Object -First 1
+          $electronExe = Get-ChildItem "release\win-unpacked" -Filter "*.exe" | Where-Object { $_.Name -notmatch 'setup|uninstall' } | Select-Object -First 1
           if (-not $electronExe) {
             throw "FATAL: Cannot find the packaged Electron .exe in release\win-unpacked"
           }
           Write-Host "  Using Electron binary: $($electronExe.FullName)"
+
+          # Convert serverPath to ABSOLUTE path — relative paths fail with
+          # ELECTRON_RUN_AS_NODE because Electron resolves paths differently.
+          $absServerPath = (Resolve-Path $serverPath).Path
+          $absServerDir = (Resolve-Path $serverDir).Path
+          Write-Host "  Server path (absolute): $absServerPath"
+          Write-Host "  Server dir (absolute): $absServerDir"
 
           # Set env vars EXACTLY like electron/main.js does:
           #   ELECTRON_RUN_AS_NODE=1 — makes Electron act as plain Node
@@ -167,10 +174,17 @@ jobs:
           # Merge with current process env
           foreach ($k in $testEnv.Keys) { Set-Item -Path "Env:$k" -Value $testEnv[$k] }
 
+          # Start the Electron binary as a Node process.
+          # Use absolute paths and capture stderr to a log file.
+          $stderrFile = Join-Path $env:RUNNER_TEMP "electron-stderr.log"
+          $stdoutFile = Join-Path $env:RUNNER_TEMP "electron-stdout.log"
+
           $proc = Start-Process -FilePath $electronExe.FullName `
-            -ArgumentList $serverPath `
+            -ArgumentList $absServerPath `
             -PassThru -WindowStyle Hidden `
-            -WorkingDirectory $serverDir
+            -WorkingDirectory $absServerDir `
+            -RedirectStandardError $stderrFile `
+            -RedirectStandardOutput $stdoutFile
 
           $serverReady = $false
           $maxAttempts = 20
@@ -178,6 +192,15 @@ jobs:
             Start-Sleep -Seconds 2
             if ($proc.HasExited) {
               Write-Host "  ✗ Server process exited early (code: $($proc.ExitCode))"
+              # Print stderr and stdout so we can see what went wrong
+              if (Test-Path $stderrFile) {
+                Write-Host "  --- STDERR ---"
+                Get-Content $stderrFile | ForEach-Object { Write-Host "    $_" }
+              }
+              if (Test-Path $stdoutFile) {
+                Write-Host "  --- STDOUT ---"
+                Get-Content $stdoutFile | ForEach-Object { Write-Host "    $_" }
+              }
               throw "FATAL: Next.js server crashed during startup (exit code $($proc.ExitCode))"
             }
             try {
