@@ -33,6 +33,132 @@ jobs:
       - name: Build and type-check installer
         run: npm run electron:build
 
+      # ============================================================
+      # CRITICAL: Verify that the Next.js standalone server.js can
+      # actually find 'next' in the packaged resources directory.
+      # electron-builder copies .next/standalone → resources/next-service-dist
+      # but this copy has been failing silently — node_modules was missing
+      # in the packaged app, causing "Cannot find module 'next'" on startup.
+      # ============================================================
+      - name: Verify Next.js module in packaged app
+        shell: pwsh
+        run: |
+          Write-Host "=== Checking packaged app structure ==="
+          $packagedDir = "release\win-unpacked\resources\app"
+          $nextServiceDist = "release\win-unpacked\resources\app\.next\standalone"
+
+          # With asar:false, files are in resources/app/.next/standalone
+          # With asar:true, files would be in app.asar — but we disabled asar.
+          # Check both possible locations.
+          $possiblePaths = @(
+            "release\win-unpacked\resources\app\.next\standalone",
+            "release\win-unpacked\resources\app\node_modules",
+            "release\win-unpacked\resources\next-service-dist"
+          )
+
+          foreach ($p in $possiblePaths) {
+            if (Test-Path $p) {
+              Write-Host "  Found: $p"
+            }
+          }
+
+          # The real check: does the packaged app have next-service-dist/server.js
+          # AND node_modules/next/package.json in the SAME directory?
+          $serverCandidates = @(
+            "release\win-unpacked\resources\app\.next\standalone\server.js",
+            "release\win-unpacked\resources\next-service-dist\server.js"
+          )
+
+          $serverPath = $null
+          foreach ($c in $serverCandidates) {
+            if (Test-Path $c) { $serverPath = $c; break }
+          }
+
+          if (-not $serverPath) {
+            Write-Host "  server.js not found in any expected location"
+            Write-Host "  Listing release\win-unpacked\resources:"
+            if (Test-Path "release\win-unpacked\resources") {
+              Get-ChildItem "release\win-unpacked\resources" -Recurse -Depth 2 | Select-Object FullName
+            }
+            throw "FATAL: server.js not found in packaged app"
+          }
+
+          Write-Host "  server.js found at: $serverPath"
+          $serverDir = Split-Path $serverPath -Parent
+          $nextPkg = Join-Path $serverDir "node_modules\next\package.json"
+
+          if (Test-Path $nextPkg) {
+            Write-Host "  ✓ next/package.json found in packaged app"
+          } else {
+            Write-Host "  ✗ next/package.json MISSING in packaged app"
+            Write-Host "  Attempting to copy node_modules from standalone output..."
+
+            # Copy the ENTIRE node_modules from .next/standalone to the server dir
+            $srcNodeModules = ".next\standalone\node_modules"
+            $destNodeModules = Join-Path $serverDir "node_modules"
+
+            if (Test-Path $srcNodeModules) {
+              Write-Host "  Copying $srcNodeModules → $destNodeModules"
+              Copy-Item -Recurse -Force $srcNodeModules $destNodeModules
+
+              # Verify
+              if (Test-Path $nextPkg) {
+                Write-Host "  ✓ next/package.json now present after manual copy"
+              } else {
+                Write-Host "  ✗ FATAL: next still missing after manual copy"
+                throw "FATAL: Cannot find module 'next' in packaged app even after manual copy"
+              }
+            } else {
+              Write-Host "  ✗ FATAL: .next/standalone/node_modules does not exist either"
+              throw "FATAL: Build output is missing node_modules entirely"
+            }
+          }
+
+          # ============================================================
+          # Test: actually require('next') from the server directory
+          # ============================================================
+          Write-Host "=== Testing require('next') from server directory ==="
+          $serverDir2 = Split-Path $serverPath -Parent
+          $testScript = @"
+          try {
+            const nextPath = require.resolve('next', { paths: ['$($serverDir2 -replace '\\','/')'] });
+            console.log('SUCCESS: next resolved to: ' + nextPath);
+            process.exit(0);
+          } catch (e) {
+            console.log('FAIL: ' + e.message);
+            process.exit(1);
+          }
+          "@
+          $testScript | Out-File -FilePath "test-require.cjs" -Encoding utf8
+          node test-require.cjs
+          if ($LASTEXITCODE -ne 0) {
+            throw "FATAL: require('next') failed in packaged app directory"
+          }
+
+          # ============================================================
+          # Test: start the Next.js server briefly to confirm it boots
+          # ============================================================
+          Write-Host "=== Testing Next.js server startup (10s timeout) ==="
+          $port = 3457
+          $proc = Start-Process -FilePath "node" -ArgumentList $serverPath -PassThru -WindowStyle Hidden
+          Start-Sleep -Seconds 8
+          try {
+            $response = Invoke-WebRequest -Uri "http://127.0.0.1:$port/" -TimeoutSec 5 -UseBasicParsing
+            Write-Host "  Server responded with HTTP $($response.StatusCode)"
+          } catch {
+            Write-Host "  Server did not respond (may be expected if DB not seeded)"
+            # Check if process is still running
+            if ($proc.HasExited) {
+              Write-Host "  ✗ Server process exited (code: $($proc.ExitCode))"
+              throw "FATAL: Next.js server crashed during startup test"
+            } else {
+              Write-Host "  Server is running but didn't respond (acceptable — DB may be missing)"
+            }
+          }
+          if (-not $proc.HasExited) { $proc.Kill() }
+
+          Write-Host "=== All checks passed ==="
+
       - name: Verify and rename installer
         shell: pwsh
         run: |

@@ -59,7 +59,11 @@ function getBunPath() {
 // === Locate the Next.js standalone server.js ===
 function getNextServerPath() {
   const paths = [
+    // extraResources destination (resources/next-service-dist/server.js)
     path.join(process.resourcesPath || '', 'next-service-dist', 'server.js'),
+    // asar:false app files (resources/app/.next/standalone/server.js)
+    path.join(process.resourcesPath || '', 'app', '.next', 'standalone', 'server.js'),
+    // dev fallback
     path.join(__dirname, '..', '.next', 'standalone', 'server.js'),
   ];
   for (const p of paths) {
@@ -70,14 +74,11 @@ function getNextServerPath() {
 }
 
 function getStaticDir() {
-  const paths = [
-    path.join(process.resourcesPath || '', 'next-service-dist'),
-    path.join(__dirname, '..', '.next', 'standalone'),
-  ];
-  for (const p of paths) {
-    if (fs.existsSync(path.join(p, 'server.js'))) return p;
-  }
-  return paths[0];
+  // Return the directory containing server.js — used as cwd for the server process.
+  const serverPath = getNextServerPath();
+  if (serverPath) return path.dirname(serverPath);
+  // Fallback to the first candidate
+  return path.join(process.resourcesPath || '', 'next-service-dist');
 }
 
 // === Locate the API service ===
