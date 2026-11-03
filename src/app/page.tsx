@@ -530,6 +530,28 @@ function saveCustomGenres(genres: Genre[]) {
 
 // Render the section-specific tags (from genre.tags or DEFAULT_GENRE_TAGS) as small badges.
 function renderGenreTags(show: TalkShow, genre?: Genre | null): { id: string; label: string }[] {
+  // Films/series/documentaries should NOT get decor tags — they're not TV studio shows.
+  // Instead, tag them by content type: فیلم/سریال/مستند.
+  if (show.isFilm) {
+    const filmTags: { id: string; label: string }[] = [];
+    // Detect content type from user tags or category
+    const userTags = show.tags || [];
+    const cat = show.category || '';
+    if (userTags.some(t => t.includes('سریال') || t.includes('series')) || cat.includes('اهدای')) {
+      filmTags.push({ id: 'film-type', label: '🎬 سریال' });
+    } else if (userTags.some(t => t.includes('مستند') || t.includes('doc')) || cat.includes('مستند')) {
+      filmTags.push({ id: 'film-type', label: '🎬 مستند' });
+    } else {
+      filmTags.push({ id: 'film-type', label: '🎬 فیلم' });
+    }
+    // Keep user-defined tags (but not decor-style tags)
+    for (const t of userTags.slice(0, 3)) {
+      if (!['مدرن', 'کلاسیک', 'ترکیبی', 'مینیمال'].includes(t)) {
+        filmTags.push({ id: 'user-' + t, label: t });
+      }
+    }
+    return filmTags;
+  }
   const specs = (genre && genre.tags) ? genre.tags : DEFAULT_GENRE_TAGS;
   const out: { id: string; label: string }[] = [];
   for (const spec of specs) {
@@ -3537,12 +3559,20 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
         }}
       >
         {thumb.image ? (
-          <img
-            src={thumb.image}
-            alt={show.name}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-          />
+          <>
+            <img
+              src={thumb.image}
+              alt={show.name}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+            {/* Dark gradient at bottom so the name is readable on the image */}
+            <div className="absolute inset-x-0 bottom-0" style={{ background: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.8) 100%)', padding: '24px 12px 8px' }}>
+              <div className="text-sm font-bold" style={{ color: 'white', textShadow: '0 1px 4px rgba(0,0,0,0.8)', direction: 'rtl', textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {show.name}
+              </div>
+            </div>
+          </>
         ) : (
           <>
             <div className="absolute inset-0" style={{ background: thumb.pattern }}></div>
@@ -3562,9 +3592,9 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
               <div className="text-center">
                 <div
                   className="text-2xl font-black mb-1"
-                  style={{ color: 'white', textShadow: '0 2px 8px rgba(0,0,0,0.5)', direction: 'ltr' }}
+                  style={{ color: 'white', textShadow: '0 2px 8px rgba(0,0,0,0.5)', direction: 'rtl', textAlign: 'center' }}
                 >
-                  {show.name.length > 20 ? show.name.substring(0, 18) + '...' : show.name}
+                  {show.name.length > 25 ? show.name.substring(0, 23) + '...' : show.name}
                 </div>
                 <div
                   className="text-xs font-medium px-2 py-0.5 rounded-full inline-block"
