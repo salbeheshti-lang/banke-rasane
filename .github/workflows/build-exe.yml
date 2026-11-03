@@ -136,20 +136,38 @@ jobs:
           }
 
           # ============================================================
-          # Test: start the Next.js server with correct PORT + HOSTNAME
-          # and REQUIRE an actual HTTP response (not just "process alive")
+          # Test: start the Next.js server EXACTLY like Electron does —
+          # using the packaged Electron binary with ELECTRON_RUN_AS_NODE=1,
+          # not plain `node`. This catches issues that only appear in the
+          # real runtime (e.g. Electron's Node version, native modules, etc.)
           # ============================================================
-          Write-Host "=== Testing Next.js server startup (strict HTTP check) ==="
+          Write-Host "=== Testing Next.js server startup (Electron simulation) ==="
           $testPort = "3457"
           $testHost = "127.0.0.1"
 
-          # Start server with explicit PORT + HOSTNAME env vars so it listens
-          # on the port we will probe. Next.js standalone reads these from env.
-          $env:PORT = $testPort
-          $env:HOSTNAME = $testHost
-          $env:NODE_ENV = "production"
+          # Find the packaged Electron binary (the .exe that users will run)
+          $electronExe = Get-ChildItem "release\win-unpacked" -Filter "*.exe" | Select-Object -First 1
+          if (-not $electronExe) {
+            throw "FATAL: Cannot find the packaged Electron .exe in release\win-unpacked"
+          }
+          Write-Host "  Using Electron binary: $($electronExe.FullName)"
 
-          $proc = Start-Process -FilePath "node" `
+          # Set env vars EXACTLY like electron/main.js does:
+          #   ELECTRON_RUN_AS_NODE=1 — makes Electron act as plain Node
+          #   PORT/HOSTNAME — tells Next.js where to listen
+          #   NODE_ENV=production
+          #   BANKRESANEH_STARTUP_TOKEN — required by /api/internal/ready
+          $testEnv = @{
+            "ELECTRON_RUN_AS_NODE" = "1";
+            "PORT" = $testPort;
+            "HOSTNAME" = $testHost;
+            "NODE_ENV" = "production";
+          }
+
+          # Merge with current process env
+          foreach ($k in $testEnv.Keys) { Set-Item -Path "Env:$k" -Value $testEnv[$k] }
+
+          $proc = Start-Process -FilePath $electronExe.FullName `
             -ArgumentList $serverPath `
             -PassThru -WindowStyle Hidden `
             -WorkingDirectory $serverDir
@@ -164,26 +182,34 @@ jobs:
             }
             try {
               $response = Invoke-WebRequest -Uri "http://$testHost`:$testPort/" -TimeoutSec 3 -UseBasicParsing
-              Write-Host "  ✓ Server responded with HTTP $($response.StatusCode) (attempt $i)"
-              $serverReady = $true
-              break
+              # STRICT: only HTTP 200 is success. Redirects, 4xx, 5xx all fail.
+              if ($response.StatusCode -eq 200) {
+                Write-Host "  ✓ Server returned HTTP 200 (attempt $i)"
+                $serverReady = $true
+                break
+              } else {
+                Write-Host "  Attempt ${i}: got HTTP $($response.StatusCode) — not 200, retrying..."
+              }
             } catch {
-              Write-Host "  Attempt ${i}: no response yet (waiting...)"
+              # Invoke-WebRequest throws on 4xx/5xx — extract the status code
+              $statusCode = $_.Exception.Response.StatusCode.value__
+              if ($statusCode) {
+                Write-Host "  Attempt ${i}: got HTTP $statusCode — not 200, retrying..."
+              } else {
+                Write-Host "  Attempt ${i}: no response yet (waiting...)"
+              }
             }
           }
 
           if (-not $serverReady) {
-            # Kill the process before failing
             if (-not $proc.HasExited) { $proc.Kill() }
-            Write-Host "  ✗ FATAL: Server did not respond after $maxAttempts attempts ($($maxAttempts * 2) seconds)"
-            throw "FATAL: Next.js server did not produce an HTTP response — build cannot be released"
+            Write-Host "  ✗ FATAL: Server did not return HTTP 200 after $maxAttempts attempts"
+            throw "FATAL: Next.js server did not produce HTTP 200 — build cannot be released"
           }
 
           if (-not $proc.HasExited) { $proc.Kill() }
           # Clean up env
-          Remove-Item Env:\PORT -ErrorAction SilentlyContinue
-          Remove-Item Env:\HOSTNAME -ErrorAction SilentlyContinue
-          Remove-Item Env:\NODE_ENV -ErrorAction SilentlyContinue
+          foreach ($k in $testEnv.Keys) { Remove-Item -Path "Env:$k" -ErrorAction SilentlyContinue }
 
           Write-Host "=== All checks passed ==="
 

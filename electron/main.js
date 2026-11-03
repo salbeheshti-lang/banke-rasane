@@ -169,7 +169,12 @@ async function startApiService() {
   for (const sp of seedCandidates) {
     if (fs.existsSync(sp)) { seedPath = sp; break; }
   }
-  log('Seed path: ' + seedPath);
+  if (!fs.existsSync(seedPath)) {
+    log('WARNING: Seed file not found at any candidate path — first-run DB seeding will be skipped.');
+    log('  Checked: ' + seedCandidates.join('; '));
+  } else {
+    log('Seed path: ' + seedPath);
+  }
   fs.mkdirSync(dbDir, { recursive: true });
 
   // Seed the writable user database once. The tracked DB uses WAL mode, so
