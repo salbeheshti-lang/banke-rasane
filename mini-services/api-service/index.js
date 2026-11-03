@@ -400,7 +400,7 @@ function seedShows() {
       (num, name, category, source, size, viewers, style, effects, layout,
        elements, materials, colors, lighting, summary, descriptionFa,
        youtube, imdb, wikipedia, socialPost, images, videos, tags, is_film)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   let inserted = 0;
   const tx = db.transaction(() => {
