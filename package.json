@@ -1,6 +1,6 @@
 {
   "name": "banke-rasane",
-  "version": "5.3.6",
+  "version": "5.3.7",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
@@ -107,9 +107,6 @@
     "asar": false,
     "files": [
       "electron/**/*",
-      ".next/standalone/**/*",
-      ".next/static/**/*",
-      "public/**/*",
       "package.json"
     ],
     "extraResources": [
