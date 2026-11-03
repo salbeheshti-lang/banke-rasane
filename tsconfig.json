@@ -39,6 +39,7 @@
   "exclude": [
     "node_modules",
     "examples/**",
+    "skills/**",
     "scripts/compare_programs.ts",
     "scripts/seed-new-shows.ts"
   ]
