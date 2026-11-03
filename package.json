@@ -108,8 +108,6 @@
     "files": [
       "electron/**/*",
       ".next/standalone/**/*",
-      ".next/static/**/*",
-      "public/**/*",
       "package.json"
     ],
     "extraResources": [
