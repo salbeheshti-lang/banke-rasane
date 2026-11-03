@@ -6098,8 +6098,8 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
 
               {/* Sections list — shows the report structure with descriptions */}
               <div className="p-4" style={{ background: '#f8faf9' }}>
-                <div className="text-xs font-bold mb-3" style={{ color: '#54D9C0', paddingRight: '8px', borderRight: '3px solid #0d7c4a' }}>
-                  ساختار گزارش (۸ بخش) — هر بخش شامل توضیحات کامل
+                <div className="text-xs font-bold mb-3" style={{ color: '#0d7c4a', paddingRight: '8px', borderRight: '3px solid #0d7c4a' }}>
+                  {lang === 'fa' ? 'ساختار گزارش (۸ بخش) — هر بخش شامل توضیحات کامل' : 'Report structure (8 sections) — each with full descriptions'}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {[
@@ -6126,9 +6126,9 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 mb-1">
                           <span className="text-sm">{s.icon}</span>
-                          <span className="text-xs font-bold" style={{ color: '#f0fdf4' }}>{s.t}</span>
+                          <span className="text-xs font-bold" style={{ color: '#1a2e1a' }}>{s.t}</span>
                         </div>
-                        <p className="text-xs leading-relaxed" style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: '10.5px' }}>
+                        <p className="text-xs leading-relaxed" style={{ color: '#4a5d52', fontSize: '10.5px' }}>
                           {s.desc}
                         </p>
                       </div>
@@ -6139,7 +6139,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
 
               {/* Sample program card preview */}
               <div className="p-4" style={{ background: 'white', borderTop: '1px solid rgba(13, 124, 74, 0.3)' }}>
-                <div className="text-xs font-bold mb-2" style={{ color: '#54D9C0' }}>نمونه کارت برنامه (از بخش ۶)</div>
+                <div className="text-xs font-bold mb-2" style={{ color: '#0d7c4a' }}>{lang === 'fa' ? 'نمونه کارت برنامه (از بخش ۶)' : 'Sample program card (from section 6)'}</div>
                 <div
                   className="rounded-lg overflow-hidden"
                   style={{ border: '1px solid rgba(13, 124, 74, 0.3)', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}
@@ -6152,10 +6152,10 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
                       className="w-5 h-5 rounded flex items-center justify-center text-xs font-bold flex-shrink-0"
                       style={{ background: '#0d7c4a', color: 'white' }}
                     >۱</span>
-                    <span className="text-xs font-bold flex-1" style={{ color: '#f0fdf4', direction: 'ltr', textAlign: 'right' }}>
-                      {shows[0]?.name || 'نمونه برنامه'}
+                    <span className="text-xs font-bold flex-1" style={{ color: '#1a2e1a', direction: 'ltr', textAlign: 'right' }}>
+                      {shows[0]?.name || (lang === 'fa' ? 'نمونه برنامه' : 'Sample program')}
                     </span>
-                    <span className="text-xs" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>شناسه: ۱</span>
+                    <span className="text-xs" style={{ color: '#4a5d52' }}>شناسه: ۱</span>
                   </div>
                   <div className="p-2 flex gap-2">
                     <div
@@ -6164,10 +6164,10 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
                     ></div>
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap gap-1 mb-1">
-                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(13, 124, 74,0.08)', color: '#54D9C0', fontSize: '9px' }}>
+                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(13, 124, 74,0.1)', color: '#0d7c4a', fontSize: '9px' }}>
                           {shows[0]?.style || 'مدرن'}
                         </span>
-                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(13, 124, 74,0.08)', color: '#54D9C0', fontSize: '9px' }}>
+                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(13, 124, 74,0.1)', color: '#0d7c4a', fontSize: '9px' }}>
                           {shows[0]?.size || 'متوسط'}
                         </span>
                       </div>
@@ -6180,7 +6180,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
               </div>
 
               {shows.length > 80 && (
-                <div className="p-2 text-center text-xs" style={{ background: '#fef9e7', color: 'rgba(244, 255, 255, 0.7)' }}>
+                <div className="p-2 text-center text-xs" style={{ background: '#fef9e7', color: '#8a6d1a' }}>
                   در گزارش کامل، ۸۰ برنامهٔ نخست به‌صورت تفصیلی و همهٔ {shows.length.toLocaleString('fa-IR')} برنامه در نمایهٔ الفبایی
                 </div>
               )}
@@ -6198,21 +6198,21 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
                 <table className="w-full" style={{ fontSize: '12px' }}>
                   <thead style={{ position: 'sticky', top: 0, background: '#f5efe0', zIndex: 1 }}>
                     <tr>
-                      <th className="text-right p-2 font-bold" style={{ color: '#99f6e4' }}>#</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#99f6e4' }}>نام</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#99f6e4' }}>دسته</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#99f6e4' }}>سبک</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#99f6e4' }}>اندازه</th>
+                      <th className="text-right p-2 font-bold" style={{ color: '#0d7c4a' }}>#</th>
+                      <th className="text-right p-2 font-bold" style={{ color: '#0d7c4a' }}>نام</th>
+                      <th className="text-right p-2 font-bold" style={{ color: '#0d7c4a' }}>دسته</th>
+                      <th className="text-right p-2 font-bold" style={{ color: '#0d7c4a' }}>سبک</th>
+                      <th className="text-right p-2 font-bold" style={{ color: '#0d7c4a' }}>اندازه</th>
                     </tr>
                   </thead>
                   <tbody>
                     {shows.slice(0, 50).map((s, i) => (
-                      <tr key={s.num} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.6)' }}>
-                        <td className="p-2" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>{(i + 1).toLocaleString('fa-IR')}</td>
-                        <td className="p-2 font-medium" style={{ color: '#f0fdf4', direction: 'ltr', textAlign: 'right' }}>{s.name}</td>
-                        <td className="p-2" style={{ color: '#99f6e4' }}>{s.category.replace(/^\d+\.\s*/, '').substring(0, 20)}</td>
-                        <td className="p-2" style={{ color: '#99f6e4' }}>{s.style}</td>
-                        <td className="p-2" style={{ color: '#99f6e4' }}>{s.size}</td>
+                      <tr key={s.num} style={{ borderBottom: '1px solid rgba(0, 0, 0, 0.08)', background: i % 2 === 0 ? 'white' : '#f9f9f9' }}>
+                        <td className="p-2" style={{ color: '#4a5d52' }}>{(i + 1).toLocaleString('fa-IR')}</td>
+                        <td className="p-2 font-medium" style={{ color: '#1a2e1a', direction: 'ltr', textAlign: 'right' }}>{s.name}</td>
+                        <td className="p-2" style={{ color: '#4a5d52' }}>{s.category.replace(/^\d+\.\s*/, '').substring(0, 20)}</td>
+                        <td className="p-2" style={{ color: '#4a5d52' }}>{s.style}</td>
+                        <td className="p-2" style={{ color: '#4a5d52' }}>{s.size}</td>
                       </tr>
                     ))}
                   </tbody>

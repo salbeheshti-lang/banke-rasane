@@ -196,7 +196,7 @@ function generatePDFHtml(shows: any[], opts: PDFOptions): string {
 
   // COVER PAGE
   const logoHtml = opts.logoDataUrl
-    ? `<img src="${opts.logoDataUrl}" alt="بانک رسانه" style="width: 96px; height: auto; display: block; margin: 0 auto;" />`
+    ? `<img src="${opts.logoDataUrl}" alt="بانک رسانه" style="width: 140px; height: auto; display: block; margin: 0 auto; filter: brightness(1.2) drop-shadow(0 4px 20px rgba(16, 185, 129, 0.4));" />`
     : '';
   const cover = `
     <section class="cover">
