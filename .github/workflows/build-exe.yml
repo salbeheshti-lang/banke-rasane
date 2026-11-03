@@ -62,11 +62,13 @@ jobs:
             }
           }
 
-          # The real check: does the packaged app have next-service-dist/server.js
+          # The real check: does the packaged app have server.js
           # AND node_modules/next/package.json in the SAME directory?
+          # IMPORTANT: order must match electron/main.js getNextServerPath() —
+          # next-service-dist is checked FIRST by the app, so test it FIRST here too.
           $serverCandidates = @(
-            "release\win-unpacked\resources\app\.next\standalone\server.js",
-            "release\win-unpacked\resources\next-service-dist\server.js"
+            "release\win-unpacked\resources\next-service-dist\server.js",
+            "release\win-unpacked\resources\app\.next\standalone\server.js"
           )
 
           $serverPath = $null
@@ -244,6 +246,33 @@ jobs:
           Copy-Item $setup.FullName 'release/BankResaneh-Setup.exe' -Force
           if (-not (Test-Path 'release/latest.yml')) { throw 'electron-builder did not produce latest.yml for auto-update.' }
           Get-ChildItem release
+
+      # ============================================================
+      # FULL SMOKE TEST — run the actual BankResaneh.exe and verify:
+      # - Next.js UI responds (port 3000)
+      # - Local API responds (port 3002)
+      # - Database is seeded (showsCount > 0)
+      # - Search endpoint is protected (401 without auth)
+      # This is the REAL test — not just "can Node require('next')".
+      # ============================================================
+      - name: Full smoke test (Electron + API + DB)
+        shell: pwsh
+        run: |
+          Write-Host "=== Running full smoke test ==="
+          Write-Host "Starting BankResaneh.exe and waiting for Next.js + API + DB..."
+
+          # The smoke test script does everything:
+          # 1. Spawns release/win-unpacked/BankResaneh.exe
+          # 2. Waits for Next.js UI on port 3000
+          # 3. Waits for API on port 3002/api/health
+          # 4. Checks showsCount > 0 (database seeded)
+          # 5. Probes /api/shows/search for 401 (auth enforced)
+          # 6. Kills the process
+          node scripts/smoke-electron.cjs
+          if ($LASTEXITCODE -ne 0) {
+            throw "FATAL: Smoke test failed — the packaged app does not work correctly"
+          }
+          Write-Host "=== Smoke test passed ==="
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
