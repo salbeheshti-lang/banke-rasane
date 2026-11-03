@@ -84,10 +84,28 @@ if (fs.existsSync(serverJs)) {
     const pkg = JSON.parse(fs.readFileSync(nextPackageJson, 'utf-8'));
     console.log(`[copy-standalone] ✓ verified: next@${pkg.version} is present in standalone`);
   } else {
-    console.error('[copy-standalone] WARNING: next/package.json not found — module may be incomplete');
+    // FATAL: next module is incomplete — this will cause 'Cannot find module next' on Windows.
+    // Fail the build instead of shipping a broken installer.
+    console.error('[copy-standalone] FATAL: next/package.json not found in standalone!');
+    console.error('[copy-standalone] Attempting force-copy from root node_modules...');
+    const rootNext = path.join(root, 'node_modules', 'next');
+    if (fs.existsSync(rootNext)) {
+      copyTree(rootNext, standaloneNext);
+      // Verify again
+      if (fs.existsSync(path.join(standaloneNext, 'package.json'))) {
+        console.log('[copy-standalone] ✓ force-copy succeeded');
+      } else {
+        console.error('[copy-standalone] FATAL: force-copy also failed — aborting build');
+        process.exit(1);
+      }
+    } else {
+      console.error('[copy-standalone] FATAL: node_modules/next not found in root — aborting build');
+      process.exit(1);
+    }
   }
 } else {
-  console.error('[copy-standalone] WARNING: server.js not found in standalone');
+  console.error('[copy-standalone] FATAL: server.js not found in standalone — aborting build');
+  process.exit(1);
 }
 
 // === Also copy the @next and @swc scoped packages if missing ===
