@@ -1,10 +1,11 @@
 name: Security tests
 
-# Runs the 50-step repeatable API security test suite on every push/PR.
-# Tests are run against:
-#   1. A fresh database (empty DB → seeded by the API on first run)
-#   2. A pre-populated database (simulating an upgrade from a previous version)
-# The test script itself handles both scenarios.
+# Runs the 61-step repeatable API security test suite on every push/PR.
+# Two scenarios are tested:
+#   1. Fresh DB — wipe and re-create from scratch
+#   2. Upgrade DB — simulate an upgrade from a previous version (legacy users)
+# The test script (scripts/security-test.sh) handles both scenarios internally
+# via the SECURITY_TEST_SCENARIO env var.
 
 on:
   push:
@@ -43,33 +44,8 @@ jobs:
         env:
           SECURITY_TEST_SCENARIO: fresh
 
-      - name: Run security test suite (pre-populated DB scenario)
+      - name: Run security test suite (upgrade DB scenario)
         run: |
-          # Pre-populate the DB with old users BEFORE starting the API,
-          # then run the same suite to verify nothing breaks on upgrade.
-          mkdir -p /tmp/old-db
-          cd mini-services/api-service
-          # Start API once to create the schema, then stop it
-          (setsid bun --hot index.js > /tmp/api-pre.log 2>&1 < /dev/null &)
-          sleep 5
-          pkill -f "bun --hot index.js" 2>/dev/null
-          sleep 2
-          # The DB now has the default admin + shows. Add some "legacy" users
-          # with various permission states to simulate an upgrade scenario.
-          bun -e '
-            import { Database } from "bun:sqlite";
-            import { createHash } from "node:crypto";
-            const db = new Database("bankresaneh.sqlite");
-            const sha = (s) => createHash("sha256").update(s).digest("hex");
-            // Legacy user with NO permissions column set (simulates v5.3.0 → v5.3.9 upgrade)
-            db.prepare("INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)")
-              .run("legacy_admin", sha("OldPass123"), "admin", "Legacy Admin");
-            db.prepare("INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)")
-              .run("legacy_editor", sha("OldPass123"), "editor", "Legacy Editor");
-            console.log("added 2 legacy users for upgrade test");
-          '
-          # Now re-run the security suite (it will kill+restart the API on the existing DB)
-          cd /home/z/my-project
           bash scripts/security-test.sh
         env:
           SECURITY_TEST_SCENARIO: upgrade
