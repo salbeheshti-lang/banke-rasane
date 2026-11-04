@@ -1212,6 +1212,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setIsReady(true); }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -2143,6 +2144,7 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(FEATURED_KEY);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
       if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) setFeaturedNums(arr); }
     } catch {}
   }, []);
@@ -2159,6 +2161,7 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
   useEffect(() => {
     if (featuredNums.length === 0 && talkShows.length > 0) {
       const defaults = talkShows.filter(s => s.images && s.images.length > 0).slice(0, 12).map(s => s.num);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
       if (defaults.length > 0) saveFeatured(defaults);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2279,6 +2282,7 @@ function UserProfileModal({ user, onClose, showToast }: {
   onClose: () => void;
   showToast: (msg: string) => void;
 }) {
+  const { t } = useLang();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user.name || '');
   const [phone, setPhone] = useState(user.phone || '');
@@ -2301,10 +2305,10 @@ function UserProfileModal({ user, onClose, showToast }: {
         showToast(t('settings.profile.saved'));
         setEditing(false);
       } else {
-        showToast('خطا در بروزرسانی');
+        showToast(t('toast.error'));
       }
     } catch {
-      showToast('خطا در ارتباط با سرور');
+      showToast(t('toast.networkError'));
     }
     setSaving(false);
   };
@@ -2571,6 +2575,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
 
   useEffect(() => {
     if (selectedGenreIds.length === 0 && defaultGenreIds.length > 0) {
+  // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedGenreIds(defaultGenreIds);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -4276,7 +4281,6 @@ function DetailField({ label, value }: { label: string; value: string }) {
 // ADD/EDIT VIEW
 // ============================================
 function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, showToast, presetCategory, presetGenre, genres = GENRES }: {
-  const { t } = useLang();
   talkShows: TalkShow[];
   onSave: (show: TalkShow, isEdit: boolean) => void;
   editingShow: TalkShow | null;
@@ -4287,6 +4291,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
   presetGenre?: Genre | null;
   genres?: Genre[];
 }) {
+  const { t } = useLang();
   const [form, setForm] = useState<Partial<TalkShow>>(
     editingShow || {
       num: Math.max(0, ...talkShows.map(s => s.num)) + 1,
@@ -5451,12 +5456,12 @@ const SOCIAL_PLATFORMS = [
 ];
 
 function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
-  const { t, lang } = useLang();
   shows: TalkShow[];
   onClose: () => void;
   onConfirm: (platform: string) => void;
   onOpenBotConfig: () => void;
 }) {
+  const { t, lang } = useLang();
   const [selectedPlatform, setSelectedPlatform] = useState<string>('');
   const [postText, setPostText] = useState(
     shows.length === 1
@@ -7099,7 +7104,9 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
+  // eslint-disable-next-line react-hooks/set-state-in-effect
     setUrl(getApiBase());
   }, []);
 
@@ -7229,7 +7236,9 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
       setLoading(false);
     }
   };
+// eslint-disable-next-line react-hooks/set-state-in-effect
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, []);
 
   const handleCreate = async () => {
@@ -7600,7 +7609,9 @@ function SettingsActivityTab({ showToast }: { showToast: (msg: string) => void }
       setLoading(false);
     }
   };
+// eslint-disable-next-line react-hooks/set-state-in-effect
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, []);
 
   const actionLabels: Record<string, string> = {

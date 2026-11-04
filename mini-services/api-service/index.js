@@ -366,6 +366,10 @@ function getUserPermissions(user) {
   
   // If user has a custom permissions string stored, use ONLY those.
   const storedPerms = (user.permissions || '').trim();
+  if (storedPerms === 'NONE') {
+    // Explicitly revoked all permissions
+    return new Set();
+  }
   if (storedPerms) {
     return new Set(storedPerms.split(',').filter(p => ALL_PERMISSIONS[p]));
   }
@@ -869,11 +873,31 @@ const server = Bun.serve({
         return json({ error: 'مدیر اصلی قابل تعلیق نیست' }, 403, req);
       }
 
+      // If upgrading a user TO admin role, check create_admins permission
+      if (body.role === 'admin' && target.role !== 'admin') {
+        if (!hasPermission(admin, 'create_admins')) {
+          return json({ error: 'شما اجازه ارتقا به مدیر را ندارید' }, 403, req);
+        }
+      }
+
       // Update name, role, isActive, and optionally permissions
       const newRole = body.role || target.role;
       const newName = body.name ?? target.name;
       const newActive = body.isActive !== undefined ? (body.isActive ? 1 : 0) : target.is_active;
-      const newPerms = Array.isArray(body.permissions) ? body.permissions.filter(p => ALL_PERMISSIONS[p]).join(',') : (target.permissions || '');
+      // Handle permissions: 
+      // - If body.permissions is an array → use it (even if empty = no permissions)
+      // - If body.permissions is not provided → keep existing
+      let newPerms;
+      if (Array.isArray(body.permissions)) {
+        // Empty array = all permissions explicitly revoked (distinct from not set)
+        newPerms = body.permissions.filter(p => ALL_PERMISSIONS[p]).join(',');
+        // If empty and user is admin, store a marker so we know it was explicitly set
+        if (newPerms === '' && newRole === 'admin') {
+          newPerms = 'NONE'; // Special marker: explicitly no permissions
+        }
+      } else {
+        newPerms = target.permissions || '';
+      }
       db.prepare('UPDATE users SET name = ?, role = ?, is_active = ?, permissions = ? WHERE id = ?').run(newName, newRole, newActive, newPerms, id);
       logActivity(admin, 'update_user', 'user', id, `Updated user "${target.username}": role=${newRole}, active=${newActive}, perms=${newPerms}`);
       return json(publicUser(getUserById(id), admin), req);
