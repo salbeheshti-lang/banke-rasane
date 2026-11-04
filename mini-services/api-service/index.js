@@ -887,26 +887,35 @@ const server = Bun.serve({
         }
       }
 
-      // Update name, role, isActive, and optionally permissions
-      const newRole = body.role || target.role;
-      const newName = body.name ?? target.name;
-      const newActive = body.isActive !== undefined ? (body.isActive ? 1 : 0) : target.is_active;
-      // Handle permissions: 
-      // - If body.permissions is an array → use it (even if empty = no permissions)
-      // - If body.permissions is not provided → keep existing
-      let newPerms;
+      // SECURITY: Only super admin can change permissions
+      // Regular admins CANNOT modify permissions (theirs or anyone else's)
+      let newPerms = target.permissions || '';
       if (Array.isArray(body.permissions)) {
-        // Empty array = all permissions explicitly revoked (distinct from not set)
+        if (!isSuperAdmin(admin)) {
+          return json({ error: 'تنها مدیر اصلی می‌تواند اختیارات را تغییر دهد' }, 403, req);
+        }
+        // Super admin can set any permissions (including empty = revoke all)
         newPerms = body.permissions.filter(p => ALL_PERMISSIONS[p]).join(',');
-        // If empty for ANY role (not just admin), store NONE marker
         if (newPerms === '') {
           newPerms = 'NONE'; // Special marker: explicitly no permissions
         }
-      } else {
-        newPerms = target.permissions || '';
+        logActivity(admin, 'update_permissions', 'user', id, `Changed permissions for "${target.username}" to: ${newPerms}`);
       }
+
+      // SECURITY: Only super admin can change another admin's role
+      // Regular admins can only change role for non-admin users (e.g. viewer→editor)
+      if (body.role && body.role !== target.role) {
+        if (target.role === 'admin' && !isSuperAdmin(admin)) {
+          return json({ error: 'تنها مدیر اصلی می‌تواند نقش مدیران را تغییر دهد' }, 403, req);
+        }
+      }
+
+      // Update name, role, isActive, and permissions
+      const newRole = body.role || target.role;
+      const newName = body.name ?? target.name;
+      const newActive = body.isActive !== undefined ? (body.isActive ? 1 : 0) : target.is_active;
       db.prepare('UPDATE users SET name = ?, role = ?, is_active = ?, permissions = ? WHERE id = ?').run(newName, newRole, newActive, newPerms, id);
-      logActivity(admin, 'update_user', 'user', id, `Updated user "${target.username}": role=${newRole}, active=${newActive}, perms=${newPerms}`);
+      logActivity(admin, 'update_user', 'user', id, `Updated user "${target.username}": role=${newRole}, active=${newActive}`);
       return json(publicUser(getUserById(id), admin), req);
     }
 
