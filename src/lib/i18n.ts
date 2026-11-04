@@ -374,18 +374,12 @@ export const dict: Dict = {
   'add.field.viewers': { fa: 'تماشاگر', en: 'Audience' },
   'add.added': { fa: 'برنامه اضافه شد', en: 'Program added' },
   'add.updated': { fa: 'برنامه بروزرسانی شد', en: 'Program updated' },
-  'add.editTitle': { fa: 'ویرایش برنامه', en: 'Edit program' },
   'add.addTitle': { fa: 'افزودن برنامهٔ جدید', en: 'Add new program' },
   'add.field.required': { fa: 'نام برنامه الزامی است', en: 'Program name is required' },
-  'add.delete': { fa: 'حذف برنامه', en: 'Delete program' },
-  'add.deleted': { fa: 'برنامه حذف شد', en: 'Program deleted' },
   'add.deleteConfirm': {
     fa: 'آیا از حذف این برنامه مطمئن هستید؟',
     en: 'Are you sure you want to delete this program?'
   },
-  'add.save': { fa: '✓ ذخیره برنامه', en: '✓ Save program' },
-  'add.saving': { fa: '⏳ در حال ذخیره...', en: '⏳ Saving...' },
-  'add.cancel': { fa: 'انصراف', en: 'Cancel' },
   'add.field.description': { fa: 'دربارهٔ برنامه (فارسی)', en: 'About the program (Persian)' },
   'add.field.summary': { fa: 'خلاصهٔ دکور', en: 'Decor summary' },
   'add.field.youtube': { fa: 'لینک یوتیوب', en: 'YouTube link' },
@@ -466,8 +460,6 @@ export const dict: Dict = {
   'genre.add.added': { fa: 'ژانر اضافه شد', en: 'Genre added' },
 
   // ===== Toast messages (general) =====
-  'toast.saved': { fa: 'ذخیره شد', en: 'Saved' },
-  'toast.error': { fa: 'خطا رخ داد', en: 'An error occurred' },
   'toast.networkError': { fa: 'خطا در ارتباط با سرور', en: 'Server connection error' },
   'toast.loadingError': { fa: 'خطا در بارگذاری', en: 'Loading error' },
 
