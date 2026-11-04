@@ -424,11 +424,10 @@ const ISLAMIC_COUNTRIES: string[] = [
 
 // Returns the list of Islamic countries mentioned in a show's text (description, summary, country).
 function detectCountries(show: TalkShow): string[] {
-  const text = `${show.descriptionFa || ''} ${show.summary || ''} ${show.country || ''}`;
+  const text = `${show.descriptionFa || ''} ${show.summary || ''} ${show.country || ''} ${(show.tags || []).join(' ')} ${show.category || ''}`;
   const found: string[] = [];
   for (const c of ISLAMIC_COUNTRIES) {
     // Word-boundary-style match: country must not be part of a longer Persian word.
-    // We use a regex that requires non-letter / start / end on either side.
     const escaped = c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const re = new RegExp(`(^|[^\\u0600-\\u06FFa-zA-Z])${escaped}([^\\u0600-\\u06FFa-zA-Z]|$)`);
     if (re.test(text)) found.push(c);
@@ -3082,6 +3081,8 @@ function ProgramsView({
   const [filterViewers, setFilterViewers] = useState('all');
   const [filterStyle, setFilterStyle] = useState('all');
   const [islamicOnly, setIslamicOnly] = useState(false);
+  // How many shows to display — starts at 60, increases by 60 when user clicks "بیشتر"
+  const [displayCount, setDisplayCount] = useState(60);
 
   const filteredShows = useMemo(() => {
     let shows = [...talkShows];
@@ -3091,16 +3092,27 @@ function ProgramsView({
     if (filterStyle !== 'all') shows = shows.filter(s => s.style === filterStyle);
     if (islamicOnly) shows = shows.filter(s => detectCountries(s).length > 0);
     if (search) {
-      const q = search.toLowerCase();
-      // Section-specific search: use genre.searchFields if defined, else default to name+summary+category.
-      const fields: (keyof TalkShow)[] = genre?.searchFields || ['name', 'summary', 'category'];
+      // Normalize search query: unify Arabic/Persian variants + remove ZWNJ
+      const normalizeFa = (text: string) =>
+        text
+          .replace(/\u064a/g, '\u06cc')  // ي (Arabic) → ی (Persian)
+          .replace(/\u0643/g, '\u06a9')  // ك (Arabic) → ک (Persian)
+          .replace(/\u0629/g, '\u0647')  // ة (Taa Marbuta) → ه
+          .replace(/\u200c/g, '')         // remove ZWNJ
+          .replace(/\u200f/g, '')         // remove RLM
+          .toLowerCase()
+          .trim();
+
+      const q = normalizeFa(search);
+      // Section-specific search: use genre.searchFields if defined, else search broadly.
+      const fields: (keyof TalkShow)[] = genre?.searchFields || ['name', 'summary', 'category', 'descriptionFa', 'materials', 'style', 'elements', 'colors'];
       shows = shows.filter(s => {
         for (const f of fields) {
           const v = s[f];
           if (typeof v === 'string') {
-            if (v.toLowerCase().includes(q) || v.includes(search)) return true;
+            if (normalizeFa(v).includes(q)) return true;
           } else if (Array.isArray(v)) {
-            if (v.some(item => String(item).toLowerCase().includes(q) || String(item).includes(search))) return true;
+            if (v.some(item => normalizeFa(String(item)).includes(q))) return true;
           }
         }
         return false;
@@ -3480,7 +3492,7 @@ function ProgramsView({
         </div>
       ) : view === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredShows.slice(0, 60).map(s => (
+          {filteredShows.slice(0, displayCount).map(s => (
             <ProgramCard
               key={s.num}
               show={s}
@@ -3498,7 +3510,7 @@ function ProgramsView({
         </div>
       ) : (
         <div className="space-y-2">
-          {filteredShows.slice(0, 60).map(s => (
+          {filteredShows.slice(0, displayCount).map(s => (
             <ProgramListRow
               key={s.num}
               show={s}
@@ -3516,10 +3528,29 @@ function ProgramsView({
         </div>
       )}
 
-      {filteredShows.length > 60 && (
-        <div className="text-center mt-8" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>
-          <p className="text-sm">
-            {t('programs.showing60')} {filteredShows.length.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US')} • {lang === 'fa' ? 'برای مشاهده همه، جستجو را فیلتر کنید' : 'To view all, filter your search'}
+      {filteredShows.length > displayCount && (
+        <div className="text-center mt-8">
+          <button
+            onClick={() => setDisplayCount(c => c + 60)}
+            className="px-6 py-3 rounded-xl text-sm font-bold transition-all"
+            style={{
+              background: 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)',
+              color: '#ffffff',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: '0 4px 14px rgba(13, 124, 74, 0.3)',
+              cursor: 'pointer',
+            }}
+          >
+            {lang === 'fa'
+              ? `نمایش بیشتر (${(filteredShows.length - displayCount).toLocaleString('fa-IR')} برنامه باقی‌مانده)`
+              : `Show more (${filteredShows.length - displayCount} remaining)`
+            }
+          </button>
+          <p className="text-xs mt-2" style={{ color: 'rgba(244, 255, 255, 0.6)' }}>
+            {lang === 'fa'
+              ? `نمایش ${Math.min(displayCount, filteredShows.length).toLocaleString('fa-IR')} از ${filteredShows.length.toLocaleString('fa-IR')} برنامه`
+              : `Showing ${Math.min(displayCount, filteredShows.length)} of ${filteredShows.length}`
+            }
           </p>
         </div>
       )}
@@ -4339,26 +4370,40 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       showToast('نام برنامه الزامی است');
       return;
     }
+    // Create a clean copy — never mutate state directly.
+    const finalForm = { ...form };
+
     // Auto-generate links if not set
-    if (!form.youtube && form.name) {
-      form.youtube = `https://www.youtube.com/results?search_query=${encodeURIComponent(form.name)}`;
+    if (!finalForm.youtube && finalForm.name) {
+      finalForm.youtube = `https://www.youtube.com/results?search_query=${encodeURIComponent(finalForm.name)}`;
     }
-    if (!form.imdb && form.name) {
-      form.imdb = `https://www.imdb.com/find?q=${encodeURIComponent(form.name)}`;
+    if (!finalForm.imdb && finalForm.name) {
+      finalForm.imdb = `https://www.imdb.com/find?q=${encodeURIComponent(finalForm.name)}`;
     }
-    if (!form.wikipedia && form.name) {
-      form.wikipedia = `https://fa.wikipedia.org/w/index.php?search=${encodeURIComponent(form.name)}`;
+    if (!finalForm.wikipedia && finalForm.name) {
+      finalForm.wikipedia = `https://fa.wikipedia.org/w/index.php?search=${encodeURIComponent(finalForm.name)}`;
     }
-    if (!form.descriptionFa) {
-      form.descriptionFa = 'برنامهٔ گفتگومی تلویزیونی با مصاحبه، بحث و بررسی موضوعات متنوع.';
+    if (!finalForm.descriptionFa) {
+      finalForm.descriptionFa = 'برنامهٔ گفتگومی تلویزیونی با مصاحبه، بحث و بررسی موضوعات متنوع.';
     }
-    if (!form.socialPost) {
-      form.socialPost = `🎬 ${form.name}\n\n📝 ${form.descriptionFa}\n\n#بانک_رسانه #تاک_شو`;
+    if (!finalForm.socialPost) {
+      finalForm.socialPost = `🎬 ${finalForm.name}
+
+📝 ${finalForm.descriptionFa}
+
+#بانک_رسانه #تاک‌شو`;
     }
+    // Ensure images and tags arrays exist
+    if (!finalForm.images) finalForm.images = [];
+    if (!finalForm.tags) finalForm.tags = [];
+
+    // Update state with the final form
+    setForm(finalForm);
+
     if (editingShow) {
-      onSave(form as TalkShow, true);
+      onSave(finalForm as TalkShow, true);
     } else {
-      onSave(form as TalkShow, false);
+      onSave(finalForm as TalkShow, false);
     }
     onDone();
   };
