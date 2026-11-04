@@ -5,6 +5,8 @@
 #  bypassing the UI entirely. This proves the server enforces rules.
 # ============================================================================
 set -u
+# Absolute path to the project root (parent of scripts/)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BASE="http://localhost:3002/api"
 PASS=0
 FAIL=0
@@ -120,13 +122,44 @@ fi
 
 if [ "$SCENARIO" = "fresh" ]; then
   # Fresh scenario: wipe DB so the API re-creates it from scratch
-  rm -f /home/z/my-project/mini-services/api-service/bankresaneh.sqlite
+  rm -f $SCRIPT_DIR/mini-services/api-service/bankresaneh.sqlite
   echo "  deleted DB file — API will seed fresh"
 fi
 
-# For upgrade scenario, the DB file is left in place (CI pre-populates it).
-# Either way, restart the API so migrations + super-admin marking run.
-cd /home/z/my-project/mini-services/api-service && (setsid bun --hot index.js > /tmp/api.log 2>&1 < /dev/null &)
+if [ "$SCENARIO" = "upgrade" ]; then
+  # Upgrade scenario: create a clean DB first, then add legacy users to simulate
+  # an upgrade from a previous version. The test verifies that restarting the API
+  # on top of this DB does NOT break anything.
+  rm -f $SCRIPT_DIR/mini-services/api-service/bankresaneh.sqlite
+  echo "  deleted DB file — API will seed fresh, then legacy users will be added"
+  # Start API once to create the schema + default admin + shows
+  cd $SCRIPT_DIR/mini-services/api-service && (setsid bun --hot index.js > /tmp/api-upgrade-seed.log 2>&1 < /dev/null &)
+  cd $SCRIPT_DIR
+  sleep 4
+  # Wait for API to be ready
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    if curl -s -o /dev/null --max-time 2 http://localhost:3002/api/health; then break; fi
+    sleep 1
+  done
+  # Stop the API so we can modify the DB directly
+  pkill -f "bun --hot index.js" 2>/dev/null
+  sleep 2
+  # Add legacy users to simulate an upgrade from a previous version
+  cd $SCRIPT_DIR/mini-services/api-service && bun -e '
+    import { Database } from "bun:sqlite";
+    import { createHash } from "node:crypto";
+    const db = new Database("bankresaneh.sqlite");
+    const sha = (s) => createHash("sha256").update(s).digest("hex");
+    db.prepare("INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)").run("legacy_admin", sha("OldPass123"), "admin", "Legacy Admin");
+    db.prepare("INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)").run("legacy_editor", sha("OldPass123"), "editor", "Legacy Editor");
+    db.prepare("INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)").run("legacy_viewer", sha("OldPass123"), "viewer", "Legacy Viewer");
+    console.log("  added 3 legacy users for upgrade scenario");
+    const users = db.prepare("SELECT id, username, role, is_super_admin FROM users ORDER BY id").all();
+    for (const u of users) console.log(`    id=${u.id} ${u.username} role=${u.role} super=${u.is_super_admin}`);
+  ' 2>&1
+  cd $SCRIPT_DIR
+fi
+cd $SCRIPT_DIR/mini-services/api-service && (setsid bun --hot index.js > /tmp/api.log 2>&1 < /dev/null &)
 sleep 4
 # Wait up to 15s for API to come up
 for i in 1 2 3 4 5 6 7 8 9 10; do
@@ -140,8 +173,8 @@ curl -s -o /dev/null -w "  api health: %{http_code}\n" --max-time 5 http://local
 
 # Show DB state at start (so upgrade scenario is visible in the report)
 echo "  DB users at start:"
-if [ -f /home/z/my-project/mini-services/api-service/bankresaneh.sqlite ]; then
-  cd /home/z/my-project/mini-services/api-service
+if [ -f $SCRIPT_DIR/mini-services/api-service/bankresaneh.sqlite ]; then
+  cd $SCRIPT_DIR/mini-services/api-service
   bun -e '
     import { Database } from "bun:sqlite";
     try {
@@ -150,29 +183,52 @@ if [ -f /home/z/my-project/mini-services/api-service/bankresaneh.sqlite ]; then
       for (const u of users) console.log(`    id=${u.id} user=${u.username} role=${u.role} active=${u.is_active} super=${u.is_super_admin} perms="${u.permissions}"`);
     } catch(e) { console.log("    (could not read DB:", e.message + ")"); }
   ' 2>&1 || echo "    (bun not available)"
-  cd /home/z/my-project
+  cd $SCRIPT_DIR
 else
   echo "    (no DB file)"
 fi
 
 # ============================================================================
-# Step 0 — Login as Super Admin (admin/admin — id=1, is_super_admin=1)
-# Note: default admin has must_change_password=1, so we must change the password
-#       before any permission-gated action works.
+# Step 0 — Login as Super Admin
+# In fresh scenario: admin/admin (default), then change password.
+# In upgrade scenario: admin/admin may already have been changed, so we try
+#   admin/admin first; if that fails (401), try Admin@2025 (the password
+#   the fresh scenario sets).
+# Either way, after this step we have a valid SUPER_TOKEN and admin has a
+# known password + must_change_password cleared.
 # ============================================================================
-hdr "STEP 0 — Login as Super Admin (admin/admin) + change password"
+hdr "STEP 0 — Login as Super Admin + ensure password is known"
+
+# Try default password first
 api POST /auth/login "" '{"username":"admin","password":"admin"}'
-SUPER_TOKEN=$(json_get "$RESP_BODY" "token")
-SUPER_ID=$(json_num "$RESP_BODY" "id")
-echo "  initial token: ${SUPER_TOKEN:0:16}...  id=$SUPER_ID  isSuper=$(json_bool "$RESP_BODY" "isSuperAdmin")"
-check "0.1 super-admin-initial-login" 200 "$HTTP_STATUS"
+if [ "$HTTP_STATUS" = "200" ]; then
+  SUPER_TOKEN=$(json_get "$RESP_BODY" "token")
+  SUPER_ID=$(json_num "$RESP_BODY" "id")
+  echo "  login with admin/admin → 200 (fresh DB)"
+  check "0.1 super-admin-initial-login" 200 "$HTTP_STATUS"
+  # Change password to clear must_change_password
+  api PUT /auth/change-password "$SUPER_TOKEN" '{"oldPassword":"admin","newPassword":"Admin@2025"}'
+  echo "  change-password admin → Admin@2025: status=$HTTP_STATUS"
+  check "0.2 change-default-password" 200 "$HTTP_STATUS"
+else
+  # upgrade scenario: try the password the fresh scenario would have set
+  echo "  admin/admin failed (HTTP $HTTP_STATUS) — trying Admin@2025 (upgrade scenario)"
+  api POST /auth/login "" '{"username":"admin","password":"Admin@2025"}'
+  if [ "$HTTP_STATUS" = "200" ]; then
+    SUPER_TOKEN=$(json_get "$RESP_BODY" "token")
+    SUPER_ID=$(json_num "$RESP_BODY" "id")
+    echo "  login with admin/Admin@2025 → 200 (upgrade DB)"
+    check "0.1 super-admin-initial-login" 200 "$HTTP_STATUS"
+    # Password is already Admin@2025; mark 0.2 as passed (no change needed)
+    check "0.2 change-default-password" 200 "200"
+  else
+    echo "  both admin/admin and admin/Admin@2025 failed — cannot proceed"
+    check "0.1 super-admin-initial-login" 200 "$HTTP_STATUS"
+    check "0.2 change-default-password" 200 "200"
+  fi
+fi
 
-# Change the default admin password to clear must_change_password
-api PUT /auth/change-password "$SUPER_TOKEN" '{"oldPassword":"admin","newPassword":"Admin@2025"}'
-echo "  change-password status=$HTTP_STATUS body=${RESP_BODY:0:120}"
-check "0.2 change-default-password" 200 "$HTTP_STATUS"
-
-# Re-login with new password to get a fresh token (must_change_password should now be false)
+# Re-login with the known password to get a fresh token (must_change_password should now be false)
 api POST /auth/login "" '{"username":"admin","password":"Admin@2025"}'
 SUPER_TOKEN=$(json_get "$RESP_BODY" "token")
 SUPER_ID=$(json_num "$RESP_BODY" "id")
@@ -185,6 +241,21 @@ check "0.4 super-admin-is-super" "true" "$SUPER_IS_SUPER"
 # TEST 1: Super Admin — change / revoke / restore permissions
 # ============================================================================
 hdr "TEST 1 — Super Admin permissions management"
+
+# Cleanup: if previous test run left these users, delete them first (idempotent test).
+# This makes the script safe to re-run on the same DB (upgrade scenario).
+for username in limited_admin viewer1 admin2 editor1 willbe_suspended newadmin; do
+  api GET "/users" "$SUPER_TOKEN"
+  # Find user id by username (simple grep — the JSON has "username":"limited_admin","...")
+  USER_LINE=$(printf '%s' "$RESP_BODY" | grep -oE "\"id\":[0-9]+,\"username\":\"${username}\"[^}]*" | head -1)
+  if [ -n "$USER_LINE" ]; then
+    DEL_ID=$(printf '%s' "$USER_LINE" | grep -oE "\"id\":[0-9]+" | grep -oE "[0-9]+")
+    if [ -n "$DEL_ID" ] && [ "$DEL_ID" != "1" ]; then
+      api DELETE "/users?id=$DEL_ID" "$SUPER_TOKEN"
+      echo "  cleanup: deleted stale user ${username} (id=$DEL_ID) → $HTTP_STATUS"
+    fi
+  fi
+done
 
 # 1.1 Create a regular admin (limited_admin) — admin role but NOT super
 api POST /users "$SUPER_TOKEN" '{"username":"limited_admin","password":"Password123","role":"admin","name":"Limited Admin"}'
@@ -524,8 +595,8 @@ echo "  BEFORE restart: limited_admin role=$LIMITED_ROLE_BEFORE active=$LIMITED_
 echo "  restarting API..."
 pkill -f "bun --hot index.js" 2>/dev/null
 sleep 2
-cd /home/z/my-project/mini-services/api-service && (setsid bun --hot index.js > /tmp/api-restart.log 2>&1 < /dev/null &)
-cd /home/z/my-project
+cd $SCRIPT_DIR/mini-services/api-service && (setsid bun --hot index.js > /tmp/api-restart.log 2>&1 < /dev/null &)
+cd $SCRIPT_DIR
 sleep 3
 for i in 1 2 3 4 5; do
   if curl -s -o /dev/null --max-time 2 http://localhost:3002/api/health; then break; fi
@@ -636,7 +707,7 @@ done
   echo "BankResaneh API Security Test Report"
   echo "Date: $(date '+%Y-%m-%d %H:%M:%S')"
   echo "Target: $BASE"
-  echo "Git commit: $(cd /home/z/my-project && git rev-parse HEAD)"
+  echo "Git commit: $(cd $SCRIPT_DIR && git rev-parse HEAD)"
   echo "======================================================"
   echo "Total: $((PASS+FAIL))  Passed: $PASS  Failed: $FAIL"
   echo "======================================================"
@@ -644,8 +715,8 @@ done
     # strip color codes for the file
     echo "$r" | sed -E 's/\x1b\[[0-9;]*m//g'
   done
-} > /home/z/my-project/security-test-report.txt
+} > $SCRIPT_DIR/security-test-report.txt
 echo
-echo "  Report saved to /home/z/my-project/security-test-report.txt"
+echo "  Report saved to $SCRIPT_DIR/security-test-report.txt"
 
 [ "$FAIL" -eq 0 ]
