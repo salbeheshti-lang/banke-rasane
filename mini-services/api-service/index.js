@@ -565,22 +565,22 @@ const server = Bun.serve({
       });
     }
 
-    // ----- Fetch image from IMDb/Wikipedia -----
+    // ----- Fetch image from Wikipedia ONLY (exact show decor photos) -----
+    // Per user requirement: do NOT use IMDb/OMDb (returns movie posters, not decor).
+    // Search Wikipedia for the EXACT show name, prefer TV series/program pages,
+    // and only accept images from wikimedia.org (Wikipedia's official image host).
     if (pathname === '/api/fetch-image' && method === 'POST') {
       const authUser = requireRole(req, ['admin', 'editor']);
       if (!authUser) return json({ error: 'Unauthorized' }, 401, req);
       let body;
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
       const num = parseInt(body?.num, 10);
-      const imdbUrl = String(body?.imdb || '');
       const wikiUrl = String(body?.wikipedia || '');
       const showName = String(body?.name || '');
       if (!Number.isFinite(num) || num < 1) return json({ error: 'invalid show number' }, 400, req);
+      if (!showName && !wikiUrl) return json({ error: 'show name or wikipedia URL required' }, 400, req);
 
-      const OMDB_API_KEY = 'thewdb';
       const UA = 'BankResaneh/2.0 (contact@bankrasaneh.ir)';
-      const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-
       async function fetchRetry(url, opts = {}, retries = 2) {
         for (let i = 0; i <= retries; i++) {
           try { const r = await fetch(url, opts); if (r.ok) return r; if (r.status === 429) { await new Promise(x=>setTimeout(x,3000*(i+1))); continue; } if (r.status === 404) return r; }
@@ -588,34 +588,94 @@ const server = Bun.serve({
         }
         return null;
       }
+      // Normalize the search query: strip parenthetical disambiguators, collapse spaces.
       function cleanQ(s) { return (s||'').replace(/[?!]+$/,'').replace(/\(.*?\)/g,' ').replace(/[\u2013\u2014-]/g,' ').replace(/\s+/g,' ').trim(); }
 
       let imageUrl = null, source = '';
-      const direct = imdbUrl?.match(/tt(\d+)/);
-      if (direct) {
-        const r = await fetchRetry(`https://www.omdbapi.com/?i=tt${direct[1]}&apikey=${OMDB_API_KEY}`,{},1);
-        if (r && r.ok) { const d = await r.json(); if (d.Response==='True' && d.Poster && d.Poster!=='N/A') { imageUrl=d.Poster; source='omdb'; } }
+
+      // Step 1: If the user supplied a Wikipedia URL, use it directly (most accurate).
+      if (wikiUrl) {
+        // Extract the page title from the URL: /wiki/Page_Title or ?search=...
+        let pageTitle = '';
+        try {
+          const u = new URL(wikiUrl);
+          if (u.pathname.startsWith('/wiki/')) {
+            pageTitle = decodeURIComponent(u.pathname.slice('/wiki/'.length).replace(/_/g, ' '));
+          } else if (u.searchParams.get('search')) {
+            pageTitle = u.searchParams.get('search');
+          }
+        } catch {}
+        if (pageTitle) {
+          // Try both en and fa Wikipedia REST API for the exact page summary
+          for (const lang of ['fa','en']) {
+            const r = await fetchRetry(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(pageTitle)}`, { headers: { 'User-Agent': UA } }, 1);
+            if (r && r.ok) {
+              const d = await r.json();
+              const img = d.originalimage?.source || d.thumbnail?.source;
+              // Only accept images hosted on Wikimedia (Wikipedia's official image CDN).
+              if (img && (img.includes('wikimedia.org') || img.includes('upload.wikimedia.org'))) {
+                imageUrl = img; source = `wikipedia-url-${lang}`;
+                break;
+              }
+            }
+          }
+        }
       }
+
+      // Step 2: If no URL (or URL didn't yield an image), search by show name with
+      // disambiguation suffixes commonly used for TV programs. Wikipedia-only.
       if (!imageUrl && showName) {
         const q = cleanQ(showName);
         if (q) {
-          const r = await fetchRetry(`https://www.omdbapi.com/?s=${encodeURIComponent(q)}&apikey=${OMDB_API_KEY}`,{},1);
-          if (r && r.ok) { const d = await r.json(); if (d.Search) for (const item of d.Search) if (item.Poster && item.Poster!=='N/A') { imageUrl=item.Poster; source='omdb'; break; } }
-        }
-      }
-      if (!imageUrl && showName) {
-        for (const lang of ['en','fa']) {
-          for (const suffix of [' (TV series)',' (TV program)',' (film)','']) {
-            const r = await fetchRetry(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cleanQ(showName)+suffix)}`,{headers:{'User-Agent':UA}},1);
-            if (r && r.ok) { const d = await r.json(); const img = d.originalimage?.source || d.thumbnail?.source; if (img) { imageUrl=img; source='wikipedia-'+lang; break; } }
+          for (const lang of ['fa','en']) {
+            // Try common TV-program disambiguators first, then plain name as last resort.
+            for (const suffix of [' (برنامه تلویزیونی)',' (مجموعه تلویزیونی)',' (TV series)',' (TV program)',' (TV show)',' (talk show)',' (film)','']) {
+              const r = await fetchRetry(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(q + suffix)}`, { headers: { 'User-Agent': UA } }, 1);
+              if (r && r.ok) {
+                const d = await r.json();
+                const img = d.originalimage?.source || d.thumbnail?.source;
+                if (img && (img.includes('wikimedia.org') || img.includes('upload.wikimedia.org'))) {
+                  imageUrl = img; source = `wikipedia-${lang}`;
+                  break;
+                }
+              }
+            }
+            if (imageUrl) break;
           }
-          if (imageUrl) break;
+
+          // Step 3: If REST summary didn't match, fall back to Wikipedia's search API.
+          // This handles cases where the exact page title differs from the show name.
+          if (!imageUrl) {
+            for (const lang of ['fa','en']) {
+              const searchUrl = `https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q + ' TV')}&format=json&srlimit=5`;
+              const r = await fetchRetry(searchUrl, { headers: { 'User-Agent': UA } }, 1);
+              if (r && r.ok) {
+                const d = await r.json();
+                if (d.query?.search) {
+                  for (const item of d.query.search) {
+                    const title = item.title;
+                    const r2 = await fetchRetry(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`, { headers: { 'User-Agent': UA } }, 1);
+                    if (r2 && r2.ok) {
+                      const d2 = await r2.json();
+                      const img = d2.originalimage?.source || d2.thumbnail?.source;
+                      if (img && (img.includes('wikimedia.org') || img.includes('upload.wikimedia.org'))) {
+                        imageUrl = img; source = `wikipedia-search-${lang}`;
+                        break;
+                      }
+                    }
+                  }
+                }
+              }
+              if (imageUrl) break;
+            }
+          }
         }
       }
-      if (!imageUrl) return json({ error: 'no image found' }, 404, req);
 
-      const isWiki = imageUrl.includes('wikimedia.org') || imageUrl.includes('wikipedia.org');
-      const ires = await fetchRetry(imageUrl, { headers: isWiki ? {'User-Agent':UA} : {'User-Agent':BROWSER_UA,'Referer':'https://www.imdb.com/'} }, 3);
+      if (!imageUrl) return json({ error: 'no Wikipedia image found for this show' }, 404, req);
+
+      // Download the image (Wikimedia requires a User-Agent).
+      const ires = await fetchRetry(imageUrl, { headers: { 'User-Agent': UA } }, 3);
       if (!ires || !ires.ok) return json({ error: 'download failed' }, 500, req);
       const buf = await ires.arrayBuffer();
       const raw = new Uint8Array(buf);
@@ -628,7 +688,6 @@ const server = Bun.serve({
       } catch(e) { processed = Buffer.from(raw); }
 
       db.prepare('UPDATE shows SET image_data = ?, image_mime = ?, image_source = ? WHERE num = ?').run(new Uint8Array(processed), 'image/jpeg', source, num);
-      if (imdbUrl) db.prepare('UPDATE shows SET imdb = ? WHERE num = ?').run(imdbUrl, num);
       if (wikiUrl) db.prepare('UPDATE shows SET wikipedia = ? WHERE num = ?').run(wikiUrl, num);
       return json({ success: true, source, size: processed.length }, req);
     }
@@ -952,6 +1011,117 @@ const server = Bun.serve({
       const admin = requirePermission(req, 'manage_users');
       if (!admin) return json({ error: 'Unauthorized' }, 401, req);
       return json({ permissions: Object.keys(ALL_PERMISSIONS) }, req);
+    }
+
+    // ----- Analytics: track a user action (view_show, export_pdf, publish_show) -----
+    // Any authenticated user can track their own actions for analytics.
+    if (pathname === '/api/analytics/track' && method === 'POST') {
+      const user = requireUser(req);
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+      let body;
+      try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
+      const action = String(body?.action || '').trim();
+      const targetType = String(body?.targetType || 'show').trim();
+      const targetId = String(body?.targetId || '').trim();
+      const details = String(body?.details || '').trim();
+      const validActions = ['view_show', 'export_pdf', 'export_excel', 'publish_show', 'open_show_details'];
+      if (!validActions.includes(action)) {
+        return json({ error: 'invalid action' }, 400, req);
+      }
+      logActivity(user, action, targetType, targetId, details);
+      return json({ success: true }, req);
+    }
+
+    // ----- Analytics: comprehensive report for the Reports tab in Settings -----
+    if (pathname === '/api/analytics/report' && method === 'GET') {
+      const user = requirePermission(req, 'export_reports');
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+
+      // Time window: default 30 days
+      const days = Math.min(parseInt(url.searchParams.get('days') || '30'), 365);
+      const since = nowSec() - days * 86400;
+
+      // 1. Daily active users (last N days) — count DISTINCT users per day from activity_log
+      const dailyActive = db.prepare(`
+        SELECT date(created_at, 'unixepoch') AS day, COUNT(DISTINCT user_id) AS users
+        FROM activity_log
+        WHERE created_at >= ? AND user_id > 0
+        GROUP BY day ORDER BY day ASC
+      `).all(since);
+
+      // 2. Total views, exports, publishes in the window
+      const totals = db.prepare(`
+        SELECT
+          SUM(CASE WHEN action = 'view_show' THEN 1 ELSE 0 END) AS views,
+          SUM(CASE WHEN action = 'export_pdf' THEN 1 ELSE 0 END) AS pdfExports,
+          SUM(CASE WHEN action = 'export_excel' THEN 1 ELSE 0 END) AS excelExports,
+          SUM(CASE WHEN action = 'publish_show' THEN 1 ELSE 0 END) AS publishes
+        FROM activity_log WHERE created_at >= ?
+      `).get(since);
+
+      // 3. Most-viewed shows (top 10) in the window
+      const topShows = db.prepare(`
+        SELECT target_id AS num, COUNT(*) AS views
+        FROM activity_log
+        WHERE action = 'view_show' AND created_at >= ? AND target_id != ''
+        GROUP BY target_id ORDER BY views DESC LIMIT 10
+      `).all(since);
+
+      // 4. Most-exported shows (PDF) in the window
+      const topExports = db.prepare(`
+        SELECT target_id AS num, COUNT(*) AS exports
+        FROM activity_log
+        WHERE action IN ('export_pdf', 'export_excel') AND created_at >= ? AND target_id != ''
+        GROUP BY target_id ORDER BY exports DESC LIMIT 10
+      `).all(since);
+
+      // 5. Incomplete programs — shows missing critical fields
+      // Critical fields: name, summary, descriptionFa, materials, style, colors
+      const allShows = db.prepare(`
+        SELECT num, name, summary, descriptionFa, materials, style, colors, layout, elements, lighting
+        FROM shows
+      `).all();
+      const incomplete = [];
+      for (const s of allShows) {
+        const missing = [];
+        if (!s.name || s.name.trim() === '') missing.push('name');
+        if (!s.summary || s.summary.trim() === '') missing.push('summary');
+        if (!s.descriptionFa || s.descriptionFa.trim() === '') missing.push('descriptionFa');
+        if (!s.materials || s.materials.trim() === '') missing.push('materials');
+        if (!s.style || s.style.trim() === '') missing.push('style');
+        if (!s.colors || s.colors.trim() === '') missing.push('colors');
+        if (!s.layout || s.layout.trim() === '') missing.push('layout');
+        if (missing.length > 0) incomplete.push({ num: s.num, name: s.name, missing });
+      }
+
+      // 6. Online users right now (active in last 2 minutes from sessions + last_seen)
+      const onlineUsers = db.prepare(`
+        SELECT id, username, name, role, last_seen
+        FROM users
+        WHERE is_active = 1 AND last_seen > ?
+        ORDER BY last_seen DESC
+      `).all(nowSec() - 120);
+
+      return json({
+        windowDays: days,
+        dailyActive,
+        totals: {
+          views: totals?.views || 0,
+          pdfExports: totals?.pdfExports || 0,
+          excelExports: totals?.excelExports || 0,
+          publishes: totals?.publishes || 0,
+        },
+        topShows,
+        topExports,
+        incompletePrograms: incomplete,
+        incompleteCount: incomplete.length,
+        totalShows: allShows.length,
+        onlineUsers: onlineUsers.map(u => ({
+          id: u.id, username: u.username, name: u.name, role: u.role,
+          lastSeenSecondsAgo: nowSec() - (u.last_seen || 0),
+        })),
+        onlineCount: onlineUsers.length,
+      }, req);
     }
 
     return json({ error: 'Not Found', path: pathname }, 404, req);

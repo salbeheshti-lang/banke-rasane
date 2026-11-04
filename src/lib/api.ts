@@ -136,4 +136,14 @@ export const api = {
     const data = await request<{ logs: any[] }>(url);
     return data.logs || [];
   },
+  async trackAnalytics(action: string, targetType = 'show', targetId = '', details = '') {
+    try {
+      await request(getApiUrl('api/analytics/track'), {
+        method: 'POST', body: JSON.stringify({ action, targetType, targetId, details }),
+      });
+    } catch { /* non-critical — analytics should never block UX */ }
+  },
+  async getAnalyticsReport(days = 30) {
+    return request<any>(getApiUrl('api/analytics/report?days=' + days));
+  },
 };
