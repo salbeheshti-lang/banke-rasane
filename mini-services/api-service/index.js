@@ -148,6 +148,7 @@ addColumnIfMissing('users', 'created_at', 'INTEGER NOT NULL DEFAULT 0');
 addColumnIfMissing('users', 'must_change_password', 'INTEGER NOT NULL DEFAULT 0');
 addColumnIfMissing('users', 'is_active', 'INTEGER NOT NULL DEFAULT 1');
 addColumnIfMissing('users', 'is_super_admin', 'INTEGER NOT NULL DEFAULT 0');
+addColumnIfMissing('users', 'permissions', "TEXT NOT NULL DEFAULT ''");
 
 // Mark the first user (id=1) as super admin — cannot be deleted or demoted.
 try {
@@ -258,6 +259,7 @@ function corsOptions(req) {
 
 function publicUser(u, viewer) {
   if (!u) return null;
+  const perms = getUserPermissions(u);
   const base = {
     id: u.id, username: u.username, role: u.role, name: u.name,
     createdAt: u.created_at, lastSeen: u.last_seen,
@@ -266,6 +268,7 @@ function publicUser(u, viewer) {
     mustChangePassword: !!u.must_change_password,
     isActive: !u.is_active ? false : true,
     isSuperAdmin: !!u.is_super_admin,
+    permissions: Array.from(perms),
   };
   // Phone visible only to admins (or self)
   if (viewer && (viewer.role === 'admin' || viewer.id === u.id)) base.phone = u.phone || '';
@@ -334,6 +337,44 @@ function logActivity(user, action, targetType, targetId, details) {
 // === Permission helpers ===
 function isSuperAdmin(user) {
   return user && !!user.is_super_admin;
+}
+
+// All permission keys and their default roles (what each role CAN do by default).
+const ALL_PERMISSIONS = {
+  manage_users:     ['admin'],           // create/list/update/delete users
+  create_admins:    ['admin'],           // create new admin-role users
+  suspend_users:    ['admin'],           // suspend/activate users
+  add_shows:        ['admin', 'editor'], // add new programs
+  edit_shows:       ['admin', 'editor'], // edit existing programs
+  delete_shows:     ['admin'],           // delete programs
+  manage_genres:    ['admin'],           // add/edit/delete custom genres
+  manage_settings:  ['admin'],           // change server URL, report settings
+  view_activity:    ['admin'],           // view activity log
+  export_reports:   ['admin', 'editor'], // export PDF/Excel
+};
+
+// Parse a user's permissions string into a Set of granted permissions.
+// Super admins have ALL permissions. Regular admins have ALL permissions by default
+// unless the super admin has explicitly customized them.
+function getUserPermissions(user) {
+  if (!user) return new Set();
+  if (isSuperAdmin(user)) return new Set(Object.keys(ALL_PERMISSIONS));
+  if (user.role === 'admin') return new Set(Object.keys(ALL_PERMISSIONS));
+  if (user.role === 'editor') return new Set(['add_shows', 'edit_shows', 'export_reports']);
+  return new Set();
+}
+
+// Check if a user has a specific permission.
+function hasPermission(user, perm) {
+  return getUserPermissions(user).has(perm);
+}
+
+// Require a specific permission (not just a role).
+function requirePermission(req, perm) {
+  const user = requireUser(req);
+  if (!user || user.must_change_password) return null;
+  if (!hasPermission(user, perm)) return null;
+  return user;
 }
 
 function requireUser(req) {
@@ -808,12 +849,13 @@ const server = Bun.serve({
         return json({ error: 'مدیر اصلی قابل تعلیق نیست' }, 403, req);
       }
 
-      // Update name, role, and optionally isActive
+      // Update name, role, isActive, and optionally permissions
       const newRole = body.role || target.role;
       const newName = body.name ?? target.name;
       const newActive = body.isActive !== undefined ? (body.isActive ? 1 : 0) : target.is_active;
-      db.prepare('UPDATE users SET name = ?, role = ?, is_active = ? WHERE id = ?').run(newName, newRole, newActive, id);
-      logActivity(admin, 'update_user', 'user', id, `Updated user "${target.username}": role=${newRole}, active=${newActive}`);
+      const newPerms = Array.isArray(body.permissions) ? body.permissions.filter(p => ALL_PERMISSIONS[p]).join(',') : (target.permissions || '');
+      db.prepare('UPDATE users SET name = ?, role = ?, is_active = ?, permissions = ? WHERE id = ?').run(newName, newRole, newActive, newPerms, id);
+      logActivity(admin, 'update_user', 'user', id, `Updated user "${target.username}": role=${newRole}, active=${newActive}, perms=${newPerms}`);
       return json(publicUser(getUserById(id), admin), req);
     }
 
@@ -842,6 +884,13 @@ const server = Bun.serve({
       const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 200);
       const logs = db.prepare('SELECT * FROM activity_log ORDER BY created_at DESC LIMIT ?').all(limit);
       return json({ logs }, req);
+    }
+
+    // ----- Permissions list -----
+    if (pathname === '/api/permissions' && method === 'GET') {
+      const admin = requireRole(req, ['admin']);
+      if (!admin) return json({ error: 'Unauthorized' }, 401, req);
+      return json({ permissions: Object.keys(ALL_PERMISSIONS) }, req);
     }
 
     return json({ error: 'Not Found', path: pathname }, 404, req);

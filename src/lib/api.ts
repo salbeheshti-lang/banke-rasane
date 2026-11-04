@@ -62,6 +62,7 @@ export interface User {
   mustChangePassword?: boolean;
   isActive?: boolean;
   isSuperAdmin?: boolean;
+  permissions?: string[];
 }
 
 function authHeaders(): Record<string, string> {
