@@ -3453,11 +3453,11 @@ function ProgramsView({
         )}
       </div>
 
-      {/* Genre breadcrumb bar — professional scrollable chips */}
+      {/* Genre breadcrumb bar — elegant pill chips with color identity dots */}
       {genre && genres && genres.length > 0 && (
         <div className="mb-4">
           <div
-            className="flex items-center gap-2 overflow-x-auto pb-2 pt-1"
+            className="flex items-center gap-1.5 overflow-x-auto pb-2 pt-1"
             style={{
               scrollbarWidth: 'thin',
               scrollbarColor: 'rgba(255,255,255,0.3) transparent',
@@ -3474,44 +3474,68 @@ function ProgramsView({
                 <button
                   key={g.id}
                   onClick={() => onGenreSelect?.(g)}
-                  className="group flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap"
+                  className="group flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap"
                   style={isActive ? {
-                    // Active: solid genre color, white text, glowing shadow
-                    background: g.color,
+                    // Active: solid genre color with gradient + glow
+                    background: `linear-gradient(135deg, ${g.color} 0%, rgba(${rgb}, 0.85) 100%)`,
                     color: '#ffffff',
-                    border: `1px solid ${g.color}`,
-                    boxShadow: `0 6px 20px ${g.color}80, 0 0 0 3px ${g.color}25`,
+                    border: `1px solid rgba(${rgb}, 0.6)`,
+                    boxShadow: `0 4px 16px ${g.color}66, 0 0 0 2px rgba(${rgb}, 0.15), inset 0 1px 0 rgba(255,255,255,0.25)`,
                     scrollSnapAlign: 'center',
                   } : {
-                    // Rest: professional WHITE liquid glass (frosted glass look)
-                    background: 'rgba(255, 255, 255, 0.55)',
-                    color: '#1a1a1a',
-                    border: '1px solid rgba(255, 255, 255, 0.8)',
-                    backdropFilter: 'blur(16px) saturate(180%)',
-                    WebkitBackdropFilter: 'blur(16px) saturate(180%)',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9)',
+                    // Rest: dark frosted glass with a colored dot indicator
+                    background: 'rgba(0, 0, 0, 0.35)',
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    backdropFilter: 'blur(12px) saturate(140%)',
+                    WebkitBackdropFilter: 'blur(12px) saturate(140%)',
+                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
                     scrollSnapAlign: 'center',
                   }}
                   onMouseEnter={(e) => {
                     if (!isActive) {
-                      // Hover: lights up with the genre's OWN color (color highlight)
-                      e.currentTarget.style.background = g.color;
-                      e.currentTarget.style.borderColor = g.color;
+                      // Hover: subtle color tint + glow, with the genre's own color bleeding through
+                      e.currentTarget.style.background = `linear-gradient(135deg, rgba(${rgb}, 0.35) 0%, rgba(${rgb}, 0.15) 100%)`;
+                      e.currentTarget.style.borderColor = `rgba(${rgb}, 0.5)`;
                       e.currentTarget.style.color = '#ffffff';
-                      e.currentTarget.style.boxShadow = `0 6px 20px ${g.color}80, 0 0 0 3px ${g.color}25`;
-                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = `0 4px 16px ${g.color}40, 0 0 0 2px rgba(${rgb}, 0.1)`;
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      // Make the dot brighter on hover
+                      const dot = e.currentTarget.querySelector('.genre-dot') as HTMLElement | null;
+                      if (dot) {
+                        dot.style.transform = 'scale(1.3)';
+                        dot.style.boxShadow = `0 0 8px ${g.color}`;
+                      }
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!isActive) {
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.55)';
-                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.8)';
-                      e.currentTarget.style.color = '#1a1a1a';
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9)';
+                      e.currentTarget.style.background = 'rgba(0, 0, 0, 0.35)';
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+                      e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)';
+                      e.currentTarget.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08)';
                       e.currentTarget.style.transform = 'translateY(0)';
+                      const dot = e.currentTarget.querySelector('.genre-dot') as HTMLElement | null;
+                      if (dot) {
+                        dot.style.transform = 'scale(1)';
+                        dot.style.boxShadow = 'none';
+                      }
                     }
                   }}
                 >
+                  {/* Color identity dot — shows the genre's color at rest, glows on hover */}
+                  <span
+                    className="genre-dot inline-block rounded-full transition-all"
+                    style={isActive ? {
+                      width: '6px', height: '6px',
+                      background: '#ffffff',
+                      boxShadow: '0 0 6px rgba(255,255,255,0.8)',
+                    } : {
+                      width: '6px', height: '6px',
+                      background: g.color,
+                      boxShadow: `0 0 4px rgba(${rgb}, 0.5)`,
+                    }}
+                  />
                   {g.nameFa}
                 </button>
               );
@@ -6742,36 +6766,36 @@ function SettingsModal({
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center p-4"
-      style={{ background: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(8px)', animation: 'fade-in 0.2s ease-out' }}
+      className="fixed inset-0 z-[80] flex items-stretch justify-center"
+      style={{ background: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(8px)', animation: 'fade-in 0.2s ease-out' }}
       onClick={onClose}
     >
       <div
-        className="relative flex flex-col"
+        className="relative flex flex-col w-full h-full"
         style={{
-          width: 'min(820px, 96vw)',
-          height: 'min(720px, 92vh)',
-          maxHeight: '92vh',
+          width: '100%',
+          maxWidth: '1000px',
+          height: '100vh',
+          maxHeight: '100vh',
           /* Liquid glass — same as header */
-          background: 'linear-gradient(180deg, rgba(5, 80, 65, 0.82) 0%, rgba(0, 95, 75, 0.78) 50%, rgba(8, 110, 90, 0.75) 100%)',
+          background: 'linear-gradient(180deg, rgba(5, 80, 65, 0.95) 0%, rgba(0, 95, 75, 0.92) 50%, rgba(8, 110, 90, 0.9) 100%)',
           backdropFilter: 'blur(28px) saturate(135%)',
           WebkitBackdropFilter: 'blur(28px) saturate(135%)',
-          borderRadius: '28px',
           boxShadow: '0 24px 80px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
           overflow: 'hidden',
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
+        {/* Header — compact */}
         <div
-          className="flex items-center justify-between p-4 flex-shrink-0"
+          className="flex items-center justify-between px-4 py-3 flex-shrink-0"
           style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.15)' }}
         >
-          <h2 className="text-lg font-bold" style={{ color: '#f0fdf4' }}>{t('settings.title')}</h2>
+          <h2 className="text-base font-bold" style={{ color: '#f0fdf4' }}>{t('settings.title')}</h2>
           <button
             onClick={onClose}
             aria-label={t('misc.close')}
-            className="p-2 rounded-lg transition-colors"
+            className="p-2 rounded-lg transition-colors hover:bg-white/10"
             style={{ color: 'rgba(255, 255, 255, 0.7)' }}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -6780,10 +6804,10 @@ function SettingsModal({
           </button>
         </div>
 
-        {/* Tabs */}
+        {/* Tabs — compact, wrap to multiple rows if needed */}
         <div
-          className="flex items-center gap-1.5 p-2 flex-shrink-0 overflow-x-auto no-scrollbar"
-          style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}
+          className="flex flex-wrap items-center gap-1 px-3 py-2 flex-shrink-0"
+          style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', background: 'rgba(0, 0, 0, 0.2)' }}
         >
           {tabs.map((t) => {
             const active = tab === t.key;
@@ -6791,27 +6815,35 @@ function SettingsModal({
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
-                className="flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap"
+                className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap"
                 style={active ? {
                   background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
                   border: '1px solid rgba(255, 255, 255, 0.3)',
                   color: 'white',
                   boxShadow: '0 4px 12px rgba(0, 107, 80, 0.4)',
                 } : {
-                  color: 'rgba(255, 255, 255, 0.7)',
-                  border: '1px solid transparent',
-                  background: 'transparent',
+                  color: 'rgba(255, 255, 255, 0.75)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  background: 'rgba(255, 255, 255, 0.06)',
                 }}
               >
-                <span>{t.icon}</span>
+                <span style={{ fontSize: '13px' }}>{t.icon}</span>
                 <span>{t.label}</span>
               </button>
             );
           })}
         </div>
 
-        {/* Body — scrollable */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6" style={{ minHeight: 0 }}>
+        {/* Body — scrollable, fills ALL remaining height */}
+        <div
+          className="flex-1 overflow-y-auto p-4 sm:p-5"
+          style={{
+            minHeight: 0,
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'rgba(255,255,255,0.4) transparent',
+            WebkitOverflowScrolling: 'touch',
+          }}
+        >
           {tab === 'profile' && <ProfileTab currentUser={currentUser} showToast={showToast} />}
           {tab === 'users' && <SettingsUsersTab currentUser={currentUser} showToast={showToast} />}
           {tab === 'server' && <SettingsServerTab showToast={showToast} />}
