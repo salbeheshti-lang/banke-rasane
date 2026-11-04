@@ -1135,7 +1135,7 @@ function HomeInner() {
       {showBotConfig && (
         <BotConfigModal
           onClose={() => setShowBotConfig(false)}
-          onSaved={() => { setShowBotConfig(false); showToast('تنظیمات ربات ذخیره شد'); }}
+          onSaved={() => { setShowBotConfig(false); showToast(t('publish.saved')); }}
         />
       )}
 
@@ -2298,7 +2298,7 @@ function UserProfileModal({ user, onClose, showToast }: {
         body: JSON.stringify({ name, phone, jobTitle, deputy, avatar }),
       });
       if (res.ok) {
-        showToast('پروفایل بروزرسانی شد');
+        showToast(t('settings.profile.saved'));
         setEditing(false);
       } else {
         showToast('خطا در بروزرسانی');
@@ -3882,6 +3882,7 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
 // SHOW DETAILS MODAL — with Persian description, links, publish, export
 // ============================================
 function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport, isUploaded, canEdit, allShows = [], onSwapShow }: {
+  const { t } = useLang();
   show: TalkShow;
   onClose: () => void;
   onEdit: (s: TalkShow) => void;
@@ -4275,6 +4276,7 @@ function DetailField({ label, value }: { label: string; value: string }) {
 // ADD/EDIT VIEW
 // ============================================
 function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, showToast, presetCategory, presetGenre, genres = GENRES }: {
+  const { t } = useLang();
   talkShows: TalkShow[];
   onSave: (show: TalkShow, isEdit: boolean) => void;
   editingShow: TalkShow | null;
@@ -4314,7 +4316,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
 
   const handleAutoFetch = async () => {
     if (!fetchUrl) {
-      showToast('لینک IMDb یا ویکی‌پدیا را وارد کنید');
+      showToast(t('add.autoFetchNoUrl'));
       return;
     }
     setFetching(true);
@@ -4356,10 +4358,10 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
           updated.socialPost = `🎬 ${updated.name}\n\n📝 ${updated.descriptionFa || ''}\n\n#بانک_رسانه #تاک_شو`;
         }
         setForm(updated);
-        showToast('اطلاعات با موفقیت دریافت شد');
+        showToast(t('add.autoFetchSuccess'));
       }
     } catch (e) {
-      showToast('خطا در دریافت اطلاعات');
+      showToast(t('add.autoFetchError'));
     } finally {
       setFetching(false);
     }
@@ -4367,7 +4369,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
 
   const handleSubmit = () => {
     if (!form.name) {
-      showToast('نام برنامه الزامی است');
+      showToast(t('add.field.required'));
       return;
     }
     // Create a clean copy — never mutate state directly.
@@ -5449,6 +5451,7 @@ const SOCIAL_PLATFORMS = [
 ];
 
 function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
+  const { t, lang } = useLang();
   shows: TalkShow[];
   onClose: () => void;
   onConfirm: (platform: string) => void;
@@ -5812,6 +5815,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
 // BOT CONFIG MODAL — configure Telegram/Bale bot token + chat ID
 // ============================================
 function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const { t } = useLang();
   const initial = loadBotConfig();
   const [platform, setPlatform] = useState<'telegram' | 'bale'>(initial?.platform || 'telegram');
   const [token, setToken] = useState(initial?.token || '');
@@ -6663,15 +6667,16 @@ function SettingsModal({
   showToast: (msg: string) => void;
   onLogout: () => void;
 }) {
+  const { t } = useLang();
   const [tab, setTab] = useState<'profile' | 'users' | 'server' | 'report' | 'password' | 'activity'>('profile');
 
   const tabs = [
-    { key: 'profile' as const,  label: 'پروفایل من', icon: '👤' },
-    { key: 'users' as const,    label: 'کاربران',     icon: '👥' },
-    { key: 'report' as const,   label: 'گزارش PDF',   icon: '📄' },
-    { key: 'activity' as const, label: 'فعالیت',      icon: '📋' },
-    { key: 'server' as const,   label: 'سرور',         icon: '🖥' },
-    { key: 'password' as const, label: 'رمز عبور',     icon: '🔑' },
+    { key: 'profile' as const,  label: t('settings.profile.edit'), icon: '👤' },
+    { key: 'users' as const,    label: t('settings.users.title'),  icon: '👥' },
+    { key: 'report' as const,   label: t('view.reports'),           icon: '📄' },
+    { key: 'activity' as const, label: t('settings.activity.title'),icon: '📋' },
+    { key: 'server' as const,   label: t('settings.server.title'),  icon: '🖥' },
+    { key: 'password' as const, label: t('settings.password.title'),icon: '🔑' },
   ];
 
   return (
@@ -6700,10 +6705,10 @@ function SettingsModal({
           className="flex items-center justify-between p-4 flex-shrink-0"
           style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.15)' }}
         >
-          <h2 className="text-lg font-bold" style={{ color: '#f0fdf4' }}>تنظیمات</h2>
+          <h2 className="text-lg font-bold" style={{ color: '#f0fdf4' }}>{t('settings.title')}</h2>
           <button
             onClick={onClose}
-            aria-label="بستن"
+            aria-label={t('misc.close')}
             className="p-2 rounded-lg transition-colors"
             style={{ color: 'rgba(255, 255, 255, 0.7)' }}
           >
@@ -6758,6 +6763,7 @@ function SettingsModal({
 
 // --- Tab: Profile (iPhone Contacts style) ---
 function ProfileTab({ currentUser, showToast }: { currentUser: User; showToast: (msg: string) => void }) {
+  const { t } = useLang();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(currentUser.name || '');
   const [phone, setPhone] = useState(currentUser.phone || '');
@@ -6777,7 +6783,7 @@ function ProfileTab({ currentUser, showToast }: { currentUser: User; showToast: 
         body: JSON.stringify({ name, phone, jobTitle, deputy, avatar }),
       });
       if (res.ok) {
-        showToast('پروفایل بروزرسانی شد');
+        showToast(t('settings.profile.saved'));
         setEditing(false);
       } else {
         showToast('خطا در بروزرسانی');
@@ -7088,6 +7094,7 @@ function SettingsReportTab({ showToast }: { showToast: (msg: string) => void }) 
 
 // --- Tab: Server URL ---
 function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) {
+  const { t } = useLang();
   const [url, setUrl] = useState('');
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -7203,6 +7210,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
 
 // --- Tab 2: Users management ---
 function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showToast: (msg: string) => void }) {
+  const { t } = useLang();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -7216,7 +7224,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
       const list = await api.getUsers();
       setUsers(list);
     } catch (e: any) {
-      setError(e?.message || 'خطا در بارگذاری کاربران');
+      setError(e?.message || t('toast.loadingError'));
     } finally {
       setLoading(false);
     }
@@ -7226,11 +7234,11 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
 
   const handleCreate = async () => {
     if (!newUser.username.trim() || !newUser.password) {
-      showToast('نام کاربری و رمز را وارد کنید');
+      showToast(t('settings.username'));
       return;
     }
     if (newUser.password.length < 8) {
-      showToast('رمز عبور باید حداقل ۸ کاراکتر باشد');
+      showToast(t('settings.password.tooShort'));
       return;
     }
     setCreating(true);
@@ -7244,7 +7252,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
         deputy: newUser.deputy,
         phone: newUser.phone,
       });
-      showToast(`کاربر «${newUser.username}» ساخته شد`);
+      showToast(`${t('settings.users.created')}: ${newUser.username}`);
       setNewUser({ username: '', password: '', role: 'viewer', name: '', jobTitle: '', deputy: '', phone: '' });
       await load();
     } catch (e: any) {
@@ -7256,32 +7264,32 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
 
   const handleDelete = async (u: User) => {
     if (u.id === currentUser.id) {
-      showToast('نمی‌توانید حساب خودتان را حذف کنید');
+      showToast(t('settings.users.cannotDeleteSelf'));
       return;
     }
     if (u.isSuperAdmin) {
-      showToast('مدیر اصلی قابل حذف نیست');
+      showToast(t('settings.users.cannotDeleteSuper'));
       return;
     }
     if (!confirm(`کاربر «${u.username}» حذف شود؟`)) return;
     try {
       await api.deleteUser(u.id);
-      showToast('کاربر حذف شد');
+      showToast(t('settings.users.deleted'));
       await load();
     } catch (e: any) {
-      showToast(e?.message || 'خطا در حذف کاربر');
+      showToast(e?.message || t('toast.error'));
     }
   };
 
   const handleChangeRole = async (u: User, newRole: string) => {
     if (newRole === u.role) return;
-    if (u.isSuperAdmin) { showToast('مدیر اصلی قابل تغییر نیست'); return; }
+    if (u.isSuperAdmin) { showToast(t('settings.users.cannotChangeSuper')); return; }
     try {
       await api.updateUser(u.id, { role: newRole });
-      showToast(`نقش «${u.username}» به ${newRole} تغییر کرد`);
+      showToast(`${t('settings.users.roleChanged')}: ${u.username} → ${newRole}`);
       await load();
     } catch (e: any) {
-      showToast(e?.message || 'خطا در تغییر نقش');
+      showToast(e?.message || t('toast.error'));
     }
   };
 
@@ -7292,7 +7300,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
       showToast(newActive ? `کاربر «${u.username}» فعال شد` : `کاربر «${u.username}» معلق شد`);
       await load();
     } catch (e: any) {
-      showToast(e?.message || 'خطا در تغییر وضعیت کاربر');
+      showToast(e?.message || t('toast.error'));
     }
   };
 
@@ -7517,7 +7525,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
                     cursor: (u.id === currentUser.id || u.isSuperAdmin) ? 'not-allowed' : 'pointer',
                     opacity: (u.id === currentUser.id || u.isSuperAdmin) ? 0.6 : 1,
                   }}
-                  title={u.isSuperAdmin ? 'مدیر اصلی قابل تغییر نیست' : u.id === currentUser.id ? 'نمی‌توانید نقش خودتان را تغییر دهید' : 'تغییر نقش'}
+                  title={u.isSuperAdmin ? t('settings.users.cannotChangeSuper') : u.id === currentUser.id ? 'نمی‌توانید نقش خودتان را تغییر دهید' : 'تغییر نقش'}
                 >
                   <option value="viewer" style={{ background: '#0a1f14', color: '#f0fdf4' }}>بیننده</option>
                   <option value="editor" style={{ background: '#0a1f14', color: '#f0fdf4' }}>ویراستار</option>
@@ -7559,7 +7567,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
                     cursor: (u.id === currentUser.id || u.isSuperAdmin) ? 'not-allowed' : 'pointer',
                     opacity: (u.id === currentUser.id || u.isSuperAdmin) ? 0.4 : 1,
                   }}
-                  title={u.isSuperAdmin ? 'مدیر اصلی قابل حذف نیست' : u.id === currentUser.id ? 'نمی‌توانید خودتان را حذف کنید' : `حذف ${u.username}`}
+                  title={u.isSuperAdmin ? t('settings.users.cannotDeleteSuper') : u.id === currentUser.id ? 'نمی‌توانید خودتان را حذف کنید' : `حذف ${u.username}`}
                   aria-label={`حذف کاربر ${u.username}`}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -7577,6 +7585,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
 
 // --- Tab: Activity Log ---
 function SettingsActivityTab({ showToast }: { showToast: (msg: string) => void }) {
+  const { t } = useLang();
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -7682,6 +7691,7 @@ function SettingsPasswordTab({
   showToast: (msg: string) => void;
   onLogout: () => void;
 }) {
+  const { t } = useLang();
   const [oldPw, setOldPw] = useState('');
   const [newPw, setNewPw] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
