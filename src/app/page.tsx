@@ -7215,6 +7215,103 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
   );
 }
 
+// --- Permissions Panel — checkbox for each permission ---
+const PERMISSION_LABELS: Record<string, { fa: string; en: string }> = {
+  manage_users:    { fa: 'مدیریت کاربران',      en: 'Manage users' },
+  create_admins:   { fa: 'ساخت مدیر جدید',       en: 'Create admins' },
+  suspend_users:   { fa: 'تعلیق کاربران',        en: 'Suspend users' },
+  add_shows:       { fa: 'افزودن برنامه',        en: 'Add programs' },
+  edit_shows:      { fa: 'ویرایش برنامه',        en: 'Edit programs' },
+  delete_shows:    { fa: 'حذف برنامه',           en: 'Delete programs' },
+  manage_genres:   { fa: 'مدیریت ژانرها',        en: 'Manage genres' },
+  manage_settings: { fa: 'مدیریت تنظیمات',       en: 'Manage settings' },
+  view_activity:   { fa: 'مشاهده گزارش فعالیت',  en: 'View activity log' },
+  export_reports:  { fa: 'خروجی گزارش',          en: 'Export reports' },
+};
+
+function PermissionsPanel({ user, currentUser, onSaved }: {
+  user: User;
+  currentUser: User;
+  onSaved: (permissions: string[]) => void;
+}) {
+  const { t, lang } = useLang();
+  const [perms, setPerms] = useState<Set<string>>(new Set(user.permissions || []));
+  const [saving, setSaving] = useState(false);
+
+  const toggle = (perm: string) => {
+    const next = new Set(perms);
+    if (next.has(perm)) next.delete(perm);
+    else next.add(perm);
+    setPerms(next);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.updateUser(user.id, { permissions: Array.from(perms) });
+      onSaved(Array.from(perms));
+    } catch {
+      // ignore
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Super admins have all permissions and cannot be modified
+  const isSuper = user.isSuperAdmin;
+
+  return (
+    <div className="p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)' }}>
+      <div className="text-xs font-bold mb-2" style={{ color: '#54D9C0' }}>
+        {lang === 'fa' ? 'اختیارات دسترسی' : 'Permissions'}
+        {isSuper && <span className="mr-2 text-[10px]" style={{ color: '#10b981' }}>({lang === 'fa' ? 'مدیر اصلی — همه اختیارات' : 'Super admin — all permissions'})</span>}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {Object.keys(PERMISSION_LABELS).map(perm => {
+          const label = lang === 'fa' ? PERMISSION_LABELS[perm].fa : PERMISSION_LABELS[perm].en;
+          const checked = isSuper || perms.has(perm);
+          return (
+            <label
+              key={perm}
+              className="flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors"
+              style={{
+                background: checked ? 'rgba(16, 185, 129, 0.08)' : 'transparent',
+                opacity: isSuper ? 0.6 : 1,
+                cursor: isSuper ? 'not-allowed' : 'pointer',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={checked}
+                disabled={isSuper}
+                onChange={() => !isSuper && toggle(perm)}
+                style={{ accentColor: '#10b981', width: '16px', height: '16px' }}
+              />
+              <span className="text-xs" style={{ color: checked ? '#10b981' : 'rgba(244, 255, 255, 0.7)' }}>
+                {label}
+              </span>
+            </label>
+          );
+        })}
+      </div>
+      {!isSuper && (
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="mt-3 px-4 py-2 rounded-lg text-xs font-bold transition-all"
+          style={{
+            background: saving ? 'rgba(107, 143, 122, 0.3)' : '#0d7c4a',
+            color: '#ffffff',
+            cursor: saving ? 'not-allowed' : 'pointer',
+          }}
+        >
+          {saving ? '⏳ ...' : (lang === 'fa' ? '✓ ذخیره اختیارات' : '✓ Save permissions')}
+        </button>
+      )}
+    </div>
+  );
+}
+
 // --- Tab 2: Users management ---
 function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showToast: (msg: string) => void }) {
   const { t } = useLang();
@@ -7584,6 +7681,30 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
                   </svg>
                 </button>
               </div>
+              {/* Permissions panel for admins (super admin can edit, others see read-only) */}
+              {u.role === 'admin' && currentUser.isSuperAdmin && !u.isSuperAdmin && (
+                <PermissionsPanel
+                  user={u}
+                  currentUser={currentUser}
+                  onSaved={(perms) => {
+                    showToast(perms.length > 0 ? `اختیارات ذخیره شد (${perms.length} مورد)` : 'تمام اختیارات لغو شد');
+                    load();
+                  }}
+                />
+              )}
+              {/* Read-only permissions display for non-super-admin viewers */}
+              {u.role === 'admin' && !currentUser.isSuperAdmin && u.permissions && u.permissions.length > 0 && (
+                <div className="w-full mt-2 p-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <div className="text-[10px] font-bold mb-1" style={{ color: '#54D9C0' }}>اختیارات:</div>
+                  <div className="flex flex-wrap gap-1">
+                    {u.permissions.map(p => (
+                      <span key={p} className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>
+                        {PERMISSION_LABELS[p]?.fa || p}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             ))}
           </div>
         )}

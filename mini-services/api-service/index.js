@@ -880,6 +880,13 @@ const server = Bun.serve({
         }
       }
 
+      // If suspending/activating a user, check suspend_users permission
+      if (body.isActive !== undefined && body.isActive !== !!target.is_active) {
+        if (!hasPermission(admin, 'suspend_users')) {
+          return json({ error: 'شما اجازه تعلیق کاربران را ندارید' }, 403, req);
+        }
+      }
+
       // Update name, role, isActive, and optionally permissions
       const newRole = body.role || target.role;
       const newName = body.name ?? target.name;
@@ -891,8 +898,8 @@ const server = Bun.serve({
       if (Array.isArray(body.permissions)) {
         // Empty array = all permissions explicitly revoked (distinct from not set)
         newPerms = body.permissions.filter(p => ALL_PERMISSIONS[p]).join(',');
-        // If empty and user is admin, store a marker so we know it was explicitly set
-        if (newPerms === '' && newRole === 'admin') {
+        // If empty for ANY role (not just admin), store NONE marker
+        if (newPerms === '') {
           newPerms = 'NONE'; // Special marker: explicitly no permissions
         }
       } else {
