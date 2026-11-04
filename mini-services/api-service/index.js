@@ -146,6 +146,27 @@ addColumnIfMissing('users', 'deputy', "TEXT NOT NULL DEFAULT ''");
 addColumnIfMissing('users', 'phone', "TEXT NOT NULL DEFAULT ''");
 addColumnIfMissing('users', 'created_at', 'INTEGER NOT NULL DEFAULT 0');
 addColumnIfMissing('users', 'must_change_password', 'INTEGER NOT NULL DEFAULT 0');
+addColumnIfMissing('users', 'is_active', 'INTEGER NOT NULL DEFAULT 1');
+addColumnIfMissing('users', 'is_super_admin', 'INTEGER NOT NULL DEFAULT 0');
+
+// Mark the first user (id=1) as super admin — cannot be deleted or demoted.
+try {
+  db.prepare("UPDATE users SET is_super_admin = 1, role = 'admin' WHERE id = 1").run();
+} catch(e) {}
+
+// Activity log table — records who did what, when.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS activity_log (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id       INTEGER NOT NULL,
+    username      TEXT NOT NULL DEFAULT '',
+    action        TEXT NOT NULL,
+    target_type   TEXT NOT NULL DEFAULT '',
+    target_id     TEXT NOT NULL DEFAULT '',
+    details       TEXT NOT NULL DEFAULT '',
+    created_at    INTEGER NOT NULL DEFAULT 0
+  );
+`);
 addColumnIfMissing('shows', 'image_data', 'BLOB');
 addColumnIfMissing('shows', 'image_mime', "TEXT NOT NULL DEFAULT 'image/jpeg'");
 addColumnIfMissing('shows', 'image_source', "TEXT NOT NULL DEFAULT ''");
@@ -243,6 +264,8 @@ function publicUser(u, viewer) {
     online: u.last_seen && (nowSec() - u.last_seen) < 120,
     jobTitle: u.job_title || '', deputy: u.deputy || '', avatar: u.avatar || '',
     mustChangePassword: !!u.must_change_password,
+    isActive: !u.is_active ? false : true,
+    isSuperAdmin: !!u.is_super_admin,
   };
   // Phone visible only to admins (or self)
   if (viewer && (viewer.role === 'admin' || viewer.id === u.id)) base.phone = u.phone || '';
@@ -299,10 +322,28 @@ function createSession(userId) {
   return token;
 }
 function destroySession(token) { db.prepare('DELETE FROM sessions WHERE token = ?').run(token); }
+
+// === Activity Log — records who did what, when ===
+function logActivity(user, action, targetType, targetId, details) {
+  try {
+    db.prepare('INSERT INTO activity_log (user_id, username, action, target_type, target_id, details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(user.id, user.username, action, targetType, String(targetId || ''), String(details || ''), nowSec());
+  } catch(e) { /* non-critical */ }
+}
+
+// === Permission helpers ===
+function isSuperAdmin(user) {
+  return user && !!user.is_super_admin;
+}
+
 function requireUser(req) {
   const auth = req.headers.get('Authorization') || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
-  return token ? getUserByToken(token) : null;
+  if (!token) return null;
+  const user = getUserByToken(token);
+  // Block suspended/inactive users from all API access
+  if (user && user.is_active === 0) return null;
+  return user;
 }
 function requireRole(req, roles) {
   const user = requireUser(req);
@@ -742,7 +783,10 @@ const server = Bun.serve({
       const role = ['admin', 'editor', 'viewer'].includes(body.role) ? body.role : 'viewer';
       const existing = getUserByUsername(username);
       if (existing) return json({ error: 'نام کاربری تکراری' }, 409, req);
-      const result = db.prepare('INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)').run(username, hashPassword(password), role, body.name || '');
+      const result = db.prepare('INSERT INTO users (username, password_hash, role, name, job_title, deputy, phone) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
+        username, hashPassword(password), role, body.name || '', body.jobTitle || '', body.deputy || '', body.phone || ''
+      );
+      logActivity(admin, 'create_user', 'user', result.lastInsertRowid, `Created user "${username}" with role "${role}"`);
       return json(publicUser(getUserById(result.lastInsertRowid), admin), req);
     }
 
@@ -755,7 +799,21 @@ const server = Bun.serve({
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
       const target = getUserById(id);
       if (!target) return json({ error: 'user not found' }, 404, req);
-      db.prepare('UPDATE users SET name = ?, role = ? WHERE id = ?').run(body.name ?? target.name, body.role ?? target.role, id);
+
+      // Super admin protection: cannot demote or suspend super admin
+      if (isSuperAdmin(target) && body.role && body.role !== 'admin') {
+        return json({ error: 'مدیر اصلی قابل تنزل سطح دسترسی نیست' }, 403, req);
+      }
+      if (isSuperAdmin(target) && body.isActive === false) {
+        return json({ error: 'مدیر اصلی قابل تعلیق نیست' }, 403, req);
+      }
+
+      // Update name, role, and optionally isActive
+      const newRole = body.role || target.role;
+      const newName = body.name ?? target.name;
+      const newActive = body.isActive !== undefined ? (body.isActive ? 1 : 0) : target.is_active;
+      db.prepare('UPDATE users SET name = ?, role = ?, is_active = ? WHERE id = ?').run(newName, newRole, newActive, id);
+      logActivity(admin, 'update_user', 'user', id, `Updated user "${target.username}": role=${newRole}, active=${newActive}`);
       return json(publicUser(getUserById(id), admin), req);
     }
 
@@ -764,9 +822,26 @@ const server = Bun.serve({
       const admin = requireRole(req, ['admin']);
       if (!admin) return json({ error: 'Unauthorized' }, 401, req);
       const id = parseInt(url.searchParams.get('id') || '0');
-      if (id === admin.id) return json({ error: 'cannot delete self' }, 400, req);
+      // Cannot delete self
+      if (id === admin.id) return json({ error: 'نمی‌توانید حساب خودتان را حذف کنید' }, 400, req);
+      // Cannot delete super admin
+      const target = getUserById(id);
+      if (!target) return json({ error: 'کاربر یافت نشد' }, 404, req);
+      if (isSuperAdmin(target)) return json({ error: 'مدیر اصلی قابل حذف نیست' }, 403, req);
+      // Destroy all sessions of the deleted user
+      db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id);
       db.prepare('DELETE FROM users WHERE id = ?').run(id);
+      logActivity(admin, 'delete_user', 'user', id, `Deleted user "${target.username}"`);
       return json({ success: true }, req);
+    }
+
+    // ----- Activity log -----
+    if (pathname === '/api/activity' && method === 'GET') {
+      const admin = requireRole(req, ['admin']);
+      if (!admin) return json({ error: 'Unauthorized' }, 401, req);
+      const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 200);
+      const logs = db.prepare('SELECT * FROM activity_log ORDER BY created_at DESC LIMIT ?').all(limit);
+      return json({ logs }, req);
     }
 
     return json({ error: 'Not Found', path: pathname }, 404, req);

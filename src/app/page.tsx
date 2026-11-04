@@ -7257,6 +7257,10 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
       showToast('نمی‌توانید حساب خودتان را حذف کنید');
       return;
     }
+    if (u.isSuperAdmin) {
+      showToast('مدیر اصلی قابل حذف نیست');
+      return;
+    }
     if (!confirm(`کاربر «${u.username}» حذف شود؟`)) return;
     try {
       await api.deleteUser(u.id);

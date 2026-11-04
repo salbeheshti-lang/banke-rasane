@@ -60,6 +60,8 @@ export interface User {
   lastSeen?: number;
   online?: boolean;
   mustChangePassword?: boolean;
+  isActive?: boolean;
+  isSuperAdmin?: boolean;
 }
 
 function authHeaders(): Record<string, string> {
