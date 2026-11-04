@@ -7273,12 +7273,24 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
 
   const handleChangeRole = async (u: User, newRole: string) => {
     if (newRole === u.role) return;
+    if (u.isSuperAdmin) { showToast('مدیر اصلی قابل تغییر نیست'); return; }
     try {
       await api.updateUser(u.id, { role: newRole });
       showToast(`نقش «${u.username}» به ${newRole} تغییر کرد`);
       await load();
     } catch (e: any) {
       showToast(e?.message || 'خطا در تغییر نقش');
+    }
+  };
+
+  const handleToggleSuspend = async (u: User) => {
+    const newActive = u.isActive === false ? true : false;
+    try {
+      await api.updateUser(u.id, { isActive: newActive });
+      showToast(newActive ? `کاربر «${u.username}» فعال شد` : `کاربر «${u.username}» معلق شد`);
+      await load();
+    } catch (e: any) {
+      showToast(e?.message || 'خطا در تغییر وضعیت کاربر');
     }
   };
 
@@ -7453,8 +7465,8 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
             {users.map((u) => (
               <div
                 key={u.id}
-                className="p-3 rounded-xl flex items-center gap-3"
-                style={{ background: 'white', border: '1px solid rgba(13, 124, 74, 0.15)' }}
+                className="p-3 rounded-xl flex items-center gap-3 flex-wrap"
+                style={{ background: u.isActive === false ? 'rgba(107, 143, 122, 0.08)' : 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.15)', opacity: u.isActive === false ? 0.6 : 1 }}
               >
                 <div
                   className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm"
@@ -7467,48 +7479,85 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
                   {(u.name || u.username).charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm" style={{ color: '#f0fdf4' }} title={u.username}>
-                    {u.name || u.username}{' '}
+                  <div className="font-bold text-sm flex items-center gap-2" style={{ color: '#f0fdf4' }} title={u.username}>
+                    {u.name || u.username}
+                    {u.isSuperAdmin && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: 'rgba(16, 185, 129, 0.25)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.4)' }}>👑 مدیر اصلی</span>
+                    )}
+                    {u.isActive === false && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: 'rgba(107, 143, 122, 0.2)', color: '#94a8c0', border: '1px solid rgba(107, 143, 122, 0.35)' }}>معلق</span>
+                    )}
                     {u.id === currentUser.id && (
                       <span className="text-xs font-normal" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>(شما)</span>
                     )}
                   </div>
                   <div className="text-xs" style={{ color: 'rgba(244, 255, 255, 0.7)' }} dir="ltr">@{u.username}</div>
+                  {u.permissions && u.permissions.length > 0 && u.role === 'admin' && !u.isSuperAdmin && (
+                    <div className="text-[10px] mt-1" style={{ color: 'rgba(244, 255, 255, 0.5)' }}>
+                      اختیارات: {u.permissions.length} مورد
+                    </div>
+                  )}
                 </div>
+                {/* Role selector — disabled for super admin */}
                 <select
                   value={u.role}
                   onChange={(e) => handleChangeRole(u, e.target.value)}
-                  disabled={u.id === currentUser.id}
+                  disabled={u.id === currentUser.id || u.isSuperAdmin}
                   style={{
-                    background: 'rgba(13, 124, 74, 0.05)',
-                    border: '1px solid rgba(13, 124, 74, 0.2)',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
                     borderRadius: '8px',
                     padding: '6px 10px',
                     fontSize: '13px',
                     color: '#f0fdf4',
                     outline: 'none',
                     fontFamily: 'inherit',
-                    cursor: u.id === currentUser.id ? 'not-allowed' : 'pointer',
-                    opacity: u.id === currentUser.id ? 0.6 : 1,
+                    cursor: (u.id === currentUser.id || u.isSuperAdmin) ? 'not-allowed' : 'pointer',
+                    opacity: (u.id === currentUser.id || u.isSuperAdmin) ? 0.6 : 1,
                   }}
-                  title={u.id === currentUser.id ? 'نمی‌توانید نقش خودتان را تغییر دهید' : 'تغییر نقش'}
+                  title={u.isSuperAdmin ? 'مدیر اصلی قابل تغییر نیست' : u.id === currentUser.id ? 'نمی‌توانید نقش خودتان را تغییر دهید' : 'تغییر نقش'}
                 >
-                  <option value="viewer">بیننده</option>
-                  <option value="editor">ویراستار</option>
-                  <option value="admin">مدیر</option>
+                  <option value="viewer" style={{ background: '#0a1f14', color: '#f0fdf4' }}>بیننده</option>
+                  <option value="editor" style={{ background: '#0a1f14', color: '#f0fdf4' }}>ویراستار</option>
+                  <option value="admin" style={{ background: '#0a1f14', color: '#f0fdf4' }}>مدیر</option>
                 </select>
+                {/* Suspend/Activate button — only for admins, not for super admin or self */}
+                {currentUser.isSuperAdmin && u.role === 'admin' && !u.isSuperAdmin && u.id !== currentUser.id && (
+                  <button
+                    onClick={() => handleToggleSuspend(u)}
+                    className="p-2 rounded-lg transition-colors flex-shrink-0"
+                    style={{
+                      color: u.isActive === false ? '#10b981' : '#f59e0b',
+                      background: u.isActive === false ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                      border: `1px solid ${u.isActive === false ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+                      cursor: 'pointer',
+                    }}
+                    title={u.isActive === false ? 'فعال‌سازی کاربر' : 'تعلیق کاربر'}
+                  >
+                    {u.isActive === false ? (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                      </svg>
+                    )}
+                  </button>
+                )}
+                {/* Delete button — disabled for super admin and self */}
                 <button
                   onClick={() => handleDelete(u)}
-                  disabled={u.id === currentUser.id}
+                  disabled={u.id === currentUser.id || u.isSuperAdmin}
                   className="p-2 rounded-lg transition-colors flex-shrink-0"
                   style={{
-                    color: u.id === currentUser.id ? 'rgba(107, 143, 122, 0.4)' : '#dc2626',
-                    background: u.id === currentUser.id ? 'transparent' : 'rgba(220, 38, 38, 0.1)',
+                    color: (u.id === currentUser.id || u.isSuperAdmin) ? 'rgba(107, 143, 122, 0.4)' : '#dc2626',
+                    background: (u.id === currentUser.id || u.isSuperAdmin) ? 'transparent' : 'rgba(220, 38, 38, 0.1)',
                     border: '1px solid rgba(220, 38, 38, 0.25)',
-                    cursor: u.id === currentUser.id ? 'not-allowed' : 'pointer',
-                    opacity: u.id === currentUser.id ? 0.4 : 1,
+                    cursor: (u.id === currentUser.id || u.isSuperAdmin) ? 'not-allowed' : 'pointer',
+                    opacity: (u.id === currentUser.id || u.isSuperAdmin) ? 0.4 : 1,
                   }}
-                  title={u.id === currentUser.id ? 'نمی‌توانید خودتان را حذف کنید' : `حذف ${u.username}`}
+                  title={u.isSuperAdmin ? 'مدیر اصلی قابل حذف نیست' : u.id === currentUser.id ? 'نمی‌توانید خودتان را حذف کنید' : `حذف ${u.username}`}
                   aria-label={`حذف کاربر ${u.username}`}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
