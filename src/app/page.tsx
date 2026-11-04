@@ -7100,6 +7100,7 @@ function SettingsReportTab({ showToast }: { showToast: (msg: string) => void }) 
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setReportLoading(true);
     api.getAnalyticsReport(days)
       .then(data => { if (!cancelled) setReport(data); })
