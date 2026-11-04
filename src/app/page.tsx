@@ -2259,7 +2259,7 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={() => setShowPicker(false)}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: 'linear-gradient(135deg, rgba(0,60,48,0.95) 0%, rgba(8,90,75,0.92) 100%)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '20px', padding: '20px', maxWidth: '520px', width: '100%', maxHeight: '75vh', overflowY: 'auto', boxShadow: '0 12px 40px rgba(0,0,0,0.4)' }}>
             <h3 style={{ color: '#f0fdf4', marginBottom: '12px', fontWeight: 800, fontSize: '16px' }}>مدیریت برنامه‌های منتخب</h3>
-            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="جستجوی برنامه..." style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: '#f0fdf4', fontSize: '13px', outline: 'none', marginBottom: '12px', fontFamily: 'inherit' }} />
+            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="جستجوی برنامه..." style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.35)', color: '#f0fdf4', fontSize: '13px', outline: 'none', marginBottom: '12px', fontFamily: 'inherit' }} />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', maxHeight: '400px', overflowY: 'auto' }}>
               {filteredSearch.map(show => {
                 const isF = featuredNums.includes(show.num);
@@ -3280,6 +3280,7 @@ function ProgramsView({
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)',
               color: 'rgba(255, 255, 255, 0.9)',
+              border: '1px solid rgba(255, 255, 255, 0.35)',
             }}
           >
             🌍 اسلامی
@@ -3295,7 +3296,7 @@ function ProgramsView({
                 color: '#54D9C0',
               } : {
                 background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-                border: '1px solid rgba(13, 124, 74, 0.15)',
+                border: '1px solid rgba(255, 255, 255, 0.35)',
                 color: 'rgba(255, 255, 255, 0.9)',
               }}
             >
@@ -3426,7 +3427,6 @@ function ProgramsView({
           >
             {genres.filter(g => g.id !== 'decor' && g.id !== 'psa' && g.id !== 'deepobs' && g.id !== 'ads').map(g => {
               const isActive = g.id === genre.id;
-              const rgb = hexToRgb(g.color);
               return (
                 <button
                   key={g.id}
@@ -3439,14 +3439,12 @@ function ProgramsView({
                     boxShadow: `0 4px 14px ${g.color}66`,
                     scrollSnapAlign: 'center',
                   } : {
-                    // Ghost tint of the genre's own color — each chip hints its identity at rest,
-                    // and lights up to full saturation on hover. Way more alive than plain white glass.
-                    background: `rgba(${rgb}, 0.12)`,
-                    color: g.color,
-                    border: `1px solid rgba(${rgb}, 0.45)`,
-                    backdropFilter: 'blur(8px)',
-                    WebkitBackdropFilter: 'blur(8px)',
-                    boxShadow: `inset 0 0 0 1px rgba(${rgb}, 0.05)`,
+                    // Liquid glass — white text, subtle white bg, genre color on hover
+                    background: 'rgba(255, 255, 255, 0.10)',
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                    backdropFilter: 'blur(12px) saturate(140%)',
+                    WebkitBackdropFilter: 'blur(12px) saturate(140%)',
                     scrollSnapAlign: 'center',
                   }}
                   onMouseEnter={(e) => {
@@ -3459,10 +3457,10 @@ function ProgramsView({
                   }}
                   onMouseLeave={(e) => {
                     if (!isActive) {
-                      e.currentTarget.style.background = `rgba(${rgb}, 0.12)`;
-                      e.currentTarget.style.borderColor = `rgba(${rgb}, 0.45)`;
-                      e.currentTarget.style.color = g.color;
-                      e.currentTarget.style.boxShadow = `inset 0 0 0 1px rgba(${rgb}, 0.05)`;
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.10)';
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.25)';
+                      e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)';
+                      e.currentTarget.style.boxShadow = 'none';
                     }
                   }}
                 >
@@ -5267,7 +5265,7 @@ function AddGenreModal({ onClose, onSave }: {
       nameFa: trimmed,
       name: trimmed,
       color,
-      description: description.trim() || `ژانر سفارشی: ${trimmed}`,
+      description: description.trim() || '',
       filterFn: (s: TalkShow) => s.category.includes(trimmed),
       isCustom: true,
       tags: DEFAULT_GENRE_TAGS,
