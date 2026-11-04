@@ -1299,7 +1299,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
               dir="ltr"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="admin"
+              placeholder={t('login.usernamePlaceholder') || 'نام کاربری خود را وارد کنید'}
               disabled={loading}
               style={{
                 width: '100%',
@@ -1330,7 +1330,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 dir="ltr"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••"
+                placeholder={t('login.passwordPlaceholder') || 'رمز عبور خود را وارد کنید'}
                 disabled={loading}
                 style={{
                   width: '100%',

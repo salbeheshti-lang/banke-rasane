@@ -59,6 +59,8 @@ export const dict: Dict = {
   // ===== Login =====
   'login.username': { fa: 'نام کاربری', en: 'Username' },
   'login.password': { fa: 'رمز عبور', en: 'Password' },
+  'login.usernamePlaceholder': { fa: 'نام کاربری خود را وارد کنید', en: 'Enter your username' },
+  'login.passwordPlaceholder': { fa: 'رمز عبور خود را وارد کنید', en: 'Enter your password' },
   'login.showPassword': { fa: 'نمایش رمز', en: 'Show password' },
   'login.hidePassword': { fa: 'پنهان کردن رمز', en: 'Hide password' },
   'login.submit': { fa: 'ورود به برنامه', en: 'Sign in' },
