@@ -150,11 +150,6 @@ addColumnIfMissing('users', 'is_active', 'INTEGER NOT NULL DEFAULT 1');
 addColumnIfMissing('users', 'is_super_admin', 'INTEGER NOT NULL DEFAULT 0');
 addColumnIfMissing('users', 'permissions', "TEXT NOT NULL DEFAULT ''");
 
-// Mark the first user (id=1) as super admin — cannot be deleted or demoted.
-try {
-  db.prepare("UPDATE users SET is_super_admin = 1, role = 'admin' WHERE id = 1").run();
-} catch(e) {}
-
 // Activity log table — records who did what, when.
 db.exec(`
   CREATE TABLE IF NOT EXISTS activity_log (
@@ -515,6 +510,12 @@ function seedShows() {
 
 seedDefaultAdmin();
 seedShows();
+
+// Mark the first user (id=1) as super admin — cannot be deleted or demoted.
+// Runs AFTER seeding so the row exists. Safe to call on every startup (idempotent).
+try {
+  db.prepare("UPDATE users SET is_super_admin = 1, role = 'admin' WHERE id = 1").run();
+} catch(e) { console.warn('[seed] failed to mark super admin:', e.message); }
 
 // ---------------------------------------------------------------------------
 // Bun server
