@@ -131,4 +131,9 @@ export const api = {
   async updateUser(id: number, data: any) { return request(getApiUrl('api/users?id=' + encodeURIComponent(id)), { method: 'PUT', body: JSON.stringify(data) }); },
   async deleteUser(id: number) { return request(getApiUrl('api/users?id=' + encodeURIComponent(id)), { method: 'DELETE' }); },
   async createUser(data: any) { return request(getApiUrl('api/users'), { method: 'POST', body: JSON.stringify(data) }); },
+  async getActivity(limit?: number) {
+    const url = getApiUrl('api/activity') + (limit ? '?limit=' + limit : '');
+    const data = await request<{ logs: any[] }>(url);
+    return data.logs || [];
+  },
 };

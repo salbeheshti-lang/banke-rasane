@@ -6663,12 +6663,13 @@ function SettingsModal({
   showToast: (msg: string) => void;
   onLogout: () => void;
 }) {
-  const [tab, setTab] = useState<'profile' | 'users' | 'server' | 'report' | 'password'>('profile');
+  const [tab, setTab] = useState<'profile' | 'users' | 'server' | 'report' | 'password' | 'activity'>('profile');
 
   const tabs = [
     { key: 'profile' as const,  label: 'پروفایل من', icon: '👤' },
     { key: 'users' as const,    label: 'کاربران',     icon: '👥' },
     { key: 'report' as const,   label: 'گزارش PDF',   icon: '📄' },
+    { key: 'activity' as const, label: 'فعالیت',      icon: '📋' },
     { key: 'server' as const,   label: 'سرور',         icon: '🖥' },
     { key: 'password' as const, label: 'رمز عبور',     icon: '🔑' },
   ];
@@ -6747,6 +6748,7 @@ function SettingsModal({
           {tab === 'users' && <SettingsUsersTab currentUser={currentUser} showToast={showToast} />}
           {tab === 'server' && <SettingsServerTab showToast={showToast} />}
           {tab === 'report' && <SettingsReportTab showToast={showToast} />}
+          {tab === 'activity' && <SettingsActivityTab showToast={showToast} />}
           {tab === 'password' && <SettingsPasswordTab currentUser={currentUser} showToast={showToast} onLogout={onLogout} />}
         </div>
       </div>
@@ -7569,6 +7571,103 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// --- Tab: Activity Log ---
+function SettingsActivityTab({ showToast }: { showToast: (msg: string) => void }) {
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const data = await api.getActivity(100);
+      setLogs(data);
+    } catch (e: any) {
+      // ignore — non-admin users won't have access
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const actionLabels: Record<string, string> = {
+    create_user: 'ساخت کاربر',
+    update_user: 'ویرایش کاربر',
+    delete_user: 'حذف کاربر',
+    suspend_user: 'تعلیق کاربر',
+    activate_user: 'فعال‌سازی کاربر',
+  };
+
+  const formatTime = (ts: number) => {
+    if (!ts) return '';
+    const d = new Date(ts * 1000);
+    return d.toLocaleDateString('fa-IR') + ' ' + d.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div>
+        <h3 className="text-base font-bold mb-1" style={{ color: '#f0fdf4' }}>📋 گزارش فعالیت</h3>
+        <p className="text-sm" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>
+          آخرین تغییرات اعمال‌شده توسط کاربران سیستم.
+        </p>
+      </div>
+
+      {loading && (
+        <div className="p-4 text-center text-sm" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>در حال بارگذاری...</div>
+      )}
+
+      {!loading && logs.length === 0 && (
+        <div className="p-4 text-center text-sm" style={{ color: 'rgba(244, 255, 255, 0.5)' }}>
+          هیچ فعالیتی ثبت نشده است.
+        </div>
+      )}
+
+      {!loading && logs.length > 0 && (
+        <div className="space-y-2 max-h-96 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+          {logs.map((log) => (
+            <div
+              key={log.id}
+              className="p-3 rounded-xl flex items-start gap-3"
+              style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.12)' }}
+            >
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-sm"
+                style={{
+                  background: log.action?.includes('delete') ? 'rgba(220, 38, 38, 0.15)' :
+                              log.action?.includes('create') ? 'rgba(16, 185, 129, 0.15)' :
+                              log.action?.includes('suspend') ? 'rgba(245, 158, 11, 0.15)' :
+                              'rgba(13, 124, 74, 0.15)',
+                  color: log.action?.includes('delete') ? '#dc2626' :
+                         log.action?.includes('create') ? '#10b981' :
+                         log.action?.includes('suspend') ? '#f59e0b' :
+                         '#54D9C0',
+                }}
+              >
+                {log.action?.includes('delete') ? '🗑' :
+                 log.action?.includes('create') ? '➕' :
+                 log.action?.includes('suspend') ? '⏸' :
+                 log.action?.includes('activate') ? '▶' : '✏'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-bold" style={{ color: '#f0fdf4' }}>
+                  {actionLabels[log.action] || log.action}
+                </div>
+                <div className="text-xs" style={{ color: 'rgba(244, 255, 255, 0.6)' }}>
+                  {log.details}
+                </div>
+                <div className="text-[10px] mt-1" style={{ color: 'rgba(244, 255, 255, 0.4)' }}>
+                  {log.username} • {formatTime(log.created_at)}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
