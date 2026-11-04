@@ -33,6 +33,25 @@ check_ge() {
     printf "${RED}✗ FAIL${NC}  [%s] expected>=%s got=%s\n" "$name" "$min" "$actual"
   fi
 }
+# Usage: check_in NAME "val1|val2|val3" ACTUAL  (pass if actual matches any allowed value)
+check_in() {
+  local name="$1" allowed="$2" actual="$3"
+  local IFS='|'
+  local found=0 v
+  for v in $allowed; do
+    if [ "$v" = "$actual" ]; then found=1; break; fi
+  done
+  if [ "$found" = "1" ]; then
+    PASS=$((PASS+1))
+    RESULTS+=("$(printf "${GREEN}✓ PASS${NC}  [%s] expected in {%s} got=%s" "$name" "$allowed" "$actual")")
+    printf "${GREEN}✓ PASS${NC}  [%s] expected in {%s} got=%s\n" "$name" "$allowed" "$actual"
+  else
+    FAIL=$((FAIL+1))
+    RESULTS+=("$(printf "${RED}✗ FAIL${NC}  [%s] expected in {%s} got=%s" "$name" "$allowed" "$actual")")
+    printf "${RED}✗ FAIL${NC}  [%s] expected in {%s} got=%s\n" "$name" "$allowed" "$actual"
+  fi
+}
+
 check() {
   local name="$1" expected="$2" actual="$3" extra="${4:-}"
   if [ "$expected" = "$actual" ]; then
@@ -78,23 +97,35 @@ echo "==========================================================================
 echo "  BankResaneh API Security Test Suite"
 echo "  Target: $BASE"
 echo "  Time:   $(date '+%Y-%m-%d %H:%M:%S')"
+echo "  Scenario: ${SECURITY_TEST_SCENARIO:-fresh}"
 echo "=========================================================================="
 
 # ============================================================================
-# SETUP: Reset DB to a clean state with default admin (admin/admin)
+# SETUP: Prepare the database according to the requested scenario.
+#   fresh   — delete DB, let API seed from scratch (default)
+#   upgrade — keep any existing DB + pre-seeded legacy users (CI sets this up)
 # ============================================================================
-hdr "SETUP — fresh DB"
-rm -f /home/z/my-project/mini-services/api-service/bankresaneh.sqlite
-# Restart the API service so it re-creates the default DB with the bug fix
+SCENARIO="${SECURITY_TEST_SCENARIO:-fresh}"
+
+hdr "SETUP — scenario: $SCENARIO"
+# Always kill any running API first so we have a clean process state
 echo "  killing all existing API processes..."
 pkill -f "bun --hot index.js" 2>/dev/null
 sleep 2
-# Verify nothing is listening on 3002
 if ss -tlnp 2>/dev/null | grep -q ":3002"; then
   echo "  WARN: port 3002 still in use, force-killing..."
   fuser -k 3002/tcp 2>/dev/null
   sleep 2
 fi
+
+if [ "$SCENARIO" = "fresh" ]; then
+  # Fresh scenario: wipe DB so the API re-creates it from scratch
+  rm -f /home/z/my-project/mini-services/api-service/bankresaneh.sqlite
+  echo "  deleted DB file — API will seed fresh"
+fi
+
+# For upgrade scenario, the DB file is left in place (CI pre-populates it).
+# Either way, restart the API so migrations + super-admin marking run.
 cd /home/z/my-project/mini-services/api-service && (setsid bun --hot index.js > /tmp/api.log 2>&1 < /dev/null &)
 sleep 4
 # Wait up to 15s for API to come up
@@ -106,6 +137,23 @@ for i in 1 2 3 4 5 6 7 8 9 10; do
   sleep 1
 done
 curl -s -o /dev/null -w "  api health: %{http_code}\n" --max-time 5 http://localhost:3002/api/health
+
+# Show DB state at start (so upgrade scenario is visible in the report)
+echo "  DB users at start:"
+if [ -f /home/z/my-project/mini-services/api-service/bankresaneh.sqlite ]; then
+  cd /home/z/my-project/mini-services/api-service
+  bun -e '
+    import { Database } from "bun:sqlite";
+    try {
+      const db = new Database("bankresaneh.sqlite");
+      const users = db.prepare("SELECT id, username, role, is_active, is_super_admin, permissions FROM users ORDER BY id").all();
+      for (const u of users) console.log(`    id=${u.id} user=${u.username} role=${u.role} active=${u.is_active} super=${u.is_super_admin} perms="${u.permissions}"`);
+    } catch(e) { console.log("    (could not read DB:", e.message + ")"); }
+  ' 2>&1 || echo "    (bun not available)"
+  cd /home/z/my-project
+else
+  echo "    (no DB file)"
+fi
 
 # ============================================================================
 # Step 0 — Login as Super Admin (admin/admin — id=1, is_super_admin=1)
@@ -457,6 +505,118 @@ check "6.4 viewer-never-promoted" "viewer" "$VIEWER_ROLE"
 
 echo
 echo "  → TEST 6 SUMMARY: Database state consistent with security rules."
+
+# ============================================================================
+# TEST 7: Idempotency — restarting the API must NOT reset permissions
+# This simulates an upgrade scenario: API restarts on top of an existing DB.
+# ============================================================================
+hdr "TEST 7 — Idempotency: API restart does NOT reset permissions"
+
+# Capture state BEFORE restart
+api GET /users "$SUPER_TOKEN"
+LIMITED_BLOCK_BEFORE=$(printf '%s' "$RESP_BODY" | grep -oE "\"id\":${LIMITED_ID},\"username\":\"limited_admin\"[^}]*")
+LIMITED_PERMS_BEFORE=$(printf '%s' "$LIMITED_BLOCK_BEFORE" | grep -oE '"permissions":\[[^]]*\]' | head -1)
+LIMITED_ROLE_BEFORE=$(printf '%s' "$LIMITED_BLOCK_BEFORE" | grep -oE '"role":"[^"]*"' | sed -E 's/.*"role":"([^"]*)".*/\1/')
+LIMITED_ACTIVE_BEFORE=$(printf '%s' "$LIMITED_BLOCK_BEFORE" | grep -oE '"isActive":(true|false)' | sed -E 's/.*"isActive":(true|false).*/\1/')
+echo "  BEFORE restart: limited_admin role=$LIMITED_ROLE_BEFORE active=$LIMITED_ACTIVE_BEFORE perms=${LIMITED_PERMS_BEFORE:0:80}"
+
+# Restart the API (simulates upgrade / process restart)
+echo "  restarting API..."
+pkill -f "bun --hot index.js" 2>/dev/null
+sleep 2
+cd /home/z/my-project/mini-services/api-service && (setsid bun --hot index.js > /tmp/api-restart.log 2>&1 < /dev/null &)
+cd /home/z/my-project
+sleep 3
+for i in 1 2 3 4 5; do
+  if curl -s -o /dev/null --max-time 2 http://localhost:3002/api/health; then break; fi
+  sleep 1
+done
+
+# Re-login (sessions may have been invalidated by the restart)
+api POST /auth/login "" '{"username":"admin","password":"Admin@2025"}'
+SUPER_TOKEN=$(json_get "$RESP_BODY" "token")
+check "7.1 relogin-after-restart" 200 "$HTTP_STATUS"
+
+# Capture state AFTER restart
+api GET /users "$SUPER_TOKEN"
+LIMITED_BLOCK_AFTER=$(printf '%s' "$RESP_BODY" | grep -oE "\"id\":${LIMITED_ID},\"username\":\"limited_admin\"[^}]*")
+LIMITED_PERMS_AFTER=$(printf '%s' "$LIMITED_BLOCK_AFTER" | grep -oE '"permissions":\[[^]]*\]' | head -1)
+LIMITED_ROLE_AFTER=$(printf '%s' "$LIMITED_BLOCK_AFTER" | grep -oE '"role":"[^"]*"' | sed -E 's/.*"role":"([^"]*)".*/\1/')
+LIMITED_ACTIVE_AFTER=$(printf '%s' "$LIMITED_BLOCK_AFTER" | grep -oE '"isActive":(true|false)' | sed -E 's/.*"isActive":(true|false).*/\1/')
+echo "  AFTER restart:  limited_admin role=$LIMITED_ROLE_AFTER active=$LIMITED_ACTIVE_AFTER perms=${LIMITED_PERMS_AFTER:0:80}"
+
+# 7.2 Permissions must NOT have been reset
+if [ "$LIMITED_PERMS_BEFORE" = "$LIMITED_PERMS_AFTER" ]; then
+  check "7.2 perms-not-reset-on-restart" "unchanged" "unchanged"
+else
+  check "7.2 perms-not-reset-on-restart" "unchanged" "CHANGED"
+fi
+# 7.3 Role must NOT have been reset
+if [ "$LIMITED_ROLE_BEFORE" = "$LIMITED_ROLE_AFTER" ]; then
+  check "7.3 role-not-reset-on-restart" "unchanged" "unchanged"
+else
+  check "7.3 role-not-reset-on-restart" "unchanged" "CHANGED"
+fi
+# 7.4 Active state must NOT have been reset
+if [ "$LIMITED_ACTIVE_BEFORE" = "$LIMITED_ACTIVE_AFTER" ]; then
+  check "7.4 active-not-reset-on-restart" "unchanged" "unchanged"
+else
+  check "7.4 active-not-reset-on-restart" "unchanged" "CHANGED"
+fi
+# 7.5 Super admin must STILL be super (the bug fix is idempotent)
+SUPER_BLOCK_AFTER=$(printf '%s' "$RESP_BODY" | grep -oE "\"id\":${SUPER_ID},\"username\":\"admin\"[^}]*")
+SUPER_IS_SUPER_AFTER=$(printf '%s' "$SUPER_BLOCK_AFTER" | grep -oE '"isSuperAdmin":(true|false)' | sed -E 's/.*"isSuperAdmin":(true|false).*/\1/')
+check "7.5 super-admin-survives-restart" "true" "$SUPER_IS_SUPER_AFTER"
+
+echo
+echo "  → TEST 7 SUMMARY: Restarting API preserves all permission state."
+
+# ============================================================================
+# TEST 8: Single super admin — no other user can become super by changing ID
+# ============================================================================
+hdr "TEST 8 — Single super-admin identity (ID cannot grant super)"
+
+# 8.1 Only ONE user should have is_super_admin=1
+SUPER_COUNT=$(printf '%s' "$RESP_BODY" | grep -oE '"isSuperAdmin":true' | wc -l)
+echo "  users with isSuperAdmin=true: $SUPER_COUNT (should be exactly 1)"
+check "8.1 only-one-super-admin" 1 "$SUPER_COUNT"
+
+# 8.2 Create a new admin via super admin — verify it is NOT super
+api POST /users "$SUPER_TOKEN" '{"username":"newadmin","password":"Password123","role":"admin","name":"New Admin"}'
+NEWADMIN_ID=$(json_num "$RESP_BODY" "id")
+NEWADMIN_IS_SUPER=$(json_bool "$RESP_BODY" "isSuperAdmin")
+echo "  newadmin id=$NEWADMIN_ID isSuper=$NEWADMIN_IS_SUPER (should be false)"
+check "8.2 new-admin-not-super" "false" "$NEWADMIN_IS_SUPER"
+
+# 8.3 Try to escalate via direct API: PUT /users with isSuperAdmin:true in body
+# The API should ignore unknown fields (only name/role/isActive/permissions are processed)
+api PUT "/users?id=$NEWADMIN_ID" "$SUPER_TOKEN" '{"isSuperAdmin":true,"role":"admin"}'
+NEWADMIN_IS_SUPER_AFTER=$(json_bool "$RESP_BODY" "isSuperAdmin")
+echo "  after PUT with isSuperAdmin:true → isSuper=$NEWADMIN_IS_SUPER_AFTER (should still be false)"
+check "8.3 cant-inject-isSuperAdmin-via-api" "false" "$NEWADMIN_IS_SUPER_AFTER"
+
+# 8.4 Even super admin cannot make another user super (only id=1 is ever super)
+api PUT "/users?id=$NEWADMIN_ID" "$SUPER_TOKEN" '{"role":"admin","permissions":["manage_users","create_admins"]}'
+NEWADMIN_IS_SUPER_AFTER2=$(json_bool "$RESP_BODY" "isSuperAdmin")
+echo "  after super-admin grants perms → isSuper=$NEWADMIN_IS_SUPER_AFTER2 (should still be false)"
+check "8.4 super-cant-create-another-super" "false" "$NEWADMIN_IS_SUPER_AFTER2"
+
+# 8.5 Try to login as a different user and use their token against super-admin endpoints
+# Verify the new admin (even with manage_users) cannot demote the real super admin
+api POST /auth/login "" '{"username":"newadmin","password":"Password123"}'
+NEWADMIN_TOKEN=$(json_get "$RESP_BODY" "token")
+api PUT "/users?id=$SUPER_ID" "$NEWADMIN_TOKEN" '{"role":"viewer"}'
+echo "  newadmin (with manage_users) tries to demote super admin → $HTTP_STATUS (should be 403)"
+check "8.5 other-admin-cant-demote-super" 403 "$HTTP_STATUS"
+
+# 8.6 Try path-traversal / SQL-injection style: id=1 (already covered) — also try id=0, id=-1
+api PUT "/users?id=0" "$NEWADMIN_TOKEN" '{"role":"admin","isSuperAdmin":true}'
+echo "  newadmin tries id=0 with isSuperAdmin:true → $HTTP_STATUS (should be 404 not-found OR 403 — either is safe)"
+# Either 404 (user not found) or 403 (forbidden) is acceptable — the key is NO super was created
+check_in "8.6 id-zero-not-super" "404|403" "$HTTP_STATUS"
+
+echo
+echo "  → TEST 8 SUMMARY: Only id=1 is ever super admin; no injection vector."
 
 # ============================================================================
 # FINAL SUMMARY
