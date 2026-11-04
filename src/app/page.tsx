@@ -3882,7 +3882,6 @@ function ProgramListRow({ show, selectionMode, selected, isUploaded, onToggle, o
 // SHOW DETAILS MODAL — with Persian description, links, publish, export
 // ============================================
 function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport, isUploaded, canEdit, allShows = [], onSwapShow }: {
-  const { t } = useLang();
   show: TalkShow;
   onClose: () => void;
   onEdit: (s: TalkShow) => void;
@@ -3894,6 +3893,7 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
   allShows?: TalkShow[];
   onSwapShow?: (s: TalkShow) => void;
 }) {
+  const { t } = useLang();
   const thumb = getShowThumbnail(show);
   const [confirmDelete, setConfirmDelete] = useState(false);
   // Related programs computed from the full list — capped at 6.

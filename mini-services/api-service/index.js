@@ -354,11 +354,23 @@ const ALL_PERMISSIONS = {
 };
 
 // Parse a user's permissions string into a Set of granted permissions.
-// Super admins have ALL permissions. Regular admins have ALL permissions by default
-// unless the super admin has explicitly customized them.
+// Super admins have ALL permissions.
+// Regular admins have ALL permissions by default UNLESS the super admin has
+// explicitly set a custom permissions string (non-empty) — in which case
+// only the stored permissions are granted.
+// Editors have: add_shows, edit_shows, export_reports.
+// Viewers have: none.
 function getUserPermissions(user) {
   if (!user) return new Set();
   if (isSuperAdmin(user)) return new Set(Object.keys(ALL_PERMISSIONS));
+  
+  // If user has a custom permissions string stored, use ONLY those.
+  const storedPerms = (user.permissions || '').trim();
+  if (storedPerms) {
+    return new Set(storedPerms.split(',').filter(p => ALL_PERMISSIONS[p]));
+  }
+  
+  // No custom permissions — use role-based defaults.
   if (user.role === 'admin') return new Set(Object.keys(ALL_PERMISSIONS));
   if (user.role === 'editor') return new Set(['add_shows', 'edit_shows', 'export_reports']);
   return new Set();
@@ -766,8 +778,8 @@ const server = Bun.serve({
 
     // ----- Shows: create -----
     if (pathname === '/api/shows' && method === 'POST') {
-      const user = requireRole(req, ['admin', 'editor']);
-      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+      const user = requirePermission(req, 'add_shows');
+      if (!user) return json({ error: 'Unauthorized — no add_shows permission' }, 401, req);
       let body;
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
       if (!body.num) {
@@ -775,13 +787,14 @@ const server = Bun.serve({
         body.num = (max?.m || 0) + 1;
       }
       db.prepare(`INSERT OR REPLACE INTO shows (${SHOW_COLUMNS.join(', ')}) VALUES (${SHOW_COLUMNS.map(() => '?').join(', ')})`).run(...showToValues(body));
+      logActivity(user, 'create_show', 'show', body.num, `Created show "${body.name}"`);
       return json(rowToShow(db.prepare('SELECT * FROM shows WHERE num = ?').get(body.num)), req);
     }
 
     // ----- Shows: update -----
     if (pathname.startsWith('/api/shows/') && method === 'PUT') {
-      const user = requireRole(req, ['admin', 'editor']);
-      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+      const user = requirePermission(req, 'edit_shows');
+      if (!user) return json({ error: 'Unauthorized — no edit_shows permission' }, 401, req);
       const num = parseInt(pathname.slice('/api/shows/'.length));
       let body;
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
@@ -790,22 +803,25 @@ const server = Bun.serve({
       if (!existing) return json({ error: 'show not found' }, 404, req);
       const merged = { ...rowToShow(existing), ...body, num };
       db.prepare(`INSERT OR REPLACE INTO shows (${SHOW_COLUMNS.join(', ')}) VALUES (${SHOW_COLUMNS.map(() => '?').join(', ')})`).run(...showToValues(merged));
+      logActivity(user, 'update_show', 'show', num, `Updated show "${merged.name}"`);
       return json(rowToShow(db.prepare('SELECT * FROM shows WHERE num = ?').get(num)), req);
     }
 
     // ----- Shows: delete -----
     if (pathname.startsWith('/api/shows') && method === 'DELETE') {
-      const user = requireRole(req, ['admin', 'editor']);
-      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+      const user = requirePermission(req, 'delete_shows');
+      if (!user) return json({ error: 'Unauthorized — no delete_shows permission' }, 401, req);
       const num = parseInt(url.searchParams.get('num') || '0');
       if (!num) return json({ error: 'num required' }, 400, req);
+      const show = db.prepare('SELECT name FROM shows WHERE num = ?').get(num);
       db.prepare('DELETE FROM shows WHERE num = ?').run(num);
+      logActivity(user, 'delete_show', 'show', num, `Deleted show "${show?.name || num}"`);
       return json({ success: true }, req);
     }
 
     // ----- Users: list -----
     if (pathname === '/api/users' && method === 'GET') {
-      const user = requireRole(req, ['admin']);
+      const user = requirePermission(req, 'manage_users');
       if (!user) return json({ error: 'Unauthorized' }, 401, req);
       const rows = db.prepare('SELECT * FROM users ORDER BY id').all();
       return json({ users: rows.map(u => publicUser(u, user)) }, req);
@@ -813,15 +829,19 @@ const server = Bun.serve({
 
     // ----- Users: create -----
     if (pathname === '/api/users' && method === 'POST') {
-      const admin = requireRole(req, ['admin']);
+      const admin = requirePermission(req, 'manage_users');
       if (!admin) return json({ error: 'Unauthorized' }, 401, req);
       let body;
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
+      // Creating an admin requires the create_admins permission
+      const role = ['admin', 'editor', 'viewer'].includes(body.role) ? body.role : 'viewer';
+      if (role === 'admin' && !hasPermission(admin, 'create_admins')) {
+        return json({ error: 'شما اجازه ساخت مدیر جدید ندارید' }, 403, req);
+      }
       const username = String(body?.username || '').trim();
       const password = String(body?.password || '');
       if (!username || !password) return json({ error: 'نام کاربری و رمز عبور را وارد کنید' }, 400, req);
       if (password.length < 8) return json({ error: 'رمز عبور باید حداقل ۸ کاراکتر باشد' }, 400, req);
-      const role = ['admin', 'editor', 'viewer'].includes(body.role) ? body.role : 'viewer';
       const existing = getUserByUsername(username);
       if (existing) return json({ error: 'نام کاربری تکراری' }, 409, req);
       const result = db.prepare('INSERT INTO users (username, password_hash, role, name, job_title, deputy, phone) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
@@ -833,7 +853,7 @@ const server = Bun.serve({
 
     // ----- Users: update -----
     if (pathname.startsWith('/api/users') && method === 'PUT') {
-      const admin = requireRole(req, ['admin']);
+      const admin = requirePermission(req, 'manage_users');
       if (!admin) return json({ error: 'Unauthorized' }, 401, req);
       const id = parseInt(url.searchParams.get('id') || '0');
       let body;
@@ -861,7 +881,7 @@ const server = Bun.serve({
 
     // ----- Users: delete -----
     if (pathname.startsWith('/api/users') && method === 'DELETE') {
-      const admin = requireRole(req, ['admin']);
+      const admin = requirePermission(req, 'manage_users');
       if (!admin) return json({ error: 'Unauthorized' }, 401, req);
       const id = parseInt(url.searchParams.get('id') || '0');
       // Cannot delete self
@@ -879,7 +899,7 @@ const server = Bun.serve({
 
     // ----- Activity log -----
     if (pathname === '/api/activity' && method === 'GET') {
-      const admin = requireRole(req, ['admin']);
+      const admin = requirePermission(req, 'view_activity');
       if (!admin) return json({ error: 'Unauthorized' }, 401, req);
       const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 200);
       const logs = db.prepare('SELECT * FROM activity_log ORDER BY created_at DESC LIMIT ?').all(limit);
@@ -888,7 +908,7 @@ const server = Bun.serve({
 
     // ----- Permissions list -----
     if (pathname === '/api/permissions' && method === 'GET') {
-      const admin = requireRole(req, ['admin']);
+      const admin = requirePermission(req, 'manage_users');
       if (!admin) return json({ error: 'Unauthorized' }, 401, req);
       return json({ permissions: Object.keys(ALL_PERMISSIONS) }, req);
     }
