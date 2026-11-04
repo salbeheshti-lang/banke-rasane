@@ -576,12 +576,21 @@ function adjustColor(hex: string, amount: number): string {
   return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 }
 
-// Get show's real image if available, otherwise generate thumbnail from decor properties
+// Get show's real image if available, otherwise generate thumbnail from decor properties.
+// IMPORTANT (per user requirement): We deliberately ignore show.images (old local files
+// that contain incorrect movie posters, not actual decor photos).
+// The user wants EXACT decor photos sourced ONLY from Wikipedia.
+// When the user is logged in, we try the /api/image/<num> endpoint (which serves images
+// fetched from Wikipedia by an admin). If that image doesn't exist (404), the onError
+// handler hides it and the gradient placeholder is shown.
+// When NOT logged in, we just show the gradient placeholder — no images at all.
 function getShowThumbnail(show: TalkShow): { gradient: string; pattern: string; accent: string; image: string | null } {
-  // Check if show has real images from PDF
-  if (show.images && show.images.length > 0) {
+  // Check if a Wikipedia image has been fetched and stored for this show.
+  // The endpoint returns 404 if no image is stored, which the <img onError> handler
+  // converts to the gradient placeholder.
+  if (typeof window !== 'undefined' && localStorage.getItem('bankresaneh_token')) {
     const thumb = generateThumbnailColors(show);
-    return { ...thumb, image: show.images[0] };
+    return { ...thumb, image: getApiUrl('api/image/' + show.num) };
   }
   return { ...generateThumbnailColors(show), image: null };
 }
@@ -829,6 +838,14 @@ function HomeInner() {
   const [overrides, setOverrides] = useState<Overrides>({ added: [], edited: {}, deleted: [] });
   const [uploadedShows, setUploadedShows] = useState<number[]>([]);
   const [selectedShow, setSelectedShow] = useState<TalkShow | null>(null);
+
+  // Track "view_show" analytics whenever a show's details modal opens
+  useEffect(() => {
+    if (selectedShow) {
+      api.trackAnalytics('view_show', 'show', String(selectedShow.num), `Viewed "${selectedShow.name}"`);
+    }
+  }, [selectedShow]);
+
   const [editingShow, setEditingShow] = useState<TalkShow | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [publishShows, setPublishShows] = useState<TalkShow[] | null>(null);
@@ -1110,8 +1127,14 @@ function HomeInner() {
           onClose={() => setSelectedShow(null)}
           onEdit={(s) => { setSelectedShow(null); setEditingShow(s); setPresetGenre(null); setPresetCategory(undefined); navigate('add'); }}
           onDelete={handleDeleteShow}
-          onPublish={(s) => setPublishShows([s])}
-          onExport={(s, fmt) => setExportPreview({ shows: [s], format: fmt })}
+          onPublish={(s) => {
+            api.trackAnalytics('publish_show', 'show', String(s.num), `Published "${s.name}"`);
+            setPublishShows([s]);
+          }}
+          onExport={(s, fmt) => {
+            api.trackAnalytics(fmt === 'pdf' ? 'export_pdf' : 'export_excel', 'show', String(s.num), `Exported "${s.name}" as ${fmt.toUpperCase()}`);
+            setExportPreview({ shows: [s], format: fmt });
+          }}
           isUploaded={uploadedShows.includes(selectedShow.num)}
           canEdit={canEdit}
           onSwapShow={(s) => setSelectedShow(s)}
@@ -3128,6 +3151,7 @@ function ProgramsView({
 
   const handleUploadSelected = () => {
     const selectedShows = filteredShows.filter(s => selectedIds.includes(s.num));
+    selectedShows.forEach(s => api.trackAnalytics('publish_show', 'show', String(s.num), `Bulk published "${s.name}"`));
     onPublish(selectedShows);
     setSelectedIds([]);
     setSelectionMode(false);
@@ -3135,6 +3159,7 @@ function ProgramsView({
 
   const handlePDF = () => {
     const selectedShows = filteredShows.filter(s => selectedIds.includes(s.num));
+    selectedShows.forEach(s => api.trackAnalytics('export_pdf', 'show', String(s.num), `Bulk PDF "${s.name}"`));
     onExport(selectedShows, 'pdf');
     setSelectedIds([]);
     setSelectionMode(false);
@@ -3142,6 +3167,7 @@ function ProgramsView({
 
   const handleExcel = () => {
     const selectedShows = filteredShows.filter(s => selectedIds.includes(s.num));
+    selectedShows.forEach(s => api.trackAnalytics('export_excel', 'show', String(s.num), `Bulk Excel "${s.name}"`));
     onExport(selectedShows, 'excel');
     setSelectedIds([]);
     setSelectionMode(false);
@@ -3448,38 +3474,41 @@ function ProgramsView({
                 <button
                   key={g.id}
                   onClick={() => onGenreSelect?.(g)}
-                  className="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap"
+                  className="group flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap"
                   style={isActive ? {
+                    // Active: solid genre color, white text, glowing shadow
                     background: g.color,
                     color: '#ffffff',
                     border: `1px solid ${g.color}`,
-                    boxShadow: `0 4px 14px ${g.color}66`,
+                    boxShadow: `0 6px 20px ${g.color}80, 0 0 0 3px ${g.color}25`,
                     scrollSnapAlign: 'center',
                   } : {
-                    // Ghost tint of the genre's own color — each chip hints its identity at rest,
-                    // and lights up to full saturation on hover. Way more alive than plain white glass.
-                    background: `rgba(${rgb}, 0.12)`,
-                    color: g.color,
-                    border: `1px solid rgba(${rgb}, 0.45)`,
-                    backdropFilter: 'blur(8px)',
-                    WebkitBackdropFilter: 'blur(8px)',
-                    boxShadow: `inset 0 0 0 1px rgba(${rgb}, 0.05)`,
+                    // Rest: professional WHITE liquid glass (frosted glass look)
+                    background: 'rgba(255, 255, 255, 0.55)',
+                    color: '#1a1a1a',
+                    border: '1px solid rgba(255, 255, 255, 0.8)',
+                    backdropFilter: 'blur(16px) saturate(180%)',
+                    WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9)',
                     scrollSnapAlign: 'center',
                   }}
                   onMouseEnter={(e) => {
                     if (!isActive) {
+                      // Hover: lights up with the genre's OWN color (color highlight)
                       e.currentTarget.style.background = g.color;
                       e.currentTarget.style.borderColor = g.color;
                       e.currentTarget.style.color = '#ffffff';
-                      e.currentTarget.style.boxShadow = `0 4px 14px ${g.color}66`;
+                      e.currentTarget.style.boxShadow = `0 6px 20px ${g.color}80, 0 0 0 3px ${g.color}25`;
+                      e.currentTarget.style.transform = 'translateY(-2px)';
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!isActive) {
-                      e.currentTarget.style.background = `rgba(${rgb}, 0.12)`;
-                      e.currentTarget.style.borderColor = `rgba(${rgb}, 0.45)`;
-                      e.currentTarget.style.color = g.color;
-                      e.currentTarget.style.boxShadow = `inset 0 0 0 1px rgba(${rgb}, 0.05)`;
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.55)';
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.8)';
+                      e.currentTarget.style.color = '#1a1a1a';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9)';
+                      e.currentTarget.style.transform = 'translateY(0)';
                     }
                   }}
                 >
@@ -3600,8 +3629,35 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
               src={thumb.image}
               alt={show.name}
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              onError={(e) => {
+                // Image failed to load (likely 404 from API) — fall back to the gradient placeholder.
+                // Hide the <img> so the parent's background gradient shows through.
+                (e.target as HTMLImageElement).style.display = 'none';
+                // Also show the show name overlay so users still see what the program is.
+                const parent = (e.target as HTMLImageElement).parentElement;
+                if (parent) {
+                  const overlay = parent.querySelector('.fallback-name-overlay') as HTMLElement | null;
+                  if (overlay) overlay.style.display = 'flex';
+                }
+              }}
             />
+            {/* Fallback overlay (hidden by default, shown if image fails to load) */}
+            <div className="fallback-name-overlay absolute inset-0 items-center justify-center p-4" style={{ display: 'none' }}>
+              <div className="text-center">
+                <div
+                  className="text-2xl font-black mb-1"
+                  style={{ color: 'white', textShadow: '0 2px 8px rgba(0,0,0,0.5)', direction: 'rtl', textAlign: 'center' }}
+                >
+                  {show.name.length > 25 ? show.name.substring(0, 23) + '...' : show.name}
+                </div>
+                <div
+                  className="text-xs font-medium px-2 py-0.5 rounded-full inline-block"
+                  style={{ background: 'rgba(255,255,255,0.25)', color: 'white', backdropFilter: 'blur(8px)' }}
+                >
+                  {show.style}
+                </div>
+              </div>
+            </div>
             {/* Dark gradient at bottom so the name is readable on the image */}
             <div className="absolute inset-x-0 bottom-0" style={{ background: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.8) 100%)', padding: '24px 12px 8px' }}>
               <div className="text-sm font-bold" style={{ color: 'white', textShadow: '0 1px 4px rgba(0,0,0,0.8)', direction: 'rtl', textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -6693,8 +6749,9 @@ function SettingsModal({
       <div
         className="relative flex flex-col"
         style={{
-          width: 'min(640px, 96vw)',
-          maxHeight: '90vh',
+          width: 'min(820px, 96vw)',
+          height: 'min(720px, 92vh)',
+          maxHeight: '92vh',
           /* Liquid glass — same as header */
           background: 'linear-gradient(180deg, rgba(5, 80, 65, 0.82) 0%, rgba(0, 95, 75, 0.78) 50%, rgba(8, 110, 90, 0.75) 100%)',
           backdropFilter: 'blur(28px) saturate(135%)',
@@ -6725,7 +6782,7 @@ function SettingsModal({
 
         {/* Tabs */}
         <div
-          className="flex items-center gap-1 p-2 flex-shrink-0 overflow-x-auto no-scrollbar"
+          className="flex items-center gap-1.5 p-2 flex-shrink-0 overflow-x-auto no-scrollbar"
           style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}
         >
           {tabs.map((t) => {
@@ -6734,11 +6791,12 @@ function SettingsModal({
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap"
+                className="flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap"
                 style={active ? {
                   background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
                   border: '1px solid rgba(255, 255, 255, 0.3)',
                   color: 'white',
+                  boxShadow: '0 4px 12px rgba(0, 107, 80, 0.4)',
                 } : {
                   color: 'rgba(255, 255, 255, 0.7)',
                   border: '1px solid transparent',
@@ -6753,7 +6811,7 @@ function SettingsModal({
         </div>
 
         {/* Body — scrollable */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6" style={{ maxHeight: 'calc(90vh - 130px)' }}>
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6" style={{ minHeight: 0 }}>
           {tab === 'profile' && <ProfileTab currentUser={currentUser} showToast={showToast} />}
           {tab === 'users' && <SettingsUsersTab currentUser={currentUser} showToast={showToast} />}
           {tab === 'server' && <SettingsServerTab showToast={showToast} />}
@@ -7010,11 +7068,15 @@ function ProfileField({ icon, label, value, isEditing, onChange, placeholder, di
   );
 }
 
-// --- Tab: Report Settings (admin edits PDF report defaults) ---
+// --- Tab: Report Settings — analytics dashboard + PDF report defaults ---
 function SettingsReportTab({ showToast }: { showToast: (msg: string) => void }) {
+  const { t } = useLang();
   const [title, setTitle] = useState('');
   const [subtitle, setSubtitle] = useState('');
   const [loading, setLoading] = useState(true);
+  const [report, setReport] = useState<any>(null);
+  const [reportLoading, setReportLoading] = useState(true);
+  const [days, setDays] = useState(30);
 
   useEffect(() => {
     try {
@@ -7036,63 +7098,292 @@ function SettingsReportTab({ showToast }: { showToast: (msg: string) => void }) 
     setLoading(false);
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    setReportLoading(true);
+    api.getAnalyticsReport(days)
+      .then(data => { if (!cancelled) setReport(data); })
+      .catch(() => { if (!cancelled) setReport(null); })
+      .finally(() => { if (!cancelled) setReportLoading(false); });
+    return () => { cancelled = true; };
+  }, [days]);
+
   const handleSave = () => {
     try {
       localStorage.setItem('bankresaneh_report_defaults', JSON.stringify({ title, subtitle }));
-      showToast('تنظیمات گزارش ذخیره شد');
+      showToast(t('reports.settingsSaved'));
     } catch {
-      showToast('خطا در ذخیره‌سازی');
+      showToast(t('reports.settingsError'));
     }
   };
 
   if (loading) return null;
 
+  const cardStyle: React.CSSProperties = {
+    background: 'rgba(255,255,255,0.08)',
+    border: '1px solid rgba(255,255,255,0.15)',
+    borderRadius: '16px',
+    padding: '16px',
+  };
+  const statStyle: React.CSSProperties = {
+    fontSize: '28px', fontWeight: 800, color: '#5eead4', lineHeight: 1.1,
+  };
+  const labelStyle: React.CSSProperties = {
+    fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '4px',
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      {/* Analytics dashboard */}
       <div>
-        <label style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.9)', display: 'block', marginBottom: '6px' }}>
-          عنوان پیش‌فرض گزارش
-        </label>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          style={{
-            width: '100%', padding: '12px 14px', borderRadius: '12px',
-            background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
-            color: '#f0fdf4', fontSize: '14px', fontFamily: 'inherit', outline: 'none',
-          }}
-        />
+        <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#f0fdf4', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span>📊</span> گزارش فعالیت و تحلیل
+        </h3>
+
+        {/* Days selector */}
+        <div className="flex items-center gap-2 mb-4" style={{ flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>بازه زمانی:</span>
+          {[7, 30, 90, 365].map(d => (
+            <button
+              key={d}
+              onClick={() => setDays(d)}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+              style={days === d ? {
+                background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
+                color: '#fff', border: '1px solid rgba(255,255,255,0.3)',
+              } : {
+                background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)',
+                border: '1px solid rgba(255,255,255,0.15)',
+              }}
+            >
+              {d === 365 ? 'یک سال' : d === 90 ? 'سه ماه' : d === 30 ? 'یک ماه' : 'یک هفته'}
+            </button>
+          ))}
+        </div>
+
+        {reportLoading ? (
+          <div style={{ textAlign: 'center', padding: '32px', color: 'rgba(255,255,255,0.5)' }}>
+            <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏳</div>
+            در حال بارگذاری گزارش…
+          </div>
+        ) : !report ? (
+          <div style={{ ...cardStyle, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
+            گزارشی در دسترس نیست.
+          </div>
+        ) : (
+          <>
+            {/* Top stats row */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+              <div style={cardStyle}>
+                <div style={statStyle}>{(report.totals?.views || 0).toLocaleString('fa-IR')}</div>
+                <div style={labelStyle}>👁 مشاهده برنامه</div>
+              </div>
+              <div style={cardStyle}>
+                <div style={statStyle}>{(report.totals?.pdfExports || 0).toLocaleString('fa-IR')}</div>
+                <div style={labelStyle}>📄 خروجی PDF</div>
+              </div>
+              <div style={cardStyle}>
+                <div style={statStyle}>{(report.totals?.publishes || 0).toLocaleString('fa-IR')}</div>
+                <div style={labelStyle}>📤 منتشر شده</div>
+              </div>
+              <div style={cardStyle}>
+                <div style={statStyle}>{(report.onlineCount || 0).toLocaleString('fa-IR')}</div>
+                <div style={labelStyle}>🟢 آنلاین اکنون</div>
+              </div>
+            </div>
+
+            {/* Online users list */}
+            {report.onlineUsers && report.onlineUsers.length > 0 && (
+              <div style={{ ...cardStyle, marginBottom: '12px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#5eead4', marginBottom: '8px' }}>
+                  🟢 کاربران آنلاین ({report.onlineCount.toLocaleString('fa-IR')} نفر)
+                </div>
+                <div className="space-y-1" style={{ maxHeight: '160px', overflowY: 'auto' }}>
+                  {report.onlineUsers.map((u: any) => (
+                    <div key={u.id} className="flex items-center justify-between py-1.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div className="flex items-center gap-2">
+                        <span style={{ fontSize: '16px' }}>{u.role === 'admin' ? '👑' : u.role === 'editor' ? '✏️' : '👁'}</span>
+                        <span style={{ color: '#f0fdf4', fontWeight: 600, fontSize: '13px' }}>{u.name || u.username}</span>
+                        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px' }}>@{u.username}</span>
+                      </div>
+                      <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px' }}>
+                        {u.lastSeenSecondsAgo < 60 ? 'هم‌اکنون' : `${Math.floor(u.lastSeenSecondsAgo / 60).toLocaleString('fa-IR')} دقیقه پیش`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Daily active chart (simple bars) */}
+            {report.dailyActive && report.dailyActive.length > 0 && (
+              <div style={{ ...cardStyle, marginBottom: '12px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#5eead4', marginBottom: '12px' }}>
+                  📅 کاربران فعال روزانه
+                </div>
+                <div className="flex items-end gap-1" style={{ height: '80px' }}>
+                  {report.dailyActive.slice(-14).map((d: any, i: number) => {
+                    const max = Math.max(...report.dailyActive.map((x: any) => x.users), 1);
+                    const h = Math.max(4, (d.users / max) * 70);
+                    return (
+                      <div key={i} className="flex-1 flex flex-col items-center" style={{ minWidth: '20px' }}>
+                        <div style={{
+                          width: '100%', height: `${h}px`,
+                          background: 'linear-gradient(180deg, #22B99A 0%, #006B50 100%)',
+                          borderRadius: '4px 4px 0 0', opacity: 0.8,
+                        }} title={`${d.day}: ${d.users} نفر`} />
+                        <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', marginTop: '4px', transform: 'rotate(-45deg)', whiteSpace: 'nowrap' }}>
+                          {d.day.slice(5)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Incomplete programs */}
+            {report.incompletePrograms && report.incompletePrograms.length > 0 && (
+              <div style={{ ...cardStyle, marginBottom: '12px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#fbbf24', marginBottom: '8px' }}>
+                  ⚠️ برنامه‌های ناقص ({report.incompleteCount.toLocaleString('fa-IR')} از {(report.totalShows || 0).toLocaleString('fa-IR')} برنامه)
+                </div>
+                <div className="space-y-1" style={{ maxHeight: '240px', overflowY: 'auto' }}>
+                  {report.incompletePrograms.slice(0, 50).map((s: any) => (
+                    <div key={s.num} className="py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div style={{ color: '#f0fdf4', fontWeight: 600, fontSize: '13px' }}>
+                        #{s.num.toLocaleString('fa-IR')} — {s.name || '(بدون نام)'}
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {s.missing.map((m: string) => (
+                          <span key={m} style={{
+                            fontSize: '10px', padding: '2px 6px', borderRadius: '4px',
+                            background: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24',
+                            border: '1px solid rgba(251, 191, 36, 0.3)',
+                          }}>
+                            {m === 'name' ? 'نام' :
+                             m === 'summary' ? 'خلاصه' :
+                             m === 'descriptionFa' ? 'توضیح فارسی' :
+                             m === 'materials' ? 'مواد' :
+                             m === 'style' ? 'سبک' :
+                             m === 'colors' ? 'رنگ‌ها' :
+                             m === 'layout' ? 'چیدمان' : m}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {report.incompleteCount > 50 && (
+                    <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: '11px', padding: '8px' }}>
+                      و {(report.incompleteCount - 50).toLocaleString('fa-IR')} برنامه دیگر…
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Top viewed shows */}
+            {report.topShows && report.topShows.length > 0 && (
+              <div style={{ ...cardStyle, marginBottom: '12px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#5eead4', marginBottom: '8px' }}>
+                  🔥 پربازدیدترین برنامه‌ها
+                </div>
+                <div className="space-y-1">
+                  {report.topShows.map((s: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between py-1.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div className="flex items-center gap-2">
+                        <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', minWidth: '18px' }}>
+                          {(i + 1).toLocaleString('fa-IR')}.
+                        </span>
+                        <span style={{ color: '#f0fdf4', fontSize: '13px' }}>#{s.num.toLocaleString('fa-IR')}</span>
+                      </div>
+                      <span style={{ color: '#5eead4', fontWeight: 700, fontSize: '13px' }}>
+                        {s.views.toLocaleString('fa-IR')} بازدید
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Top exported shows */}
+            {report.topExports && report.topExports.length > 0 && (
+              <div style={{ ...cardStyle, marginBottom: '12px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#5eead4', marginBottom: '8px' }}>
+                  📄 بیشترین خروجی (PDF/Excel)
+                </div>
+                <div className="space-y-1">
+                  {report.topExports.map((s: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between py-1.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div className="flex items-center gap-2">
+                        <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', minWidth: '18px' }}>
+                          {(i + 1).toLocaleString('fa-IR')}.
+                        </span>
+                        <span style={{ color: '#f0fdf4', fontSize: '13px' }}>#{s.num.toLocaleString('fa-IR')}</span>
+                      </div>
+                      <span style={{ color: '#5eead4', fontWeight: 700, fontSize: '13px' }}>
+                        {s.exports.toLocaleString('fa-IR')} خروجی
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
-      <div>
-        <label style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.9)', display: 'block', marginBottom: '6px' }}>
-          زیرعنوان پیش‌فرض گزارش
-        </label>
-        <textarea
-          value={subtitle}
-          onChange={(e) => setSubtitle(e.target.value)}
-          rows={3}
+
+      {/* PDF report defaults */}
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px' }}>
+        <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#f0fdf4', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span>📄</span> تنظیمات پیش‌فرض گزارش PDF
+        </h3>
+        <div>
+          <label style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.9)', display: 'block', marginBottom: '6px' }}>
+            عنوان پیش‌فرض گزارش
+          </label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            style={{
+              width: '100%', padding: '12px 14px', borderRadius: '12px',
+              background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
+              color: '#f0fdf4', fontSize: '14px', fontFamily: 'inherit', outline: 'none',
+            }}
+          />
+        </div>
+        <div className="mt-3">
+          <label style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.9)', display: 'block', marginBottom: '6px' }}>
+            زیرعنوان پیش‌فرض گزارش
+          </label>
+          <textarea
+            value={subtitle}
+            onChange={(e) => setSubtitle(e.target.value)}
+            rows={3}
+            style={{
+              width: '100%', padding: '12px 14px', borderRadius: '12px',
+              background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
+              color: '#f0fdf4', fontSize: '14px', fontFamily: 'inherit', outline: 'none', resize: 'vertical',
+            }}
+          />
+        </div>
+        <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '8px' }}>
+          این عنوان‌ها در گزارش‌های PDF و Excel به‌صورت پیش‌فرض استفاده می‌شوند.
+        </p>
+        <button
+          onClick={handleSave}
+          className="mt-3"
           style={{
-            width: '100%', padding: '12px 14px', borderRadius: '12px',
-            background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
-            color: '#f0fdf4', fontSize: '14px', fontFamily: 'inherit', outline: 'none', resize: 'vertical',
+            width: '100%', padding: '12px', borderRadius: '14px',
+            background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
+            color: '#fff', fontWeight: 700, fontSize: '14px',
+            border: '1px solid rgba(255,255,255,0.3)', cursor: 'pointer',
           }}
-        />
+        >
+          ✓ ذخیره تنظیمات
+        </button>
       </div>
-      <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>
-        این عنوان‌ها در گزارش‌های PDF و Excel به‌صورت پیش‌فرض استفاده می‌شوند.
-      </p>
-      <button
-        onClick={handleSave}
-        style={{
-          width: '100%', padding: '12px', borderRadius: '14px',
-          background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
-          color: '#fff', fontWeight: 700, fontSize: '14px',
-          border: '1px solid rgba(255,255,255,0.3)', cursor: 'pointer',
-        }}
-      >
-        ✓ ذخیره تنظیمات
-      </button>
     </div>
   );
 }
