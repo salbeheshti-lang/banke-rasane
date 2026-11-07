@@ -273,7 +273,7 @@ if [ "$SCENARIO" = "upgrade" ]; then
     import { Database } from "bun:sqlite";
     const db = new Database("bankresaneh.sqlite");
     const rows = db.prepare("SELECT username, password_hash FROM users WHERE username IN (?, ?)").all("legacy_admin", "legacy_editor");
-    console.log(rows.length === 2 && rows.every((u) => u.password_hash.startsWith("pbkdf2$")) ? "true" : "false");
+    console.log(rows.length === 2 && rows.every((u) => u.password_hash.startsWith("scrypt$")) ? "true" : "false");
   ')
   check "0.7 legacy-hashes-upgraded" "true" "$LEGACY_HASHES"
 fi
