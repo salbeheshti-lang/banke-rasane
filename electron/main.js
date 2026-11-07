@@ -299,7 +299,17 @@ function createWindow() {
     webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true },
     icon: path.join(__dirname, 'icon.ico'),
   });
-  mainWindow.once('ready-to-show', () => { mainWindow.show(); mainWindow.maximize(); });
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+    mainWindow.maximize();
+    // Only check after the window exists and is visible; otherwise the
+    // update-available handler has no parent window and silently skips prompting.
+    try {
+      autoUpdater.checkForUpdates().catch(err => log('Update check failed: ' + err.message));
+    } catch (error) {
+      log('Update check skipped: ' + error.message);
+    }
+  });
   mainWindow.loadURL(NEXT_URL);
   mainWindow.webContents.setWindowOpenHandler(({url}) => {
     if (url.startsWith('http://127.0.0.1') || url.startsWith('http://localhost')) return {action:'allow'};
@@ -367,10 +377,6 @@ app.whenReady().then(async () => {
   autoUpdater.on('error', (err) => {
     log('Auto-updater error: ' + err.message);
   });
-
-  // Check for updates (non-blocking)
-  try { autoUpdater.checkForUpdates().catch(err => log('Update check failed: ' + err.message)); }
-  catch(e) { log('Update check skipped: ' + e.message); }
 
   try {
     await startApiService();
