@@ -1195,6 +1195,7 @@ function HomeInner() {
           onClose={() => setShowSettings(false)}
           showToast={showToast}
           onLogout={handleLogout}
+          onPasswordChanged={(updatedUser) => { setCurrentUser(updatedUser); setShowSettings(false); }}
         />
       )}
 
@@ -6786,11 +6787,13 @@ function SettingsModal({
   onClose,
   showToast,
   onLogout,
+  onPasswordChanged,
 }: {
   currentUser: User;
   onClose: () => void;
   showToast: (msg: string) => void;
   onLogout: () => void;
+  onPasswordChanged?: (user: User) => void;
 }) {
   const { t } = useLang();
   const [tab, setTab] = useState<'profile' | 'users' | 'server' | 'report' | 'password' | 'activity'>('profile');
@@ -6889,7 +6892,7 @@ function SettingsModal({
           {tab === 'server' && <SettingsServerTab showToast={showToast} />}
           {tab === 'report' && <SettingsReportTab showToast={showToast} />}
           {tab === 'activity' && <SettingsActivityTab showToast={showToast} />}
-          {tab === 'password' && <SettingsPasswordTab currentUser={currentUser} showToast={showToast} onPasswordChanged={(updatedUser) => { setCurrentUser(updatedUser); if (settingsOpen) setSettingsOpen(false); }} onLogout={onLogout} />}
+          {tab === 'password' && <SettingsPasswordTab currentUser={currentUser} showToast={showToast} onPasswordChanged={onPasswordChanged} onLogout={onLogout} />}
         </div>
       </div>
     </div>
