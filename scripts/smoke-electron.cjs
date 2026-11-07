@@ -4,7 +4,7 @@ const { spawn, execFileSync } = require('node:child_process');
 const path = require('node:path');
 const http = require('node:http');
 
-const executable = path.resolve(__dirname, '..', 'release', 'win-unpacked', 'BankResaneh.exe');
+const executable = path.resolve(process.env.BANKRESANEH_EXE || process.argv[2] || path.resolve(__dirname, '..', 'release', 'win-unpacked', 'BankResaneh.exe'));
 let spawnError = null;
 const child = spawn(executable, ['--disable-gpu', '--no-sandbox'], {
   stdio: 'ignore',
