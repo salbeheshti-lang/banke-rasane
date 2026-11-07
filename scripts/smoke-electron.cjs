@@ -4,13 +4,15 @@ const { spawn, execFileSync } = require('node:child_process');
 const path = require('node:path');
 const http = require('node:http');
 
-// Use the executable path passed as a CLI argument (the CI workflow passes
-// the path of the NSIS-installed executable). Fall back to the win-unpacked
-// build for local `npm run smoke:desktop` invocations.
-const executable = process.argv[2]
-  ? path.resolve(process.argv[2])
-  : path.resolve(__dirname, '..', 'release', 'win-unpacked', 'BankResaneh.exe');
-if (process.argv[2]) {
+// Use the executable path passed as a CLI argument or the BANKRESANEH_EXE env
+// var (the CI workflow sets the env var to the NSIS-installed executable path).
+// Fall back to the win-unpacked build for local `npm run smoke:desktop` runs.
+const executable = path.resolve(
+  process.env.BANKRESANEH_EXE ||
+    process.argv[2] ||
+    path.resolve(__dirname, '..', 'release', 'win-unpacked', 'BankResaneh.exe')
+);
+if (process.env.BANKRESANEH_EXE || process.argv[2]) {
   process.stdout.write('Smoke-testing installed executable: ' + executable + '\n');
 } else {
   process.stdout.write('No executable argument — falling back to win-unpacked build: ' + executable + '\n');

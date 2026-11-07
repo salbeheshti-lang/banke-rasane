@@ -307,24 +307,44 @@ function createWindow() {
     webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true },
     icon: path.join(__dirname, 'icon.ico'),
   });
-  mainWindow.once('ready-to-show', () => { mainWindow.show(); mainWindow.maximize(); });
-  mainWindow.loadURL(NEXT_URL);
-  mainWindow.webContents.setWindowOpenHandler(({url}) => {
-    // Validate the URL with proper parsing — startsWith() would match
-    // look-alikes like http://127.0.0.1.evil.com. Only allow the exact
-    // local Next.js server (host + port), and only open http/https links
-    // externally (block javascript:, file:, data:, etc.).
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+    mainWindow.maximize();
+    // Only check after the window exists and is visible; otherwise the
+    // update-available handler has no parent window and silently skips prompting.
     try {
-      const parsed = new URL(url);
-      const isLocal =
-        (parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost') &&
-        parsed.port === String(NEXT_PORT) &&
-        (parsed.protocol === 'http:' || parsed.protocol === 'https:');
-      if (isLocal) return { action: 'allow' };
-      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
-        shell.openExternal(url);
-      }
-    } catch { /* malformed URL — deny */ }
+      autoUpdater.checkForUpdates().catch(err => log('Update check failed: ' + err.message));
+    } catch (error) {
+      log('Update check skipped: ' + error.message);
+    }
+  });
+  mainWindow.loadURL(NEXT_URL);
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    let target;
+    try {
+      target = new URL(url);
+    } catch {
+      log('Blocked malformed window-open URL');
+      return { action: 'deny' };
+    }
+
+    // Only the exact local Next.js origin may open inside the app.
+    // Avoid startsWith checks: they also accept attacker hosts such as
+    // http://127.0.0.1.evil.example.
+    const isLocalApp = target.protocol === 'http:' &&
+      (target.hostname === '127.0.0.1' || target.hostname === 'localhost') &&
+      target.port === String(NEXT_PORT);
+    if (isLocalApp) return { action: 'allow' };
+
+    // External windows may only launch ordinary web URLs. Never pass file:,
+    // javascript:, data:, or arbitrary custom protocols to the OS handler.
+    if (target.protocol === 'https:' || target.protocol === 'http:') {
+      shell.openExternal(target.toString()).catch((error) => {
+        log('Could not open external URL: ' + error.message);
+      });
+    } else {
+      log('Blocked unsupported external URL protocol: ' + target.protocol);
+    }
     return { action: 'deny' };
   });
   mainWindow.on('closed', () => { mainWindow = null; });

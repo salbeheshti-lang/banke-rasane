@@ -30,3 +30,28 @@ model Post {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+// Per-user translation rate-limit bucket (atomic, persistent).
+//
+// WHY A DB TABLE (not the previous JSON file)?
+//   The previous implementation did read-modify-write on a JSON file.
+//   Although the fs calls were synchronous (so single-process-safe), the
+//   approach was NOT safe under:
+//     1. Multi-process deployments (cluster mode, PM2) — two processes
+//        could read the same count, both increment, and write back, losing
+//        one increment (under-counting → allowing >10 req/min).
+//     2. Crash-during-write — fs.writeFileSync is not atomic; a crash or
+//        power loss mid-write truncates the file, losing ALL users' state.
+//
+//   SQLite (via Prisma $transaction) gives us true ACID atomicity: the
+//   read-increment-write is a single transaction, so concurrent requests
+//   serialize correctly at the DB level. Survives restarts and crashes.
+//
+//   key = userId (the authenticated caller's id). unique per user.
+//   count = requests consumed in the current window.
+//   resetAt = epoch-ms when the window resets.
+model TranslationRateBucket {
+  key     String   @id
+  count   Int      @default(0)
+  resetAt BigInt
+}

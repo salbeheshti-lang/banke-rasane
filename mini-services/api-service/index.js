@@ -16,6 +16,12 @@ import { readFileSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 
 const PORT = parseInt(process.env.PORT || '3002', 10);
+// Bind to loopback by default. Public/server deployments must opt in explicitly.
+const HOST = process.env.BANKRESANEH_HOST || '127.0.0.1';
+const NORMALIZED_HOST = HOST.replace(/^\[|\]$/g, '').toLowerCase();
+const IS_LOOPBACK_HOST = NORMALIZED_HOST === 'localhost' || NORMALIZED_HOST === '::1' ||
+  /^127(?:\.\d{1,3}){3}$/.test(NORMALIZED_HOST);
+const INITIAL_ADMIN_PASSWORD = process.env.BANKRESANEH_ADMIN_PASSWORD || '';
 
 // ---------------------------------------------------------------------------
 // DB setup
@@ -433,6 +439,14 @@ function requirePermission(req, perm) {
   return user;
 }
 
+// Distinguish missing/invalid authentication (401) from insufficient privilege (403).
+function permissionFailure(req, message = 'Forbidden') {
+  const user = requireUser(req);
+  if (!user) return json({ error: 'Unauthorized' }, 401, req);
+  if (user.must_change_password) return json({ error: 'Password change required' }, 403, req);
+  return json({ error: message }, 403, req);
+}
+
 function requireUser(req) {
   const token = getTokenFromRequest(req);
   if (!token) return null;
@@ -473,6 +487,13 @@ function sha256(s) { return createHash('sha256').update(s, 'utf8').digest('hex')
 // NOTE: Node errors when maxmem <= 128*N*r; N=2^17/r=8 needs exactly 128 MiB,
 // so maxmem must be strictly larger — we set 256 MB. Bun's bundled OpenSSL
 // defaults to maxmem=32MB, which would fail with MEMORY_LIMIT_EXCEEDED.
+// DECISION (integration of PR #9): kept ASYNC scrypt with the bounded
+// concurrency semaphore — PR #9's synchronous PBKDF2 (600k iterations)
+// would block the event loop for ~150-250 ms per login, stalling every
+// concurrent API request. OWASP accepts scrypt (N=2^17, r=8, p=1) as the
+// fallback when Argon2id is unavailable, so there is no operational reason
+// to migrate. Legacy SHA-256 hashes still verify (constant-time) and
+// transparently upgrade to scrypt on successful login.
 const SCRYPT_N = Math.pow(2, 17);
 const SCRYPT_R = 8;
 const SCRYPT_P = 1;
@@ -507,6 +528,15 @@ async function runScrypt(password, salt, keylen, params) {
   finally { releaseScryptSlot(); }
 }
 
+// Constant-time comparison of two hex strings (from PR #9). Guards format
+// first so malformed stored hashes fail closed instead of throwing.
+function constantTimeHexEqual(left, right) {
+  if (typeof left !== 'string' || typeof right !== 'string' || !/^[a-f0-9]+$/i.test(left) || !/^[a-f0-9]+$/i.test(right)) return false;
+  const a = Buffer.from(left, 'hex');
+  const b = Buffer.from(right, 'hex');
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 async function hashPassword(password) {
   const salt = randomBytes(16).toString('hex');
   const key = (await runScrypt(password, salt, SCRYPT_KEYLEN, {
@@ -535,12 +565,14 @@ async function verifyPassword(password, stored) {
       return timingSafeEqual(Buffer.from(key, 'hex'), Buffer.from(derived, 'hex'));
     }
     if (stored.includes('$')) {
-      // Legacy salted SHA-256: <salt>$<hash>
-      const [salt, hash] = stored.split('$');
-      return hash === sha256(salt + password);
+      // Legacy salted SHA-256: <salt>$<hash> (exactly two segments — adopt
+      // PR #9's strict format validation so malformed hashes fail closed).
+      const [salt, expected, ...extra] = stored.split('$');
+      if (extra.length || !salt || !/^[a-f0-9]{64}$/i.test(expected || '')) return false;
+      return constantTimeHexEqual(sha256(salt + password), expected);
     }
-    // Very legacy unsalted SHA-256 (seed format)
-    return stored === sha256(password);
+    // Very legacy unsalted SHA-256 (seed format) — constant-time comparison.
+    return constantTimeHexEqual(sha256(password), stored);
   } catch {
     return false;
   }
@@ -626,16 +658,30 @@ setInterval(() => {
 // ---------------------------------------------------------------------------
 function seedDefaultAdmin() {
   const existing = db.prepare('SELECT COUNT(*) AS c FROM users').get();
+  const defaultAdmin = db.prepare('SELECT id, password_hash FROM users WHERE username = ?').get('admin');
+  const stillUsingPublicDefault = !!defaultAdmin && defaultAdmin.password_hash === sha256('admin');
+  const needsInitialCredential = existing.c === 0 || stillUsingPublicDefault;
+
+  // Never expose the well-known admin/admin credential on a non-loopback server.
+  if (!IS_LOOPBACK_HOST && needsInitialCredential && INITIAL_ADMIN_PASSWORD.length < 12) {
+    throw new Error('Remote API bootstrap requires BANKRESANEH_ADMIN_PASSWORD with at least 12 characters; refusing public default admin credentials.');
+  }
+
   if (existing.c === 0) {
+    const initialHash = IS_LOOPBACK_HOST ? sha256('admin') : hashPassword(INITIAL_ADMIN_PASSWORD);
     db.prepare('INSERT INTO users (username, password_hash, role, name, must_change_password) VALUES (?, ?, ?, ?, 1)')
-      .run('admin', sha256('admin'), 'admin', 'مدیر سیستم');
+      .run('admin', initialHash, 'admin', 'مدیر سیستم');
     console.log('[seed] created default admin; password change is required at first login');
-  } else {
-    db.prepare('UPDATE users SET must_change_password = 1 WHERE username = ? AND password_hash = ?')
-      .run('admin', sha256('admin'));
+  } else if (stillUsingPublicDefault) {
+    if (!IS_LOOPBACK_HOST) {
+      db.prepare('UPDATE users SET password_hash = ?, must_change_password = 1 WHERE id = ?')
+        .run(hashPassword(INITIAL_ADMIN_PASSWORD), defaultAdmin.id);
+      console.log('[security] replaced public default admin credential using BANKRESANEH_ADMIN_PASSWORD');
+    } else {
+      db.prepare('UPDATE users SET must_change_password = 1 WHERE id = ?').run(defaultAdmin.id);
+    }
   }
 }
-
 function seedShows() {
   const candidates = [
     process.env.BANKRESANEH_SEED_PATH,
@@ -703,7 +749,7 @@ const server = Bun.serve({
   // sessions, and the database, so it must not be exposed to the network by
   // default. Public deployments must explicitly opt-in via BANKRESANEH_HOST=0.0.0.0
   // (plus HTTPS, CORS allow-list, and a changed admin password).
-  hostname: process.env.BANKRESANEH_HOST || '127.0.0.1',
+  hostname: HOST,
   async fetch(req) {
     const url = new URL(req.url);
     const pathname = url.pathname;
@@ -751,8 +797,8 @@ const server = Bun.serve({
     // Search Wikipedia for the EXACT show name, prefer TV series/program pages,
     // and only accept images from wikimedia.org (Wikipedia's official image host).
     if (pathname === '/api/fetch-image' && method === 'POST') {
-      const authUser = requireRole(req, ['admin', 'editor']);
-      if (!authUser) return json({ error: 'Unauthorized' }, 401, req);
+      const authUser = requirePermission(req, 'edit_shows');
+      if (!authUser) return permissionFailure(req, 'شما اجازه ویرایش برنامه‌ها را ندارید');
       let body;
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
       const num = parseInt(body?.num, 10);
@@ -895,20 +941,23 @@ const server = Bun.serve({
       const password = String(body?.password || '');
       if (!username || !password) return json({ error: 'نام کاربری و رمز عبور را وارد کنید' }, 400, req);
       const user = getUserByUsername(username);
-      if (!user || !(await verifyPassword(password, user.password_hash))) {
+      // verifyPassword is ASYNC (scrypt runs on the thread pool) — the await
+      // is MANDATORY: without it passwordValid would be a truthy Promise and
+      // every password would be accepted. (Integration note: PR #9's combined
+      // condition was sync; adapted here to the async scrypt implementation.)
+      const passwordValid = user ? await verifyPassword(password, user.password_hash) : false;
+      if (!user || !passwordValid || user.is_active === 0) {
+        // Suspended accounts must never receive a new session; return the
+        // same generic "invalid credentials" message as a bad password to
+        // avoid leaking which usernames exist and which are suspended.
         recordFailedAttempt(ip);
         return json({ error: 'نام کاربری یا رمز عبور نادرست است' }, 401, req);
       }
-      // SECURITY: suspended users cannot log in. We return the same generic
-      // "invalid credentials" message as a bad password to avoid leaking
-      // which usernames exist and which are suspended (info-disclosure
-      // defense). The previous code issued a valid session token even for
-      // suspended users, which was misleading UX (the token worked for
-      // /api/auth/me but failed everywhere else).
-      if (user.is_active === 0) {
-        recordFailedAttempt(ip);
-        return json({ error: 'نام کاربری یا رمز عبور نادرست است' }, 401, req);
-      }
+      // Legacy-hash upgrade is handled exclusively by upgradePasswordHash()
+      // below (async scrypt). Integration note: PR #9's auto-merged block
+      // checked 'pbkdf2$' and called the now-async hashPassword WITHOUT
+      // await — that would persist "[object Promise]" as the password hash.
+      // Removed during conflict resolution.
       clearRateLimit(ip);
       // Transparent password-hash upgrade: if this account's stored hash is
       // still the legacy SHA-256 format, silently re-hash it with scrypt
@@ -1081,7 +1130,7 @@ const server = Bun.serve({
     // ----- Shows: create -----
     if (pathname === '/api/shows' && method === 'POST') {
       const user = requirePermission(req, 'add_shows');
-      if (!user) return json({ error: 'Unauthorized — no add_shows permission' }, 401, req);
+      if (!user) return permissionFailure(req, 'شما اجازه افزودن برنامه را ندارید');
       let body;
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
       if (!body.num) {
@@ -1096,7 +1145,7 @@ const server = Bun.serve({
     // ----- Shows: update -----
     if (pathname.startsWith('/api/shows/') && method === 'PUT') {
       const user = requirePermission(req, 'edit_shows');
-      if (!user) return json({ error: 'Unauthorized — no edit_shows permission' }, 401, req);
+      if (!user) return permissionFailure(req, 'شما اجازه ویرایش برنامه را ندارید');
       const num = parseInt(pathname.slice('/api/shows/'.length));
       let body;
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
@@ -1112,7 +1161,7 @@ const server = Bun.serve({
     // ----- Shows: delete -----
     if (pathname.startsWith('/api/shows') && method === 'DELETE') {
       const user = requirePermission(req, 'delete_shows');
-      if (!user) return json({ error: 'Unauthorized — no delete_shows permission' }, 401, req);
+      if (!user) return permissionFailure(req, 'شما اجازه حذف برنامه را ندارید');
       const num = parseInt(url.searchParams.get('num') || '0');
       if (!num) return json({ error: 'num required' }, 400, req);
       const show = db.prepare('SELECT name FROM shows WHERE num = ?').get(num);
@@ -1124,7 +1173,7 @@ const server = Bun.serve({
     // ----- Users: list -----
     if (pathname === '/api/users' && method === 'GET') {
       const user = requirePermission(req, 'manage_users');
-      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+      if (!user) return permissionFailure(req, 'شما اجازه مدیریت کاربران را ندارید');
       const rows = db.prepare('SELECT * FROM users ORDER BY id').all();
       return json({ users: rows.map(u => publicUser(u, user)) }, req);
     }
@@ -1132,7 +1181,7 @@ const server = Bun.serve({
     // ----- Users: create -----
     if (pathname === '/api/users' && method === 'POST') {
       const admin = requirePermission(req, 'manage_users');
-      if (!admin) return json({ error: 'Unauthorized' }, 401, req);
+      if (!admin) return permissionFailure(req, 'شما اجازه مدیریت کاربران را ندارید');
       let body;
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
       // Creating an admin requires the create_admins permission
@@ -1157,7 +1206,7 @@ const server = Bun.serve({
     // ----- Users: update -----
     if (pathname.startsWith('/api/users') && method === 'PUT') {
       const admin = requirePermission(req, 'manage_users');
-      if (!admin) return json({ error: 'Unauthorized' }, 401, req);
+      if (!admin) return permissionFailure(req, 'شما اجازه مدیریت کاربران را ندارید');
       const id = parseInt(url.searchParams.get('id') || '0');
       let body;
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
@@ -1242,7 +1291,7 @@ const server = Bun.serve({
     // ----- Users: delete -----
     if (pathname.startsWith('/api/users') && method === 'DELETE') {
       const admin = requirePermission(req, 'manage_users');
-      if (!admin) return json({ error: 'Unauthorized' }, 401, req);
+      if (!admin) return permissionFailure(req, 'شما اجازه مدیریت کاربران را ندارید');
       const id = parseInt(url.searchParams.get('id') || '0');
       // Cannot delete self
       if (id === admin.id) return json({ error: 'نمی‌توانید حساب خودتان را حذف کنید' }, 400, req);
@@ -1260,12 +1309,12 @@ const server = Bun.serve({
     // ----- Activity log -----
     if (pathname === '/api/activity' && method === 'GET') {
       const admin = requirePermission(req, 'view_activity');
-      if (!admin) return json({ error: 'Unauthorized' }, 401, req);
+      // 401 (no/invalid token) vs 403 (insufficient privilege) — PR #9.
+      if (!admin) return permissionFailure(req, 'شما اجازه مشاهده گزارش فعالیت را ندارید');
       // Clamp limit to [1, 200] — previously negative values bypassed the
       // upper bound and returned the entire log (DoS via large result set).
-      let limit = parseInt(url.searchParams.get('limit') || '50', 10);
-      if (!Number.isFinite(limit) || limit < 1) limit = 50;
-      limit = Math.min(limit, 200);
+      const requestedLimit = parseInt(url.searchParams.get('limit') || '50', 10);
+      const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(requestedLimit, 200)) : 50;
       const logs = db.prepare('SELECT * FROM activity_log ORDER BY created_at DESC LIMIT ?').all(limit);
       return json({ logs }, req);
     }
@@ -1273,7 +1322,7 @@ const server = Bun.serve({
     // ----- Permissions list -----
     if (pathname === '/api/permissions' && method === 'GET') {
       const admin = requirePermission(req, 'manage_users');
-      if (!admin) return json({ error: 'Unauthorized' }, 401, req);
+      if (!admin) return permissionFailure(req, 'شما اجازه مشاهده اختیارات را ندارید');
       return json({ permissions: Object.keys(ALL_PERMISSIONS) }, req);
     }
 
@@ -1299,7 +1348,7 @@ const server = Bun.serve({
     // ----- Analytics: comprehensive report for the Reports tab in Settings -----
     if (pathname === '/api/analytics/report' && method === 'GET') {
       const user = requirePermission(req, 'export_reports');
-      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+      if (!user) return permissionFailure(req, 'شما اجازه دریافت گزارش‌ها را ندارید');
 
       // Time window: default 30 days
       const days = Math.min(parseInt(url.searchParams.get('days') || '30'), 365);

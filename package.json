@@ -107,7 +107,6 @@
     "asar": false,
     "files": [
       "electron/**/*",
-      ".next/standalone/**/*",
       "package.json"
     ],
     "extraResources": [
