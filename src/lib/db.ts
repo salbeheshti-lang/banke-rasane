@@ -10,7 +10,16 @@ const defaultDbPath = path.join(
 if (!process.env.DATABASE_URL) {
   mkdirSync(path.dirname(defaultDbPath), { recursive: true })
 }
-const databaseUrl = process.env.DATABASE_URL || `file:${path.resolve(defaultDbPath).replace(/\\/g, '/')}`
+function toPrismaSqliteUrl(filePath: string): string {
+  const normalized = path.resolve(filePath).replace(/\\/g, '/')
+  const segments = normalized.split('/')
+  const encodedPath = segments.map((segment, index) =>
+    index === 0 && /^[A-Za-z]:$/.test(segment) ? segment : encodeURIComponent(segment),
+  ).join('/')
+  return `file:${encodedPath}`
+}
+
+const databaseUrl = process.env.DATABASE_URL || toPrismaSqliteUrl(defaultDbPath)
 
 // SQLite connection tuning:
 //   connection_limit=1 — SQLite allows only ONE writer at a time; a pool of
