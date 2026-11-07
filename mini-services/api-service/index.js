@@ -388,6 +388,14 @@ function requirePermission(req, perm) {
   return user;
 }
 
+// Distinguish missing/invalid authentication (401) from insufficient privilege (403).
+function permissionFailure(req, message = 'Forbidden') {
+  const user = requireUser(req);
+  if (!user) return json({ error: 'Unauthorized' }, 401, req);
+  if (user.must_change_password) return json({ error: 'Password change required' }, 403, req);
+  return json({ error: message }, 403, req);
+}
+
 function requireUser(req) {
   const auth = req.headers.get('Authorization') || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
@@ -570,8 +578,8 @@ const server = Bun.serve({
     // Search Wikipedia for the EXACT show name, prefer TV series/program pages,
     // and only accept images from wikimedia.org (Wikipedia's official image host).
     if (pathname === '/api/fetch-image' && method === 'POST') {
-      const authUser = requireRole(req, ['admin', 'editor']);
-      if (!authUser) return json({ error: 'Unauthorized' }, 401, req);
+      const authUser = requirePermission(req, 'edit_shows');
+      if (!authUser) return permissionFailure(req, 'شما اجازه ویرایش برنامه‌ها را ندارید');
       let body;
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
       const num = parseInt(body?.num, 10);
@@ -703,7 +711,8 @@ const server = Bun.serve({
       const password = String(body?.password || '');
       if (!username || !password) return json({ error: 'نام کاربری و رمز عبور را وارد کنید' }, 400, req);
       const user = getUserByUsername(username);
-      if (!user || !verifyPassword(password, user.password_hash)) {
+      if (!user || !verifyPassword(password, user.password_hash) || user.is_active === 0) {
+        // Suspended accounts must never receive a new session; do not disclose status.
         recordFailedAttempt(ip);
         return json({ error: 'نام کاربری یا رمز عبور نادرست است' }, 401, req);
       }
@@ -843,7 +852,7 @@ const server = Bun.serve({
     // ----- Shows: create -----
     if (pathname === '/api/shows' && method === 'POST') {
       const user = requirePermission(req, 'add_shows');
-      if (!user) return json({ error: 'Unauthorized — no add_shows permission' }, 401, req);
+      if (!user) return permissionFailure(req, 'شما اجازه افزودن برنامه را ندارید');
       let body;
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
       if (!body.num) {
@@ -858,7 +867,7 @@ const server = Bun.serve({
     // ----- Shows: update -----
     if (pathname.startsWith('/api/shows/') && method === 'PUT') {
       const user = requirePermission(req, 'edit_shows');
-      if (!user) return json({ error: 'Unauthorized — no edit_shows permission' }, 401, req);
+      if (!user) return permissionFailure(req, 'شما اجازه ویرایش برنامه را ندارید');
       const num = parseInt(pathname.slice('/api/shows/'.length));
       let body;
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
@@ -874,7 +883,7 @@ const server = Bun.serve({
     // ----- Shows: delete -----
     if (pathname.startsWith('/api/shows') && method === 'DELETE') {
       const user = requirePermission(req, 'delete_shows');
-      if (!user) return json({ error: 'Unauthorized — no delete_shows permission' }, 401, req);
+      if (!user) return permissionFailure(req, 'شما اجازه حذف برنامه را ندارید');
       const num = parseInt(url.searchParams.get('num') || '0');
       if (!num) return json({ error: 'num required' }, 400, req);
       const show = db.prepare('SELECT name FROM shows WHERE num = ?').get(num);
@@ -886,7 +895,7 @@ const server = Bun.serve({
     // ----- Users: list -----
     if (pathname === '/api/users' && method === 'GET') {
       const user = requirePermission(req, 'manage_users');
-      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+      if (!user) return permissionFailure(req, 'شما اجازه مدیریت کاربران را ندارید');
       const rows = db.prepare('SELECT * FROM users ORDER BY id').all();
       return json({ users: rows.map(u => publicUser(u, user)) }, req);
     }
@@ -894,7 +903,7 @@ const server = Bun.serve({
     // ----- Users: create -----
     if (pathname === '/api/users' && method === 'POST') {
       const admin = requirePermission(req, 'manage_users');
-      if (!admin) return json({ error: 'Unauthorized' }, 401, req);
+      if (!admin) return permissionFailure(req, 'شما اجازه مدیریت کاربران را ندارید');
       let body;
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
       // Creating an admin requires the create_admins permission
@@ -918,7 +927,7 @@ const server = Bun.serve({
     // ----- Users: update -----
     if (pathname.startsWith('/api/users') && method === 'PUT') {
       const admin = requirePermission(req, 'manage_users');
-      if (!admin) return json({ error: 'Unauthorized' }, 401, req);
+      if (!admin) return permissionFailure(req, 'شما اجازه مدیریت کاربران را ندارید');
       const id = parseInt(url.searchParams.get('id') || '0');
       let body;
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
@@ -982,7 +991,7 @@ const server = Bun.serve({
     // ----- Users: delete -----
     if (pathname.startsWith('/api/users') && method === 'DELETE') {
       const admin = requirePermission(req, 'manage_users');
-      if (!admin) return json({ error: 'Unauthorized' }, 401, req);
+      if (!admin) return permissionFailure(req, 'شما اجازه مدیریت کاربران را ندارید');
       const id = parseInt(url.searchParams.get('id') || '0');
       // Cannot delete self
       if (id === admin.id) return json({ error: 'نمی‌توانید حساب خودتان را حذف کنید' }, 400, req);
@@ -1000,8 +1009,9 @@ const server = Bun.serve({
     // ----- Activity log -----
     if (pathname === '/api/activity' && method === 'GET') {
       const admin = requirePermission(req, 'view_activity');
-      if (!admin) return json({ error: 'Unauthorized' }, 401, req);
-      const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 200);
+      if (!admin) return permissionFailure(req, 'شما اجازه مشاهده گزارش فعالیت را ندارید');
+      const requestedLimit = parseInt(url.searchParams.get('limit') || '50', 10);
+      const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(requestedLimit, 200)) : 50;
       const logs = db.prepare('SELECT * FROM activity_log ORDER BY created_at DESC LIMIT ?').all(limit);
       return json({ logs }, req);
     }
@@ -1009,7 +1019,7 @@ const server = Bun.serve({
     // ----- Permissions list -----
     if (pathname === '/api/permissions' && method === 'GET') {
       const admin = requirePermission(req, 'manage_users');
-      if (!admin) return json({ error: 'Unauthorized' }, 401, req);
+      if (!admin) return permissionFailure(req, 'شما اجازه مشاهده اختیارات را ندارید');
       return json({ permissions: Object.keys(ALL_PERMISSIONS) }, req);
     }
 
@@ -1035,7 +1045,7 @@ const server = Bun.serve({
     // ----- Analytics: comprehensive report for the Reports tab in Settings -----
     if (pathname === '/api/analytics/report' && method === 'GET') {
       const user = requirePermission(req, 'export_reports');
-      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+      if (!user) return permissionFailure(req, 'شما اجازه دریافت گزارش‌ها را ندارید');
 
       // Time window: default 30 days
       const days = Math.min(parseInt(url.searchParams.get('days') || '30'), 365);
