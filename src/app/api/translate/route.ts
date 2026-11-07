@@ -69,6 +69,21 @@ const PRESERVE_ORIGINAL_TITLE = true;
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT_MAX = 10;
 
+let rateLimitSchemaPromise: Promise<number> | undefined;
+function ensureRateLimitSchema(): Promise<number> {
+  if (!rateLimitSchemaPromise) {
+    rateLimitSchemaPromise = db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "TranslationRateBucket" (
+      "key" TEXT NOT NULL PRIMARY KEY,
+      "count" INTEGER NOT NULL DEFAULT 0,
+      "resetAt" BIGINT NOT NULL
+    )`).catch((error: unknown) => {
+      rateLimitSchemaPromise = undefined;
+      throw error;
+    });
+  }
+  return rateLimitSchemaPromise;
+}
+
 async function checkRateLimit(
   userId: string,
 ): Promise<{ ok: true } | { ok: false; retryAfter: number }> {
@@ -77,13 +92,8 @@ async function checkRateLimit(
   const windowReset = BigInt(now + RATE_LIMIT_WINDOW_MS);
 
   try {
-    // Create the Prisma model table lazily: this app does not run Prisma migrations
-    // during installation, and the rate-limit database is a fresh per-user-data DB.
-    await db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "TranslationRateBucket" (
-      "key" TEXT NOT NULL PRIMARY KEY,
-      "count" INTEGER NOT NULL DEFAULT 0,
-      "resetAt" BIGINT NOT NULL
-    )`);
+    // Ensure the table once per process; retry automatically if initialization fails.
+    await ensureRateLimitSchema();
 
     // Step 1: ensure the bucket exists (idempotent). If it doesn't, this
     // creates it with count=0. If it does, this is a no-op (empty update).
