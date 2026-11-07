@@ -107,32 +107,10 @@ jobs:
           $serverDir = Split-Path $serverPath -Parent
           $nextPkg = Join-Path $serverDir "node_modules\next\package.json"
 
-          if (Test-Path $nextPkg) {
-            Write-Host "  ✓ next/package.json found in packaged app"
-          } else {
-            Write-Host "  ✗ next/package.json MISSING in packaged app"
-            Write-Host "  Attempting to copy node_modules from standalone output..."
-
-            # Copy the ENTIRE node_modules from .next/standalone to the server dir
-            $srcNodeModules = ".next\standalone\node_modules"
-            $destNodeModules = Join-Path $serverDir "node_modules"
-
-            if (Test-Path $srcNodeModules) {
-              Write-Host "  Copying $srcNodeModules → $destNodeModules"
-              Copy-Item -Recurse -Force $srcNodeModules $destNodeModules
-
-              # Verify
-              if (Test-Path $nextPkg) {
-                Write-Host "  ✓ next/package.json now present after manual copy"
-              } else {
-                Write-Host "  ✗ FATAL: next still missing after manual copy"
-                throw "FATAL: Cannot find module 'next' in packaged app even after manual copy"
-              }
-            } else {
-              Write-Host "  ✗ FATAL: .next/standalone/node_modules does not exist either"
-              throw "FATAL: Build output is missing node_modules entirely"
-            }
+          if (-not (Test-Path $nextPkg)) {
+            throw "FATAL: next/package.json missing from installer payload; afterPack dereferenced copy did not run"
           }
+          Write-Host "  ✓ next/package.json found in installer payload (no post-build repair)"
 
           $seedFile = Join-Path $serverDir "public\talk-shows-data.json"
           if (-not (Test-Path $seedFile)) {
