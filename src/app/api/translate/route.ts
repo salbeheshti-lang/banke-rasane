@@ -77,6 +77,14 @@ async function checkRateLimit(
   const windowReset = BigInt(now + RATE_LIMIT_WINDOW_MS);
 
   try {
+    // Create the Prisma model table lazily: this app does not run Prisma migrations
+    // during installation, and the rate-limit database is a fresh per-user-data DB.
+    await db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "TranslationRateBucket" (
+      "key" TEXT NOT NULL PRIMARY KEY,
+      "count" INTEGER NOT NULL DEFAULT 0,
+      "resetAt" BIGINT NOT NULL
+    )`);
+
     // Step 1: ensure the bucket exists (idempotent). If it doesn't, this
     // creates it with count=0. If it does, this is a no-op (empty update).
     await db.translationRateBucket.upsert({
