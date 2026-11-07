@@ -49,7 +49,7 @@ function printStartupDiagnostics() {
   for (const logPath of candidates) {
     if (fs.existsSync(logPath)) {
       const lines = fs.readFileSync(logPath, 'utf8').split(/\r?\n/);
-      process.stderr.write('\n--- Electron log: ' + logPath + ' ---\\n' + lines.slice(-200).join('\n') + '\\n');
+      process.stderr.write('\n--- Electron log: ' + logPath + ' ---\n' + lines.slice(-200).join('\n') + '\n');
       return;
     }
   }
