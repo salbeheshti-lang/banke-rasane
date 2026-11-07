@@ -6,7 +6,6 @@ const { app, BrowserWindow, shell, dialog, ipcMain } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const { spawn } = require('child_process');
 const path = require('path');
-const { pathToFileURL } = require('url');
 const http = require('http');
 const fs = require('fs');
 const { randomBytes } = require('crypto');
@@ -270,7 +269,7 @@ function startNextServer() {
       // location instead of the (potentially read-only) install dir.
       BANKRESANEH_DATA_DIR: userDataDir,
       // Prisma's translation rate-limit database lives in the writable user-data directory.
-      DATABASE_URL: pathToFileURL(prismaDbPath).href,
+      DATABASE_URL: `file:${path.resolve(prismaDbPath).replace(/\\\\/g, '/')}`,
       // Also pass the API base URL so the translate endpoint knows where
       // to proxy auth checks (otherwise it defaults to localhost:3002
       // which is correct in dev but explicit is better).
