@@ -1,7 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import { mkdirSync } from 'node:fs'
 import path from 'node:path'
-import { pathToFileURL } from 'node:url'
 
 const defaultDbPath = path.join(
   process.env.BANKRESANEH_DATA_DIR || process.cwd(),
@@ -11,7 +10,7 @@ const defaultDbPath = path.join(
 if (!process.env.DATABASE_URL) {
   mkdirSync(path.dirname(defaultDbPath), { recursive: true })
 }
-const databaseUrl = process.env.DATABASE_URL || pathToFileURL(defaultDbPath).href
+const databaseUrl = process.env.DATABASE_URL || `file:${path.resolve(defaultDbPath).replace(/\\\\/g, '/')}`
 
 // SQLite connection tuning:
 //   connection_limit=1 — SQLite allows only ONE writer at a time; a pool of
