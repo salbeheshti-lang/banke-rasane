@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
 import ZAI from 'z-ai-web-dev-sdk';
 import { requirePermissionAny } from '@/lib/server-auth';
-import { getDataFile } from '@/lib/data-dir';
+import { db } from '@/lib/db';
 export const runtime = 'nodejs';
 
 // Translation endpoint for the BankResaneh show editor.
@@ -43,56 +41,104 @@ const PRESERVED_FIELDS = new Set([
 // "عنوان اصلی تغییر نکند" (the original title must not change).
 const PRESERVE_ORIGINAL_TITLE = true;
 
-// === Rate limiter (PERSISTENT on-disk token bucket, per user) ===
+// === Rate limiter (ATOMIC, persistent, per user) ===
 // Limits: 10 requests per 60 seconds per user. Bursts up to 10 are allowed.
-// Stored in the writable data directory (NOT process.cwd() — that's the
-// install dir on Windows, which is read-only under Program Files).
-// The data directory resolves to:
-//   - Electron production: %APPDATA%\banke-rasane\ (writable by user)
-//   - Dev mode: project root /data
+//
+// WHY updateMany (not $transaction)?
+//   The previous implementation did read-modify-write on a JSON file with
+//   fs.readFileSync/fs.writeFileSync. While synchronous (single-process
+//   safe), it was NOT atomic across:
+//     1. Multi-process deployments (cluster/PM2) — lost increments.
+//     2. Crash-during-write — fs.writeFileSync is not atomic; a crash
+//        mid-write truncates the file and loses ALL users' state.
+//
+//   We first tried Prisma's interactive db.$transaction, but Prisma + SQLite
+//   interactive transactions suffer from P1008 socket timeouts under
+//   concurrent load (the BEGIN IMMEDIATE lock acquisition exceeds Prisma's
+//   internal query timeout). So we switched to a single-statement approach:
+//
+//   `updateMany` with a WHERE clause compiles to a single atomic SQL UPDATE:
+//     UPDATE ... SET count = count + 1
+//     WHERE key = ? AND count < 10 AND resetAt > now
+//   SQLite serializes writes at the file level, so this UPDATE is atomic: two
+//   concurrent requests cannot both see count=9 and both increment to 10.
+//   Exactly one will affect 1 row (allowed), the other will affect 0 rows
+//   (then falls through to the limit-reached path). This is correct.
+//
+//   The bucket persists in the app DB (survives restarts and crashes).
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT_MAX = 10;
-const RATE_LIMIT_FILE = getDataFile('translate-rate-limit.json');
 
-interface RateBuckets { [userId: string]: { count: number; resetAt: number } }
-
-function readRateBuckets(): RateBuckets {
-  try {
-    if (fs.existsSync(RATE_LIMIT_FILE)) {
-      const raw = fs.readFileSync(RATE_LIMIT_FILE, 'utf-8');
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') return parsed as RateBuckets;
-    }
-  } catch { /* fall through */ }
-  return {};
-}
-
-function writeRateBuckets(buckets: RateBuckets): void {
-  try {
-    const dir = path.dirname(RATE_LIMIT_FILE);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(RATE_LIMIT_FILE, JSON.stringify(buckets), 'utf-8');
-  } catch {
-    // Non-critical — if we can't persist, the in-memory check still works
-    // for the current process lifetime.
-  }
-}
-
-function checkRateLimit(userId: string): { ok: true } | { ok: false; retryAfter: number } {
-  const buckets = readRateBuckets();
+async function checkRateLimit(
+  userId: string,
+): Promise<{ ok: true } | { ok: false; retryAfter: number }> {
   const now = Date.now();
-  const bucket = buckets[userId];
-  if (!bucket || bucket.resetAt < now) {
-    buckets[userId] = { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS };
-    writeRateBuckets(buckets);
+  const nowBig = BigInt(now);
+  const windowReset = BigInt(now + RATE_LIMIT_WINDOW_MS);
+
+  try {
+    // Step 1: ensure the bucket exists (idempotent). If it doesn't, this
+    // creates it with count=0. If it does, this is a no-op (empty update).
+    await db.translationRateBucket.upsert({
+      where: { key: userId },
+      create: { key: userId, count: 0, resetAt: windowReset },
+      update: {},
+    });
+
+    // Step 2: atomic increment — only succeeds if under limit AND window
+    // not expired. This is a single SQL UPDATE, atomic at the SQLite level.
+    const updated = await db.translationRateBucket.updateMany({
+      where: {
+        key: userId,
+        count: { lt: RATE_LIMIT_MAX },
+        resetAt: { gt: nowBig },
+      },
+      data: { count: { increment: 1 } },
+    });
+
+    if (updated.count === 1) {
+      return { ok: true }; // incremented successfully
+    }
+
+    // Step 3: updateMany affected 0 rows → either limit reached or window
+    // expired. Read the current state to decide.
+    const bucket = await db.translationRateBucket.findUnique({
+      where: { key: userId },
+    });
+
+    if (!bucket) {
+      // Should not happen (we just upserted), but handle defensively:
+      // create a fresh bucket and allow.
+      await db.translationRateBucket.upsert({
+        where: { key: userId },
+        create: { key: userId, count: 1, resetAt: windowReset },
+        update: { count: 1, resetAt: windowReset },
+      });
+      return { ok: true };
+    }
+
+    // Window expired → reset and allow this request.
+    if (bucket.resetAt <= nowBig) {
+      await db.translationRateBucket.update({
+        where: { key: userId },
+        data: { count: 1, resetAt: windowReset },
+      });
+      return { ok: true };
+    }
+
+    // Limit reached → reject.
+    return {
+      ok: false,
+      retryAfter: Math.ceil((Number(bucket.resetAt) - now) / 1000),
+    };
+  } catch (e) {
+    // If the DB is unavailable (disk full, locked beyond retries), fail
+    // OPEN for availability — the translation still requires a valid
+    // permission check above, so this is not an auth bypass. Same fail-open
+    // behavior as the previous JSON implementation.
+    console.error('[translate] rate-limit DB error, failing open:', e);
     return { ok: true };
   }
-  if (bucket.count >= RATE_LIMIT_MAX) {
-    return { ok: false, retryAfter: Math.ceil((bucket.resetAt - now) / 1000) };
-  }
-  bucket.count += 1;
-  writeRateBuckets(buckets);
-  return { ok: true };
 }
 
 // === Input validation caps ===
@@ -119,7 +165,7 @@ export async function POST(request: NextRequest) {
   }
 
   // --- 2. Rate limit (persistent, survives restart) ---
-  const rl = checkRateLimit(String(user.id));
+  const rl = await checkRateLimit(String(user.id));
   if (!rl.ok) {
     return NextResponse.json(
       { error: `محدودیت ترجمه: ${rl.retryAfter} ثانیه صبر کنید` },
