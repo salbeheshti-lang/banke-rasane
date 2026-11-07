@@ -2,10 +2,19 @@ import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-const dataDir = mkdtempSync(path.join(tmpdir(), 'bankresaneh-prisma-runtime-'));
+const dataDir = mkdtempSync(path.join(tmpdir(), 'bankresaneh prisma runtime-'));
 const databasePath = path.join(dataDir, 'db', 'translation-rate-limit.sqlite');
 mkdirSync(path.dirname(databasePath), { recursive: true });
-process.env.DATABASE_URL = `file:${path.resolve(databasePath).replace(/\\/g, '/')}`;
+function toPrismaSqliteUrl(filePath: string): string {
+  const normalized = path.resolve(filePath).replace(/\\/g, '/')
+  const segments = normalized.split('/')
+  const encodedPath = segments.map((segment, index) =>
+    index === 0 && /^[A-Za-z]:$/.test(segment) ? segment : encodeURIComponent(segment),
+  ).join('/')
+  return `file:${encodedPath}`
+}
+
+process.env.DATABASE_URL = toPrismaSqliteUrl(databasePath);
 
 const { db } = await import('../src/lib/db');
 
