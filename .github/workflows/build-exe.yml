@@ -131,6 +131,16 @@ jobs:
             }
           }
 
+          $seedFile = Join-Path $serverDir "public\\talk-shows-data.json"
+          if (-not (Test-Path $seedFile)) {
+            throw "FATAL: talk-shows-data.json missing from packaged standalone public directory"
+          }
+          $seedData = Get-Content $seedFile -Raw | ConvertFrom-Json
+          if ($seedData.Count -lt 1) {
+            throw "FATAL: packaged talk-shows-data.json is empty"
+          }
+          Write-Host "  ✓ Archive seed found in standalone payload ($($seedData.Count) records)"
+
           # ============================================================
           # Test: actually require('next') from the server directory
           # ============================================================
