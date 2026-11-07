@@ -5,7 +5,7 @@ import path from 'node:path';
 const dataDir = mkdtempSync(path.join(tmpdir(), 'bankresaneh-prisma-runtime-'));
 const databasePath = path.join(dataDir, 'db', 'translation-rate-limit.sqlite');
 mkdirSync(path.dirname(databasePath), { recursive: true });
-process.env.DATABASE_URL = `file:${path.resolve(databasePath).replace(/\\\\/g, '/')}`;
+process.env.DATABASE_URL = `file:${path.resolve(databasePath).replace(/\\/g, '/')}`;
 
 const { db } = await import('../src/lib/db');
 
