@@ -30,11 +30,16 @@ jobs:
         env:
           DATABASE_URL: file:./db/custom.db
 
+      - name: Test persistent Prisma SQLite runtime
+        run: bun scripts/test-prisma-runtime.ts
+
       - name: Lint
         run: bun run lint
 
       - name: Production build
         run: bun run build
+        env:
+          DATABASE_URL: file:./db/custom.db
 
       - name: Type check
         run: bun run typecheck

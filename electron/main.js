@@ -10,6 +10,11 @@ const http = require('http');
 const fs = require('fs');
 const { randomBytes } = require('crypto');
 
+function toPrismaSqliteUrl(filePath) {
+  const normalized = path.resolve(filePath).replace(/\\/g, '/');
+  return `file:${normalized}`;
+}
+
 let mainWindow = null;
 let nextServer = null;
 let apiServer = null;
@@ -59,12 +64,9 @@ function getBunPath() {
 // === Locate the Next.js standalone server.js ===
 function getNextServerPath() {
   const paths = [
-    // PRIMARY: asar:false app files (resources/app/.next/standalone/server.js)
-    // This is the canonical location — files always copies correctly (unlike extraResources).
-    path.join(process.resourcesPath || '', 'app', '.next', 'standalone', 'server.js'),
-    // FALLBACK: extraResources destination (resources/next-service-dist/server.js)
+    // Canonical packaged location: the standalone tree is copied once by extraResources.
     path.join(process.resourcesPath || '', 'next-service-dist', 'server.js'),
-    // dev fallback
+    // Development fallback only.
     path.join(__dirname, '..', '.next', 'standalone', 'server.js'),
   ];
   for (const p of paths) {
@@ -255,6 +257,11 @@ function startNextServer() {
     log('Starting Next server: ' + serverPath);
     log('Next cwd: ' + staticDir);
 
+    const userDataDir = app.getPath('userData');
+    const prismaDataDir = path.join(userDataDir, 'db');
+    fs.mkdirSync(prismaDataDir, { recursive: true });
+    const prismaDbPath = path.join(prismaDataDir, 'translation-rate-limit.sqlite');
+
     const env = {
       ...process.env,
       ELECTRON_RUN_AS_NODE: '1',
@@ -265,7 +272,9 @@ function startNextServer() {
       // Pass the user-data directory so Next.js API routes (like the
       // translate endpoint's rate-limit file) can write to a writable
       // location instead of the (potentially read-only) install dir.
-      BANKRESANEH_DATA_DIR: app.getPath('userData'),
+      BANKRESANEH_DATA_DIR: userDataDir,
+      // Prisma's translation rate-limit database lives in the writable user-data directory.
+      DATABASE_URL: toPrismaSqliteUrl(prismaDbPath),
       // Also pass the API base URL so the translate endpoint knows where
       // to proxy auth checks (otherwise it defaults to localhost:3002
       // which is correct in dev but explicit is better).

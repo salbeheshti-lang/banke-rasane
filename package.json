@@ -109,6 +109,7 @@
       "electron/**/*",
       "package.json"
     ],
+    "afterPack": "scripts/after-pack.cjs",
     "extraResources": [
       {
         "from": "mini-services/api-service",

@@ -1378,7 +1378,7 @@ function HomeInner() {
 // ============================================
 function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
   const { t } = useLang();
-  const [isReady, setIsReady] = useState(false);
+  const [isReady] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -1386,7 +1386,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
   const [error, setError] = useState<string | null>(null);
 
    
-  useEffect(() => { setIsReady(true); }, []);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -7931,15 +7931,12 @@ function SettingsReportTab({ showToast }: { showToast: (msg: string) => void }) 
 // --- Tab: Server URL ---
 function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) {
   const { t } = useLang();
-  const [url, setUrl] = useState('');
+  const [url, setUrl] = useState(() => getApiBase());
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
    
-  useEffect(() => {
-   
-    setUrl(getApiBase());
-  }, []);
+
 
   const handleTest = async () => {
     setTesting(true);
@@ -8165,10 +8162,21 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
       setLoading(false);
     }
   };
- 
 
-   
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    let cancelled = false;
+    api.getUsers().then((list) => {
+      if (!cancelled) {
+        setUsers(list);
+        setError(null);
+      }
+    }).catch((e: any) => {
+      if (!cancelled) setError(e?.message || t('toast.loadingError'));
+    }).finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [t]);
 
   const handleCreate = async () => {
     if (!newUser.username.trim() || !newUser.password) {
@@ -8573,21 +8581,17 @@ function SettingsActivityTab({ showToast }: { showToast: (msg: string) => void }
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const data = await api.getActivity(100);
-      setLogs(data);
-    } catch (e: any) {
-      // ignore — non-admin users won't have access
-    } finally {
-      setLoading(false);
-    }
-  };
- 
-
-   
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    let cancelled = false;
+    api.getActivity(100).then((data) => {
+      if (!cancelled) setLogs(data);
+    }).catch(() => {
+      // Non-admin users may not have access to the activity log.
+    }).finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const actionLabels: Record<string, string> = {
     create_user: 'ساخت کاربر',

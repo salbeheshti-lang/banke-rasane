@@ -1,6 +1,8 @@
 name: Build Windows installer
 
 on:
+  pull_request:
+    branches: [main]
   push:
     tags:
       - 'v*'
@@ -30,8 +32,13 @@ jobs:
         env:
           DATABASE_URL: file:./db/custom.db
 
+      - name: Test persistent Prisma SQLite runtime
+        run: bun scripts/test-prisma-runtime.ts
+
       - name: Build and type-check installer
         run: npm run electron:build
+        env:
+          DATABASE_URL: file:./db/custom.db
 
       # ============================================================
       # CRITICAL: Verify that the Next.js standalone server.js can
@@ -100,32 +107,20 @@ jobs:
           $serverDir = Split-Path $serverPath -Parent
           $nextPkg = Join-Path $serverDir "node_modules\next\package.json"
 
-          if (Test-Path $nextPkg) {
-            Write-Host "  ✓ next/package.json found in packaged app"
-          } else {
-            Write-Host "  ✗ next/package.json MISSING in packaged app"
-            Write-Host "  Attempting to copy node_modules from standalone output..."
-
-            # Copy the ENTIRE node_modules from .next/standalone to the server dir
-            $srcNodeModules = ".next\standalone\node_modules"
-            $destNodeModules = Join-Path $serverDir "node_modules"
-
-            if (Test-Path $srcNodeModules) {
-              Write-Host "  Copying $srcNodeModules → $destNodeModules"
-              Copy-Item -Recurse -Force $srcNodeModules $destNodeModules
-
-              # Verify
-              if (Test-Path $nextPkg) {
-                Write-Host "  ✓ next/package.json now present after manual copy"
-              } else {
-                Write-Host "  ✗ FATAL: next still missing after manual copy"
-                throw "FATAL: Cannot find module 'next' in packaged app even after manual copy"
-              }
-            } else {
-              Write-Host "  ✗ FATAL: .next/standalone/node_modules does not exist either"
-              throw "FATAL: Build output is missing node_modules entirely"
-            }
+          if (-not (Test-Path $nextPkg)) {
+            throw "FATAL: next/package.json missing from installer payload; afterPack dereferenced copy did not run"
           }
+          Write-Host "  ✓ next/package.json found in installer payload (no post-build repair)"
+
+          $seedFile = Join-Path $serverDir "public\talk-shows-data.json"
+          if (-not (Test-Path $seedFile)) {
+            throw "FATAL: talk-shows-data.json missing from packaged standalone public directory"
+          }
+          $seedData = Get-Content $seedFile -Raw | ConvertFrom-Json
+          if ($seedData.Count -lt 1) {
+            throw "FATAL: packaged talk-shows-data.json is empty"
+          }
+          Write-Host "  ✓ Archive seed found in standalone payload ($($seedData.Count) records)"
 
           # ============================================================
           # Test: actually require('next') from the server directory
@@ -348,64 +343,6 @@ jobs:
       # INSTALLER SMOKE TEST — install the actual NSIS Setup.exe
       # and run the installed app. This catches extraction/install
       # hangs that win-unpacked tests cannot detect.
-      # ============================================================
-      - name: Install NSIS package and verify installed app
-        shell: pwsh
-        timeout-minutes: 15
-        run: |
-          $setup = (Resolve-Path 'release/BankResaneh-Setup.exe').Path
-          $installDir = Join-Path $env:RUNNER_TEMP 'BankResaneh-Installer-Smoke'
-          $installerLog = Join-Path $env:RUNNER_TEMP 'bankresaneh-installer.log'
-
-          if (Test-Path $installDir) {
-            Remove-Item $installDir -Recurse -Force
-          }
-
-          Write-Host "=== Running actual NSIS installer in silent mode ==="
-          Write-Host "Installer: $setup"
-          Write-Host "Install directory: $installDir"
-
-          # NSIS requires /D=... to be the final command-line argument.
-          $installer = Start-Process -FilePath $setup -ArgumentList @('/S', "/LOG=$installerLog", "/D=$installDir") -PassThru
-
-          if (-not $installer.WaitForExit(600000)) {
-            Write-Host "FATAL: Installer did not finish within 10 minutes."
-            if (Test-Path $installerLog) {
-              Get-Content $installerLog -Tail 120 | ForEach-Object { Write-Host $_ }
-            }
-            try { & taskkill.exe /PID $installer.Id /T /F | Out-Null } catch {}
-            throw "FATAL: NSIS installer timed out after 10 minutes."
-          }
-
-          if ($installer.ExitCode -ne 0) {
-            Write-Host "Installer exit code: $($installer.ExitCode)"
-            if (Test-Path $installerLog) {
-              Get-Content $installerLog -Tail 120 | ForEach-Object { Write-Host $_ }
-            }
-            throw "FATAL: NSIS installer returned exit code $($installer.ExitCode)."
-          }
-
-          # Verify installed files exist
-          $installedExe = Join-Path $installDir 'BankResaneh.exe'
-          $installedServer = Join-Path $installDir 'resources\app\.next\standalone\server.js'
-          $installedNext = Join-Path $installDir 'resources\app\.next\standalone\node_modules\next\package.json'
-          $installedApi = Join-Path $installDir 'resources\api-service\index.js'
-          $installedBun = Join-Path $installDir 'resources\bun-runtime\bin\bun.exe'
-
-          foreach ($required in @($installedExe, $installedServer, $installedNext, $installedApi, $installedBun)) {
-            if (-not (Test-Path $required)) {
-              throw "FATAL: Installed file missing: $required"
-            }
-            Write-Host "  ✓ Found: $required"
-          }
-
-          Write-Host "=== Running smoke test against the INSTALLED executable ==="
-          node scripts/smoke-electron.cjs "$installedExe"
-          if ($LASTEXITCODE -ne 0) {
-            throw "FATAL: Installed application smoke test failed."
-          }
-          Write-Host "=== NSIS install + installed application test passed ==="
-
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:

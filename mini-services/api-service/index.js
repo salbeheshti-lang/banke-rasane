@@ -656,7 +656,7 @@ setInterval(() => {
 // ---------------------------------------------------------------------------
 // Seed default admin + shows
 // ---------------------------------------------------------------------------
-function seedDefaultAdmin() {
+async function seedDefaultAdmin() {
   const existing = db.prepare('SELECT COUNT(*) AS c FROM users').get();
   const defaultAdmin = db.prepare('SELECT id, password_hash FROM users WHERE username = ?').get('admin');
   const stillUsingPublicDefault = !!defaultAdmin && defaultAdmin.password_hash === sha256('admin');
@@ -668,14 +668,14 @@ function seedDefaultAdmin() {
   }
 
   if (existing.c === 0) {
-    const initialHash = IS_LOOPBACK_HOST ? sha256('admin') : hashPassword(INITIAL_ADMIN_PASSWORD);
+    const initialHash = IS_LOOPBACK_HOST ? sha256('admin') : await hashPassword(INITIAL_ADMIN_PASSWORD);
     db.prepare('INSERT INTO users (username, password_hash, role, name, must_change_password) VALUES (?, ?, ?, ?, 1)')
       .run('admin', initialHash, 'admin', 'مدیر سیستم');
     console.log('[seed] created default admin; password change is required at first login');
   } else if (stillUsingPublicDefault) {
     if (!IS_LOOPBACK_HOST) {
       db.prepare('UPDATE users SET password_hash = ?, must_change_password = 1 WHERE id = ?')
-        .run(hashPassword(INITIAL_ADMIN_PASSWORD), defaultAdmin.id);
+        .run(await hashPassword(INITIAL_ADMIN_PASSWORD), defaultAdmin.id);
       console.log('[security] replaced public default admin credential using BANKRESANEH_ADMIN_PASSWORD');
     } else {
       db.prepare('UPDATE users SET must_change_password = 1 WHERE id = ?').run(defaultAdmin.id);
@@ -731,7 +731,7 @@ function seedShows() {
   console.log(`[seed] inserted ${inserted} shows (now ${shows.length} total)`);
 }
 
-seedDefaultAdmin();
+await seedDefaultAdmin();
 seedShows();
 
 // Mark the first user (id=1) as super admin — cannot be deleted or demoted.
