@@ -110,6 +110,19 @@ echo "==========================================================================
 SCENARIO="${SECURITY_TEST_SCENARIO:-fresh}"
 
 hdr "SETUP — scenario: $SCENARIO"
+
+# Remote production deployments must not seed the public admin/admin credential.
+REMOTE_DB="/tmp/bankresaneh-remote-guard-$$.sqlite"
+REMOTE_LOG=$(timeout 10s env -u BANKRESANEH_ADMIN_PASSWORD NODE_ENV=production BANKRESANEH_HOST=0.0.0.0 PORT=3010 DB_PATH="$REMOTE_DB" bun "$SCRIPT_DIR/mini-services/api-service/index.js" 2>&1)
+REMOTE_EXIT=$?
+if printf '%s' "$REMOTE_LOG" | grep -q "requires BANKRESANEH_ADMIN_PASSWORD"; then
+  check "0.remote-default-admin-blocked" "blocked" "blocked"
+else
+  check "0.remote-default-admin-blocked" "blocked" "NOT_BLOCKED (exit=$REMOTE_EXIT)"
+  printf '%s\n' "$REMOTE_LOG"
+fi
+rm -f "$REMOTE_DB" "$REMOTE_DB-wal" "$REMOTE_DB-shm"
+
 # Always kill any running API first so we have a clean process state
 echo "  killing all existing API processes..."
 pkill -f "bun --hot index.js" 2>/dev/null
@@ -141,6 +154,11 @@ if [ "$SCENARIO" = "upgrade" ]; then
     if curl -s -o /dev/null --max-time 2 http://localhost:3002/api/health; then break; fi
     sleep 1
   done
+  if ! curl -fsS -o /dev/null --max-time 5 http://localhost:3002/api/health; then
+    echo "  FATAL: API failed during upgrade seed. Startup log follows:"
+    cat /tmp/api-upgrade-seed.log 2>/dev/null || true
+    exit 1
+  fi
   # Stop the API so we can modify the DB directly
   pkill -f "bun --hot index.js" 2>/dev/null
   sleep 2
@@ -150,8 +168,9 @@ if [ "$SCENARIO" = "upgrade" ]; then
     import { createHash } from "node:crypto";
     const db = new Database("bankresaneh.sqlite");
     const sha = (s) => createHash("sha256").update(s).digest("hex");
+    const legacySalt = "legacy-salt-123";
     db.prepare("INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)").run("legacy_admin", sha("OldPass123"), "admin", "Legacy Admin");
-    db.prepare("INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)").run("legacy_editor", sha("OldPass123"), "editor", "Legacy Editor");
+    db.prepare("INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)").run("legacy_editor", legacySalt + "$" + sha(legacySalt + "OldPass123"), "editor", "Legacy Editor");
     db.prepare("INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)").run("legacy_viewer", sha("OldPass123"), "viewer", "Legacy Viewer");
     console.log("  added 3 legacy users for upgrade scenario");
     const users = db.prepare("SELECT id, username, role, is_super_admin FROM users ORDER BY id").all();
@@ -169,7 +188,12 @@ for i in 1 2 3 4 5 6 7 8 9 10; do
   fi
   sleep 1
 done
-curl -s -o /dev/null -w "  api health: %{http_code}\n" --max-time 5 http://localhost:3002/api/health
+if ! curl -fsS -o /dev/null --max-time 5 http://localhost:3002/api/health; then
+  echo "  FATAL: API did not start. Startup log follows:"
+  cat /tmp/api.log 2>/dev/null || true
+  exit 1
+fi
+echo "  api health: 200"
 
 # Show DB state at start (so upgrade scenario is visible in the report)
 echo "  DB users at start:"
@@ -192,7 +216,7 @@ fi
 # Step 0 — Login as Super Admin
 # In fresh scenario: admin/admin (default), then change password.
 # In upgrade scenario: admin/admin may already have been changed, so we try
-#   admin/admin first; if that fails (401), try Admin@2025 (the password
+#   admin/admin first; if that fails, try Admin@2025 (the password
 #   the fresh scenario sets).
 # Either way, after this step we have a valid SUPER_TOKEN and admin has a
 # known password + must_change_password cleared.
@@ -236,6 +260,23 @@ SUPER_IS_SUPER=$(json_bool "$RESP_BODY" "isSuperAdmin")
 echo "  fresh token: ${SUPER_TOKEN:0:16}...  id=$SUPER_ID  isSuper=$SUPER_IS_SUPER"
 check "0.3 super-admin-relogin" 200 "$HTTP_STATUS"
 check "0.4 super-admin-is-super" "true" "$SUPER_IS_SUPER"
+
+# Upgrade both historical password formats without forcing a password reset.
+if [ "$SCENARIO" = "upgrade" ]; then
+  api POST /auth/login "" '{"username":"legacy_admin","password":"OldPass123"}'
+  LEGACY_ADMIN_TOKEN=$(json_get "$RESP_BODY" "token")
+  check "0.5 legacy-unsalted-sha256-login" 200 "$HTTP_STATUS"
+  api POST /auth/login "" '{"username":"legacy_editor","password":"OldPass123"}'
+  LEGACY_EDITOR_TOKEN=$(json_get "$RESP_BODY" "token")
+  check "0.6 legacy-salted-sha256-login" 200 "$HTTP_STATUS"
+  LEGACY_HASHES=$(cd "$SCRIPT_DIR/mini-services/api-service" && bun -e '
+    import { Database } from "bun:sqlite";
+    const db = new Database("bankresaneh.sqlite");
+    const rows = db.prepare("SELECT username, password_hash FROM users WHERE username IN (?, ?)").all("legacy_admin", "legacy_editor");
+    console.log(rows.length === 2 && rows.every((u) => u.password_hash.startsWith("pbkdf2$")) ? "true" : "false");
+  ')
+  check "0.7 legacy-hashes-upgraded" "true" "$LEGACY_HASHES"
+fi
 
 # ============================================================================
 # TEST 1: Super Admin — change / revoke / restore permissions
@@ -282,8 +323,8 @@ check "1.3 limited-login" 200 "$HTTP_STATUS"
 
 # Now limited_admin (with empty permissions) tries to list users
 api GET /users "$LIMITED_TOKEN"
-echo "  limited_admin GET /users → $HTTP_STATUS (should be 401 because manage_users was revoked)"
-check "1.3a revoked-cant-list-users" 401 "$HTTP_STATUS"
+echo "  limited_admin GET /users → $HTTP_STATUS (should be 403 because manage_users was revoked)"
+check "1.3a revoked-cant-list-users" 403 "$HTTP_STATUS"
 
 # 1.4 Super admin restores SOME permissions (just add_shows + edit_shows)
 api PUT "/users?id=$LIMITED_ID" "$SUPER_TOKEN" '{"permissions":["add_shows","edit_shows"]}'
@@ -301,8 +342,8 @@ fi
 api GET /shows "$LIMITED_TOKEN"
 check "1.5a limited-can-list-shows" 200 "$HTTP_STATUS"
 api DELETE "/shows?num=999999" "$LIMITED_TOKEN"
-echo "  limited_admin delete show → $HTTP_STATUS (should be 401, no delete_shows perm)"
-check "1.5b limited-cant-delete-shows" 401 "$HTTP_STATUS"
+echo "  limited_admin delete show → $HTTP_STATUS (should be 403, no delete_shows perm)"
+check "1.5b limited-cant-delete-shows" 403 "$HTTP_STATUS"
 
 # 1.6 Super admin restores ALL permissions
 api PUT "/users?id=$LIMITED_ID" "$SUPER_TOKEN" '{"permissions":["manage_users","create_admins","suspend_users","add_shows","edit_shows","delete_shows","manage_genres","manage_settings","view_activity","export_reports"]}'
@@ -408,6 +449,14 @@ api POST /auth/login "" '{"username":"editor1","password":"Password123"}'
 EDITOR_TOKEN=$(json_get "$RESP_BODY" "token")
 check "3.1 editor-login" 200 "$HTTP_STATUS"
 
+# Viewer must not mutate show images through the fetch-image helper.
+api POST /auth/login "" '{"username":"viewer1","password":"Password123"}'
+VIEWER_TOKEN=$(json_get "$RESP_BODY" "token")
+check "3.1b viewer-login" 200 "$HTTP_STATUS"
+api POST /fetch-image "$VIEWER_TOKEN" '{"num":1,"name":"test show"}'
+echo "  viewer tries fetch-image mutation → $HTTP_STATUS (should be 403)"
+check "3.1c viewer-cannot-fetch-image" 403 "$HTTP_STATUS"
+
 # 3.2 Editor adds a show (should succeed — has add_shows by default)
 api POST /shows "$EDITOR_TOKEN" '{"num":99001,"name":"Test Show by Editor","category":"test","days":"sat","time":"20:00"}'
 echo "  editor adds show → $HTTP_STATUS (should be 200)"
@@ -421,27 +470,27 @@ check "3.3 editor-can-edit-show" 200 "$HTTP_STATUS"
 # 3.4 Editor tries to delete the show (should FAIL — no delete_shows for editor)
 api DELETE "/shows?num=99001" "$EDITOR_TOKEN"
 echo "  editor tries to delete show → $HTTP_STATUS (should be 401)"
-check "3.4 editor-cant-delete-show" 401 "$HTTP_STATUS"
+check "3.4 editor-cant-delete-show" 403 "$HTTP_STATUS"
 
 # 3.5 Editor tries to list users (should FAIL — no manage_users for editor)
 api GET /users "$EDITOR_TOKEN"
 echo "  editor tries to list users → $HTTP_STATUS (should be 401)"
-check "3.5 editor-cant-list-users" 401 "$HTTP_STATUS"
+check "3.5 editor-cant-list-users" 403 "$HTTP_STATUS"
 
 # 3.6 Editor tries to create a user (should FAIL — no manage_users)
 api POST /users "$EDITOR_TOKEN" '{"username":"rogue","password":"Password123","role":"viewer"}'
 echo "  editor tries to create user → $HTTP_STATUS (should be 401)"
-check "3.6 editor-cant-create-user" 401 "$HTTP_STATUS"
+check "3.6 editor-cant-create-user" 403 "$HTTP_STATUS"
 
 # 3.7 Editor tries to view activity log (should FAIL — no view_activity)
 api GET /activity "$EDITOR_TOKEN"
 echo "  editor tries to view activity log → $HTTP_STATUS (should be 401)"
-check "3.7 editor-cant-view-activity" 401 "$HTTP_STATUS"
+check "3.7 editor-cant-view-activity" 403 "$HTTP_STATUS"
 
 # 3.8 Editor tries to update the super admin (should FAIL)
 api PUT "/users?id=$SUPER_ID" "$EDITOR_TOKEN" '{"role":"viewer"}'
 echo "  editor tries to demote super admin → $HTTP_STATUS (should be 401 — no manage_users)"
-check "3.8 editor-cant-touch-super" 401 "$HTTP_STATUS"
+check "3.8 editor-cant-touch-super" 403 "$HTTP_STATUS"
 
 echo
 echo "  → TEST 3 SUMMARY: Editor can add/edit but cannot delete or manage users."
@@ -497,16 +546,21 @@ api GET /users "$SUS_TOKEN"
 echo "  suspended-token GET /users → $HTTP_STATUS (should be 401)"
 check "4.3b token-blocked-after-suspend" 401 "$HTTP_STATUS"
 
+# A suspended account must also be denied a fresh login/session.
+api POST /auth/login "" '{"username":"willbe_suspended","password":"Password123"}'
+echo "  suspended account login → $HTTP_STATUS (should be 401)"
+check "4.3c suspended-account-cannot-login" 401 "$HTTP_STATUS"
+
 # 4.4 Role escalation attempt: editor sends a forged role='admin' in login body? Login doesn't accept that.
 #    But: an editor with a token tries to PUT /users with body {role:'admin'} on himself
 api PUT "/users?id=$EDITOR_ID" "$EDITOR_TOKEN" '{"role":"admin"}'
 echo "  editor self-promote role → $HTTP_STATUS (should be 401 — no manage_users)"
-check "4.4 editor-self-promote-blocked" 401 "$HTTP_STATUS"
+check "4.4 editor-self-promote-blocked" 403 "$HTTP_STATUS"
 
 # 4.5 Editor tries to inject permissions field on self
 api PUT "/users?id=$EDITOR_ID" "$EDITOR_TOKEN" '{"permissions":["manage_users","delete_shows"]}'
 echo "  editor sets own permissions → $HTTP_STATUS (should be 401 — no manage_users)"
-check "4.5 editor-set-perms-blocked" 401 "$HTTP_STATUS"
+check "4.5 editor-set-perms-blocked" 403 "$HTTP_STATUS"
 
 # 4.6 Try a malformed JSON body
 api POST /shows "$SUPER_TOKEN" 'this-is-not-json'
@@ -515,8 +569,8 @@ check "4.6 malformed-json-400" 400 "$HTTP_STATUS"
 
 # 4.7 Cross-user: editor tries to use a path-traversal id
 api PUT "/users?id=../" "$EDITOR_TOKEN" '{"role":"admin"}'
-echo "  editor path traversal → $HTTP_STATUS (should be 401)"
-check "4.7 path-traversal-rejected" 401 "$HTTP_STATUS"
+echo "  editor path traversal → $HTTP_STATUS (should be 403 — authenticated but unauthorized)"
+check "4.7 path-traversal-rejected" 403 "$HTTP_STATUS"
 
 # 4.8 Limited admin tries to modify super admin's permissions (the BIG ONE)
 api PUT "/users?id=$SUPER_ID" "$LIMITED_TOKEN" '{"permissions":[]}'
