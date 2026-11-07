@@ -1446,9 +1446,6 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
           <p style={{ color: 'rgba(134, 239, 172, 0.6)' }} className="text-xs tracking-wider">
             نسخه ۲.۰.۰ • بانک اطلاعاتی برنامه‌های تلویزیونی
           </p>
-          <p style={{ color: 'rgba(134, 239, 172, 0.45)' }} className="text-xs mt-2">
-            نام کاربری پیش‌فرض: <span dir="ltr">admin</span> / رمز: <span dir="ltr">admin</span>
-          </p>
         </div>
       </div>
     </div>
