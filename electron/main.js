@@ -311,9 +311,33 @@ function createWindow() {
     }
   });
   mainWindow.loadURL(NEXT_URL);
-  mainWindow.webContents.setWindowOpenHandler(({url}) => {
-    if (url.startsWith('http://127.0.0.1') || url.startsWith('http://localhost')) return {action:'allow'};
-    shell.openExternal(url); return {action:'deny'};
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    let target;
+    try {
+      target = new URL(url);
+    } catch {
+      log('Blocked malformed window-open URL');
+      return { action: 'deny' };
+    }
+
+    // Only the exact local Next.js origin may open inside the app.
+    // Avoid startsWith checks: they also accept attacker hosts such as
+    // http://127.0.0.1.evil.example.
+    const isLocalApp = target.protocol === 'http:' &&
+      (target.hostname === '127.0.0.1' || target.hostname === 'localhost') &&
+      target.port === String(NEXT_PORT);
+    if (isLocalApp) return { action: 'allow' };
+
+    // External windows may only launch ordinary web URLs. Never pass file:,
+    // javascript:, data:, or arbitrary custom protocols to the OS handler.
+    if (target.protocol === 'https:' || target.protocol === 'http:') {
+      shell.openExternal(target.toString()).catch((error) => {
+        log('Could not open external URL: ' + error.message);
+      });
+    } else {
+      log('Blocked unsupported external URL protocol: ' + target.protocol);
+    }
+    return { action: 'deny' };
   });
   mainWindow.on('closed', () => { mainWindow = null; });
 }
