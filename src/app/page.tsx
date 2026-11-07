@@ -34,6 +34,9 @@ interface TalkShow {
   tags?: string[];
   images?: string[];
   videos?: string[];
+  // Source of the DB-stored image BLOB ('wikipedia', 'imdb', or '' if none).
+  // Used as a cache-buster for /api/image/<num> so cards re-fetch after update.
+  imageSource?: string;
 }
 
 // A "section-specific tag" — derives a small badge label from a TalkShow field
@@ -577,22 +580,44 @@ function adjustColor(hex: string, amount: number): string {
 }
 
 // Get show's real image if available, otherwise generate thumbnail from decor properties.
-// IMPORTANT (per user requirement): We deliberately ignore show.images (old local files
-// that contain incorrect movie posters, not actual decor photos).
-// The user wants EXACT decor photos sourced ONLY from Wikipedia.
-// When the user is logged in, we try the /api/image/<num> endpoint (which serves images
-// fetched from Wikipedia by an admin). If that image doesn't exist (404), the onError
-// handler hides it and the gradient placeholder is shown.
-// When NOT logged in, we just show the gradient placeholder — no images at all.
+//
+// Image source priority (first match wins):
+//   1. First EXTERNAL URL in show.images[] (https://...) — these are real
+//      images the user fetched from Wikipedia/IMDb via the auto-fetch feature.
+//   2. /api/image/<num> BLOB endpoint — images stored in the DB by an admin
+//      via the fetch-image endpoint.
+//   3. Gradient placeholder (no image).
+//
+// Note: show.images[] may also contain LOCAL file paths (e.g. /program-images/
+// p4_img1.png) from the original seed data. The user has stated these are
+// "incorrect movie posters, not actual decor photos", so we deliberately
+// SKIP any image that doesn't start with http(s)://.
+//
+// When the user is NOT logged in, we show only the gradient placeholder.
 function getShowThumbnail(show: TalkShow): { gradient: string; pattern: string; accent: string; image: string | null } {
-  // Check if a Wikipedia image has been fetched and stored for this show.
-  // The endpoint returns 404 if no image is stored, which the <img onError> handler
-  // converts to the gradient placeholder.
-  if (typeof window !== 'undefined' && localStorage.getItem('bankresaneh_token')) {
-    const thumb = generateThumbnailColors(show);
-    return { ...thumb, image: getApiUrl('api/image/' + show.num) };
+  const thumb = generateThumbnailColors(show);
+  const loggedIn = typeof window !== 'undefined' && !!localStorage.getItem('bankresaneh_token');
+
+  // 1. Prefer the first EXTERNAL image URL the user fetched (Wikipedia/IMDb).
+  if (show.images && show.images.length > 0) {
+    const externalUrl = show.images.find((u) => typeof u === 'string' && /^https?:\/\//i.test(u));
+    if (externalUrl) {
+      return { ...thumb, image: externalUrl };
+    }
+    // If only local paths exist (seed data), fall through to the BLOB endpoint.
   }
-  return { ...generateThumbnailColors(show), image: null };
+
+  // 2. Try the DB-backed image BLOB (may return 404 → onError hides the <img>).
+  if (loggedIn) {
+    // Use imageSource as a cache-buster so that when an image is freshly
+    // fetched, the URL changes and the browser re-requests it instead of
+    // serving a stale 404 from its internal cache.
+    const cacheBuster = show.imageSource ? encodeURIComponent(show.imageSource) : '0';
+    return { ...thumb, image: getApiUrl('api/image/' + show.num) + '?v=' + cacheBuster };
+  }
+
+  // 3. Not logged in — no image.
+  return { ...thumb, image: null };
 }
 
 function generateThumbnailColors(show: TalkShow): { gradient: string; pattern: string; accent: string } {
@@ -4417,29 +4442,35 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       } else {
         const info = data.info;
         const updated = { ...form };
+        // Only fill fields that are CURRENTLY EMPTY — never overwrite data
+        // the user has already entered or curated. This is the fix for the
+        // user's report: "وقتی با ویکی پدیا عکس رو اضافه کردم بقیه توضیحاتم
+        // تغییر کرده" (when I added the image, my other descriptions changed).
         if (info.title && !updated.name) updated.name = info.title;
-        if (info.description) {
+        if (info.description && !updated.descriptionFa) {
           updated.descriptionFa = info.description;
-          updated.summary = info.description.substring(0, 200);
+          if (!updated.summary) updated.summary = info.description.substring(0, 200);
         }
-        // Push auto-fetched image into images[] array (up to 8 total)
+        // Push auto-fetched image into images[] array (up to 8 total).
+        // This is additive — never removes existing images.
         if (info.image) {
           const existing = updated.images || [];
           if (!existing.includes(info.image) && existing.length < 8) {
             updated.images = [...existing, info.image];
           }
         }
-        if (info.rating) updated.colors = `امتیاز: ${info.rating}`;
-        if (info.genres) updated.category = info.genres;
-        if (info.duration) updated.elements = info.duration;
-        if (fetchUrl.includes('imdb.com')) updated.imdb = fetchUrl;
-        if (fetchUrl.includes('wikipedia.org')) updated.wikipedia = fetchUrl;
-        // Auto-generate YouTube search link
-        if (updated.name) {
+        // Only fill these if currently empty — don't clobber curated data.
+        if (info.rating && !updated.colors) updated.colors = `امتیاز: ${info.rating}`;
+        if (info.genres && !updated.category) updated.category = info.genres;
+        if (info.duration && !updated.elements) updated.elements = info.duration;
+        if (fetchUrl.includes('imdb.com') && !updated.imdb) updated.imdb = fetchUrl;
+        if (fetchUrl.includes('wikipedia.org') && !updated.wikipedia) updated.wikipedia = fetchUrl;
+        // Auto-generate YouTube search link only if not already set.
+        if (updated.name && !updated.youtube) {
           updated.youtube = `https://www.youtube.com/results?search_query=${encodeURIComponent(updated.name)}`;
         }
-        // Auto-generate social post
-        if (updated.name) {
+        // Auto-generate social post only if not already set.
+        if (updated.name && !updated.socialPost) {
           updated.socialPost = `🎬 ${updated.name}\n\n📝 ${updated.descriptionFa || ''}\n\n#بانک_رسانه #تاک_شو`;
         }
         setForm(updated);

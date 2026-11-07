@@ -286,6 +286,10 @@ function rowToShow(r) {
     wikipedia: r.wikipedia, socialPost: r.socialPost,
     images, videos, tags,
     isFilm: !!(r.is_film),
+    // Expose the image source so the frontend can:
+    //   1. know whether a BLOB image exists (non-empty string)
+    //   2. use it as a cache-buster (?v=wikipedia) so cards re-fetch after update
+    imageSource: r.image_source || '',
   };
 }
 
