@@ -500,8 +500,10 @@ type StoredGenre = {
 function stripLegacyGenreDescription(description: string): string {
   const d = (description || '').trim();
   if (!d) return '';
-  // Matches "ژانر سفارشی:", "ژانر سفارشی :" and the exact placeholder itself.
-  if (d === 'ژانر سفارشی' || d.startsWith('ژانر سفارشی:')) return '';
+  // Matches "ژانر سفارشی", "ژانر سفارشی:", "ژانر سفارشی :"
+  // and "ژانر سفارشی: <name>" / "ژانر سفارشی : <name>" (legacy auto-filled placeholders).
+  // The regex allows optional whitespace before the colon so BOTH variants are stripped.
+  if (d === 'ژانر سفارشی' || /^ژانر\s*سفارشی\s*:/.test(d)) return '';
   return d;
 }
 
@@ -2967,9 +2969,8 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
           const count = talkShows.filter(g.filterFn).length;
           const canManage = isAdmin && g.isCustom && onEditGenre && onDeleteGenre;
           return (
-            <button
+            <div
               key={g.id}
-              onClick={() => onGenreClick(g)}
               className="premium-genre-card animate-card-enter text-right relative"
               style={{
                 animationDelay: `${idx * 50}ms`,
@@ -2979,11 +2980,9 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
             >
               {canManage && (
                 <div className="absolute top-3 left-3 z-10 flex items-center gap-1">
-                  <span
-                    role="button"
-                    tabIndex={0}
+                  <button
+                    type="button"
                     onClick={(e) => { e.stopPropagation(); setEditingGenre(g); }}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); setEditingGenre(g); } }}
                     className="w-7 h-7 rounded-lg flex items-center justify-center transition-all"
                     title="ویرایش ژانر"
                     aria-label="ویرایش ژانر"
@@ -2997,12 +2996,10 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
-                  </span>
-                  <span
-                    role="button"
-                    tabIndex={0}
+                  </button>
+                  <button
+                    type="button"
                     onClick={(e) => { e.stopPropagation(); setDeletingGenre(g); }}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); setDeletingGenre(g); } }}
                     className="w-7 h-7 rounded-lg flex items-center justify-center transition-all"
                     title="حذف ژانر"
                     aria-label="حذف ژانر"
@@ -3016,41 +3013,48 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
-                  </span>
+                  </button>
                 </div>
               )}
-              <div className="flex items-start justify-between mb-4">
-                <div
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                  style={{
-                    /* Colored icon container — vibrant, no glow */
-                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                    color: '#ffffff',
-                    border: '1px solid rgba(255, 255, 255, 0.25)',
-                  }}
-                >
-                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+              <button
+                type="button"
+                onClick={() => onGenreClick(g)}
+                className="w-full text-right"
+                style={{ background: 'transparent', border: 'none', padding: '0', cursor: 'pointer', color: 'inherit', font: 'inherit' }}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                    style={{
+                      /* Colored icon container — vibrant, no glow */
+                      backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                      color: '#ffffff',
+                      border: '1px solid rgba(255, 255, 255, 0.25)',
+                    }}
+                  >
+                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <div className="text-4xl font-black" style={{ color: '#ffffff' }}>
+                      {count.toLocaleString('fa-IR')}
+                    </div>
+                    <div className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>برنامه</div>
+                  </div>
+                </div>
+                <h3 className="font-bold text-lg mb-1" style={{ color: '#ffffff' }}>{g.nameFa}</h3>
+                {g.description ? (
+                  <p className="text-sm mt-3" style={{ color: 'rgba(255, 255, 255, 0.75)' }}>{g.description}</p>
+                ) : null}
+                <div className="mt-4 flex items-center text-sm font-bold" style={{ color: g.color }}>
+                  مشاهده و جستجو
+                  <svg className="w-4 h-4 mr-1 rtl-flip" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>
                 </div>
-                <div className="text-left">
-                  <div className="text-4xl font-black" style={{ color: '#ffffff' }}>
-                    {count.toLocaleString('fa-IR')}
-                  </div>
-                  <div className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>برنامه</div>
-                </div>
-              </div>
-              <h3 className="font-bold text-lg mb-1" style={{ color: '#ffffff' }}>{g.nameFa}</h3>
-              {g.description ? (
-                <p className="text-sm mt-3" style={{ color: 'rgba(255, 255, 255, 0.75)' }}>{g.description}</p>
-              ) : null}
-              <div className="mt-4 flex items-center text-sm font-bold" style={{ color: g.color }}>
-                مشاهده و جستجو
-                <svg className="w-4 h-4 mr-1 rtl-flip" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-              </div>
-            </button>
+              </button>
+            </div>
           );
         })}
       </div>
