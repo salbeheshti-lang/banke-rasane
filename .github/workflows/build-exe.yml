@@ -32,6 +32,9 @@ jobs:
         env:
           DATABASE_URL: file:./db/custom.db
 
+      - name: Test persistent Prisma SQLite runtime
+        run: bun scripts/test-prisma-runtime.ts
+
       - name: Build and type-check installer
         run: npm run electron:build
         env:
