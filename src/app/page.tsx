@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
-import { api, setApiBase, getApiBase, getApiUrl, User } from '@/lib/api';
+import { api, setApiBase, getApiBase, getApiUrl, User, authHeaders } from '@/lib/api';
 import { useTheme } from '@/hooks/use-theme';
 import { useEscapeKey } from '@/hooks/use-escape-key';
 import { LangProvider, useLang } from '@/lib/i18n-context';
@@ -4439,7 +4439,9 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
     try {
       const res = await fetch('/api/translate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        // Permission-guarded route (add_shows/edit_shows) — without the Bearer
+        // token the server always replied 403 and translation silently failed.
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ fields: form }),
       });
       const data = await res.json();
@@ -4487,7 +4489,10 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
     try {
       const res = await fetch('/api/fetch-show-info', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        // Permission-guarded route (edit_shows) — without the Bearer token the
+        // server always replied 403, so fetching info/image from a link
+        // (IMDb/Wikipedia) never added anything to the form.
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ url: fetchUrl }),
       });
       const data = await res.json();
@@ -5801,7 +5806,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
         : undefined;
       const res = await fetch('/api/publish-social', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({
           platform: botConfig.platform,
           token: botConfig.token,
@@ -6373,7 +6378,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
         // caller-provided overrides so the rendered PDF matches the preview.
         const res = await fetch('/api/export-pdf', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({ shows, title, subtitle, organization }),
         });
         if (res.ok) {
@@ -6695,7 +6700,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/settings/report');
+        const res = await fetch('/api/settings/report', { headers: { ...authHeaders() } });
         if (!res.ok) return;
         const data = await res.json();
         if (cancelled) return;
@@ -6712,7 +6717,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
     try {
       const res = await fetch('/api/settings/report', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ title: rTitle, subtitle: rSubtitle, organization: rOrg }),
       });
       if (res.ok) {
@@ -6732,7 +6737,9 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const res = await fetch('/api/settings/logo', { method: 'POST', body: fd });
+      // NOTE: no Content-Type here — the browser must set the multipart
+      // boundary; we only attach the Bearer token.
+      const res = await fetch('/api/settings/logo', { method: 'POST', headers: { ...authHeaders() }, body: fd });
       if (res.ok) {
         setLogoVersion(v => v + 1);    // force <img> to reload from new file
         showToast(t('reports.logoUpdated'));

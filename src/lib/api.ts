@@ -65,7 +65,11 @@ export interface User {
   permissions?: string[];
 }
 
-function authHeaders(): Record<string, string> {
+// Exported so SPA code that calls Next.js API routes directly (e.g.
+// /api/fetch-show-info, /api/translate) can attach the Bearer token too —
+// those routes are permission-guarded server-side and returned 403 when the
+// header was missing ("لینک عکس رو اضافه نمیکنه" bug).
+export function authHeaders(): Record<string, string> {
   const token = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;
   return token ? { Authorization: 'Bearer ' + token } : {};
 }
