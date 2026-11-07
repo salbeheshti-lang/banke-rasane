@@ -134,7 +134,7 @@ jobs:
             }
           }
 
-          $seedFile = Join-Path $serverDir "public\\talk-shows-data.json"
+          $seedFile = Join-Path $serverDir "public\talk-shows-data.json"
           if (-not (Test-Path $seedFile)) {
             throw "FATAL: talk-shows-data.json missing from packaged standalone public directory"
           }
