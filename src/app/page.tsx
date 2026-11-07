@@ -4923,6 +4923,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
   showToast: (msg: string) => void;
 }) {
   const [urlInput, setUrlInput] = useState('');
+  const [failedUrls, setFailedUrls] = useState<Set<number>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Keep a ref to the latest images array so async FileReader callbacks always see current state
   const imagesRef = useRef<string[]>(images);
@@ -4930,17 +4931,44 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
   imagesRef.current = images;
   const MAX_IMAGES = 8;
 
+  // Heuristic: detect whether a URL points to a direct image file (vs. an HTML
+  // page like a Wikipedia article URL). The user often pastes a Wikipedia/
+  // IMDb article URL expecting auto-extraction — warn them to use the
+  // "دریافت خودکار" box above for that, or to paste a direct image link here.
+  function looksLikeDirectImage(url: string): boolean {
+    const u = url.toLowerCase();
+    // data: URLs are always valid images (base64-encoded).
+    if (u.startsWith('data:image/')) return true;
+    // Direct image extensions in the path (before any query/hash).
+    try {
+      const path = new URL(url).pathname.toLowerCase();
+      if (/\.(jpe?g|png|gif|webp|bmp|svg|avif|ico)(\?|#|$)/.test(path)) return true;
+    } catch {}
+    // Known image hosts that serve images directly even without extension.
+    if (/upload\.wikimedia\.org|\.wikimedia\.org|\.wpimg\.cn|\.imdb-img|m\.media-amazon\.com/.test(u)) return true;
+    return false;
+  }
+
   const addUrl = () => {
-    if (!urlInput.trim()) return;
+    const trimmed = urlInput.trim();
+    if (!trimmed) return;
     if (images.length >= MAX_IMAGES) {
       showToast(`حداکثر ${MAX_IMAGES.toLocaleString('fa-IR')} تصویر مجاز است`);
       return;
     }
-    if (images.includes(urlInput.trim())) {
+    if (images.includes(trimmed)) {
       showToast('این تصویر قبلاً اضافه شده');
       return;
     }
-    onChange([...images, urlInput.trim()]);
+    // Warn (but still allow) if the URL doesn't look like a direct image.
+    // Many users paste a Wikipedia article URL here expecting the system to
+    // extract the cover image (which is what the auto-fetch box above does).
+    if (!looksLikeDirectImage(trimmed)) {
+      showToast('⚠ این لینک مستقیم تصویر نیست — برای استخراج از صفحهٔ ویکی‌پدیا/IMDb از کادر «دریافت خودکار اطلاعات» بالاتر استفاده کنید. با این حال لینک اضافه شد؛ در صورت نمایش‌نشدن، آدرس تصویر مستقیم را بچسبانید.');
+    } else {
+      showToast(`✓ تصویر اضافه شد (${(images.length + 1).toLocaleString('fa-IR')} از ${MAX_IMAGES.toLocaleString('fa-IR')})`);
+    }
+    onChange([...images, trimmed]);
     setUrlInput('');
   };
 
@@ -5005,20 +5033,28 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
           value={urlInput}
           onChange={(e) => setUrlInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addUrl())}
-          placeholder="لینک تصویر را اینجا بچسبانید..."
+          placeholder="لینک مستقیم تصویر (مثلاً ...jpg یا png) را اینجا بچسبانید..."
           disabled={images.length >= MAX_IMAGES}
           style={{
             flex: 1,
             padding: '10px 16px',
             borderRadius: '12px',
-            border: '1px solid rgba(13, 124, 74,0.15)',
-            background: images.length >= MAX_IMAGES ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.8)',
-            color: '#f0fdf4',
+            border: '1px solid rgba(13, 124, 74,0.25)',
+            // Use a SOLID white background so the typed URL is clearly visible.
+            // The previous semi-transparent 0.8 alpha over the dark premium-glass
+            // produced a near-white background that competed with the #f0fdf4
+            // light text → made the typed URL nearly invisible (user reported
+            // "با لینک عکس رو اضافه نمیکنه اصلا" because they couldn't see what
+            // they pasted).
+            background: images.length >= MAX_IMAGES ? 'rgba(220, 230, 220, 0.85)' : 'rgb(255, 255, 255)',
+            // DARK text on white background for maximum readability of the URL.
+            color: '#0d2818',
             fontFamily: 'inherit',
             outline: 'none',
             direction: 'ltr',
             textAlign: 'left',
-            fontSize: '12px',
+            fontSize: '13px',
+            fontWeight: 500,
           }}
         />
         <button
@@ -5084,10 +5120,40 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
                 src={img}
                 alt={`تصویر ${(idx + 1).toLocaleString('fa-IR')}`}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onLoad={() => {
+                  // Image loaded successfully — clear any previous failure flag.
+                  setFailedUrls((prev) => {
+                    if (!prev.has(idx)) return prev;
+                    const next = new Set(prev);
+                    next.delete(idx);
+                    return next;
+                  });
+                }}
                 onError={(e) => {
-                  (e.target as HTMLImageElement).style.opacity = '0.3';
+                  // Image failed to load. Show a clear "broken image" indicator
+                  // instead of just dimming the broken <img> — the previous
+                  // opacity:0.3 made the slot look like an empty placeholder,
+                  // which is why users thought "nothing was added".
+                  (e.target as HTMLImageElement).style.visibility = 'hidden';
+                  setFailedUrls((prev) => new Set(prev).add(idx));
                 }}
               />
+              {/* Broken-image overlay — only shown when this specific slot
+                  failed to load. Displays the URL snippet so the user can see
+                  WHAT link failed (and copy/fix it). */}
+              {failedUrls.has(idx) && (
+                <div
+                  className="absolute inset-0 flex flex-col items-center justify-center p-2 text-center"
+                  style={{ background: 'rgba(127, 29, 29, 0.85)', color: '#fee2e2' }}
+                  dir="ltr"
+                >
+                  <div className="text-2xl mb-1">⚠️</div>
+                  <div className="text-[10px] font-bold mb-1" dir="rtl">تصویر بارگذاری نشد</div>
+                  <div className="text-[9px] font-mono opacity-80 break-all line-clamp-2" title={img}>
+                    {img.length > 40 ? img.slice(0, 40) + '…' : img}
+                  </div>
+                </div>
+              )}
               {/* Cover badge */}
               {idx === 0 && (
                 <span
