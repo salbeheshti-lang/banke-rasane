@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requirePermission } from '@/lib/server-auth';
+import { gatePermission } from '@/lib/server-auth';
 export const runtime = 'nodejs';
 const OMDB_API_KEY = 'thewdb';
 const UA = 'BankResaneh/2.0 (contact@bankrasaneh.ir)';
@@ -22,10 +22,11 @@ export async function POST(request: NextRequest) {
   // --- Auth: requires add_shows or edit_shows permission (admin/editor by default).
   // Previously this endpoint was unauthenticated and used the project's shared
   // public OMDB API key — anyone could call it and exhaust the daily quota. ---
-  const user = await requirePermission(request, 'edit_shows');
-  if (!user) {
-    return NextResponse.json({ error: 'دسترسی غیرمجاز — نیاز به دسترسی ویرایش برنامه' }, { status: 403 });
+  const gate = await gatePermission(request, 'edit_shows');
+  if (!gate.ok) {
+    return NextResponse.json({ error: gate.status === 401 ? 'احراز هویت لازم است' : 'دسترسی غیرمجاز — نیاز به دسترسی ویرایش برنامه' }, { status: gate.status });
   }
+  const user = gate.user;
   try {
     const { url } = await request.json();
     if (!url) return NextResponse.json({ error: 'URL الزامی است' }, { status: 400 });

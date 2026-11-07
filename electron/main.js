@@ -310,8 +310,22 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => { mainWindow.show(); mainWindow.maximize(); });
   mainWindow.loadURL(NEXT_URL);
   mainWindow.webContents.setWindowOpenHandler(({url}) => {
-    if (url.startsWith('http://127.0.0.1') || url.startsWith('http://localhost')) return {action:'allow'};
-    shell.openExternal(url); return {action:'deny'};
+    // Validate the URL with proper parsing — startsWith() would match
+    // look-alikes like http://127.0.0.1.evil.com. Only allow the exact
+    // local Next.js server (host + port), and only open http/https links
+    // externally (block javascript:, file:, data:, etc.).
+    try {
+      const parsed = new URL(url);
+      const isLocal =
+        (parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost') &&
+        parsed.port === String(NEXT_PORT) &&
+        (parsed.protocol === 'http:' || parsed.protocol === 'https:');
+      if (isLocal) return { action: 'allow' };
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        shell.openExternal(url);
+      }
+    } catch { /* malformed URL — deny */ }
+    return { action: 'deny' };
   });
   mainWindow.on('closed', () => { mainWindow = null; });
 }
@@ -376,14 +390,15 @@ app.whenReady().then(async () => {
     log('Auto-updater error: ' + err.message);
   });
 
-  // Check for updates (non-blocking)
-  try { autoUpdater.checkForUpdates().catch(err => log('Update check failed: ' + err.message)); }
-  catch(e) { log('Update check skipped: ' + e.message); }
-
   try {
     await startApiService();
     await startNextServer();
     createWindow();
+    // Check for updates AFTER the window is shown so the update-available
+    // dialog can attach to mainWindow (previously this ran before
+    // createWindow, so the dialog was silently skipped on fast checks).
+    try { autoUpdater.checkForUpdates().catch(err => log('Update check failed: ' + err.message)); }
+    catch(e) { log('Update check skipped: ' + e.message); }
   } catch(err) {
     log('FATAL: ' + err.message);
     dialog.showErrorBox('خطا در راه‌اندازی', 'خطا: ' + err.message + '\n\nفایل لاگ: ' + getLogPath());

@@ -699,7 +699,11 @@ try {
 // ---------------------------------------------------------------------------
 const server = Bun.serve({
   port: PORT,
-  hostname: process.env.BANKRESANEH_HOST || '0.0.0.0',
+  // Default to loopback (127.0.0.1) for security: the API service owns auth,
+  // sessions, and the database, so it must not be exposed to the network by
+  // default. Public deployments must explicitly opt-in via BANKRESANEH_HOST=0.0.0.0
+  // (plus HTTPS, CORS allow-list, and a changed admin password).
+  hostname: process.env.BANKRESANEH_HOST || '127.0.0.1',
   async fetch(req) {
     const url = new URL(req.url);
     const pathname = url.pathname;

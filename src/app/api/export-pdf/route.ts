@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { requirePermission } from '@/lib/server-auth';
+import { gatePermission } from '@/lib/server-auth';
 import { getDataFile } from '@/lib/data-dir';
 
 export const runtime = 'nodejs';
@@ -80,10 +80,11 @@ export async function POST(request: NextRequest) {
   // --- Auth: requires export_reports permission (admin/editor by default).
   // Previously this endpoint was unauthenticated, allowing anyone to generate
   // PDFs from caller-supplied show data — a minor abuse vector. ---
-  const user = await requirePermission(request, 'export_reports');
-  if (!user) {
-    return NextResponse.json({ error: 'دسترسی غیرمجاز — نیاز به دسترسی گزارش‌گیری' }, { status: 403 });
+  const gate = await gatePermission(request, 'export_reports');
+  if (!gate.ok) {
+    return NextResponse.json({ error: gate.status === 401 ? 'احراز هویت لازم است' : 'دسترسی غیرمجاز — نیاز به دسترسی گزارش‌گیری' }, { status: gate.status });
   }
+  const user = gate.user;
   try {
     const body = await request.json();
     const shows = body.shows;

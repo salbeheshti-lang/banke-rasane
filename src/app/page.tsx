@@ -1118,8 +1118,9 @@ function HomeInner() {
   // Delete a custom Genre (removes from state + localStorage).
   // The shows themselves are NOT deleted (deleting a genre must not destroy
   // programs), but their `category` field still carries the genre name. We
-  // clear that stale reference from overridden/added shows so the category
-  // doesn't dangle, and document the behavior via the toast.
+  // clear that stale reference from overridden/added shows AND from base shows
+  // (by creating an edit override) so the category doesn't dangle — mirroring
+  // the rename migration in handleEditGenre.
   const handleDeleteGenre = (id: string) => {
     const target = customGenres.find(x => x.id === id);
     const next = customGenres.filter(x => x.id !== id);
@@ -1130,18 +1131,40 @@ function HomeInner() {
       showToast('ژانر حذف شد');
       return;
     }
-    // Clear the genre name from the category of user-added/edited shows.
-    const strip = (s: TalkShow): TalkShow =>
-      s.category && s.category.includes(name)
-        ? { ...s, category: s.category.split(name).join('').trim() }
-        : s;
+    // Clear the genre name from a show's category, then clean up any dangling
+    // separators (e.g. " | خبری" → "خبری", "مستند | " → "مستند") left behind.
+    const strip = (s: TalkShow): TalkShow => {
+      if (!s.category || !s.category.includes(name)) return s;
+      const cat = s.category.split(name).join('')
+        .replace(/\|\s*\|/g, '|')      // collapse "||" / "| |" → "|"
+        .replace(/^\s*\|\s*/, '')       // trim leading separator
+        .replace(/\s*\|\s*$/, '')       // trim trailing separator
+        .trim();
+      return { ...s, category: cat };
+    };
     const added = overrides.added.map(strip);
     const edited: Record<number, TalkShow> = {};
     for (const [k, v] of Object.entries(overrides.edited)) {
       edited[Number(k)] = strip(v);
     }
+    // Base shows (not yet overridden) that reference the deleted genre need an
+    // edit override so their stale category is cleared too.
+    const editedNums = new Set(Object.keys(edited).map(Number));
+    const addedNums = new Set(added.map(s => s.num));
+    const deleted = new Set(overrides.deleted);
+    let clearedCount = 0;
+    for (const baseShow of baseShows) {
+      if (editedNums.has(baseShow.num) || addedNums.has(baseShow.num) || deleted.has(baseShow.num)) continue;
+      if (baseShow.category && baseShow.category.includes(name)) {
+        edited[baseShow.num] = strip(baseShow);
+        clearedCount++;
+      }
+    }
+    // Count shows already cleared in added/edited (check original category).
+    for (const s of added) if ((overrides.added.find(o => o.num === s.num)?.category || '').includes(name)) clearedCount++;
+    for (const v of Object.values(overrides.edited)) if (v.category.includes(name)) clearedCount++;
     commitOverrides({ ...overrides, added, edited });
-    showToast(`ژانر «${name}» حذف شد — برنامه‌ها حفظ شدند، دسته‌بندی پاک شد`);
+    showToast(`ژانر «${name}» حذف شد — برنامه‌ها حفظ شدند${clearedCount > 0 ? `، دسته‌بندی ${clearedCount} برنامه پاک شد` : ''}`);
   };
 
   const handleLogout = async () => {
@@ -3664,6 +3687,7 @@ function ProgramsView({
           >
             {genres.filter(g => g.id !== 'decor' && g.id !== 'psa' && g.id !== 'deepobs' && g.id !== 'ads').map(g => {
               const isActive = g.id === genre.id;
+              const rgb = hexToRgb(g.color);
               return (
                 <button
                   key={g.id}

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import ZAI from 'z-ai-web-dev-sdk';
-import { requirePermissionAny } from '@/lib/server-auth';
+import { gatePermissionAny } from '@/lib/server-auth';
 import { getDataFile } from '@/lib/data-dir';
 export const runtime = 'nodejs';
 
@@ -113,10 +113,11 @@ export async function POST(request: NextRequest) {
   // Only users who can edit/add shows should be able to translate them.
   // Previously this endpoint required only `requireUser`, which let viewers
   // consume the LLM quota — a cost-amplification vector.
-  const user = await requirePermissionAny(request, 'add_shows', 'edit_shows');
-  if (!user) {
-    return NextResponse.json({ error: 'دسترسی غیرمجاز — نیاز به مجوز ویرایش برنامه' }, { status: 403 });
+  const gate = await gatePermissionAny(request, 'add_shows', 'edit_shows');
+  if (!gate.ok) {
+    return NextResponse.json({ error: gate.status === 401 ? 'احراز هویت لازم است' : 'دسترسی غیرمجاز — نیاز به مجوز ویرایش برنامه' }, { status: gate.status });
   }
+  const user = gate.user;
 
   // --- 2. Rate limit (persistent, survives restart) ---
   const rl = checkRateLimit(String(user.id));

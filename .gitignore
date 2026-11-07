@@ -62,3 +62,6 @@ public/uploads/
 data/
 *.sqlite
 security-test-report.txt
+
+# Git worktrees (local development only — must never be committed as a submodule)
+.worktrees/

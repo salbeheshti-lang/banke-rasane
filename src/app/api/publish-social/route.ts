@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requirePermission } from '@/lib/server-auth';
+import { gatePermission } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
 
@@ -26,10 +26,11 @@ export async function POST(request: NextRequest) {
   // spam relay. The token+chatId are still caller-supplied (per the
   // existing bot-config feature), but now only authorized users can hit
   // the endpoint at all. ---
-  const user = await requirePermission(request, 'export_reports');
-  if (!user) {
-    return NextResponse.json({ ok: false, error: 'دسترسی غیرمجاز — نیاز به دسترسی گزارش‌گیری' }, { status: 403 });
+  const gate = await gatePermission(request, 'export_reports');
+  if (!gate.ok) {
+    return NextResponse.json({ ok: false, error: gate.status === 401 ? 'احراز هویت لازم است' : 'دسترسی غیرمجاز — نیاز به دسترسی گزارش‌گیری' }, { status: gate.status });
   }
+  const user = gate.user;
   try {
     const body = (await request.json()) as PublishBody & { verify?: boolean };
     const { platform, token, chatId, text, imageUrl } = body;

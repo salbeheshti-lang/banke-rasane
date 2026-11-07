@@ -106,3 +106,52 @@ export async function requirePermissionAny(
   }
   return null;
 }
+
+// ---------------------------------------------------------------------------
+// Gate helpers — return a discriminated result that lets the caller
+// distinguish "unauthenticated" (401) from "authenticated but forbidden" (403).
+// This fixes the issue where requirePermission returns null for BOTH cases,
+// causing some routes to respond 403 to unauthenticated callers.
+//
+// Each gate makes exactly ONE call to the Bun API service (no double-fetch).
+// ---------------------------------------------------------------------------
+
+export type AuthGate =
+  | { ok: true; user: AuthUser }
+  | { ok: false; status: 401 | 403 };
+
+/**
+ * Check authentication + a single permission, returning a gate result that
+ * distinguishes 401 (unauthenticated) from 403 (forbidden).
+ */
+export async function gatePermission(
+  req: NextRequest,
+  permission: string
+): Promise<AuthGate> {
+  const user = await requireUser(req);
+  if (!user) return { ok: false, status: 401 };
+  if (user.isSuperAdmin) return { ok: true, user };
+  if (Array.isArray(user.permissions) && user.permissions.includes(permission)) {
+    return { ok: true, user };
+  }
+  return { ok: false, status: 403 };
+}
+
+/**
+ * Check authentication + at-least-one of several permissions, returning a
+ * gate result that distinguishes 401 (unauthenticated) from 403 (forbidden).
+ */
+export async function gatePermissionAny(
+  req: NextRequest,
+  ...permissions: string[]
+): Promise<AuthGate> {
+  const user = await requireUser(req);
+  if (!user) return { ok: false, status: 401 };
+  if (user.isSuperAdmin) return { ok: true, user };
+  if (Array.isArray(user.permissions)) {
+    for (const p of permissions) {
+      if (user.permissions.includes(p)) return { ok: true, user };
+    }
+  }
+  return { ok: false, status: 403 };
+}
