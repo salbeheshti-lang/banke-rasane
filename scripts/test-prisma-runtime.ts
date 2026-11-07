@@ -8,7 +8,7 @@ const databasePath = path.join(dataDir, 'db', 'translation-rate-limit.sqlite');
 mkdirSync(path.dirname(databasePath), { recursive: true });
 process.env.DATABASE_URL = pathToFileURL(databasePath).href;
 
-const { db } = await import('../src/lib/db.ts');
+const { db } = await import('../src/lib/db');
 
 try {
   await db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "TranslationRateBucket" (
