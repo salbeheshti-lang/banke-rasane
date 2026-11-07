@@ -38,8 +38,8 @@ child.stderr.on('data', (data) => {
 child.on('error', (error) => { spawnError = error; });
 
 function printStartupDiagnostics() {
-  process.stderr.write('\\n--- Electron startup output ---\\n' + (childOutput || '(no child output)') + '\\n');
-  const userDataMatch = childOutput.match(/UserData:\\s*(.+)/);
+  process.stderr.write('\n--- Electron startup output ---\n' + (childOutput || '(no child output)') + '\n');
+  const userDataMatch = childOutput.match(/UserData:\s*(.+)/);
   const candidates = userDataMatch
     ? [path.join(userDataMatch[1].trim(), 'bankresaneh.log')]
     : [
@@ -48,8 +48,8 @@ function printStartupDiagnostics() {
       ];
   for (const logPath of candidates) {
     if (fs.existsSync(logPath)) {
-      const lines = fs.readFileSync(logPath, 'utf8').split(/\\r?\\n/);
-      process.stderr.write('\\n--- Electron log: ' + logPath + ' ---\\n' + lines.slice(-200).join('\\n') + '\\n');
+      const lines = fs.readFileSync(logPath, 'utf8').split(/\r?\n/);
+      process.stderr.write('\n--- Electron log: ' + logPath + ' ---\\n' + lines.slice(-200).join('\n') + '\\n');
       return;
     }
   }
