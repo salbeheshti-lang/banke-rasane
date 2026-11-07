@@ -418,18 +418,30 @@ function hashPassword(password) {
   const salt = randomBytes(16).toString('hex');
   const iterations = 310000;
   const hash = pbkdf2Sync(password, salt, iterations, 32, 'sha256').toString('hex');
-  return `pbkdf2${iterations}${salt}${hash}`;
+  return 'pbkdf2$' + iterations + '$' + salt + '$' + hash;
 }
 function constantTimeHexEqual(left, right) {
-  if (typeof left !== 'string' || typeof right !== 'string' ||
-      !/^[a-f0-9]+$/i.test(left) || !/^[a-f0-9]+$/i.test(right)) return false;
+  if (typeof left !== 'string' || typeof right !== 'string' || !/^[a-f0-9]+$/i.test(left) || !/^[a-f0-9]+$/i.test(right)) return false;
   const a = Buffer.from(left, 'hex');
   const b = Buffer.from(right, 'hex');
   return a.length === b.length && timingSafeEqual(a, b);
 }
 function verifyPassword(password, stored) {
   if (typeof stored !== 'string' || !stored) return false;
-  if (stored.startsWith('pbkdf2
+  if (stored.startsWith('pbkdf2$')) {
+    const parts = stored.split('$');
+    if (parts.length !== 4) return false;
+    const iterations = Number(parts[1]), salt = parts[2], expected = parts[3];
+    if (!Number.isInteger(iterations) || iterations < 100000 || iterations > 1000000 || !/^[a-f0-9]{32}$/i.test(salt) || !/^[a-f0-9]{64}$/i.test(expected)) return false;
+    return constantTimeHexEqual(pbkdf2Sync(password, salt, iterations, 32, 'sha256').toString('hex'), expected);
+  }
+  if (stored.includes('$')) {
+    const [salt, expected, ...extra] = stored.split('$');
+    if (extra.length || !salt || !/^[a-f0-9]{64}$/i.test(expected || '')) return false;
+    return constantTimeHexEqual(createHash('sha256').update(salt + password, 'utf8').digest('hex'), expected);
+  }
+  return constantTimeHexEqual(sha256(password), stored);
+}
 function genToken() { return randomBytes(32).toString('hex'); }
 function nowSec() { return Math.floor(Date.now() / 1000); }
 function getClientIP(req) {
@@ -726,14 +738,7 @@ const server = Bun.serve({
         return json({ error: 'نام کاربری یا رمز عبور نادرست است' }, 401, req);
       }
       // Transparently upgrade legacy SHA-256 hashes after successful authentication.
-      if (!user.password_hash.startsWith('pbkdf2
-      db.prepare('UPDATE users SET last_seen = ? WHERE id = ?').run(nowSec(), user.id);
-      user.last_seen = nowSec();
-      const token = createSession(user.id);
-      return json({ token, user: publicUser(user, user) }, req);
-    }
-
-    )) {
+      if (!user.password_hash.startsWith('pbkdf2$')) {
         const upgradedHash = hashPassword(password);
         db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(upgradedHash, user.id);
         user.password_hash = upgradedHash;
