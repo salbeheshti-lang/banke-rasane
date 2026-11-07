@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import ZAI from 'z-ai-web-dev-sdk';
 import { requirePermissionAny } from '@/lib/server-auth';
+import { getDataFile } from '@/lib/data-dir';
 export const runtime = 'nodejs';
 
 // Translation endpoint for the BankResaneh show editor.
@@ -44,10 +45,14 @@ const PRESERVE_ORIGINAL_TITLE = true;
 
 // === Rate limiter (PERSISTENT on-disk token bucket, per user) ===
 // Limits: 10 requests per 60 seconds per user. Bursts up to 10 are allowed.
-// Stored in data/translate-rate-limit.json so it survives server restarts.
+// Stored in the writable data directory (NOT process.cwd() — that's the
+// install dir on Windows, which is read-only under Program Files).
+// The data directory resolves to:
+//   - Electron production: %APPDATA%\banke-rasane\ (writable by user)
+//   - Dev mode: project root /data
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT_MAX = 10;
-const RATE_LIMIT_FILE = path.join(process.cwd(), 'data', 'translate-rate-limit.json');
+const RATE_LIMIT_FILE = getDataFile('translate-rate-limit.json');
 
 interface RateBuckets { [userId: string]: { count: number; resetAt: number } }
 

@@ -10,7 +10,7 @@
 //  All endpoints under /api/*
 // ============================================================================
 import { Database } from 'bun:sqlite';
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { readFileSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 
@@ -411,15 +411,74 @@ function requireRole(req, roles) {
 }
 
 function sha256(s) { return createHash('sha256').update(s, 'utf8').digest('hex'); }
+
+// ---------------------------------------------------------------------------
+// Password hashing — scrypt (OWASP-recommended, built into Node/Bun crypto)
+// ---------------------------------------------------------------------------
+// MIGRATION (per audit: SHA-256 is a fast hash vulnerable to GPU brute-force):
+//   New passwords are hashed with scrypt (N=2^15, r=8, p=1, 32-byte key,
+//   16-byte salt) and stored as:
+//       scrypt$N$r$p$<salt-hex>$<hash-hex>
+//   Old formats are still VERIFIED transparently so no user is locked out:
+//       <salt-hex>$<sha256-hex>        (salted SHA-256 — previous format)
+//       <plain-sha256-hex>             (no '$' — the very first seed format)
+//   Transparent upgrade: when a user logs in with an old-format hash and the
+//   password verifies, we re-hash with scrypt and persist immediately, so
+//   every account migrates itself on first login without any user action.
+//
+// scrypt params (OWASP 2024 guidance): N=2^15 (32 MiB memory), r=8, p=1.
+// This makes GPU brute-force ~10^5x more expensive than SHA-256.
+const SCRYPT_N = Math.pow(2, 15);
+const SCRYPT_R = 8;
+const SCRYPT_P = 1;
+const SCRYPT_KEYLEN = 32;
+
 function hashPassword(password) {
   const salt = randomBytes(16).toString('hex');
-  const hash = createHash('sha256').update(salt + password, 'utf8').digest('hex');
-  return salt + '$' + hash;
+  const key = scryptSync(password, salt, SCRYPT_KEYLEN, { N: SCRYPT_N, r: SCRYPT_R, p: SCRYPT_P }).toString('hex');
+  return `scrypt$${SCRYPT_N}$${SCRYPT_R}$${SCRYPT_P}$${salt}$${key}`;
 }
+
+// Returns true if the stored hash uses the modern scrypt format.
+function isScryptHash(stored) {
+  return typeof stored === 'string' && stored.startsWith('scrypt$');
+}
+
 function verifyPassword(password, stored) {
-  if (!stored.includes('$')) return stored === sha256(password);
-  const [salt, hash] = stored.split('$');
-  return hash === createHash('sha256').update(salt + password, 'utf8').digest('hex');
+  try {
+    if (isScryptHash(stored)) {
+      // Format: scrypt$N$r$p$<salt>$<key>
+      const [, nStr, rStr, pStr, salt, key] = stored.split('$');
+      const derived = scryptSync(password, salt, SCRYPT_KEYLEN, {
+        N: parseInt(nStr, 10), r: parseInt(rStr, 10), p: parseInt(pStr, 10),
+      }).toString('hex');
+      // constant-time comparison
+      if (key.length !== derived.length) return false;
+      return timingSafeEqual(Buffer.from(key, 'hex'), Buffer.from(derived, 'hex'));
+    }
+    if (stored.includes('$')) {
+      // Legacy salted SHA-256: <salt>$<hash>
+      const [salt, hash] = stored.split('$');
+      return hash === sha256(salt + password);
+    }
+    // Very legacy unsalted SHA-256 (seed format)
+    return stored === sha256(password);
+  } catch {
+    return false;
+  }
+}
+
+// Re-hash a verified legacy password with scrypt and persist it.
+// Called right after a successful login where the stored hash was NOT
+// scrypt — so accounts silently upgrade to the modern format on login.
+function upgradePasswordHash(userId, password, stored) {
+  if (isScryptHash(stored)) return; // already modern, nothing to do
+  try {
+    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashPassword(password), userId);
+    console.log(`[security] upgraded password hash to scrypt for user id=${userId}`);
+  } catch (e) {
+    console.warn(`[security] failed to upgrade password hash for user ${userId}: ${e.message}`);
+  }
 }
 function genToken() { return randomBytes(32).toString('hex'); }
 function nowSec() { return Math.floor(Date.now() / 1000); }
@@ -725,6 +784,11 @@ const server = Bun.serve({
         return json({ error: 'نام کاربری یا رمز عبور نادرست است' }, 401, req);
       }
       clearRateLimit(ip);
+      // Transparent password-hash upgrade: if this account's stored hash is
+      // still the legacy SHA-256 format, silently re-hash it with scrypt
+      // now that we've verified the plaintext password. Every account
+      // migrates itself on first login — no user action required.
+      upgradePasswordHash(user.id, password, user.password_hash);
       db.prepare('UPDATE users SET last_seen = ? WHERE id = ?').run(nowSec(), user.id);
       user.last_seen = nowSec();
       const token = createSession(user.id);

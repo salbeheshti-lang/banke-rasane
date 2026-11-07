@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { requireUser, requirePermission } from '@/lib/server-auth';
+import { getDataFile } from '@/lib/data-dir';
 
 export const runtime = 'nodejs';
 
-const SETTINGS_FILE = path.join(process.cwd(), 'data', 'report-settings.json');
+// Store report settings in the writable data directory (NOT process.cwd()/data,
+// which is read-only under Program Files on Windows). The data dir resolves to:
+//   - Electron production: %APPDATA%\banke-rasane\
+//   - Dev mode: project root /data
+const SETTINGS_FILE = getDataFile('report-settings.json');
 
 interface ReportSettings {
   title: string;

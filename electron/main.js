@@ -262,6 +262,14 @@ function startNextServer() {
       PORT: String(NEXT_PORT),
       HOSTNAME: '127.0.0.1',
       BANKRESANEH_STARTUP_TOKEN: STARTUP_TOKEN,
+      // Pass the user-data directory so Next.js API routes (like the
+      // translate endpoint's rate-limit file) can write to a writable
+      // location instead of the (potentially read-only) install dir.
+      BANKRESANEH_DATA_DIR: app.getPath('userData'),
+      // Also pass the API base URL so the translate endpoint knows where
+      // to proxy auth checks (otherwise it defaults to localhost:3002
+      // which is correct in dev but explicit is better).
+      BANKRESANEH_API_BASE: 'http://127.0.0.1:' + API_PORT,
     };
     nextServer = spawn(process.execPath, [serverPath], {
       cwd: staticDir,

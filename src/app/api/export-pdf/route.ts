@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { requirePermission } from '@/lib/server-auth';
+import { getDataFile } from '@/lib/data-dir';
 
 export const runtime = 'nodejs';
 
@@ -19,7 +20,14 @@ export const runtime = 'nodejs';
  * Returns an empty string (no <img> rendered) if neither file exists.
  */
 function getLogoDataUrl(): string {
+  // Candidate order:
+  //   1. Custom logo uploaded by admin → writable data dir (data/logo.png
+  //      in dev, %APPDATA%\banke-rasane\logo.png in Electron prod).
+  //   2. Legacy custom logo path (public/uploads/logo.png) — kept for
+  //      backwards compat with installs that wrote here before the fix.
+  //   3. Default program logo → public/banke-rasane-logo.png (read-only OK).
   const candidates = [
+    getDataFile('logo.png'),
     path.join(process.cwd(), 'public', 'uploads', 'logo.png'),
     path.join(process.cwd(), 'public', 'banke-rasane-logo.png'),
   ];
@@ -39,12 +47,16 @@ function getLogoDataUrl(): string {
 
 /**
  * Read persisted report settings (title / subtitle / organization) from disk.
- * Stored as JSON at data/report-settings.json so admins can edit defaults
- * without touching code. Returns sensible fallbacks if file is missing.
+ * Stored as JSON in the writable data directory (see @/lib/data-dir) so admins
+ * can edit defaults without touching code. Returns sensible fallbacks if the
+ * file is missing or unreadable.
  */
 function getReportSettings(): { title: string; subtitle: string; organization: string } {
   try {
-    const f = path.join(process.cwd(), 'data', 'report-settings.json');
+    // Use the writable data dir — matches where /api/settings/report WRITES
+    // the file. The previous hardcoded process.cwd()/data path pointed at
+    // the read-only install directory in packaged Electron builds.
+    const f = getDataFile('report-settings.json');
     if (fs.existsSync(f)) {
       const raw = fs.readFileSync(f, 'utf-8');
       const parsed = JSON.parse(raw);
