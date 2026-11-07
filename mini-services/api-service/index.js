@@ -208,17 +208,53 @@ try {
 // ---------------------------------------------------------------------------
 function isAllowedOrigin(origin) {
   if (!origin) return false;
-  // Check env-based additional origins
+  // Check env-based additional origins (production deployments can set
+  // CORS_ORIGINS=https://example.com,https://app.example.com).
   const extraOrigins = (process.env.CORS_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
   if (extraOrigins.includes(origin)) return true;
+  // Localhost / loopback — always allowed (dev + Electron desktop app,
+  // which serves the UI on 127.0.0.1:3000 and the API on 127.0.0.1:3002).
   if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true;
+  // Preview gateway — *.space-z.ai hosts proxy API requests via the
+  // XTransformPort query param. The gateway sets the Origin to the
+  // session subdomain, so we allow the whole suffix. This is safe
+  // because the API listens only on 127.0.0.1 (not exposed to the
+  // internet) and the gateway itself enforces session auth.
   if (/^https?:\/\/[^/]*\.space-z\.ai(:\d+)?$/.test(origin)) return true;
-  if (/^https?:\/\/[^/]*\.(lan|local)(:\d+)?$/.test(origin)) return true;
+  // NOTE: previously we also allowed *.lan and *.local — removed in the
+  // CORS hardening pass since those are rarely needed and could be
+  // spoofed by a malicious device on the LAN.
   return false;
 }
 function getCorsHeader(req) {
   const origin = req.headers.get('origin') || '';
   return isAllowedOrigin(origin) ? origin : '';
+}
+
+// Validate that a URL points to a Wikipedia/Wikimedia host.
+// Used to prevent stored-XSS via the 'wikipedia' column (which the
+// frontend renders as a clickable <a href>).
+//   ✓ https://en.wikipedia.org/wiki/Foo
+//   ✓ https://fa.wikipedia.org/wiki/...
+//   ✓ https://commons.wikimedia.org/wiki/...
+//   ✗ javascript:alert(1)
+//   ✗ https://evil.com/wiki/phishing
+function isWikipediaUrl(url) {
+  if (typeof url !== 'string' || !url) return false;
+  if (!/^https?:\/\//i.test(url)) return false; // reject javascript:, data:, etc.
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    // Allow any language subdomain of wikipedia.org (en, fa, ar, etc.)
+    if (/^[a-z]{2,3}\.wikipedia\.org$/.test(host)) return true;
+    // Allow commons.wikimedia.org and upload.wikimedia.org
+    if (host === 'commons.wikimedia.org' || host === 'upload.wikimedia.org') return true;
+    // Allow meta.wikimedia.org
+    if (host === 'meta.wikimedia.org') return true;
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -428,14 +464,20 @@ function sha256(s) { return createHash('sha256').update(s, 'utf8').digest('hex')
 //
 // scrypt params (OWASP 2024 guidance): N=2^15 (32 MiB memory), r=8, p=1.
 // This makes GPU brute-force ~10^5x more expensive than SHA-256.
+// NOTE: Bun's bundled OpenSSL defaults to maxmem=32MB, which N=2^15/r=8
+// exactly saturates → 'MEMORY_LIMIT_EXCEEDED'. We explicitly raise maxmem
+// to 128 MB so the OWASP-recommended params work on both Node and Bun.
 const SCRYPT_N = Math.pow(2, 15);
 const SCRYPT_R = 8;
 const SCRYPT_P = 1;
 const SCRYPT_KEYLEN = 32;
+const SCRYPT_MAXMEM = 128 * 1024 * 1024; // 128 MB
 
 function hashPassword(password) {
   const salt = randomBytes(16).toString('hex');
-  const key = scryptSync(password, salt, SCRYPT_KEYLEN, { N: SCRYPT_N, r: SCRYPT_R, p: SCRYPT_P }).toString('hex');
+  const key = scryptSync(password, salt, SCRYPT_KEYLEN, {
+    N: SCRYPT_N, r: SCRYPT_R, p: SCRYPT_P, maxmem: SCRYPT_MAXMEM,
+  }).toString('hex');
   return `scrypt$${SCRYPT_N}$${SCRYPT_R}$${SCRYPT_P}$${salt}$${key}`;
 }
 
@@ -451,6 +493,7 @@ function verifyPassword(password, stored) {
       const [, nStr, rStr, pStr, salt, key] = stored.split('$');
       const derived = scryptSync(password, salt, SCRYPT_KEYLEN, {
         N: parseInt(nStr, 10), r: parseInt(rStr, 10), p: parseInt(pStr, 10),
+        maxmem: SCRYPT_MAXMEM,
       }).toString('hex');
       // constant-time comparison
       if (key.length !== derived.length) return false;
@@ -754,7 +797,18 @@ const server = Bun.serve({
       } catch(e) { processed = Buffer.from(raw); }
 
       db.prepare('UPDATE shows SET image_data = ?, image_mime = ?, image_source = ? WHERE num = ?').run(new Uint8Array(processed), 'image/jpeg', source, num);
-      if (wikiUrl) db.prepare('UPDATE shows SET wikipedia = ? WHERE num = ?').run(wikiUrl, num);
+      // SECURITY: only persist the wikipedia URL if it points to a valid
+      // Wikipedia/Wikimedia host. Previously the raw user-supplied URL was
+      // stored without hostname validation, which could allow a
+      // 'javascript:' URL or arbitrary malicious host to be persisted and
+      // later rendered as a clickable <a href> in the frontend (stored XSS).
+      if (wikiUrl && isWikipediaUrl(wikiUrl)) {
+        db.prepare('UPDATE shows SET wikipedia = ? WHERE num = ?').run(wikiUrl, num);
+      } else if (wikiUrl) {
+        // Invalid host — don't persist, but don't fail the whole request
+        // (the image was already saved successfully).
+        console.warn(`[fetch-image] rejected non-Wikipedia URL for show ${num}: ${wikiUrl.substring(0, 80)}`);
+      }
       return json({ success: true, source, size: processed.length }, req);
     }
 
@@ -1133,7 +1187,11 @@ const server = Bun.serve({
     if (pathname === '/api/activity' && method === 'GET') {
       const admin = requirePermission(req, 'view_activity');
       if (!admin) return json({ error: 'Unauthorized' }, 401, req);
-      const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 200);
+      // Clamp limit to [1, 200] — previously negative values bypassed the
+      // upper bound and returned the entire log (DoS via large result set).
+      let limit = parseInt(url.searchParams.get('limit') || '50', 10);
+      if (!Number.isFinite(limit) || limit < 1) limit = 50;
+      limit = Math.min(limit, 200);
       const logs = db.prepare('SELECT * FROM activity_log ORDER BY created_at DESC LIMIT ?').all(limit);
       return json({ logs }, req);
     }
