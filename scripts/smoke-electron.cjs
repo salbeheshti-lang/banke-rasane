@@ -2,6 +2,7 @@
 // Windows-only smoke test for the packaged Electron application.
 const { spawn, execFileSync } = require('node:child_process');
 const path = require('node:path');
+const fs = require('node:fs');
 const http = require('node:http');
 
 // Use the executable path passed as a CLI argument or the BANKRESANEH_EXE env
@@ -18,13 +19,41 @@ if (process.env.BANKRESANEH_EXE || process.argv[2]) {
   process.stdout.write('No executable argument — falling back to win-unpacked build: ' + executable + '\n');
 }
 let spawnError = null;
-const child = spawn(executable, ['--disable-gpu', '--no-sandbox'], {
-  stdio: 'ignore',
+const child = spawn(executable, ['--disable-gpu', '--no-sandbox', '--enable-logging=stderr'], {
+  stdio: ['ignore', 'pipe', 'pipe'],
   windowsHide: false,
   env: { ...process.env, ELECTRON_DISABLE_SECURITY_WARNINGS: 'true' },
 });
-
+let childOutput = '';
+child.stdout.on('data', (data) => {
+  const value = data.toString();
+  childOutput += value;
+  process.stdout.write(value);
+});
+child.stderr.on('data', (data) => {
+  const value = data.toString();
+  childOutput += value;
+  process.stderr.write(value);
+});
 child.on('error', (error) => { spawnError = error; });
+
+function printStartupDiagnostics() {
+  process.stderr.write('\\n--- Electron startup output ---\\n' + (childOutput || '(no child output)') + '\\n');
+  const userDataMatch = childOutput.match(/UserData:\\s*(.+)/);
+  const candidates = userDataMatch
+    ? [path.join(userDataMatch[1].trim(), 'bankresaneh.log')]
+    : [
+        path.join(process.env.APPDATA || '', 'banke-rasane', 'bankresaneh.log'),
+        path.join(process.env.APPDATA || '', 'BankResaneh', 'bankresaneh.log'),
+      ];
+  for (const logPath of candidates) {
+    if (fs.existsSync(logPath)) {
+      const lines = fs.readFileSync(logPath, 'utf8').split(/\\r?\\n/);
+      process.stderr.write('\\n--- Electron log: ' + logPath + ' ---\\n' + lines.slice(-200).join('\\n') + '\\n');
+      return;
+    }
+  }
+}
 
 function getResponse(url) {
   return new Promise((resolve, reject) => {
@@ -81,6 +110,7 @@ async function waitFor(url, label, timeoutMs = 90000) {
     process.stdout.write('Packaged Electron smoke test passed.\n');
   } catch (error) {
     process.stderr.write(error.stack || error.message);
+    printStartupDiagnostics();
     process.exitCode = 1;
   } finally {
     if (child.pid) {
