@@ -111,6 +111,11 @@
     ],
     "extraResources": [
       {
+        "from": ".next/standalone",
+        "to": "next-service-dist",
+        "filter": ["**/*"]
+      },
+      {
         "from": "mini-services/api-service",
         "to": "api-service",
         "filter": [
