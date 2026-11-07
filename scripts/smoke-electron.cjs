@@ -114,9 +114,16 @@ async function waitFor(url, label, timeoutMs = 90000) {
     process.exitCode = 1;
   } finally {
     if (child.pid) {
+      process.stdout.write('Stopping packaged app process tree...\\n');
       try {
-        execFileSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
-      } catch {}
+        execFileSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], {
+          stdio: 'ignore',
+          timeout: 10000,
+        });
+      } catch (error) {
+        process.stderr.write('taskkill cleanup timed out or failed: ' + error.message + '\\n');
+        try { child.kill(); } catch {}
+      }
     }
   }
 })();
