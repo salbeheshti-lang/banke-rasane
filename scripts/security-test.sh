@@ -192,7 +192,7 @@ fi
 # Step 0 — Login as Super Admin
 # In fresh scenario: admin/admin (default), then change password.
 # In upgrade scenario: admin/admin may already have been changed, so we try
-#   admin/admin first; if that fails (401), try Admin@2025 (the password
+#   admin/admin first; if that fails, try Admin@2025 (the password
 #   the fresh scenario sets).
 # Either way, after this step we have a valid SUPER_TOKEN and admin has a
 # known password + must_change_password cleared.
@@ -282,8 +282,8 @@ check "1.3 limited-login" 200 "$HTTP_STATUS"
 
 # Now limited_admin (with empty permissions) tries to list users
 api GET /users "$LIMITED_TOKEN"
-echo "  limited_admin GET /users → $HTTP_STATUS (should be 401 because manage_users was revoked)"
-check "1.3a revoked-cant-list-users" 401 "$HTTP_STATUS"
+echo "  limited_admin GET /users → $HTTP_STATUS (should be 403 because manage_users was revoked)"
+check "1.3a revoked-cant-list-users" 403 "$HTTP_STATUS"
 
 # 1.4 Super admin restores SOME permissions (just add_shows + edit_shows)
 api PUT "/users?id=$LIMITED_ID" "$SUPER_TOKEN" '{"permissions":["add_shows","edit_shows"]}'
@@ -301,8 +301,8 @@ fi
 api GET /shows "$LIMITED_TOKEN"
 check "1.5a limited-can-list-shows" 200 "$HTTP_STATUS"
 api DELETE "/shows?num=999999" "$LIMITED_TOKEN"
-echo "  limited_admin delete show → $HTTP_STATUS (should be 401, no delete_shows perm)"
-check "1.5b limited-cant-delete-shows" 401 "$HTTP_STATUS"
+echo "  limited_admin delete show → $HTTP_STATUS (should be 403, no delete_shows perm)"
+check "1.5b limited-cant-delete-shows" 403 "$HTTP_STATUS"
 
 # 1.6 Super admin restores ALL permissions
 api PUT "/users?id=$LIMITED_ID" "$SUPER_TOKEN" '{"permissions":["manage_users","create_admins","suspend_users","add_shows","edit_shows","delete_shows","manage_genres","manage_settings","view_activity","export_reports"]}'
@@ -408,6 +408,14 @@ api POST /auth/login "" '{"username":"editor1","password":"Password123"}'
 EDITOR_TOKEN=$(json_get "$RESP_BODY" "token")
 check "3.1 editor-login" 200 "$HTTP_STATUS"
 
+# Viewer must not mutate show images through the fetch-image helper.
+api POST /auth/login "" '{"username":"viewer1","password":"Password123"}'
+VIEWER_TOKEN=$(json_get "$RESP_BODY" "token")
+check "3.1b viewer-login" 200 "$HTTP_STATUS"
+api POST /fetch-image "$VIEWER_TOKEN" '{"num":1,"name":"test show"}'
+echo "  viewer tries fetch-image mutation → $HTTP_STATUS (should be 403)"
+check "3.1c viewer-cannot-fetch-image" 403 "$HTTP_STATUS"
+
 # 3.2 Editor adds a show (should succeed — has add_shows by default)
 api POST /shows "$EDITOR_TOKEN" '{"num":99001,"name":"Test Show by Editor","category":"test","days":"sat","time":"20:00"}'
 echo "  editor adds show → $HTTP_STATUS (should be 200)"
@@ -421,27 +429,27 @@ check "3.3 editor-can-edit-show" 200 "$HTTP_STATUS"
 # 3.4 Editor tries to delete the show (should FAIL — no delete_shows for editor)
 api DELETE "/shows?num=99001" "$EDITOR_TOKEN"
 echo "  editor tries to delete show → $HTTP_STATUS (should be 401)"
-check "3.4 editor-cant-delete-show" 401 "$HTTP_STATUS"
+check "3.4 editor-cant-delete-show" 403 "$HTTP_STATUS"
 
 # 3.5 Editor tries to list users (should FAIL — no manage_users for editor)
 api GET /users "$EDITOR_TOKEN"
 echo "  editor tries to list users → $HTTP_STATUS (should be 401)"
-check "3.5 editor-cant-list-users" 401 "$HTTP_STATUS"
+check "3.5 editor-cant-list-users" 403 "$HTTP_STATUS"
 
 # 3.6 Editor tries to create a user (should FAIL — no manage_users)
 api POST /users "$EDITOR_TOKEN" '{"username":"rogue","password":"Password123","role":"viewer"}'
 echo "  editor tries to create user → $HTTP_STATUS (should be 401)"
-check "3.6 editor-cant-create-user" 401 "$HTTP_STATUS"
+check "3.6 editor-cant-create-user" 403 "$HTTP_STATUS"
 
 # 3.7 Editor tries to view activity log (should FAIL — no view_activity)
 api GET /activity "$EDITOR_TOKEN"
 echo "  editor tries to view activity log → $HTTP_STATUS (should be 401)"
-check "3.7 editor-cant-view-activity" 401 "$HTTP_STATUS"
+check "3.7 editor-cant-view-activity" 403 "$HTTP_STATUS"
 
 # 3.8 Editor tries to update the super admin (should FAIL)
 api PUT "/users?id=$SUPER_ID" "$EDITOR_TOKEN" '{"role":"viewer"}'
 echo "  editor tries to demote super admin → $HTTP_STATUS (should be 401 — no manage_users)"
-check "3.8 editor-cant-touch-super" 401 "$HTTP_STATUS"
+check "3.8 editor-cant-touch-super" 403 "$HTTP_STATUS"
 
 echo
 echo "  → TEST 3 SUMMARY: Editor can add/edit but cannot delete or manage users."
@@ -497,16 +505,21 @@ api GET /users "$SUS_TOKEN"
 echo "  suspended-token GET /users → $HTTP_STATUS (should be 401)"
 check "4.3b token-blocked-after-suspend" 401 "$HTTP_STATUS"
 
+# A suspended account must also be denied a fresh login/session.
+api POST /auth/login "" '{"username":"willbe_suspended","password":"Password123"}'
+echo "  suspended account login → $HTTP_STATUS (should be 401)"
+check "4.3c suspended-account-cannot-login" 401 "$HTTP_STATUS"
+
 # 4.4 Role escalation attempt: editor sends a forged role='admin' in login body? Login doesn't accept that.
 #    But: an editor with a token tries to PUT /users with body {role:'admin'} on himself
 api PUT "/users?id=$EDITOR_ID" "$EDITOR_TOKEN" '{"role":"admin"}'
 echo "  editor self-promote role → $HTTP_STATUS (should be 401 — no manage_users)"
-check "4.4 editor-self-promote-blocked" 401 "$HTTP_STATUS"
+check "4.4 editor-self-promote-blocked" 403 "$HTTP_STATUS"
 
 # 4.5 Editor tries to inject permissions field on self
 api PUT "/users?id=$EDITOR_ID" "$EDITOR_TOKEN" '{"permissions":["manage_users","delete_shows"]}'
 echo "  editor sets own permissions → $HTTP_STATUS (should be 401 — no manage_users)"
-check "4.5 editor-set-perms-blocked" 401 "$HTTP_STATUS"
+check "4.5 editor-set-perms-blocked" 403 "$HTTP_STATUS"
 
 # 4.6 Try a malformed JSON body
 api POST /shows "$SUPER_TOKEN" 'this-is-not-json'
