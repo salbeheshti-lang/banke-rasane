@@ -807,7 +807,15 @@ const server = Bun.serve({
       const limit = Math.max(1, Math.min(100, parseInt(url.searchParams.get('limit') || '30', 10) || 30));
       const terms = query.split(' ').filter(Boolean).slice(0, 8);
       const offset = (page - 1) * limit;
-      const categorySql = category ? ' AND LOWER(shows.category) LIKE ?' : '';
+      // Normalize the DB-side category so it matches the user-side normalization:
+      // - ZWNJ (U+200C) and ZWJ (U+200D) → space  (so 'تاک‌شو' matches 'تاک شو')
+      // - Arabic Yeh (U+064A) → Persian Yeh (U+06CC)
+      // - Arabic Kaf (U+0643) → Persian Keheh (U+06A9)
+      // - Arabic Teh Marbuta (U+0629) → Persian Heh (U+0647)
+      // SQLite doesn't have a unicode-normalize function, so we chain REPLACE.
+      // Char codes are used to avoid encoding issues in the SQL string.
+      const categoryNormSql = `LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(shows.category, char(0x200C), ' '), char(0x200D), ' '), char(0x64A), char(0x6CC)), char(0x643), char(0x6A9)), char(0x629), char(0x647)))`;
+      const categorySql = category ? ` AND ${categoryNormSql} LIKE ?` : '';
       const categoryParams = category ? ['%' + category + '%'] : [];
       let total = 0;
       let rows = [];
@@ -834,7 +842,7 @@ const server = Bun.serve({
           conditions.push('(name LIKE ? OR category LIKE ? OR summary LIKE ? OR descriptionFa LIKE ? OR source LIKE ? OR style LIKE ? OR effects LIKE ? OR layout LIKE ? OR elements LIKE ? OR materials LIKE ? OR colors LIKE ? OR lighting LIKE ?)');
           params.push(pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern);
         }
-        if (category) { conditions.push('LOWER(category) LIKE ?'); params.push('%' + category + '%'); }
+        if (category) { conditions.push(`${categoryNormSql} LIKE ?`); params.push('%' + category + '%'); }
         const where = conditions.length ? ' WHERE ' + conditions.join(' AND ') : '';
         total = db.prepare('SELECT COUNT(*) AS total FROM shows' + where).get(...params).total;
         rows = db.prepare(`SELECT * FROM shows${where}
