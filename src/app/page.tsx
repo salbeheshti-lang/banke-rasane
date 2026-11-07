@@ -1362,7 +1362,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+   
   useEffect(() => { setIsReady(true); }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -2291,7 +2291,8 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(FEATURED_KEY);
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+      // One-time hydration of persisted featured-shows from localStorage.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- runs once on mount, guarded by `raw` check, no cascading renders.
       if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) setFeaturedNums(arr); }
     } catch {}
   }, []);
@@ -2308,10 +2309,10 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
   useEffect(() => {
     if (featuredNums.length === 0 && talkShows.length > 0) {
       const defaults = talkShows.filter(s => s.images && s.images.length > 0).slice(0, 12).map(s => s.num);
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+      // Seed defaults only once when no user selection exists yet.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- guarded by `featuredNums.length === 0`, stops re-running after first set.
       if (defaults.length > 0) saveFeatured(defaults);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [talkShows]);
 
   const scrollToCard = (idx: number) => {
@@ -2727,10 +2728,10 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
 
   useEffect(() => {
     if (selectedGenreIds.length === 0 && defaultGenreIds.length > 0) {
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+      // Default-select the top strip genres when the user hasn't picked any.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- guarded by `selectedGenreIds.length === 0`, runs once.
       setSelectedGenreIds(defaultGenreIds);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultGenreIds]);
 
   const stripGenres = useMemo(() => {
@@ -7599,16 +7600,16 @@ function SettingsReportTab({ showToast }: { showToast: (msg: string) => void }) 
         const obj = JSON.parse(saved);
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setTitle(obj.title || '');
-        // eslint-disable-next-line react-hooks/set-state-in-effect
+         
         setSubtitle(obj.subtitle || '');
       } else {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
+         
         setTitle('گزارش جامع برنامه‌های تلویزیونی');
-        // eslint-disable-next-line react-hooks/set-state-in-effect
+         
         setSubtitle('مرجع جامع برنامه‌های تلویزیونی بین‌المللی');
       }
     } catch {}
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     setLoading(false);
   }, []);
 
@@ -7910,9 +7911,9 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+   
   useEffect(() => {
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+   
     setUrl(getApiBase());
   }, []);
 
@@ -8140,9 +8141,9 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
       setLoading(false);
     }
   };
-// eslint-disable-next-line react-hooks/set-state-in-effect
+ 
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+   
   useEffect(() => { load(); }, []);
 
   const handleCreate = async () => {
@@ -8559,9 +8560,9 @@ function SettingsActivityTab({ showToast }: { showToast: (msg: string) => void }
       setLoading(false);
     }
   };
-// eslint-disable-next-line react-hooks/set-state-in-effect
+ 
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+   
   useEffect(() => { load(); }, []);
 
   const actionLabels: Record<string, string> = {

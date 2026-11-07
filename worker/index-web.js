@@ -392,7 +392,7 @@ loadShows();
 </body>
 </html>`;
 
-export default {
+const handler = {
   async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname;
@@ -411,3 +411,5 @@ export default {
     return htmlResponse(DASHBOARD_PAGE);
   },
 };
+
+export default handler;

@@ -84,7 +84,7 @@ function hasRole(user, ...roles) {
 }
 
 // Main handler
-export default {
+const handler = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname;
@@ -343,3 +343,5 @@ export default {
     }
   },
 };
+
+export default handler;
