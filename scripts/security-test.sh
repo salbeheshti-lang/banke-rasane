@@ -125,7 +125,7 @@ rm -f "$REMOTE_DB" "$REMOTE_DB-wal" "$REMOTE_DB-shm"
 
 # Positive remote bootstrap: a strong initial password must be scrypt-hashed
 # before the API begins accepting requests (hashPassword is asynchronous).
-REMOTE_TMP_SUFFIX="\${BASHPID:-$$}"
+REMOTE_TMP_SUFFIX="$-$RANDOM"
 REMOTE_SUCCESS_DB="/tmp/bankresaneh-remote-success-\${REMOTE_TMP_SUFFIX}.sqlite"
 REMOTE_SUCCESS_LOG="/tmp/bankresaneh-remote-success-\${REMOTE_TMP_SUFFIX}.log"
 REMOTE_LOGIN_FILE="/tmp/bankresaneh-remote-login-\${REMOTE_TMP_SUFFIX}.json"
