@@ -150,8 +150,9 @@ if [ "$SCENARIO" = "upgrade" ]; then
     import { createHash } from "node:crypto";
     const db = new Database("bankresaneh.sqlite");
     const sha = (s) => createHash("sha256").update(s).digest("hex");
+    const legacySalt = "legacy-salt-123";
     db.prepare("INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)").run("legacy_admin", sha("OldPass123"), "admin", "Legacy Admin");
-    db.prepare("INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)").run("legacy_editor", sha("OldPass123"), "editor", "Legacy Editor");
+    db.prepare("INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)").run("legacy_editor", legacySalt + "$" + sha(legacySalt + "OldPass123"), "editor", "Legacy Editor");
     db.prepare("INSERT INTO users (username, password_hash, role, name) VALUES (?, ?, ?, ?)").run("legacy_viewer", sha("OldPass123"), "viewer", "Legacy Viewer");
     console.log("  added 3 legacy users for upgrade scenario");
     const users = db.prepare("SELECT id, username, role, is_super_admin FROM users ORDER BY id").all();
@@ -236,6 +237,23 @@ SUPER_IS_SUPER=$(json_bool "$RESP_BODY" "isSuperAdmin")
 echo "  fresh token: ${SUPER_TOKEN:0:16}...  id=$SUPER_ID  isSuper=$SUPER_IS_SUPER"
 check "0.3 super-admin-relogin" 200 "$HTTP_STATUS"
 check "0.4 super-admin-is-super" "true" "$SUPER_IS_SUPER"
+
+# Upgrade both historical password formats without forcing a password reset.
+if [ "$SCENARIO" = "upgrade" ]; then
+  api POST /auth/login "" '{"username":"legacy_admin","password":"OldPass123"}'
+  LEGACY_ADMIN_TOKEN=$(json_get "$RESP_BODY" "token")
+  check "0.5 legacy-unsalted-sha256-login" 200 "$HTTP_STATUS"
+  api POST /auth/login "" '{"username":"legacy_editor","password":"OldPass123"}'
+  LEGACY_EDITOR_TOKEN=$(json_get "$RESP_BODY" "token")
+  check "0.6 legacy-salted-sha256-login" 200 "$HTTP_STATUS"
+  LEGACY_HASHES=$(cd "$SCRIPT_DIR/mini-services/api-service" && bun -e '
+    import { Database } from "bun:sqlite";
+    const db = new Database("bankresaneh.sqlite");
+    const rows = db.prepare("SELECT username, password_hash FROM users WHERE username IN (?, ?)").all("legacy_admin", "legacy_editor");
+    console.log(rows.length === 2 && rows.every((u) => u.password_hash.startsWith("pbkdf2$")) ? "true" : "false");
+  ')
+  check "0.7 legacy-hashes-upgraded" "true" "$LEGACY_HASHES"
+fi
 
 # ============================================================================
 # TEST 1: Super Admin — change / revoke / restore permissions
