@@ -170,7 +170,12 @@ for i in 1 2 3 4 5 6 7 8 9 10; do
   fi
   sleep 1
 done
-curl -s -o /dev/null -w "  api health: %{http_code}\n" --max-time 5 http://localhost:3002/api/health
+if ! curl -fsS -o /dev/null --max-time 5 http://localhost:3002/api/health; then
+  echo "  FATAL: API did not start. Startup log follows:"
+  cat /tmp/api.log 2>/dev/null || true
+  exit 1
+fi
+echo "  api health: 200"
 
 # Show DB state at start (so upgrade scenario is visible in the report)
 echo "  DB users at start:"
