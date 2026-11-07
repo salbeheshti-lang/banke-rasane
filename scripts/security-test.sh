@@ -141,6 +141,11 @@ if [ "$SCENARIO" = "upgrade" ]; then
     if curl -s -o /dev/null --max-time 2 http://localhost:3002/api/health; then break; fi
     sleep 1
   done
+  if ! curl -fsS -o /dev/null --max-time 5 http://localhost:3002/api/health; then
+    echo "  FATAL: API failed during upgrade seed. Startup log follows:"
+    cat /tmp/api-upgrade-seed.log 2>/dev/null || true
+    exit 1
+  fi
   # Stop the API so we can modify the DB directly
   pkill -f "bun --hot index.js" 2>/dev/null
   sleep 2
