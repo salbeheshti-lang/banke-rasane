@@ -113,7 +113,7 @@ hdr "SETUP — scenario: $SCENARIO"
 
 # Remote production deployments must not seed the public admin/admin credential.
 REMOTE_DB="/tmp/bankresaneh-remote-guard-$$.sqlite"
-REMOTE_LOG=$(timeout 10s env NODE_ENV=production BANKRESANEH_HOST=0.0.0.0 PORT=3010 DB_PATH="$REMOTE_DB" bun "$SCRIPT_DIR/mini-services/api-service/index.js" 2>&1)
+REMOTE_LOG=$(timeout 10s env -u BANKRESANEH_ADMIN_PASSWORD NODE_ENV=production BANKRESANEH_HOST=0.0.0.0 PORT=3010 DB_PATH="$REMOTE_DB" bun "$SCRIPT_DIR/mini-services/api-service/index.js" 2>&1)
 REMOTE_EXIT=$?
 if printf '%s' "$REMOTE_LOG" | grep -q "requires BANKRESANEH_ADMIN_PASSWORD"; then
   check "0.remote-default-admin-blocked" "blocked" "blocked"
