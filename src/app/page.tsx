@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
-import { api, setApiBase, getApiBase, getApiUrl, User } from '@/lib/api';
+import { api, setApiBase, getApiBase, getApiUrl, User, authHeaders } from '@/lib/api';
 import { useTheme } from '@/hooks/use-theme';
+import { useEscapeKey } from '@/hooks/use-escape-key';
 import { LangProvider, useLang } from '@/lib/i18n-context';
 
 // ============================================
@@ -34,6 +35,9 @@ interface TalkShow {
   tags?: string[];
   images?: string[];
   videos?: string[];
+  // Source of the DB-stored image BLOB ('wikipedia', 'imdb', or '' if none).
+  // Used as a cache-buster for /api/image/<num> so cards re-fetch after update.
+  imageSource?: string;
 }
 
 // A "section-specific tag" — derives a small badge label from a TalkShow field
@@ -424,11 +428,10 @@ const ISLAMIC_COUNTRIES: string[] = [
 
 // Returns the list of Islamic countries mentioned in a show's text (description, summary, country).
 function detectCountries(show: TalkShow): string[] {
-  const text = `${show.descriptionFa || ''} ${show.summary || ''} ${show.country || ''}`;
+  const text = `${show.descriptionFa || ''} ${show.summary || ''} ${show.country || ''} ${(show.tags || []).join(' ')} ${show.category || ''}`;
   const found: string[] = [];
   for (const c of ISLAMIC_COUNTRIES) {
     // Word-boundary-style match: country must not be part of a longer Persian word.
-    // We use a regex that requires non-letter / start / end on either side.
     const escaped = c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const re = new RegExp(`(^|[^\\u0600-\\u06FFa-zA-Z])${escaped}([^\\u0600-\\u06FFa-zA-Z]|$)`);
     if (re.test(text)) found.push(c);
@@ -488,6 +491,20 @@ type StoredGenre = {
   description: string;
 };
 
+/**
+ * Legacy custom genres were auto-described as "ژانر سفارشی: <name>". That
+ * placeholder must never appear on a genre card, so any description that
+ * matches the old auto-generated pattern is dropped (empty string → the card
+ * simply omits the description line). User-written descriptions pass through.
+ */
+function stripLegacyGenreDescription(description: string): string {
+  const d = (description || '').trim();
+  if (!d) return '';
+  // Matches "ژانر سفارشی:", "ژانر سفارشی :" and the exact placeholder itself.
+  if (d === 'ژانر سفارشی' || d.startsWith('ژانر سفارشی:')) return '';
+  return d;
+}
+
 function loadCustomGenres(): Genre[] {
   if (typeof window === 'undefined') return [];
   try {
@@ -503,7 +520,10 @@ function loadCustomGenres(): Genre[] {
         nameFa: g.nameFa,
         name: g.name || g.nameFa,
         color: g.color,
-        description: g.description || '',
+        // MIGRATION: older versions auto-filled the card description with
+        // "ژانر سفارشی: <name>" — strip that legacy placeholder so the card
+        // shows the real description (or nothing) instead.
+        description: stripLegacyGenreDescription(g.description || ''),
         // Match shows whose category contains the genre's Persian name
         filterFn: (s: TalkShow) => s.category.includes(g.nameFa) || (g.name ? s.category.includes(g.name) : false),
         isCustom: true,
@@ -577,14 +597,45 @@ function adjustColor(hex: string, amount: number): string {
   return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 }
 
-// Get show's real image if available, otherwise generate thumbnail from decor properties
+// Get show's real image if available, otherwise generate thumbnail from decor properties.
+//
+// Image source priority (first match wins):
+//   1. First EXTERNAL URL in show.images[] (https://...) — these are real
+//      images the user fetched from Wikipedia/IMDb via the auto-fetch feature.
+//   2. /api/image/<num> BLOB endpoint — images stored in the DB by an admin
+//      via the fetch-image endpoint.
+//   3. Gradient placeholder (no image).
+//
+// Note: show.images[] may also contain LOCAL file paths (e.g. /program-images/
+// p4_img1.png) from the original seed data. The user has stated these are
+// "incorrect movie posters, not actual decor photos", so we deliberately
+// SKIP any image that doesn't start with http(s)://.
+//
+// When the user is NOT logged in, we show only the gradient placeholder.
 function getShowThumbnail(show: TalkShow): { gradient: string; pattern: string; accent: string; image: string | null } {
-  // Check if show has real images from PDF
+  const thumb = generateThumbnailColors(show);
+  const loggedIn = typeof window !== 'undefined' && !!localStorage.getItem('bankresaneh_token');
+
+  // 1. Prefer the first EXTERNAL image URL the user fetched (Wikipedia/IMDb).
   if (show.images && show.images.length > 0) {
-    const thumb = generateThumbnailColors(show);
-    return { ...thumb, image: show.images[0] };
+    const externalUrl = show.images.find((u) => typeof u === 'string' && /^https?:\/\//i.test(u));
+    if (externalUrl) {
+      return { ...thumb, image: externalUrl };
+    }
+    // If only local paths exist (seed data), fall through to the BLOB endpoint.
   }
-  return { ...generateThumbnailColors(show), image: null };
+
+  // 2. Try the DB-backed image BLOB (may return 404 → onError hides the <img>).
+  if (loggedIn) {
+    // Use imageSource as a cache-buster so that when an image is freshly
+    // fetched, the URL changes and the browser re-requests it instead of
+    // serving a stale 404 from its internal cache.
+    const cacheBuster = show.imageSource ? encodeURIComponent(show.imageSource) : '0';
+    return { ...thumb, image: getApiUrl('api/image/' + show.num) + '?v=' + cacheBuster };
+  }
+
+  // 3. Not logged in — no image.
+  return { ...thumb, image: null };
 }
 
 function generateThumbnailColors(show: TalkShow): { gradient: string; pattern: string; accent: string } {
@@ -830,6 +881,14 @@ function HomeInner() {
   const [overrides, setOverrides] = useState<Overrides>({ added: [], edited: {}, deleted: [] });
   const [uploadedShows, setUploadedShows] = useState<number[]>([]);
   const [selectedShow, setSelectedShow] = useState<TalkShow | null>(null);
+
+  // Track "view_show" analytics whenever a show's details modal opens
+  useEffect(() => {
+    if (selectedShow) {
+      api.trackAnalytics('view_show', 'show', String(selectedShow.num), `Viewed "${selectedShow.name}"`);
+    }
+  }, [selectedShow]);
+
   const [editingShow, setEditingShow] = useState<TalkShow | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [publishShows, setPublishShows] = useState<TalkShow[] | null>(null);
@@ -878,7 +937,11 @@ function HomeInner() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydrate persisted overrides after mount to preserve the current UI behavior.
     setOverrides(saved);
     // Restore custom genres saved in a previous session.
-    setCustomGenres(loadCustomGenres());
+    const restoredGenres = loadCustomGenres();
+    setCustomGenres(restoredGenres);
+    // Persist migrated (cleaned) genres back so legacy "ژانر سفارشی:" placeholder
+    // descriptions are permanently removed from storage, not just hidden.
+    if (restoredGenres.length > 0) saveCustomGenres(restoredGenres);
     fetch('/talk-shows-data.json')
       .then(r => r.json())
       .then((data: TalkShow[]) => {
@@ -1002,6 +1065,22 @@ function HomeInner() {
     showToast(`ژانر «${g.nameFa}» اضافه شد`);
   };
 
+  // Edit an existing custom Genre (updates state + localStorage).
+  const handleEditGenre = (g: Genre) => {
+    const next = customGenres.map(x => (x.id === g.id ? g : x));
+    setCustomGenres(next);
+    saveCustomGenres(next);
+    showToast(`ژانر «${g.nameFa}» به‌روزرسانی شد`);
+  };
+
+  // Delete a custom Genre (removes from state + localStorage).
+  const handleDeleteGenre = (id: string) => {
+    const next = customGenres.filter(x => x.id !== id);
+    setCustomGenres(next);
+    saveCustomGenres(next);
+    showToast('ژانر حذف شد');
+  };
+
   const handleLogout = async () => {
     try { await api.logout(); } catch {}
     setCurrentUser(null);
@@ -1078,7 +1157,7 @@ function HomeInner() {
       />
 
       <main key={currentView} className={`animate-view-enter ${isMobile ? 'p-4 pt-20 pb-28' : 'p-8 pt-24'}`}>
-        {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} onShowClick={setSelectedShow} />}
+        {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} onEditGenre={handleEditGenre} onDeleteGenre={handleDeleteGenre} onShowClick={setSelectedShow} />}
         {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} onExport={(shows, format, meta) => setExportPreview({ shows, format, ...meta })} />}
@@ -1111,8 +1190,14 @@ function HomeInner() {
           onClose={() => setSelectedShow(null)}
           onEdit={(s) => { setSelectedShow(null); setEditingShow(s); setPresetGenre(null); setPresetCategory(undefined); navigate('add'); }}
           onDelete={handleDeleteShow}
-          onPublish={(s) => setPublishShows([s])}
-          onExport={(s, fmt) => setExportPreview({ shows: [s], format: fmt })}
+          onPublish={(s) => {
+            api.trackAnalytics('publish_show', 'show', String(s.num), `Published "${s.name}"`);
+            setPublishShows([s]);
+          }}
+          onExport={(s, fmt) => {
+            api.trackAnalytics(fmt === 'pdf' ? 'export_pdf' : 'export_excel', 'show', String(s.num), `Exported "${s.name}" as ${fmt.toUpperCase()}`);
+            setExportPreview({ shows: [s], format: fmt });
+          }}
           isUploaded={uploadedShows.includes(selectedShow.num)}
           canEdit={canEdit}
           onSwapShow={(s) => setSelectedShow(s)}
@@ -1136,7 +1221,7 @@ function HomeInner() {
       {showBotConfig && (
         <BotConfigModal
           onClose={() => setShowBotConfig(false)}
-          onSaved={() => { setShowBotConfig(false); showToast('تنظیمات ربات ذخیره شد'); }}
+          onSaved={() => { setShowBotConfig(false); showToast(t('publish.saved')); }}
         />
       )}
 
@@ -1147,6 +1232,7 @@ function HomeInner() {
           onClose={() => setShowSettings(false)}
           showToast={showToast}
           onLogout={handleLogout}
+          onPasswordChanged={(updatedUser) => { setCurrentUser(updatedUser); setShowSettings(false); }}
         />
       )}
 
@@ -1213,6 +1299,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setIsReady(true); }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1276,7 +1363,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
               dir="ltr"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="admin"
+              placeholder={t('login.usernamePlaceholder') || 'نام کاربری خود را وارد کنید'}
               disabled={loading}
               style={{
                 width: '100%',
@@ -1307,7 +1394,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 dir="ltr"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••"
+                placeholder={t('login.passwordPlaceholder') || 'رمز عبور خود را وارد کنید'}
                 disabled={loading}
                 style={{
                   width: '100%',
@@ -1394,10 +1481,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
 
         <div className="mt-10 text-center">
           <p style={{ color: 'rgba(134, 239, 172, 0.6)' }} className="text-xs tracking-wider">
-            نسخه ۲.۰.۰ • بانک اطلاعاتی برنامه‌های تلویزیونی
-          </p>
-          <p style={{ color: 'rgba(134, 239, 172, 0.45)' }} className="text-xs mt-2">
-            نام کاربری پیش‌فرض: <span dir="ltr">admin</span> / رمز: <span dir="ltr">admin</span>
+            نسخه ۲.۰.۰ • مرجع جامع برنامه‌های تلویزیونی بین‌المللی
           </p>
         </div>
       </div>
@@ -2144,6 +2228,7 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(FEATURED_KEY);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
       if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) setFeaturedNums(arr); }
     } catch {}
   }, []);
@@ -2160,6 +2245,7 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
   useEffect(() => {
     if (featuredNums.length === 0 && talkShows.length > 0) {
       const defaults = talkShows.filter(s => s.images && s.images.length > 0).slice(0, 12).map(s => s.num);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
       if (defaults.length > 0) saveFeatured(defaults);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2280,7 +2366,9 @@ function UserProfileModal({ user, onClose, showToast }: {
   onClose: () => void;
   showToast: (msg: string) => void;
 }) {
+  const { t } = useLang();
   const [editing, setEditing] = useState(false);
+  useEscapeKey(onClose, editing); // don't close on Escape while editing
   const [name, setName] = useState(user.name || '');
   const [phone, setPhone] = useState(user.phone || '');
   const [jobTitle, setJobTitle] = useState(user.jobTitle || '');
@@ -2299,13 +2387,13 @@ function UserProfileModal({ user, onClose, showToast }: {
         body: JSON.stringify({ name, phone, jobTitle, deputy, avatar }),
       });
       if (res.ok) {
-        showToast('پروفایل بروزرسانی شد');
+        showToast(t('settings.profile.saved'));
         setEditing(false);
       } else {
-        showToast('خطا در بروزرسانی');
+        showToast(t('toast.error'));
       }
     } catch {
-      showToast('خطا در ارتباط با سرور');
+      showToast(t('toast.networkError'));
     }
     setSaving(false);
   };
@@ -2519,7 +2607,7 @@ function ContactRow({ icon, label, value, editing, onChange, placeholder, dir }:
 // ============================================
 // DASHBOARD
 // ============================================
-function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isAdmin, genres = GENRES, onAddGenre, onShowClick }: {
+function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isAdmin, genres = GENRES, onAddGenre, onEditGenre, onDeleteGenre, onShowClick }: {
   onGenreClick: (g: Genre) => void;
   talkShows: TalkShow[];
   uploadedCount: number;
@@ -2528,10 +2616,14 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
   isAdmin?: boolean;
   genres?: Genre[];
   onAddGenre?: (g: Genre) => void;
+  onEditGenre?: (g: Genre) => void;
+  onDeleteGenre?: (id: string) => void;
   onShowClick?: (s: TalkShow) => void;
 }) {
   const { t, lang } = useLang();
   const [showAddGenre, setShowAddGenre] = useState(false);
+  const [editingGenre, setEditingGenre] = useState<Genre | null>(null);
+  const [deletingGenre, setDeletingGenre] = useState<Genre | null>(null);
 
   // ----- Analytics computation -----
   // Build ranked genre list with counts and percentages.
@@ -2572,6 +2664,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
 
   useEffect(() => {
     if (selectedGenreIds.length === 0 && defaultGenreIds.length > 0) {
+  // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedGenreIds(defaultGenreIds);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2872,17 +2965,60 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {genres.map((g, idx) => {
           const count = talkShows.filter(g.filterFn).length;
+          const canManage = isAdmin && g.isCustom && onEditGenre && onDeleteGenre;
           return (
             <button
               key={g.id}
               onClick={() => onGenreClick(g)}
-              className="premium-genre-card animate-card-enter text-right"
+              className="premium-genre-card animate-card-enter text-right relative"
               style={{
                 animationDelay: `${idx * 50}ms`,
                 ['--genre-color' as string]: g.color,
                 ['--card-index' as string]: idx,
               }}
             >
+              {canManage && (
+                <div className="absolute top-3 left-3 z-10 flex items-center gap-1">
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => { e.stopPropagation(); setEditingGenre(g); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); setEditingGenre(g); } }}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center transition-all"
+                    title="ویرایش ژانر"
+                    aria-label="ویرایش ژانر"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.18)',
+                      border: '1px solid rgba(255, 255, 255, 0.3)',
+                      color: '#ffffff',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </span>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => { e.stopPropagation(); setDeletingGenre(g); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); setDeletingGenre(g); } }}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center transition-all"
+                    title="حذف ژانر"
+                    aria-label="حذف ژانر"
+                    style={{
+                      background: 'rgba(220, 38, 38, 0.25)',
+                      border: '1px solid rgba(220, 38, 38, 0.45)',
+                      color: '#fecaca',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </span>
+                </div>
+              )}
               <div className="flex items-start justify-between mb-4">
                 <div
                   className="w-14 h-14 rounded-2xl flex items-center justify-center"
@@ -2905,7 +3041,9 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                 </div>
               </div>
               <h3 className="font-bold text-lg mb-1" style={{ color: '#ffffff' }}>{g.nameFa}</h3>
-              <p className="text-sm mt-3" style={{ color: 'rgba(255, 255, 255, 0.75)' }}>{g.description}</p>
+              {g.description ? (
+                <p className="text-sm mt-3" style={{ color: 'rgba(255, 255, 255, 0.75)' }}>{g.description}</p>
+              ) : null}
               <div className="mt-4 flex items-center text-sm font-bold" style={{ color: g.color }}>
                 مشاهده و جستجو
                 <svg className="w-4 h-4 mr-1 rtl-flip" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2921,6 +3059,23 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
         <AddGenreModal
           onClose={() => setShowAddGenre(false)}
           onSave={(g) => { onAddGenre(g); setShowAddGenre(false); }}
+        />
+      )}
+
+      {editingGenre && onEditGenre && (
+        <AddGenreModal
+          editingGenre={editingGenre}
+          onClose={() => setEditingGenre(null)}
+          onSave={(g) => { onEditGenre(g); setEditingGenre(null); }}
+        />
+      )}
+
+      {deletingGenre && onDeleteGenre && (
+        <DeleteGenreConfirm
+          genre={deletingGenre}
+          count={talkShows.filter(deletingGenre.filterFn).length}
+          onClose={() => setDeletingGenre(null)}
+          onConfirm={() => { onDeleteGenre(deletingGenre.id); setDeletingGenre(null); }}
         />
       )}
     </>
@@ -3082,6 +3237,8 @@ function ProgramsView({
   const [filterViewers, setFilterViewers] = useState('all');
   const [filterStyle, setFilterStyle] = useState('all');
   const [islamicOnly, setIslamicOnly] = useState(false);
+  // How many shows to display — starts at 60, increases by 60 when user clicks "بیشتر"
+  const [displayCount, setDisplayCount] = useState(60);
 
   const filteredShows = useMemo(() => {
     let shows = [...talkShows];
@@ -3091,16 +3248,27 @@ function ProgramsView({
     if (filterStyle !== 'all') shows = shows.filter(s => s.style === filterStyle);
     if (islamicOnly) shows = shows.filter(s => detectCountries(s).length > 0);
     if (search) {
-      const q = search.toLowerCase();
-      // Section-specific search: use genre.searchFields if defined, else default to name+summary+category.
-      const fields: (keyof TalkShow)[] = genre?.searchFields || ['name', 'summary', 'category'];
+      // Normalize search query: unify Arabic/Persian variants + remove ZWNJ
+      const normalizeFa = (text: string) =>
+        text
+          .replace(/\u064a/g, '\u06cc')  // ي (Arabic) → ی (Persian)
+          .replace(/\u0643/g, '\u06a9')  // ك (Arabic) → ک (Persian)
+          .replace(/\u0629/g, '\u0647')  // ة (Taa Marbuta) → ه
+          .replace(/\u200c/g, '')         // remove ZWNJ
+          .replace(/\u200f/g, '')         // remove RLM
+          .toLowerCase()
+          .trim();
+
+      const q = normalizeFa(search);
+      // Section-specific search: use genre.searchFields if defined, else search broadly.
+      const fields: (keyof TalkShow)[] = genre?.searchFields || ['name', 'summary', 'category', 'descriptionFa', 'materials', 'style', 'elements', 'colors'];
       shows = shows.filter(s => {
         for (const f of fields) {
           const v = s[f];
           if (typeof v === 'string') {
-            if (v.toLowerCase().includes(q) || v.includes(search)) return true;
+            if (normalizeFa(v).includes(q)) return true;
           } else if (Array.isArray(v)) {
-            if (v.some(item => String(item).toLowerCase().includes(q) || String(item).includes(search))) return true;
+            if (v.some(item => normalizeFa(String(item)).includes(q))) return true;
           }
         }
         return false;
@@ -3111,6 +3279,7 @@ function ProgramsView({
 
   const handleUploadSelected = () => {
     const selectedShows = filteredShows.filter(s => selectedIds.includes(s.num));
+    selectedShows.forEach(s => api.trackAnalytics('publish_show', 'show', String(s.num), `Bulk published "${s.name}"`));
     onPublish(selectedShows);
     setSelectedIds([]);
     setSelectionMode(false);
@@ -3118,6 +3287,7 @@ function ProgramsView({
 
   const handlePDF = () => {
     const selectedShows = filteredShows.filter(s => selectedIds.includes(s.num));
+    selectedShows.forEach(s => api.trackAnalytics('export_pdf', 'show', String(s.num), `Bulk PDF "${s.name}"`));
     onExport(selectedShows, 'pdf');
     setSelectedIds([]);
     setSelectionMode(false);
@@ -3125,6 +3295,7 @@ function ProgramsView({
 
   const handleExcel = () => {
     const selectedShows = filteredShows.filter(s => selectedIds.includes(s.num));
+    selectedShows.forEach(s => api.trackAnalytics('export_excel', 'show', String(s.num), `Bulk Excel "${s.name}"`));
     onExport(selectedShows, 'excel');
     setSelectedIds([]);
     setSelectionMode(false);
@@ -3411,11 +3582,11 @@ function ProgramsView({
         )}
       </div>
 
-      {/* Genre breadcrumb bar — professional scrollable chips */}
+      {/* Genre breadcrumb bar — elegant pill chips with color identity dots */}
       {genre && genres && genres.length > 0 && (
         <div className="mb-4">
           <div
-            className="flex items-center gap-2 overflow-x-auto pb-2 pt-1"
+            className="flex items-center gap-1.5 overflow-x-auto pb-2 pt-1"
             style={{
               scrollbarWidth: 'thin',
               scrollbarColor: 'rgba(255,255,255,0.3) transparent',
@@ -3431,39 +3602,68 @@ function ProgramsView({
                 <button
                   key={g.id}
                   onClick={() => onGenreSelect?.(g)}
-                  className="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap"
+                  className="group flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap"
                   style={isActive ? {
-                    background: g.color,
+                    // Active: solid genre color with gradient + glow
+                    background: `linear-gradient(135deg, ${g.color} 0%, rgba(${rgb}, 0.85) 100%)`,
                     color: '#ffffff',
-                    border: `1px solid ${g.color}`,
-                    boxShadow: `0 4px 14px ${g.color}66`,
+                    border: `1px solid rgba(${rgb}, 0.6)`,
+                    boxShadow: `0 4px 16px ${g.color}66, 0 0 0 2px rgba(${rgb}, 0.15), inset 0 1px 0 rgba(255,255,255,0.25)`,
                     scrollSnapAlign: 'center',
                   } : {
-                    // Liquid glass — white text, subtle white bg, genre color on hover
-                    background: 'rgba(255, 255, 255, 0.10)',
+                    // Rest: dark frosted glass with a colored dot indicator
+                    background: 'rgba(0, 0, 0, 0.35)',
                     color: 'rgba(255, 255, 255, 0.9)',
-                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
                     backdropFilter: 'blur(12px) saturate(140%)',
                     WebkitBackdropFilter: 'blur(12px) saturate(140%)',
+                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
                     scrollSnapAlign: 'center',
                   }}
                   onMouseEnter={(e) => {
                     if (!isActive) {
-                      e.currentTarget.style.background = g.color;
-                      e.currentTarget.style.borderColor = g.color;
+                      // Hover: subtle color tint + glow, with the genre's own color bleeding through
+                      e.currentTarget.style.background = `linear-gradient(135deg, rgba(${rgb}, 0.35) 0%, rgba(${rgb}, 0.15) 100%)`;
+                      e.currentTarget.style.borderColor = `rgba(${rgb}, 0.5)`;
                       e.currentTarget.style.color = '#ffffff';
-                      e.currentTarget.style.boxShadow = `0 4px 14px ${g.color}66`;
+                      e.currentTarget.style.boxShadow = `0 4px 16px ${g.color}40, 0 0 0 2px rgba(${rgb}, 0.1)`;
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      // Make the dot brighter on hover
+                      const dot = e.currentTarget.querySelector('.genre-dot') as HTMLElement | null;
+                      if (dot) {
+                        dot.style.transform = 'scale(1.3)';
+                        dot.style.boxShadow = `0 0 8px ${g.color}`;
+                      }
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!isActive) {
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.10)';
-                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.25)';
+                      e.currentTarget.style.background = 'rgba(0, 0, 0, 0.35)';
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
                       e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)';
-                      e.currentTarget.style.boxShadow = 'none';
+                      e.currentTarget.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      const dot = e.currentTarget.querySelector('.genre-dot') as HTMLElement | null;
+                      if (dot) {
+                        dot.style.transform = 'scale(1)';
+                        dot.style.boxShadow = 'none';
+                      }
                     }
                   }}
                 >
+                  {/* Color identity dot — shows the genre's color at rest, glows on hover */}
+                  <span
+                    className="genre-dot inline-block rounded-full transition-all"
+                    style={isActive ? {
+                      width: '6px', height: '6px',
+                      background: '#ffffff',
+                      boxShadow: '0 0 6px rgba(255,255,255,0.8)',
+                    } : {
+                      width: '6px', height: '6px',
+                      background: g.color,
+                      boxShadow: `0 0 4px rgba(${rgb}, 0.5)`,
+                    }}
+                  />
                   {g.nameFa}
                 </button>
               );
@@ -3478,7 +3678,7 @@ function ProgramsView({
         </div>
       ) : view === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredShows.slice(0, 60).map(s => (
+          {filteredShows.slice(0, displayCount).map(s => (
             <ProgramCard
               key={s.num}
               show={s}
@@ -3496,7 +3696,7 @@ function ProgramsView({
         </div>
       ) : (
         <div className="space-y-2">
-          {filteredShows.slice(0, 60).map(s => (
+          {filteredShows.slice(0, displayCount).map(s => (
             <ProgramListRow
               key={s.num}
               show={s}
@@ -3514,10 +3714,29 @@ function ProgramsView({
         </div>
       )}
 
-      {filteredShows.length > 60 && (
-        <div className="text-center mt-8" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>
-          <p className="text-sm">
-            {t('programs.showing60')} {filteredShows.length.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US')} • {lang === 'fa' ? 'برای مشاهده همه، جستجو را فیلتر کنید' : 'To view all, filter your search'}
+      {filteredShows.length > displayCount && (
+        <div className="text-center mt-8">
+          <button
+            onClick={() => setDisplayCount(c => c + 60)}
+            className="px-6 py-3 rounded-xl text-sm font-bold transition-all"
+            style={{
+              background: 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)',
+              color: '#ffffff',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: '0 4px 14px rgba(13, 124, 74, 0.3)',
+              cursor: 'pointer',
+            }}
+          >
+            {lang === 'fa'
+              ? `نمایش بیشتر (${(filteredShows.length - displayCount).toLocaleString('fa-IR')} برنامه باقی‌مانده)`
+              : `Show more (${filteredShows.length - displayCount} remaining)`
+            }
+          </button>
+          <p className="text-xs mt-2" style={{ color: 'rgba(244, 255, 255, 0.6)' }}>
+            {lang === 'fa'
+              ? `نمایش ${Math.min(displayCount, filteredShows.length).toLocaleString('fa-IR')} از ${filteredShows.length.toLocaleString('fa-IR')} برنامه`
+              : `Showing ${Math.min(displayCount, filteredShows.length)} of ${filteredShows.length}`
+            }
           </p>
         </div>
       )}
@@ -3562,8 +3781,35 @@ function ProgramCard({ show, selectionMode, selected, isUploaded, onToggle, onCl
               src={thumb.image}
               alt={show.name}
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              onError={(e) => {
+                // Image failed to load (likely 404 from API) — fall back to the gradient placeholder.
+                // Hide the <img> so the parent's background gradient shows through.
+                (e.target as HTMLImageElement).style.display = 'none';
+                // Also show the show name overlay so users still see what the program is.
+                const parent = (e.target as HTMLImageElement).parentElement;
+                if (parent) {
+                  const overlay = parent.querySelector('.fallback-name-overlay') as HTMLElement | null;
+                  if (overlay) overlay.style.display = 'flex';
+                }
+              }}
             />
+            {/* Fallback overlay (hidden by default, shown if image fails to load) */}
+            <div className="fallback-name-overlay absolute inset-0 items-center justify-center p-4" style={{ display: 'none' }}>
+              <div className="text-center">
+                <div
+                  className="text-2xl font-black mb-1"
+                  style={{ color: 'white', textShadow: '0 2px 8px rgba(0,0,0,0.5)', direction: 'rtl', textAlign: 'center' }}
+                >
+                  {show.name.length > 25 ? show.name.substring(0, 23) + '...' : show.name}
+                </div>
+                <div
+                  className="text-xs font-medium px-2 py-0.5 rounded-full inline-block"
+                  style={{ background: 'rgba(255,255,255,0.25)', color: 'white', backdropFilter: 'blur(8px)' }}
+                >
+                  {show.style}
+                </div>
+              </div>
+            </div>
             {/* Dark gradient at bottom so the name is readable on the image */}
             <div className="absolute inset-x-0 bottom-0" style={{ background: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.8) 100%)', padding: '24px 12px 8px' }}>
               <div className="text-sm font-bold" style={{ color: 'white', textShadow: '0 1px 4px rgba(0,0,0,0.8)', direction: 'rtl', textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -3860,8 +4106,12 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
   allShows?: TalkShow[];
   onSwapShow?: (s: TalkShow) => void;
 }) {
+  const { t } = useLang();
   const thumb = getShowThumbnail(show);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Close on Escape — disabled while the delete-confirmation dialog is open
+  // so the user must explicitly choose "بله" or "خیر".
+  useEscapeKey(onClose, confirmDelete);
   // Related programs computed from the full list — capped at 6.
   const related = useMemo(
     () => allShows.length > 0 ? findRelated(show, allShows, 6) : [],
@@ -4252,6 +4502,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
   presetGenre?: Genre | null;
   genres?: Genre[];
 }) {
+  const { t } = useLang();
   const [form, setForm] = useState<Partial<TalkShow>>(
     editingShow || {
       num: Math.max(0, ...talkShows.map(s => s.num)) + 1,
@@ -4278,17 +4529,73 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
   );
   const [fetchUrl, setFetchUrl] = useState('');
   const [fetching, setFetching] = useState(false);
+  const [translating, setTranslating] = useState(false);
+  const [translatePreview, setTranslatePreview] = useState<Record<string, string> | null>(null);
+
+  // Translate text fields to Persian via the /api/translate endpoint.
+  // The endpoint is server-side only (the SDK key never reaches the client).
+  // We show a PREVIEW first — the user can review, edit, or discard before
+  // the translation is applied to the form.
+  const handleTranslate = async () => {
+    setTranslating(true);
+    setTranslatePreview(null);
+    try {
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        // Permission-guarded route (add_shows/edit_shows) — without the Bearer
+        // token the server always replied 403 and translation silently failed.
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ fields: form }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        showToast(`خطای ترجمه: ${data.error}`);
+      } else if (data.translations) {
+        // Only show fields that actually changed (different from original).
+        const changed: Record<string, string> = {};
+        for (const [k, v] of Object.entries(data.translations as Record<string,string>)) {
+          if (v !== (form as Record<string, unknown>)[k]) changed[k] = v;
+        }
+        if (Object.keys(changed).length === 0) {
+          showToast('متن از قبل فارسی است — چیزی برای ترجمه نیست.');
+        } else {
+          setTranslatePreview(changed);
+          showToast(`${Object.keys(changed).length} فیلد ترجمه شد — پیش‌نمایش را بررسی کنید.`);
+        }
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'خطای ناشناخته';
+      showToast('خطا در ارتباط با سرویس ترجمه: ' + msg);
+    } finally {
+      setTranslating(false);
+    }
+  };
+
+  const applyTranslation = () => {
+    if (!translatePreview) return;
+    setForm((prev) => ({ ...prev, ...translatePreview }));
+    setTranslatePreview(null);
+    showToast('ترجمه اعمال شد. برای ذخیره، دکمه ذخیره را بزنید.');
+  };
+
+  const cancelTranslation = () => {
+    setTranslatePreview(null);
+    showToast('ترجمه لغو شد — هیچ تغییری اعمال نشد.');
+  };
 
   const handleAutoFetch = async () => {
     if (!fetchUrl) {
-      showToast('لینک IMDb یا ویکی‌پدیا را وارد کنید');
+      showToast(t('add.autoFetchNoUrl'));
       return;
     }
     setFetching(true);
     try {
       const res = await fetch('/api/fetch-show-info', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        // Permission-guarded route (edit_shows) — without the Bearer token the
+        // server always replied 403, so fetching info/image from a link
+        // (IMDb/Wikipedia) never added anything to the form.
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ url: fetchUrl }),
       });
       const data = await res.json();
@@ -4297,36 +4604,42 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       } else {
         const info = data.info;
         const updated = { ...form };
+        // Only fill fields that are CURRENTLY EMPTY — never overwrite data
+        // the user has already entered or curated. This is the fix for the
+        // user's report: "وقتی با ویکی پدیا عکس رو اضافه کردم بقیه توضیحاتم
+        // تغییر کرده" (when I added the image, my other descriptions changed).
         if (info.title && !updated.name) updated.name = info.title;
-        if (info.description) {
+        if (info.description && !updated.descriptionFa) {
           updated.descriptionFa = info.description;
-          updated.summary = info.description.substring(0, 200);
+          if (!updated.summary) updated.summary = info.description.substring(0, 200);
         }
-        // Push auto-fetched image into images[] array (up to 8 total)
+        // Push auto-fetched image into images[] array (up to 8 total).
+        // This is additive — never removes existing images.
         if (info.image) {
           const existing = updated.images || [];
           if (!existing.includes(info.image) && existing.length < 8) {
             updated.images = [...existing, info.image];
           }
         }
-        if (info.rating) updated.colors = `امتیاز: ${info.rating}`;
-        if (info.genres) updated.category = info.genres;
-        if (info.duration) updated.elements = info.duration;
-        if (fetchUrl.includes('imdb.com')) updated.imdb = fetchUrl;
-        if (fetchUrl.includes('wikipedia.org')) updated.wikipedia = fetchUrl;
-        // Auto-generate YouTube search link
-        if (updated.name) {
+        // Only fill these if currently empty — don't clobber curated data.
+        if (info.rating && !updated.colors) updated.colors = `امتیاز: ${info.rating}`;
+        if (info.genres && !updated.category) updated.category = info.genres;
+        if (info.duration && !updated.elements) updated.elements = info.duration;
+        if (fetchUrl.includes('imdb.com') && !updated.imdb) updated.imdb = fetchUrl;
+        if (fetchUrl.includes('wikipedia.org') && !updated.wikipedia) updated.wikipedia = fetchUrl;
+        // Auto-generate YouTube search link only if not already set.
+        if (updated.name && !updated.youtube) {
           updated.youtube = `https://www.youtube.com/results?search_query=${encodeURIComponent(updated.name)}`;
         }
-        // Auto-generate social post
-        if (updated.name) {
+        // Auto-generate social post only if not already set.
+        if (updated.name && !updated.socialPost) {
           updated.socialPost = `🎬 ${updated.name}\n\n📝 ${updated.descriptionFa || ''}\n\n#بانک_رسانه #تاک_شو`;
         }
         setForm(updated);
-        showToast('اطلاعات با موفقیت دریافت شد');
+        showToast(t('add.autoFetchSuccess'));
       }
     } catch (e) {
-      showToast('خطا در دریافت اطلاعات');
+      showToast(t('add.autoFetchError'));
     } finally {
       setFetching(false);
     }
@@ -4334,29 +4647,43 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
 
   const handleSubmit = () => {
     if (!form.name) {
-      showToast('نام برنامه الزامی است');
+      showToast(t('add.field.required'));
       return;
     }
+    // Create a clean copy — never mutate state directly.
+    const finalForm = { ...form };
+
     // Auto-generate links if not set
-    if (!form.youtube && form.name) {
-      form.youtube = `https://www.youtube.com/results?search_query=${encodeURIComponent(form.name)}`;
+    if (!finalForm.youtube && finalForm.name) {
+      finalForm.youtube = `https://www.youtube.com/results?search_query=${encodeURIComponent(finalForm.name)}`;
     }
-    if (!form.imdb && form.name) {
-      form.imdb = `https://www.imdb.com/find?q=${encodeURIComponent(form.name)}`;
+    if (!finalForm.imdb && finalForm.name) {
+      finalForm.imdb = `https://www.imdb.com/find?q=${encodeURIComponent(finalForm.name)}`;
     }
-    if (!form.wikipedia && form.name) {
-      form.wikipedia = `https://fa.wikipedia.org/w/index.php?search=${encodeURIComponent(form.name)}`;
+    if (!finalForm.wikipedia && finalForm.name) {
+      finalForm.wikipedia = `https://fa.wikipedia.org/w/index.php?search=${encodeURIComponent(finalForm.name)}`;
     }
-    if (!form.descriptionFa) {
-      form.descriptionFa = 'برنامهٔ گفتگومی تلویزیونی با مصاحبه، بحث و بررسی موضوعات متنوع.';
+    if (!finalForm.descriptionFa) {
+      finalForm.descriptionFa = 'برنامهٔ گفتگومی تلویزیونی با مصاحبه، بحث و بررسی موضوعات متنوع.';
     }
-    if (!form.socialPost) {
-      form.socialPost = `🎬 ${form.name}\n\n📝 ${form.descriptionFa}\n\n#بانک_رسانه #تاک_شو`;
+    if (!finalForm.socialPost) {
+      finalForm.socialPost = `🎬 ${finalForm.name}
+
+📝 ${finalForm.descriptionFa}
+
+#بانک_رسانه #تاک‌شو`;
     }
+    // Ensure images and tags arrays exist
+    if (!finalForm.images) finalForm.images = [];
+    if (!finalForm.tags) finalForm.tags = [];
+
+    // Update state with the final form
+    setForm(finalForm);
+
     if (editingShow) {
-      onSave(form as TalkShow, true);
+      onSave(finalForm as TalkShow, true);
     } else {
-      onSave(form as TalkShow, false);
+      onSave(finalForm as TalkShow, false);
     }
     onDone();
   };
@@ -4407,6 +4734,84 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
               {fetching ? '⏳ در حال دریافت...' : '⚡ دریافت'}
             </button>
           </div>
+        </div>
+
+        {/* 🌐 Translate to Persian — server-side LLM translation.
+            Shows a preview before applying. Original title, URLs, and other
+            protected fields are preserved by the API. */}
+        <div
+          className="p-4 rounded-2xl"
+          style={{ background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.25)' }}
+        >
+          <h4 className="font-bold mb-2" style={{ color: '#f0fdf4' }}>🌐 ترجمه هوشمند به فارسی</h4>
+          <p className="text-xs mb-3" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>
+            توضیحات، خلاصه و سایر فیلدهای متنی برنامه به فارسی روان ترجمه می‌شوند. عنوان اصلی و لینک‌ها تغییر نمی‌کنند. نتیجه را قبل از ذخیره بررسی می‌کنید.
+          </p>
+          <button
+            onClick={handleTranslate}
+            disabled={translating}
+            className="btn-enter-premium"
+            style={{ padding: '10px 24px', fontSize: '14px', whiteSpace: 'nowrap' }}
+          >
+            {translating ? '⏳ در حال ترجمه...' : '🌐 ترجمه به فارسی'}
+          </button>
+
+          {/* Preview dialog — shown after translation completes */}
+          {translatePreview && (
+            <div
+              className="mt-4 p-4 rounded-xl"
+              style={{ background: 'rgba(0, 0, 0, 0.3)', border: '1px solid rgba(99, 102, 241, 0.4)' }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h5 className="font-bold text-sm" style={{ color: '#c7d2fe' }}>
+                  📝 پیش‌نمایش ترجمه ({Object.keys(translatePreview).length} فیلد)
+                </h5>
+                <div className="flex gap-2">
+                  <button
+                    onClick={cancelTranslation}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                    style={{ background: 'rgba(255, 255, 255, 0.1)', color: '#f0fdf4' }}
+                  >
+                    لغو
+                  </button>
+                  <button
+                    onClick={applyTranslation}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
+                    style={{ background: 'rgba(99, 102, 241, 0.8)', color: 'white' }}
+                  >
+                    ✓ اعمال ترجمه
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {Object.entries(translatePreview).map(([field, translated]) => {
+                  const original = (form as Record<string, unknown>)[field];
+                  const fieldName = field === 'summary' ? 'خلاصه' :
+                                    field === 'descriptionFa' ? 'توضیحات فارسی' :
+                                    field === 'elements' ? 'عناصر' :
+                                    field === 'materials' ? 'مواد' :
+                                    field === 'colors' ? 'رنگ‌ها' :
+                                    field === 'lighting' ? 'نورپردازی' :
+                                    field === 'layout' ? 'چیدمان' :
+                                    field === 'style' ? 'سبک' :
+                                    field === 'effects' ? 'افکت‌ها' :
+                                    field === 'viewers' ? 'تماشاگران' :
+                                    field === 'size' ? 'سایز' : field;
+                  return (
+                    <div key={field} className="p-2 rounded-lg" style={{ background: 'rgba(255, 255, 255, 0.05)' }}>
+                      <div className="text-xs font-bold mb-1" style={{ color: '#a5b4fc' }}>{fieldName}</div>
+                      <div className="text-xs mb-1" style={{ color: 'rgba(244, 255, 255, 0.5)' }}>
+                        <span className="opacity-60">اصلی:</span> {String(original || '').substring(0, 80)}{String(original || '').length > 80 ? '...' : ''}
+                      </div>
+                      <div className="text-xs" style={{ color: '#f0fdf4' }}>
+                        <span className="opacity-60">ترجمه:</span> {translated.substring(0, 80)}{translated.length > 80 ? '...' : ''}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         <FormField label="نام برنامه *" value={form.name || ''} onChange={v => setForm({ ...form, name: v })} placeholder="مثلاً: BBC Breakfast" />
@@ -4626,6 +5031,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
   showToast: (msg: string) => void;
 }) {
   const [urlInput, setUrlInput] = useState('');
+  const [failedUrls, setFailedUrls] = useState<Set<number>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Keep a ref to the latest images array so async FileReader callbacks always see current state
   const imagesRef = useRef<string[]>(images);
@@ -4633,17 +5039,44 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
   imagesRef.current = images;
   const MAX_IMAGES = 8;
 
+  // Heuristic: detect whether a URL points to a direct image file (vs. an HTML
+  // page like a Wikipedia article URL). The user often pastes a Wikipedia/
+  // IMDb article URL expecting auto-extraction — warn them to use the
+  // "دریافت خودکار" box above for that, or to paste a direct image link here.
+  function looksLikeDirectImage(url: string): boolean {
+    const u = url.toLowerCase();
+    // data: URLs are always valid images (base64-encoded).
+    if (u.startsWith('data:image/')) return true;
+    // Direct image extensions in the path (before any query/hash).
+    try {
+      const path = new URL(url).pathname.toLowerCase();
+      if (/\.(jpe?g|png|gif|webp|bmp|svg|avif|ico)(\?|#|$)/.test(path)) return true;
+    } catch {}
+    // Known image hosts that serve images directly even without extension.
+    if (/upload\.wikimedia\.org|\.wikimedia\.org|\.wpimg\.cn|\.imdb-img|m\.media-amazon\.com/.test(u)) return true;
+    return false;
+  }
+
   const addUrl = () => {
-    if (!urlInput.trim()) return;
+    const trimmed = urlInput.trim();
+    if (!trimmed) return;
     if (images.length >= MAX_IMAGES) {
       showToast(`حداکثر ${MAX_IMAGES.toLocaleString('fa-IR')} تصویر مجاز است`);
       return;
     }
-    if (images.includes(urlInput.trim())) {
+    if (images.includes(trimmed)) {
       showToast('این تصویر قبلاً اضافه شده');
       return;
     }
-    onChange([...images, urlInput.trim()]);
+    // Warn (but still allow) if the URL doesn't look like a direct image.
+    // Many users paste a Wikipedia article URL here expecting the system to
+    // extract the cover image (which is what the auto-fetch box above does).
+    if (!looksLikeDirectImage(trimmed)) {
+      showToast('⚠ این لینک مستقیم تصویر نیست — برای استخراج از صفحهٔ ویکی‌پدیا/IMDb از کادر «دریافت خودکار اطلاعات» بالاتر استفاده کنید. با این حال لینک اضافه شد؛ در صورت نمایش‌نشدن، آدرس تصویر مستقیم را بچسبانید.');
+    } else {
+      showToast(`✓ تصویر اضافه شد (${(images.length + 1).toLocaleString('fa-IR')} از ${MAX_IMAGES.toLocaleString('fa-IR')})`);
+    }
+    onChange([...images, trimmed]);
     setUrlInput('');
   };
 
@@ -4708,20 +5141,28 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
           value={urlInput}
           onChange={(e) => setUrlInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addUrl())}
-          placeholder="لینک تصویر را اینجا بچسبانید..."
+          placeholder="لینک مستقیم تصویر (مثلاً ...jpg یا png) را اینجا بچسبانید..."
           disabled={images.length >= MAX_IMAGES}
           style={{
             flex: 1,
             padding: '10px 16px',
             borderRadius: '12px',
-            border: '1px solid rgba(13, 124, 74,0.15)',
-            background: images.length >= MAX_IMAGES ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.8)',
-            color: '#f0fdf4',
+            border: '1px solid rgba(13, 124, 74,0.25)',
+            // Use a SOLID white background so the typed URL is clearly visible.
+            // The previous semi-transparent 0.8 alpha over the dark premium-glass
+            // produced a near-white background that competed with the #f0fdf4
+            // light text → made the typed URL nearly invisible (user reported
+            // "با لینک عکس رو اضافه نمیکنه اصلا" because they couldn't see what
+            // they pasted).
+            background: images.length >= MAX_IMAGES ? 'rgba(220, 230, 220, 0.85)' : 'rgb(255, 255, 255)',
+            // DARK text on white background for maximum readability of the URL.
+            color: '#0d2818',
             fontFamily: 'inherit',
             outline: 'none',
             direction: 'ltr',
             textAlign: 'left',
-            fontSize: '12px',
+            fontSize: '13px',
+            fontWeight: 500,
           }}
         />
         <button
@@ -4787,10 +5228,40 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
                 src={img}
                 alt={`تصویر ${(idx + 1).toLocaleString('fa-IR')}`}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onLoad={() => {
+                  // Image loaded successfully — clear any previous failure flag.
+                  setFailedUrls((prev) => {
+                    if (!prev.has(idx)) return prev;
+                    const next = new Set(prev);
+                    next.delete(idx);
+                    return next;
+                  });
+                }}
                 onError={(e) => {
-                  (e.target as HTMLImageElement).style.opacity = '0.3';
+                  // Image failed to load. Show a clear "broken image" indicator
+                  // instead of just dimming the broken <img> — the previous
+                  // opacity:0.3 made the slot look like an empty placeholder,
+                  // which is why users thought "nothing was added".
+                  (e.target as HTMLImageElement).style.visibility = 'hidden';
+                  setFailedUrls((prev) => new Set(prev).add(idx));
                 }}
               />
+              {/* Broken-image overlay — only shown when this specific slot
+                  failed to load. Displays the URL snippet so the user can see
+                  WHAT link failed (and copy/fix it). */}
+              {failedUrls.has(idx) && (
+                <div
+                  className="absolute inset-0 flex flex-col items-center justify-center p-2 text-center"
+                  style={{ background: 'rgba(127, 29, 29, 0.85)', color: '#fee2e2' }}
+                  dir="ltr"
+                >
+                  <div className="text-2xl mb-1">⚠️</div>
+                  <div className="text-[10px] font-bold mb-1" dir="rtl">تصویر بارگذاری نشد</div>
+                  <div className="text-[9px] font-mono opacity-80 break-all line-clamp-2" title={img}>
+                    {img.length > 40 ? img.slice(0, 40) + '…' : img}
+                  </div>
+                </div>
+              )}
               {/* Cover badge */}
               {idx === 0 && (
                 <span
@@ -5247,30 +5718,33 @@ const GENRE_COLOR_PRESETS = [
   '#10b981', '#10b981', '#7c3aed', '#db2777', '#dc2626', '#ea580c', '#16a34a', '#0d7c4a',
 ];
 
-function AddGenreModal({ onClose, onSave }: {
+function AddGenreModal({ onClose, onSave, editingGenre }: {
   onClose: () => void;
   onSave: (g: Genre) => void;
+  editingGenre?: Genre | null;
 }) {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [color, setColor] = useState(GENRE_COLOR_PRESETS[0]);
+  useEscapeKey(onClose);
+  const isEditing = !!editingGenre;
+  const [name, setName] = useState(editingGenre?.nameFa ?? '');
+  const [description, setDescription] = useState(editingGenre?.description ?? '');
+  const [color, setColor] = useState(editingGenre?.color ?? GENRE_COLOR_PRESETS[0]);
 
   const handleSave = () => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    const id = 'custom-' + Date.now().toString(36);
+    const id = editingGenre?.id ?? ('custom-' + Date.now().toString(36));
     const g: Genre = {
       id,
-      key: id,
+      key: editingGenre?.key ?? id,
       nameFa: trimmed,
       name: trimmed,
       color,
       description: description.trim() || '',
       filterFn: (s: TalkShow) => s.category.includes(trimmed),
       isCustom: true,
-      tags: DEFAULT_GENRE_TAGS,
-      presetTags: [],
-      searchFields: ['name', 'summary', 'category', 'descriptionFa'] as (keyof TalkShow)[],
+      tags: editingGenre?.tags ?? DEFAULT_GENRE_TAGS,
+      presetTags: editingGenre?.presetTags ?? [],
+      searchFields: editingGenre?.searchFields ?? (['name', 'summary', 'category', 'descriptionFa'] as (keyof TalkShow)[]),
     };
     onSave(g);
   };
@@ -5280,7 +5754,7 @@ function AddGenreModal({ onClose, onSave }: {
       <div className="modal-content animate-modal-enter" style={{ maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(13, 124, 74,0.1)' }}>
-          <h2 className="text-xl font-bold" style={{ color: '#f0fdf4' }}>+ افزودن ژانر جدید</h2>
+          <h2 className="text-xl font-bold" style={{ color: '#f0fdf4' }}>{isEditing ? '✏️ ویرایش ژانر' : '+ افزودن ژانر جدید'}</h2>
           <button onClick={onClose} className="p-2 rounded-lg" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -5376,12 +5850,68 @@ function AddGenreModal({ onClose, onSave }: {
               className="btn-enter-premium flex-1"
               style={{ opacity: name.trim() ? 1 : 0.5, cursor: name.trim() ? 'pointer' : 'not-allowed' }}
             >
-              ✓ ذخیره ژانر
+              ✓ {isEditing ? 'به‌روزرسانی ژانر' : 'ذخیره ژانر'}
             </button>
             <button
               onClick={onClose}
               className="px-6 py-3 rounded-xl text-sm font-medium"
               style={{ background: 'rgba(107, 143, 122,0.15)', color: 'rgba(255, 255, 255, 0.9)', border: '1px solid rgba(107, 143, 122,0.3)' }}
+            >
+              انصراف
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// DELETE GENRE CONFIRM — confirms removal of a custom genre
+// ============================================
+function DeleteGenreConfirm({ genre, count, onClose, onConfirm }: {
+  genre: Genre;
+  count: number;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  useEscapeKey(onClose);
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-content animate-modal-enter" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
+        <div className="p-6 text-center">
+          <div
+            className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+            style={{ background: 'rgba(220, 38, 38, 0.15)', border: '1px solid rgba(220, 38, 38, 0.4)' }}
+          >
+            <svg className="w-7 h-7" style={{ color: '#fca5a5' }} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold mb-2" style={{ color: '#f0fdf4' }}>حذف ژانر</h2>
+          <p className="text-sm mb-1" style={{ color: 'rgba(244, 255, 255, 0.8)' }}>
+            آیا از حذف ژانر «<strong style={{ color: genre.color }}>{genre.nameFa}</strong>» مطمئن هستید؟
+          </p>
+          <p className="text-xs mb-6" style={{ color: 'rgba(244, 255, 255, 0.6)' }}>
+            این ژانر {count > 0 ? `${count.toLocaleString('fa-IR')} برنامه` : 'هیچ برنامه‌ای'} را در بر می‌گیرد. حذف ژانر، خود برنامه‌ها را پاک نمی‌کند.
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={onConfirm}
+              className="flex-1 py-3 rounded-xl text-sm font-bold transition-all"
+              style={{
+                background: 'linear-gradient(135deg, #b91c1c 0%, #dc2626 100%)',
+                color: '#ffffff',
+                border: '1px solid rgba(220, 38, 38, 0.5)',
+                boxShadow: '0 4px 14px rgba(185, 28, 28, 0.4)',
+              }}
+            >
+              ✓ بله، حذف شود
+            </button>
+            <button
+              onClick={onClose}
+              className="px-6 py-3 rounded-xl text-sm font-medium"
+              style={{ background: 'rgba(107, 143, 122, 0.15)', color: 'rgba(255, 255, 255, 0.9)', border: '1px solid rgba(107, 143, 122, 0.3)' }}
             >
               انصراف
             </button>
@@ -5407,6 +5937,8 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
   onConfirm: (platform: string) => void;
   onOpenBotConfig: () => void;
 }) {
+  const { t, lang } = useLang();
+  useEscapeKey(onClose);
   const [selectedPlatform, setSelectedPlatform] = useState<string>('');
   const [postText, setPostText] = useState(
     shows.length === 1
@@ -5435,7 +5967,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
         : undefined;
       const res = await fetch('/api/publish-social', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({
           platform: botConfig.platform,
           token: botConfig.token,
@@ -5765,6 +6297,8 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
 // BOT CONFIG MODAL — configure Telegram/Bale bot token + chat ID
 // ============================================
 function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const { t } = useLang();
+  useEscapeKey(onClose);
   const initial = loadBotConfig();
   const [platform, setPlatform] = useState<'telegram' | 'bale'>(initial?.platform || 'telegram');
   const [token, setToken] = useState(initial?.token || '');
@@ -5778,7 +6312,21 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
     setTesting(true);
     setTestResult(null);
     try {
-      const res = await fetch(`/api/publish-social?platform=${platform}&token=${encodeURIComponent(token)}`);
+      // SECURITY: previously this used a GET request with the token in the
+      // query string (?token=...), which leaks the bot token into server
+      // access logs, browser history, and any proxy in between. Now we
+      // send the token in the POST body (encrypted in transit via HTTPS)
+      // and use the {verify:true} flag to tell the backend to just validate
+      // the token, not send a message.
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('bankresaneh_token') : '';
+      const res = await fetch('/api/publish-social', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken ? { Authorization: 'Bearer ' + authToken } : {}),
+        },
+        body: JSON.stringify({ platform, token, verify: true }),
+      });
       const data = await res.json();
       if (data.ok) {
         setTestResult({ ok: true, msg: `✅ ربات «@${data.bot.username}» شناسایی شد` });
@@ -5975,6 +6523,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
   organization?: string;
 }) {
   const { t, lang } = useLang();
+  useEscapeKey(onClose);
   const [downloading, setDownloading] = useState(false);
 
   // Resolve the effective report metadata — caller-provided overrides win,
@@ -5990,7 +6539,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
         // caller-provided overrides so the rendered PDF matches the preview.
         const res = await fetch('/api/export-pdf', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({ shows, title, subtitle, organization }),
         });
         if (res.ok) {
@@ -6312,7 +6861,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/settings/report');
+        const res = await fetch('/api/settings/report', { headers: { ...authHeaders() } });
         if (!res.ok) return;
         const data = await res.json();
         if (cancelled) return;
@@ -6329,7 +6878,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
     try {
       const res = await fetch('/api/settings/report', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ title: rTitle, subtitle: rSubtitle, organization: rOrg }),
       });
       if (res.ok) {
@@ -6349,7 +6898,9 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const res = await fetch('/api/settings/logo', { method: 'POST', body: fd });
+      // NOTE: no Content-Type here — the browser must set the multipart
+      // boundary; we only attach the Bearer token.
+      const res = await fetch('/api/settings/logo', { method: 'POST', headers: { ...authHeaders() }, body: fd });
       if (res.ok) {
         setLogoVersion(v => v + 1);    // force <img> to reload from new file
         showToast(t('reports.logoUpdated'));
@@ -6610,53 +7161,58 @@ function SettingsModal({
   onClose,
   showToast,
   onLogout,
+  onPasswordChanged,
 }: {
   currentUser: User;
   onClose: () => void;
   showToast: (msg: string) => void;
   onLogout: () => void;
+  onPasswordChanged?: (user: User) => void;
 }) {
-  const [tab, setTab] = useState<'profile' | 'users' | 'server' | 'report' | 'password'>('profile');
+  const { t } = useLang();
+  const [tab, setTab] = useState<'profile' | 'users' | 'server' | 'report' | 'password' | 'activity'>('profile');
 
   const tabs = [
-    { key: 'profile' as const,  label: 'پروفایل من', icon: '👤' },
-    { key: 'users' as const,    label: 'کاربران',     icon: '👥' },
-    { key: 'report' as const,   label: 'گزارش PDF',   icon: '📄' },
-    { key: 'server' as const,   label: 'سرور',         icon: '🖥' },
-    { key: 'password' as const, label: 'رمز عبور',     icon: '🔑' },
+    { key: 'profile' as const,  label: t('settings.profile.edit'), icon: '👤' },
+    { key: 'users' as const,    label: t('settings.users.title'),  icon: '👥' },
+    { key: 'report' as const,   label: t('view.reports'),           icon: '📄' },
+    { key: 'activity' as const, label: t('settings.activity.title'),icon: '📋' },
+    { key: 'server' as const,   label: t('settings.server.title'),  icon: '🖥' },
+    { key: 'password' as const, label: t('settings.password.title'),icon: '🔑' },
   ];
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center p-4"
-      style={{ background: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(8px)', animation: 'fade-in 0.2s ease-out' }}
+      className="fixed inset-0 z-[80] flex items-stretch justify-center"
+      style={{ background: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(8px)', animation: 'fade-in 0.2s ease-out' }}
       onClick={onClose}
     >
       <div
-        className="relative flex flex-col"
+        className="relative flex flex-col w-full h-full"
         style={{
-          width: 'min(640px, 96vw)',
-          maxHeight: '90vh',
+          width: '100%',
+          maxWidth: '1000px',
+          height: '100vh',
+          maxHeight: '100vh',
           /* Liquid glass — same as header */
-          background: 'linear-gradient(180deg, rgba(5, 80, 65, 0.82) 0%, rgba(0, 95, 75, 0.78) 50%, rgba(8, 110, 90, 0.75) 100%)',
+          background: 'linear-gradient(180deg, rgba(5, 80, 65, 0.95) 0%, rgba(0, 95, 75, 0.92) 50%, rgba(8, 110, 90, 0.9) 100%)',
           backdropFilter: 'blur(28px) saturate(135%)',
           WebkitBackdropFilter: 'blur(28px) saturate(135%)',
-          borderRadius: '28px',
           boxShadow: '0 24px 80px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
           overflow: 'hidden',
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
+        {/* Header — compact */}
         <div
-          className="flex items-center justify-between p-4 flex-shrink-0"
+          className="flex items-center justify-between px-4 py-3 flex-shrink-0"
           style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.15)' }}
         >
-          <h2 className="text-lg font-bold" style={{ color: '#f0fdf4' }}>تنظیمات</h2>
+          <h2 className="text-base font-bold" style={{ color: '#f0fdf4' }}>{t('settings.title')}</h2>
           <button
             onClick={onClose}
-            aria-label="بستن"
-            className="p-2 rounded-lg transition-colors"
+            aria-label={t('misc.close')}
+            className="p-2 rounded-lg transition-colors hover:bg-white/10"
             style={{ color: 'rgba(255, 255, 255, 0.7)' }}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -6665,10 +7221,10 @@ function SettingsModal({
           </button>
         </div>
 
-        {/* Tabs */}
+        {/* Tabs — compact, wrap to multiple rows if needed */}
         <div
-          className="flex items-center gap-1 p-2 flex-shrink-0 overflow-x-auto no-scrollbar"
-          style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}
+          className="flex flex-wrap items-center gap-1 px-3 py-2 flex-shrink-0"
+          style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', background: 'rgba(0, 0, 0, 0.2)' }}
         >
           {tabs.map((t) => {
             const active = tab === t.key;
@@ -6676,31 +7232,41 @@ function SettingsModal({
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap"
+                className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap"
                 style={active ? {
                   background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
                   border: '1px solid rgba(255, 255, 255, 0.3)',
                   color: 'white',
+                  boxShadow: '0 4px 12px rgba(0, 107, 80, 0.4)',
                 } : {
-                  color: 'rgba(255, 255, 255, 0.7)',
-                  border: '1px solid transparent',
-                  background: 'transparent',
+                  color: 'rgba(255, 255, 255, 0.75)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  background: 'rgba(255, 255, 255, 0.06)',
                 }}
               >
-                <span>{t.icon}</span>
+                <span style={{ fontSize: '13px' }}>{t.icon}</span>
                 <span>{t.label}</span>
               </button>
             );
           })}
         </div>
 
-        {/* Body — scrollable */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6" style={{ maxHeight: 'calc(90vh - 130px)' }}>
+        {/* Body — scrollable, fills ALL remaining height */}
+        <div
+          className="flex-1 overflow-y-auto p-4 sm:p-5"
+          style={{
+            minHeight: 0,
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'rgba(255,255,255,0.4) transparent',
+            WebkitOverflowScrolling: 'touch',
+          }}
+        >
           {tab === 'profile' && <ProfileTab currentUser={currentUser} showToast={showToast} />}
           {tab === 'users' && <SettingsUsersTab currentUser={currentUser} showToast={showToast} />}
           {tab === 'server' && <SettingsServerTab showToast={showToast} />}
           {tab === 'report' && <SettingsReportTab showToast={showToast} />}
-          {tab === 'password' && <SettingsPasswordTab currentUser={currentUser} showToast={showToast} onLogout={onLogout} />}
+          {tab === 'activity' && <SettingsActivityTab showToast={showToast} />}
+          {tab === 'password' && <SettingsPasswordTab currentUser={currentUser} showToast={showToast} onPasswordChanged={onPasswordChanged} onLogout={onLogout} />}
         </div>
       </div>
     </div>
@@ -6709,6 +7275,7 @@ function SettingsModal({
 
 // --- Tab: Profile (iPhone Contacts style) ---
 function ProfileTab({ currentUser, showToast }: { currentUser: User; showToast: (msg: string) => void }) {
+  const { t } = useLang();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(currentUser.name || '');
   const [phone, setPhone] = useState(currentUser.phone || '');
@@ -6728,7 +7295,7 @@ function ProfileTab({ currentUser, showToast }: { currentUser: User; showToast: 
         body: JSON.stringify({ name, phone, jobTitle, deputy, avatar }),
       });
       if (res.ok) {
-        showToast('پروفایل بروزرسانی شد');
+        showToast(t('settings.profile.saved'));
         setEditing(false);
       } else {
         showToast('خطا در بروزرسانی');
@@ -6950,11 +7517,15 @@ function ProfileField({ icon, label, value, isEditing, onChange, placeholder, di
   );
 }
 
-// --- Tab: Report Settings (admin edits PDF report defaults) ---
+// --- Tab: Report Settings — analytics dashboard + PDF report defaults ---
 function SettingsReportTab({ showToast }: { showToast: (msg: string) => void }) {
+  const { t } = useLang();
   const [title, setTitle] = useState('');
   const [subtitle, setSubtitle] = useState('');
   const [loading, setLoading] = useState(true);
+  const [report, setReport] = useState<any>(null);
+  const [reportLoading, setReportLoading] = useState(true);
+  const [days, setDays] = useState(30);
 
   useEffect(() => {
     try {
@@ -6976,74 +7547,307 @@ function SettingsReportTab({ showToast }: { showToast: (msg: string) => void }) 
     setLoading(false);
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setReportLoading(true);
+    api.getAnalyticsReport(days)
+      .then(data => { if (!cancelled) setReport(data); })
+      .catch(() => { if (!cancelled) setReport(null); })
+      .finally(() => { if (!cancelled) setReportLoading(false); });
+    return () => { cancelled = true; };
+  }, [days]);
+
   const handleSave = () => {
     try {
       localStorage.setItem('bankresaneh_report_defaults', JSON.stringify({ title, subtitle }));
-      showToast('تنظیمات گزارش ذخیره شد');
+      showToast(t('reports.settingsSaved'));
     } catch {
-      showToast('خطا در ذخیره‌سازی');
+      showToast(t('reports.settingsError'));
     }
   };
 
   if (loading) return null;
 
+  const cardStyle: React.CSSProperties = {
+    background: 'rgba(255,255,255,0.08)',
+    border: '1px solid rgba(255,255,255,0.15)',
+    borderRadius: '16px',
+    padding: '16px',
+  };
+  const statStyle: React.CSSProperties = {
+    fontSize: '28px', fontWeight: 800, color: '#5eead4', lineHeight: 1.1,
+  };
+  const labelStyle: React.CSSProperties = {
+    fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '4px',
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      {/* Analytics dashboard */}
       <div>
-        <label style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.9)', display: 'block', marginBottom: '6px' }}>
-          عنوان پیش‌فرض گزارش
-        </label>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          style={{
-            width: '100%', padding: '12px 14px', borderRadius: '12px',
-            background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
-            color: '#f0fdf4', fontSize: '14px', fontFamily: 'inherit', outline: 'none',
-          }}
-        />
+        <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#f0fdf4', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span>📊</span> گزارش فعالیت و تحلیل
+        </h3>
+
+        {/* Days selector */}
+        <div className="flex items-center gap-2 mb-4" style={{ flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>بازه زمانی:</span>
+          {[7, 30, 90, 365].map(d => (
+            <button
+              key={d}
+              onClick={() => setDays(d)}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+              style={days === d ? {
+                background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
+                color: '#fff', border: '1px solid rgba(255,255,255,0.3)',
+              } : {
+                background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)',
+                border: '1px solid rgba(255,255,255,0.15)',
+              }}
+            >
+              {d === 365 ? 'یک سال' : d === 90 ? 'سه ماه' : d === 30 ? 'یک ماه' : 'یک هفته'}
+            </button>
+          ))}
+        </div>
+
+        {reportLoading ? (
+          <div style={{ textAlign: 'center', padding: '32px', color: 'rgba(255,255,255,0.5)' }}>
+            <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏳</div>
+            در حال بارگذاری گزارش…
+          </div>
+        ) : !report ? (
+          <div style={{ ...cardStyle, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
+            گزارشی در دسترس نیست.
+          </div>
+        ) : (
+          <>
+            {/* Top stats row */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+              <div style={cardStyle}>
+                <div style={statStyle}>{(report.totals?.views || 0).toLocaleString('fa-IR')}</div>
+                <div style={labelStyle}>👁 مشاهده برنامه</div>
+              </div>
+              <div style={cardStyle}>
+                <div style={statStyle}>{(report.totals?.pdfExports || 0).toLocaleString('fa-IR')}</div>
+                <div style={labelStyle}>📄 خروجی PDF</div>
+              </div>
+              <div style={cardStyle}>
+                <div style={statStyle}>{(report.totals?.publishes || 0).toLocaleString('fa-IR')}</div>
+                <div style={labelStyle}>📤 منتشر شده</div>
+              </div>
+              <div style={cardStyle}>
+                <div style={statStyle}>{(report.onlineCount || 0).toLocaleString('fa-IR')}</div>
+                <div style={labelStyle}>🟢 آنلاین اکنون</div>
+              </div>
+            </div>
+
+            {/* Online users list */}
+            {report.onlineUsers && report.onlineUsers.length > 0 && (
+              <div style={{ ...cardStyle, marginBottom: '12px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#5eead4', marginBottom: '8px' }}>
+                  🟢 کاربران آنلاین ({report.onlineCount.toLocaleString('fa-IR')} نفر)
+                </div>
+                <div className="space-y-1" style={{ maxHeight: '160px', overflowY: 'auto' }}>
+                  {report.onlineUsers.map((u: any) => (
+                    <div key={u.id} className="flex items-center justify-between py-1.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div className="flex items-center gap-2">
+                        <span style={{ fontSize: '16px' }}>{u.role === 'admin' ? '👑' : u.role === 'editor' ? '✏️' : '👁'}</span>
+                        <span style={{ color: '#f0fdf4', fontWeight: 600, fontSize: '13px' }}>{u.name || u.username}</span>
+                        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px' }}>@{u.username}</span>
+                      </div>
+                      <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px' }}>
+                        {u.lastSeenSecondsAgo < 60 ? 'هم‌اکنون' : `${Math.floor(u.lastSeenSecondsAgo / 60).toLocaleString('fa-IR')} دقیقه پیش`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Daily active chart (simple bars) */}
+            {report.dailyActive && report.dailyActive.length > 0 && (
+              <div style={{ ...cardStyle, marginBottom: '12px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#5eead4', marginBottom: '12px' }}>
+                  📅 کاربران فعال روزانه
+                </div>
+                <div className="flex items-end gap-1" style={{ height: '80px' }}>
+                  {report.dailyActive.slice(-14).map((d: any, i: number) => {
+                    const max = Math.max(...report.dailyActive.map((x: any) => x.users), 1);
+                    const h = Math.max(4, (d.users / max) * 70);
+                    return (
+                      <div key={i} className="flex-1 flex flex-col items-center" style={{ minWidth: '20px' }}>
+                        <div style={{
+                          width: '100%', height: `${h}px`,
+                          background: 'linear-gradient(180deg, #22B99A 0%, #006B50 100%)',
+                          borderRadius: '4px 4px 0 0', opacity: 0.8,
+                        }} title={`${d.day}: ${d.users} نفر`} />
+                        <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', marginTop: '4px', transform: 'rotate(-45deg)', whiteSpace: 'nowrap' }}>
+                          {d.day.slice(5)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Incomplete programs */}
+            {report.incompletePrograms && report.incompletePrograms.length > 0 && (
+              <div style={{ ...cardStyle, marginBottom: '12px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#fbbf24', marginBottom: '8px' }}>
+                  ⚠️ برنامه‌های ناقص ({report.incompleteCount.toLocaleString('fa-IR')} از {(report.totalShows || 0).toLocaleString('fa-IR')} برنامه)
+                </div>
+                <div className="space-y-1" style={{ maxHeight: '240px', overflowY: 'auto' }}>
+                  {report.incompletePrograms.slice(0, 50).map((s: any) => (
+                    <div key={s.num} className="py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div style={{ color: '#f0fdf4', fontWeight: 600, fontSize: '13px' }}>
+                        #{s.num.toLocaleString('fa-IR')} — {s.name || '(بدون نام)'}
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {s.missing.map((m: string) => (
+                          <span key={m} style={{
+                            fontSize: '10px', padding: '2px 6px', borderRadius: '4px',
+                            background: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24',
+                            border: '1px solid rgba(251, 191, 36, 0.3)',
+                          }}>
+                            {m === 'name' ? 'نام' :
+                             m === 'summary' ? 'خلاصه' :
+                             m === 'descriptionFa' ? 'توضیح فارسی' :
+                             m === 'materials' ? 'مواد' :
+                             m === 'style' ? 'سبک' :
+                             m === 'colors' ? 'رنگ‌ها' :
+                             m === 'layout' ? 'چیدمان' : m}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {report.incompleteCount > 50 && (
+                    <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: '11px', padding: '8px' }}>
+                      و {(report.incompleteCount - 50).toLocaleString('fa-IR')} برنامه دیگر…
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Top viewed shows */}
+            {report.topShows && report.topShows.length > 0 && (
+              <div style={{ ...cardStyle, marginBottom: '12px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#5eead4', marginBottom: '8px' }}>
+                  🔥 پربازدیدترین برنامه‌ها
+                </div>
+                <div className="space-y-1">
+                  {report.topShows.map((s: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between py-1.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div className="flex items-center gap-2">
+                        <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', minWidth: '18px' }}>
+                          {(i + 1).toLocaleString('fa-IR')}.
+                        </span>
+                        <span style={{ color: '#f0fdf4', fontSize: '13px' }}>#{s.num.toLocaleString('fa-IR')}</span>
+                      </div>
+                      <span style={{ color: '#5eead4', fontWeight: 700, fontSize: '13px' }}>
+                        {s.views.toLocaleString('fa-IR')} بازدید
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Top exported shows */}
+            {report.topExports && report.topExports.length > 0 && (
+              <div style={{ ...cardStyle, marginBottom: '12px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#5eead4', marginBottom: '8px' }}>
+                  📄 بیشترین خروجی (PDF/Excel)
+                </div>
+                <div className="space-y-1">
+                  {report.topExports.map((s: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between py-1.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div className="flex items-center gap-2">
+                        <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', minWidth: '18px' }}>
+                          {(i + 1).toLocaleString('fa-IR')}.
+                        </span>
+                        <span style={{ color: '#f0fdf4', fontSize: '13px' }}>#{s.num.toLocaleString('fa-IR')}</span>
+                      </div>
+                      <span style={{ color: '#5eead4', fontWeight: 700, fontSize: '13px' }}>
+                        {s.exports.toLocaleString('fa-IR')} خروجی
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
-      <div>
-        <label style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.9)', display: 'block', marginBottom: '6px' }}>
-          زیرعنوان پیش‌فرض گزارش
-        </label>
-        <textarea
-          value={subtitle}
-          onChange={(e) => setSubtitle(e.target.value)}
-          rows={3}
+
+      {/* PDF report defaults */}
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px' }}>
+        <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#f0fdf4', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span>📄</span> تنظیمات پیش‌فرض گزارش PDF
+        </h3>
+        <div>
+          <label style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.9)', display: 'block', marginBottom: '6px' }}>
+            عنوان پیش‌فرض گزارش
+          </label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            style={{
+              width: '100%', padding: '12px 14px', borderRadius: '12px',
+              background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
+              color: '#f0fdf4', fontSize: '14px', fontFamily: 'inherit', outline: 'none',
+            }}
+          />
+        </div>
+        <div className="mt-3">
+          <label style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.9)', display: 'block', marginBottom: '6px' }}>
+            زیرعنوان پیش‌فرض گزارش
+          </label>
+          <textarea
+            value={subtitle}
+            onChange={(e) => setSubtitle(e.target.value)}
+            rows={3}
+            style={{
+              width: '100%', padding: '12px 14px', borderRadius: '12px',
+              background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
+              color: '#f0fdf4', fontSize: '14px', fontFamily: 'inherit', outline: 'none', resize: 'vertical',
+            }}
+          />
+        </div>
+        <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '8px' }}>
+          این عنوان‌ها در گزارش‌های PDF و Excel به‌صورت پیش‌فرض استفاده می‌شوند.
+        </p>
+        <button
+          onClick={handleSave}
+          className="mt-3"
           style={{
-            width: '100%', padding: '12px 14px', borderRadius: '12px',
-            background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
-            color: '#f0fdf4', fontSize: '14px', fontFamily: 'inherit', outline: 'none', resize: 'vertical',
+            width: '100%', padding: '12px', borderRadius: '14px',
+            background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
+            color: '#fff', fontWeight: 700, fontSize: '14px',
+            border: '1px solid rgba(255,255,255,0.3)', cursor: 'pointer',
           }}
-        />
+        >
+          ✓ ذخیره تنظیمات
+        </button>
       </div>
-      <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>
-        این عنوان‌ها در گزارش‌های PDF و Excel به‌صورت پیش‌فرض استفاده می‌شوند.
-      </p>
-      <button
-        onClick={handleSave}
-        style={{
-          width: '100%', padding: '12px', borderRadius: '14px',
-          background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
-          color: '#fff', fontWeight: 700, fontSize: '14px',
-          border: '1px solid rgba(255,255,255,0.3)', cursor: 'pointer',
-        }}
-      >
-        ✓ ذخیره تنظیمات
-      </button>
     </div>
   );
 }
 
 // --- Tab: Server URL ---
 function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) {
+  const { t } = useLang();
   const [url, setUrl] = useState('');
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
+  // eslint-disable-next-line react-hooks/set-state-in-effect
     setUrl(getApiBase());
   }, []);
 
@@ -7152,8 +7956,106 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
   );
 }
 
+// --- Permissions Panel — checkbox for each permission ---
+const PERMISSION_LABELS: Record<string, { fa: string; en: string }> = {
+  manage_users:    { fa: 'مدیریت کاربران',      en: 'Manage users' },
+  create_admins:   { fa: 'ساخت مدیر جدید',       en: 'Create admins' },
+  suspend_users:   { fa: 'تعلیق کاربران',        en: 'Suspend users' },
+  add_shows:       { fa: 'افزودن برنامه',        en: 'Add programs' },
+  edit_shows:      { fa: 'ویرایش برنامه',        en: 'Edit programs' },
+  delete_shows:    { fa: 'حذف برنامه',           en: 'Delete programs' },
+  manage_genres:   { fa: 'مدیریت ژانرها',        en: 'Manage genres' },
+  manage_settings: { fa: 'مدیریت تنظیمات',       en: 'Manage settings' },
+  view_activity:   { fa: 'مشاهده گزارش فعالیت',  en: 'View activity log' },
+  export_reports:  { fa: 'خروجی گزارش',          en: 'Export reports' },
+};
+
+function PermissionsPanel({ user, currentUser, onSaved }: {
+  user: User;
+  currentUser: User;
+  onSaved: (permissions: string[]) => void;
+}) {
+  const { t, lang } = useLang();
+  const [perms, setPerms] = useState<Set<string>>(new Set(user.permissions || []));
+  const [saving, setSaving] = useState(false);
+
+  const toggle = (perm: string) => {
+    const next = new Set(perms);
+    if (next.has(perm)) next.delete(perm);
+    else next.add(perm);
+    setPerms(next);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.updateUser(user.id, { permissions: Array.from(perms) });
+      onSaved(Array.from(perms));
+    } catch {
+      // ignore
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Super admins have all permissions and cannot be modified
+  const isSuper = user.isSuperAdmin;
+
+  return (
+    <div className="p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)' }}>
+      <div className="text-xs font-bold mb-2" style={{ color: '#54D9C0' }}>
+        {lang === 'fa' ? 'اختیارات دسترسی' : 'Permissions'}
+        {isSuper && <span className="mr-2 text-[10px]" style={{ color: '#10b981' }}>({lang === 'fa' ? 'مدیر اصلی — همه اختیارات' : 'Super admin — all permissions'})</span>}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {Object.keys(PERMISSION_LABELS).map(perm => {
+          const label = lang === 'fa' ? PERMISSION_LABELS[perm].fa : PERMISSION_LABELS[perm].en;
+          const checked = isSuper || perms.has(perm);
+          return (
+            <label
+              key={perm}
+              className="flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors"
+              style={{
+                background: checked ? 'rgba(16, 185, 129, 0.08)' : 'transparent',
+                opacity: isSuper ? 0.6 : 1,
+                cursor: isSuper ? 'not-allowed' : 'pointer',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={checked}
+                disabled={isSuper}
+                onChange={() => !isSuper && toggle(perm)}
+                style={{ accentColor: '#10b981', width: '16px', height: '16px' }}
+              />
+              <span className="text-xs" style={{ color: checked ? '#10b981' : 'rgba(244, 255, 255, 0.7)' }}>
+                {label}
+              </span>
+            </label>
+          );
+        })}
+      </div>
+      {!isSuper && (
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="mt-3 px-4 py-2 rounded-lg text-xs font-bold transition-all"
+          style={{
+            background: saving ? 'rgba(107, 143, 122, 0.3)' : '#0d7c4a',
+            color: '#ffffff',
+            cursor: saving ? 'not-allowed' : 'pointer',
+          }}
+        >
+          {saving ? '⏳ ...' : (lang === 'fa' ? '✓ ذخیره اختیارات' : '✓ Save permissions')}
+        </button>
+      )}
+    </div>
+  );
+}
+
 // --- Tab 2: Users management ---
 function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showToast: (msg: string) => void }) {
+  const { t } = useLang();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -7168,21 +8070,23 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
       const list = await api.getUsers();
       setUsers(list);
     } catch (e: any) {
-      setError(e?.message || 'خطا در بارگذاری کاربران');
+      setError(e?.message || t('toast.loadingError'));
     } finally {
       setLoading(false);
     }
   };
+// eslint-disable-next-line react-hooks/set-state-in-effect
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, []);
 
   const handleCreate = async () => {
     if (!newUser.username.trim() || !newUser.password) {
-      showToast('نام کاربری و رمز را وارد کنید');
+      showToast(t('settings.username'));
       return;
     }
     if (newUser.password.length < 8) {
-      showToast('رمز عبور باید حداقل ۸ کاراکتر باشد');
+      showToast(t('settings.password.tooShort'));
       return;
     }
     setCreating(true);
@@ -7196,7 +8100,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
         deputy: newUser.deputy,
         phone: newUser.phone,
       });
-      showToast(`کاربر «${newUser.username}» ساخته شد`);
+      showToast(`${t('settings.users.created')}: ${newUser.username}`);
       setNewUser({ username: '', password: '', role: 'viewer', name: '', jobTitle: '', deputy: '', phone: '' });
       await load();
     } catch (e: any) {
@@ -7208,27 +8112,43 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
 
   const handleDelete = async (u: User) => {
     if (u.id === currentUser.id) {
-      showToast('نمی‌توانید حساب خودتان را حذف کنید');
+      showToast(t('settings.users.cannotDeleteSelf'));
+      return;
+    }
+    if (u.isSuperAdmin) {
+      showToast(t('settings.users.cannotDeleteSuper'));
       return;
     }
     if (!confirm(`کاربر «${u.username}» حذف شود؟`)) return;
     try {
       await api.deleteUser(u.id);
-      showToast('کاربر حذف شد');
+      showToast(t('settings.users.deleted'));
       await load();
     } catch (e: any) {
-      showToast(e?.message || 'خطا در حذف کاربر');
+      showToast(e?.message || t('toast.error'));
     }
   };
 
   const handleChangeRole = async (u: User, newRole: string) => {
     if (newRole === u.role) return;
+    if (u.isSuperAdmin) { showToast(t('settings.users.cannotChangeSuper')); return; }
     try {
       await api.updateUser(u.id, { role: newRole });
-      showToast(`نقش «${u.username}» به ${newRole} تغییر کرد`);
+      showToast(`${t('settings.users.roleChanged')}: ${u.username} → ${newRole}`);
       await load();
     } catch (e: any) {
-      showToast(e?.message || 'خطا در تغییر نقش');
+      showToast(e?.message || t('toast.error'));
+    }
+  };
+
+  const handleToggleSuspend = async (u: User) => {
+    const newActive = u.isActive === false ? true : false;
+    try {
+      await api.updateUser(u.id, { isActive: newActive });
+      showToast(newActive ? `کاربر «${u.username}» فعال شد` : `کاربر «${u.username}» معلق شد`);
+      await load();
+    } catch (e: any) {
+      showToast(e?.message || t('toast.error'));
     }
   };
 
@@ -7284,42 +8204,44 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
             }}
           />
           <div className="relative">
-          <input
-            type={showPw ? 'text' : 'password'}
-            dir="ltr"
-            placeholder="رمز عبور (حداقل ۸ کاراکتر)"
-            value={newUser.password}
-            onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-            style={{
-              background: 'rgba(255,255,255,0.1)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              borderRadius: '10px',
-              padding: '10px 40px 10px 14px',
-              fontSize: '14px',
-              color: '#f0fdf4',
-              outline: 'none',
-              textAlign: 'left',
-              direction: 'ltr',
-            }}
-          />
-          <button
-            type="button"
-            onClick={() => setShowPw(!showPw)}
-            className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-colors"
-            style={{ color: '#54D9C0', background: 'transparent' }}
-            title={showPw ? 'پنهان کردن رمز' : 'نمایش رمز'}
-          >
-            {showPw ? (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.243 4.243L9.88 9.88" />
-              </svg>
-            ) : (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178a1.012 1.012 0 010 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            )}
-          </button>
+            <input
+              type={showPw ? 'text' : 'password'}
+              dir="ltr"
+              placeholder="رمز عبور (حداقل ۸ کاراکتر)"
+              value={newUser.password}
+              onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+              style={{
+                background: 'rgba(255,255,255,0.1)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '10px',
+                padding: '10px 40px 10px 14px',
+                fontSize: '14px',
+                color: '#f0fdf4',
+                outline: 'none',
+                textAlign: 'left',
+                direction: 'ltr',
+                width: '100%',
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPw(!showPw)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-colors hover:bg-white/10"
+              style={{ color: '#54D9C0', background: 'transparent' }}
+              title={showPw ? 'پنهان کردن رمز' : 'نمایش رمز'}
+              aria-label={showPw ? 'پنهان کردن رمز' : 'نمایش رمز'}
+            >
+              {showPw ? (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.243 4.243L9.88 9.88" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178a1.012 1.012 0 010 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              )}
+            </button>
           </div>
           <input
             type="tel"
@@ -7423,8 +8345,8 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
             {users.map((u) => (
               <div
                 key={u.id}
-                className="p-3 rounded-xl flex items-center gap-3"
-                style={{ background: 'white', border: '1px solid rgba(13, 124, 74, 0.15)' }}
+                className="p-3 rounded-xl flex items-center gap-3 flex-wrap"
+                style={{ background: u.isActive === false ? 'rgba(107, 143, 122, 0.08)' : 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.15)', opacity: u.isActive === false ? 0.6 : 1 }}
               >
                 <div
                   className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm"
@@ -7437,54 +8359,115 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
                   {(u.name || u.username).charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm" style={{ color: '#f0fdf4' }} title={u.username}>
-                    {u.name || u.username}{' '}
+                  <div className="font-bold text-sm flex items-center gap-2" style={{ color: '#f0fdf4' }} title={u.username}>
+                    {u.name || u.username}
+                    {u.isSuperAdmin && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: 'rgba(16, 185, 129, 0.25)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.4)' }}>👑 مدیر اصلی</span>
+                    )}
+                    {u.isActive === false && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: 'rgba(107, 143, 122, 0.2)', color: '#94a8c0', border: '1px solid rgba(107, 143, 122, 0.35)' }}>معلق</span>
+                    )}
                     {u.id === currentUser.id && (
                       <span className="text-xs font-normal" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>(شما)</span>
                     )}
                   </div>
                   <div className="text-xs" style={{ color: 'rgba(244, 255, 255, 0.7)' }} dir="ltr">@{u.username}</div>
+                  {u.permissions && u.permissions.length > 0 && u.role === 'admin' && !u.isSuperAdmin && (
+                    <div className="text-[10px] mt-1" style={{ color: 'rgba(244, 255, 255, 0.5)' }}>
+                      اختیارات: {u.permissions.length} مورد
+                    </div>
+                  )}
                 </div>
+                {/* Role selector — disabled for super admin */}
                 <select
                   value={u.role}
                   onChange={(e) => handleChangeRole(u, e.target.value)}
-                  disabled={u.id === currentUser.id}
+                  disabled={u.id === currentUser.id || u.isSuperAdmin}
                   style={{
-                    background: 'rgba(13, 124, 74, 0.05)',
-                    border: '1px solid rgba(13, 124, 74, 0.2)',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
                     borderRadius: '8px',
                     padding: '6px 10px',
                     fontSize: '13px',
                     color: '#f0fdf4',
                     outline: 'none',
                     fontFamily: 'inherit',
-                    cursor: u.id === currentUser.id ? 'not-allowed' : 'pointer',
-                    opacity: u.id === currentUser.id ? 0.6 : 1,
+                    cursor: (u.id === currentUser.id || u.isSuperAdmin) ? 'not-allowed' : 'pointer',
+                    opacity: (u.id === currentUser.id || u.isSuperAdmin) ? 0.6 : 1,
                   }}
-                  title={u.id === currentUser.id ? 'نمی‌توانید نقش خودتان را تغییر دهید' : 'تغییر نقش'}
+                  title={u.isSuperAdmin ? t('settings.users.cannotChangeSuper') : u.id === currentUser.id ? 'نمی‌توانید نقش خودتان را تغییر دهید' : 'تغییر نقش'}
                 >
-                  <option value="viewer">بیننده</option>
-                  <option value="editor">ویراستار</option>
-                  <option value="admin">مدیر</option>
+                  <option value="viewer" style={{ background: '#0a1f14', color: '#f0fdf4' }}>بیننده</option>
+                  <option value="editor" style={{ background: '#0a1f14', color: '#f0fdf4' }}>ویراستار</option>
+                  <option value="admin" style={{ background: '#0a1f14', color: '#f0fdf4' }}>مدیر</option>
                 </select>
+                {/* Suspend/Activate button — only for admins, not for super admin or self */}
+                {currentUser.isSuperAdmin && u.role === 'admin' && !u.isSuperAdmin && u.id !== currentUser.id && (
+                  <button
+                    onClick={() => handleToggleSuspend(u)}
+                    className="p-2 rounded-lg transition-colors flex-shrink-0"
+                    style={{
+                      color: u.isActive === false ? '#10b981' : '#f59e0b',
+                      background: u.isActive === false ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                      border: `1px solid ${u.isActive === false ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+                      cursor: 'pointer',
+                    }}
+                    title={u.isActive === false ? 'فعال‌سازی کاربر' : 'تعلیق کاربر'}
+                  >
+                    {u.isActive === false ? (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                      </svg>
+                    )}
+                  </button>
+                )}
+                {/* Delete button — disabled for super admin and self */}
                 <button
                   onClick={() => handleDelete(u)}
-                  disabled={u.id === currentUser.id}
+                  disabled={u.id === currentUser.id || u.isSuperAdmin}
                   className="p-2 rounded-lg transition-colors flex-shrink-0"
                   style={{
-                    color: u.id === currentUser.id ? 'rgba(107, 143, 122, 0.4)' : '#dc2626',
-                    background: u.id === currentUser.id ? 'transparent' : 'rgba(220, 38, 38, 0.1)',
+                    color: (u.id === currentUser.id || u.isSuperAdmin) ? 'rgba(107, 143, 122, 0.4)' : '#dc2626',
+                    background: (u.id === currentUser.id || u.isSuperAdmin) ? 'transparent' : 'rgba(220, 38, 38, 0.1)',
                     border: '1px solid rgba(220, 38, 38, 0.25)',
-                    cursor: u.id === currentUser.id ? 'not-allowed' : 'pointer',
-                    opacity: u.id === currentUser.id ? 0.4 : 1,
+                    cursor: (u.id === currentUser.id || u.isSuperAdmin) ? 'not-allowed' : 'pointer',
+                    opacity: (u.id === currentUser.id || u.isSuperAdmin) ? 0.4 : 1,
                   }}
-                  title={u.id === currentUser.id ? 'نمی‌توانید خودتان را حذف کنید' : `حذف ${u.username}`}
+                  title={u.isSuperAdmin ? t('settings.users.cannotDeleteSuper') : u.id === currentUser.id ? 'نمی‌توانید خودتان را حذف کنید' : `حذف ${u.username}`}
                   aria-label={`حذف کاربر ${u.username}`}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 </button>
+              {/* Permissions panel for admins (super admin can edit, others see read-only) */}
+              {u.role === 'admin' && currentUser.isSuperAdmin && !u.isSuperAdmin && (
+                <PermissionsPanel
+                  user={u}
+                  currentUser={currentUser}
+                  onSaved={(perms) => {
+                    showToast(perms.length > 0 ? `اختیارات ذخیره شد (${perms.length} مورد)` : 'تمام اختیارات لغو شد');
+                    load();
+                  }}
+                />
+              )}
+              {/* Read-only permissions display for non-super-admin viewers */}
+              {u.role === 'admin' && !currentUser.isSuperAdmin && u.permissions && u.permissions.length > 0 && (
+                <div className="w-full mt-2 p-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <div className="text-[10px] font-bold mb-1" style={{ color: '#54D9C0' }}>اختیارات:</div>
+                  <div className="flex flex-wrap gap-1">
+                    {u.permissions.map(p => (
+                      <span key={p} className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>
+                        {PERMISSION_LABELS[p]?.fa || p}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
               </div>
             ))}
           </div>
@@ -7494,16 +8477,119 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
   );
 }
 
+// --- Tab: Activity Log ---
+function SettingsActivityTab({ showToast }: { showToast: (msg: string) => void }) {
+  const { t } = useLang();
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const data = await api.getActivity(100);
+      setLogs(data);
+    } catch (e: any) {
+      // ignore — non-admin users won't have access
+    } finally {
+      setLoading(false);
+    }
+  };
+// eslint-disable-next-line react-hooks/set-state-in-effect
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { load(); }, []);
+
+  const actionLabels: Record<string, string> = {
+    create_user: 'ساخت کاربر',
+    update_user: 'ویرایش کاربر',
+    delete_user: 'حذف کاربر',
+    suspend_user: 'تعلیق کاربر',
+    activate_user: 'فعال‌سازی کاربر',
+  };
+
+  const formatTime = (ts: number) => {
+    if (!ts) return '';
+    const d = new Date(ts * 1000);
+    return d.toLocaleDateString('fa-IR') + ' ' + d.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div>
+        <h3 className="text-base font-bold mb-1" style={{ color: '#f0fdf4' }}>📋 گزارش فعالیت</h3>
+        <p className="text-sm" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>
+          آخرین تغییرات اعمال‌شده توسط کاربران سیستم.
+        </p>
+      </div>
+
+      {loading && (
+        <div className="p-4 text-center text-sm" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>در حال بارگذاری...</div>
+      )}
+
+      {!loading && logs.length === 0 && (
+        <div className="p-4 text-center text-sm" style={{ color: 'rgba(244, 255, 255, 0.5)' }}>
+          هیچ فعالیتی ثبت نشده است.
+        </div>
+      )}
+
+      {!loading && logs.length > 0 && (
+        <div className="space-y-2 max-h-96 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+          {logs.map((log) => (
+            <div
+              key={log.id}
+              className="p-3 rounded-xl flex items-start gap-3"
+              style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.12)' }}
+            >
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-sm"
+                style={{
+                  background: log.action?.includes('delete') ? 'rgba(220, 38, 38, 0.15)' :
+                              log.action?.includes('create') ? 'rgba(16, 185, 129, 0.15)' :
+                              log.action?.includes('suspend') ? 'rgba(245, 158, 11, 0.15)' :
+                              'rgba(13, 124, 74, 0.15)',
+                  color: log.action?.includes('delete') ? '#dc2626' :
+                         log.action?.includes('create') ? '#10b981' :
+                         log.action?.includes('suspend') ? '#f59e0b' :
+                         '#54D9C0',
+                }}
+              >
+                {log.action?.includes('delete') ? '🗑' :
+                 log.action?.includes('create') ? '➕' :
+                 log.action?.includes('suspend') ? '⏸' :
+                 log.action?.includes('activate') ? '▶' : '✏'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-bold" style={{ color: '#f0fdf4' }}>
+                  {actionLabels[log.action] || log.action}
+                </div>
+                <div className="text-xs" style={{ color: 'rgba(244, 255, 255, 0.6)' }}>
+                  {log.details}
+                </div>
+                <div className="text-[10px] mt-1" style={{ color: 'rgba(244, 255, 255, 0.4)' }}>
+                  {log.username} • {formatTime(log.created_at)}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // --- Tab 3: Change password ---
 function SettingsPasswordTab({
   currentUser,
   showToast,
+  onPasswordChanged,
   onLogout,
 }: {
   currentUser: User;
   showToast: (msg: string) => void;
+  onPasswordChanged?: (user: User) => void;
   onLogout: () => void;
 }) {
+  const { t } = useLang();
   const [oldPw, setOldPw] = useState('');
   const [newPw, setNewPw] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
@@ -7515,8 +8601,8 @@ function SettingsPasswordTab({
       showToast('هر سه فیلد را پر کنید');
       return;
     }
-    if (newPw.length < 4) {
-      showToast('رمز جدید باید حداقل ۴ کاراکتر باشد');
+    if (newPw.length < 8) {
+      showToast('رمز جدید باید حداقل ۸ کاراکتر باشد');
       return;
     }
     if (newPw !== confirmPw) {
@@ -7529,10 +8615,20 @@ function SettingsPasswordTab({
     }
     setSaving(true);
     try {
-      await api.changePassword(oldPw, newPw);
-      showToast('رمز با موفقیت تغییر کرد. لطفاً دوباره وارد شوید.');
-      // Force re-login since the API invalidated the session.
-      setTimeout(() => { onLogout(); }, 1500);
+      const result = await api.changePassword(oldPw, newPw);
+      // The API now returns a fresh token + updated user object. If we got
+      // them, we can keep the session alive — no re-login needed. This
+      // fixes the 401 "Unauthorized" errors that happened when the old
+      // token was invalidated but the frontend hadn't logged out yet.
+      if (result?.user && onPasswordChanged) {
+        showToast('رمز با موفقیت تغییر کرد.');
+        onPasswordChanged(result.user);
+      } else {
+        // Fallback (older API): session was invalidated, must re-login.
+        showToast('رمز با موفقیت تغییر کرد. لطفاً دوباره وارد شوید.');
+        setTimeout(() => { onLogout(); }, 1500);
+      }
+      setOldPw(''); setNewPw(''); setConfirmPw('');
     } catch (e: any) {
       showToast(e?.message || 'خطا در تغییر رمز');
     } finally {
@@ -7591,7 +8687,7 @@ function SettingsPasswordTab({
             <button
               type="button"
               onClick={() => setShowPw(!showPw)}
-              className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-lg"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg hover:bg-white/10"
               style={{ color: 'rgba(255, 255, 255, 0.9)', background: 'transparent' }}
               aria-label={showPw ? 'پنهان کردن رمز' : 'نمایش رمز'}
             >

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requirePermission } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
 
@@ -19,8 +20,18 @@ interface PublishBody {
 }
 
 export async function POST(request: NextRequest) {
+  // --- Auth: requires export_reports permission (admin/editor by default).
+  // Previously this endpoint was unauthenticated, which let anyone supply
+  // an arbitrary bot token + chatId and use this server as an anonymous
+  // spam relay. The token+chatId are still caller-supplied (per the
+  // existing bot-config feature), but now only authorized users can hit
+  // the endpoint at all. ---
+  const user = await requirePermission(request, 'export_reports');
+  if (!user) {
+    return NextResponse.json({ ok: false, error: 'دسترسی غیرمجاز — نیاز به دسترسی گزارش‌گیری' }, { status: 403 });
+  }
   try {
-    const body = (await request.json()) as PublishBody;
+    const body = (await request.json()) as PublishBody & { verify?: boolean };
     const { platform, token, chatId, text, imageUrl } = body;
 
     // Basic validation — never echo the token back in errors.
@@ -30,6 +41,22 @@ export async function POST(request: NextRequest) {
     if (!token || !/^[0-9]+:[A-Za-z0-9_-]{20,}$/.test(token)) {
       return NextResponse.json({ ok: false, error: 'توکن ربات نامعتبر است' }, { status: 400 });
     }
+
+    // VERIFY MODE: if body.verify is true, just check the bot token is valid
+    // via getMe (no message sent). This replaces the old unauthenticated GET
+    // endpoint that accepted the token via query string.
+    if (body.verify === true) {
+      const res = await fetch(`${API_BASE[platform]}/bot${token}/getMe`);
+      const data = await res.json();
+      if (!data.ok) {
+        return NextResponse.json({ ok: false, error: data.description || 'توکن نامعتبر' }, { status: 502 });
+      }
+      return NextResponse.json({
+        ok: true,
+        bot: { id: data.result.id, username: data.result.username, first_name: data.result.first_name },
+      });
+    }
+
     if (!chatId) {
       return NextResponse.json({ ok: false, error: 'شناسهٔ مقصد (Chat ID) الزامی است' }, { status: 400 });
     }
@@ -89,25 +116,12 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Lightweight GET used by the "ارسال تست" button to verify the bot token + chatId
-// without sending a full post. Returns minimal info about the bot.
-export async function GET(request: NextRequest) {
-  const platform = request.nextUrl.searchParams.get('platform') as 'telegram' | 'bale' | null;
-  const token = request.nextUrl.searchParams.get('token');
-  if (!platform || !API_BASE[platform] || !token) {
-    return NextResponse.json({ ok: false, error: 'پارامتر ناقص' }, { status: 400 });
-  }
-  try {
-    const res = await fetch(`${API_BASE[platform]}/bot${token}/getMe`);
-    const data = await res.json();
-    if (!data.ok) {
-      return NextResponse.json({ ok: false, error: data.description || 'توکن نامعتبر' }, { status: 502 });
-    }
-    return NextResponse.json({
-      ok: true,
-      bot: { id: data.result.id, username: data.result.username, first_name: data.result.first_name },
-    });
-  } catch {
-    return NextResponse.json({ ok: false, error: 'اتصال به سرور پلتفرم ناموفق بود' }, { status: 502 });
-  }
-}
+// NOTE: the original GET handler (which accepted the bot token via query
+// string) is intentionally REMOVED. The frontend now uses POST with a
+// JSON body for bot verification (see handleVerifyBot in page.tsx).
+// This eliminates the token-in-URL leak vector (tokens in URLs get
+// logged by proxies, server access logs, and browser history).
+//
+// If a GET is still needed in the future, it should:
+//   1. Require authentication (requirePermission).
+//   2. NOT accept the token via query string — use a header or POST body.

@@ -2,11 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import sharp from 'sharp';
+import { requirePermission } from '@/lib/server-auth';
+import { getDataFile } from '@/lib/data-dir';
 
 export const runtime = 'nodejs';
 
-const LOGO_DIR = path.join(process.cwd(), 'public', 'uploads');
-const LOGO_FILE = path.join(LOGO_DIR, 'logo.png');
+// Custom logos are written to the writable data directory (NOT public/uploads,
+// which is read-only under Program Files on Windows). The data dir resolves to:
+//   - Electron production: %APPDATA%\banke-rasane\
+//   - Dev mode: project root /data
+const LOGO_FILE = getDataFile('logo.png');
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const MAX_IMAGE_DIMENSION = 4096;
 
@@ -14,8 +19,15 @@ const MAX_IMAGE_DIMENSION = 4096;
  * POST /api/settings/logo
  * Accepts an image upload and normalizes it to PNG so the saved filename,
  * preview URL, and data URL embedded in the PDF all use the same encoding.
+ *
+ * Auth: requires manage_settings permission (admin-only by default).
  */
 export async function POST(request: NextRequest) {
+  // --- Auth: only admins (manage_settings permission) can replace the logo ---
+  const admin = await requirePermission(request, 'manage_settings');
+  if (!admin) {
+    return NextResponse.json({ ok: false, error: 'دسترسی غیرمجاز — نیاز به دسترسی مدیر' }, { status: 403 });
+  }
   try {
     const formData = await request.formData();
     const file = formData.get('file');
@@ -54,7 +66,10 @@ export async function POST(request: NextRequest) {
       limitInputPixels: MAX_IMAGE_DIMENSION * MAX_IMAGE_DIMENSION,
     }).rotate().png().toBuffer();
 
-    if (!fs.existsSync(LOGO_DIR)) fs.mkdirSync(LOGO_DIR, { recursive: true });
+    // Ensure the parent directory of LOGO_FILE exists (it may not on
+    // first run, especially when LOGO_FILE is in the writable data dir).
+    const logoDir = path.dirname(LOGO_FILE);
+    if (!fs.existsSync(logoDir)) fs.mkdirSync(logoDir, { recursive: true });
     const temporaryFile = `${LOGO_FILE}.tmp`;
     fs.writeFileSync(temporaryFile, png);
     fs.renameSync(temporaryFile, LOGO_FILE);

@@ -1,0 +1,59 @@
+name: Security tests
+
+# Runs the 61-step repeatable API security test suite on every push/PR.
+# Two scenarios are tested:
+#   1. Fresh DB — wipe and re-create from scratch
+#   2. Upgrade DB — simulate an upgrade from a previous version (legacy users)
+# The test script (scripts/security-test.sh) handles both scenarios internally
+# via the SECURITY_TEST_SCENARIO env var.
+
+on:
+  push:
+    branches: [main, fix/complete-v5.3.1-mainline]
+    paths:
+      - 'mini-services/api-service/**'
+      - 'scripts/security-test.sh'
+      - '.github/workflows/security-tests.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'mini-services/api-service/**'
+      - 'scripts/security-test.sh'
+      - '.github/workflows/security-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  security-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - name: Run security test suite (fresh DB scenario)
+        run: |
+          chmod +x scripts/security-test.sh
+          bash scripts/security-test.sh
+        env:
+          SECURITY_TEST_SCENARIO: fresh
+
+      - name: Run security test suite (upgrade DB scenario)
+        run: |
+          bash scripts/security-test.sh
+        env:
+          SECURITY_TEST_SCENARIO: upgrade
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-test-report
+          path: security-test-report.txt
+          retention-days: 30

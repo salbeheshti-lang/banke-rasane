@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { requireUser, requirePermission } from '@/lib/server-auth';
+import { getDataFile } from '@/lib/data-dir';
 
 export const runtime = 'nodejs';
 
-const SETTINGS_FILE = path.join(process.cwd(), 'data', 'report-settings.json');
+// Store report settings in the writable data directory (NOT process.cwd()/data,
+// which is read-only under Program Files on Windows). The data dir resolves to:
+//   - Electron production: %APPDATA%\banke-rasane\
+//   - Dev mode: project root /data
+const SETTINGS_FILE = getDataFile('report-settings.json');
 
 interface ReportSettings {
   title: string;
@@ -44,12 +50,26 @@ function writeSettings(s: ReportSettings) {
 }
 
 // GET → return current persisted settings (or defaults).
-export async function GET() {
+// Auth: any authenticated user (admin/editor/viewer). The settings contain
+// only the report title/subtitle/organization — no secrets — but we still
+// require login so anonymous users cannot probe the endpoint. Previously
+// this was fully public, which contradicted the file's own comment.
+export async function GET(request: NextRequest) {
+  const user = await requireUser(request);
+  if (!user) {
+    return NextResponse.json({ ok: false, error: 'احراز هویت لازم است' }, { status: 401 });
+  }
   return NextResponse.json(readSettings());
 }
 
 // POST → save updated settings. Body: { title?, subtitle?, organization? }
+// Auth: requires manage_settings permission (admin-only by default).
 export async function POST(request: NextRequest) {
+  // --- Auth: only admins (manage_settings permission) can change report settings ---
+  const admin = await requirePermission(request, 'manage_settings');
+  if (!admin) {
+    return NextResponse.json({ ok: false, error: 'دسترسی غیرمجاز — نیاز به دسترسی مدیر' }, { status: 403 });
+  }
   try {
     const body = await request.json();
     const current = readSettings();

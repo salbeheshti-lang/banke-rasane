@@ -60,9 +60,16 @@ export interface User {
   lastSeen?: number;
   online?: boolean;
   mustChangePassword?: boolean;
+  isActive?: boolean;
+  isSuperAdmin?: boolean;
+  permissions?: string[];
 }
 
-function authHeaders(): Record<string, string> {
+// Exported so SPA code that calls Next.js API routes directly (e.g.
+// /api/fetch-show-info, /api/translate) can attach the Bearer token too —
+// those routes are permission-guarded server-side and returned 403 when the
+// header was missing ("لینک عکس رو اضافه نمیکنه" bug).
+export function authHeaders(): Record<string, string> {
   const token = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;
   return token ? { Authorization: 'Bearer ' + token } : {};
 }
@@ -118,7 +125,18 @@ export const api = {
   async getProfile() { return request<User>(getApiUrl('api/profile')); },
   async updateProfile(data: Partial<User>) { return request<User>(getApiUrl('api/profile'), { method: 'PUT', body: JSON.stringify(data) }); },
   async changePassword(oldPassword: string, newPassword: string) {
-    return request(getApiUrl('api/auth/change-password'), { method: 'PUT', body: JSON.stringify({ oldPassword, newPassword }) });
+    const data = await request<{ success: boolean; token?: string; user?: User }>(
+      getApiUrl('api/auth/change-password'),
+      { method: 'PUT', body: JSON.stringify({ oldPassword, newPassword }) }
+    );
+    // The API now rotates the session and returns a fresh token. Persist it
+    // immediately so subsequent requests use the new token instead of the
+    // now-invalidated old one (which was the root cause of the 401
+    // "Unauthorized" errors the user saw after changing password).
+    if (data?.token && typeof window !== 'undefined') {
+      localStorage.setItem(TOKEN_KEY, data.token);
+    }
+    return data;
   },
   async getUsers() { const data = await request<{ users: User[] }>(getApiUrl('api/users')); return data.users || []; },
   async getCurrentUser(): Promise<User | null> {
@@ -128,4 +146,19 @@ export const api = {
   async updateUser(id: number, data: any) { return request(getApiUrl('api/users?id=' + encodeURIComponent(id)), { method: 'PUT', body: JSON.stringify(data) }); },
   async deleteUser(id: number) { return request(getApiUrl('api/users?id=' + encodeURIComponent(id)), { method: 'DELETE' }); },
   async createUser(data: any) { return request(getApiUrl('api/users'), { method: 'POST', body: JSON.stringify(data) }); },
+  async getActivity(limit?: number) {
+    const url = getApiUrl('api/activity') + (limit ? '?limit=' + limit : '');
+    const data = await request<{ logs: any[] }>(url);
+    return data.logs || [];
+  },
+  async trackAnalytics(action: string, targetType = 'show', targetId = '', details = '') {
+    try {
+      await request(getApiUrl('api/analytics/track'), {
+        method: 'POST', body: JSON.stringify({ action, targetType, targetId, details }),
+      });
+    } catch { /* non-critical — analytics should never block UX */ }
+  },
+  async getAnalyticsReport(days = 30) {
+    return request<any>(getApiUrl('api/analytics/report?days=' + days));
+  },
 };

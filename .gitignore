@@ -61,3 +61,4 @@ tool-results/
 public/uploads/
 data/
 *.sqlite
+security-test-report.txt

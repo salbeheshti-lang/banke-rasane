@@ -1,6 +1,6 @@
 {
   "name": "banke-rasane",
-  "version": "5.3.6",
+  "version": "5.3.9",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
@@ -93,7 +93,7 @@
     "electron": "^45.2.1",
     "electron-builder": "^26.18.0",
     "eslint": "^9",
-    "eslint-config-next": "^16.1.1",
+    "eslint-config-next": "^16.4.5",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.5",
     "typescript": "^5"
@@ -108,18 +108,9 @@
     "files": [
       "electron/**/*",
       ".next/standalone/**/*",
-      ".next/static/**/*",
-      "public/**/*",
       "package.json"
     ],
     "extraResources": [
-      {
-        "from": ".next/standalone",
-        "to": "next-service-dist",
-        "filter": [
-          "**/*"
-        ]
-      },
       {
         "from": "mini-services/api-service",
         "to": "api-service",

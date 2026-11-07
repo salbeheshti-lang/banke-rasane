@@ -59,10 +59,11 @@ function getBunPath() {
 // === Locate the Next.js standalone server.js ===
 function getNextServerPath() {
   const paths = [
-    // extraResources destination (resources/next-service-dist/server.js)
-    path.join(process.resourcesPath || '', 'next-service-dist', 'server.js'),
-    // asar:false app files (resources/app/.next/standalone/server.js)
+    // PRIMARY: asar:false app files (resources/app/.next/standalone/server.js)
+    // This is the canonical location — files always copies correctly (unlike extraResources).
     path.join(process.resourcesPath || '', 'app', '.next', 'standalone', 'server.js'),
+    // FALLBACK: extraResources destination (resources/next-service-dist/server.js)
+    path.join(process.resourcesPath || '', 'next-service-dist', 'server.js'),
     // dev fallback
     path.join(__dirname, '..', '.next', 'standalone', 'server.js'),
   ];
@@ -105,41 +106,73 @@ function getApiStaticDir() {
   return paths[0];
 }
 
-// === Start the API service (Bun on port 3002) ===
-function waitForHttp(url, child, label, maxAttempts = 60, headers = {}) {
+// Wait for an HTTP endpoint to return a 2xx/3xx response.
+//
+// Uses a deadline-based approach (mirrors scripts/smoke-electron.cjs) so that
+// "connection refused" — i.e. the server is still cold-starting — is retried
+// without consuming a fixed budget of attempts. This is critical for the
+// Next.js standalone server, which on slower Windows machines (antivirus,
+// HDD, first-run module load) can take 60+ seconds to print its banner and
+// become ready.
+//
+// Real failures are detected separately:
+//   - child process exits before readiness  → reject immediately
+//   - total elapsed time exceeds timeoutMs  → reject
+//
+// opts:
+//   intervalMs       — probe cadence (default 500ms)
+//   timeoutMs        — total deadline (default 90s; Next.js gets 180s)
+//   probeTimeoutMs   — per-request socket timeout (default 2s)
+//   progressEveryMs  — log "still starting" progress every N ms (default 10s)
+//   headers          — request headers
+function waitForHttp(url, child, label, opts = {}) {
+  const {
+    intervalMs = 500,
+    timeoutMs = 90 * 1000,
+    probeTimeoutMs = 2000,
+    progressEveryMs = 10 * 1000,
+    headers = {},
+  } = opts;
   return new Promise((resolve, reject) => {
-    let attempts = 0;
     let settled = false;
-    let interval = null;
+    let timer = null;
+    let lastProgressLog = 0;
+    const startedAt = Date.now();
     const finish = (error) => {
       if (settled) return;
       settled = true;
-      if (interval) clearInterval(interval);
+      if (timer) clearInterval(timer);
       if (error) reject(error);
       else resolve();
     };
+    // Real failure: child died before we ever got a successful response.
     child.once('error', (error) => finish(new Error(label + ' process error: ' + error.message)));
     child.once('exit', (code, signal) => {
       if (!settled) finish(new Error(label + ' exited before readiness (code ' + code + ', signal ' + signal + ')'));
     });
     const probe = () => {
       if (settled) return;
-      attempts++;
+      const elapsed = Date.now() - startedAt;
+      if (elapsed > timeoutMs) {
+        finish(new Error(label + ' not ready after ' + Math.round(elapsed / 1000) + 's'));
+        return;
+      }
+      if (elapsed - lastProgressLog >= progressEveryMs) {
+        log(label + ' still starting... (' + Math.round(elapsed / 1000) + 's elapsed)');
+        lastProgressLog = elapsed;
+      }
       const request = http.get(url, { headers }, (response) => {
         response.resume();
         if (response.statusCode >= 200 && response.statusCode < 400) {
-          log(label + ' ready (HTTP ' + response.statusCode + ')');
+          log(label + ' ready (HTTP ' + response.statusCode + ', ' + Math.round(elapsed / 1000) + 's)');
           finish();
-        } else if (attempts >= maxAttempts) {
-          finish(new Error(label + ' returned HTTP ' + response.statusCode));
         }
+        // Non-2xx/3xx: keep probing until the deadline.
       });
-      request.setTimeout(2000, () => request.destroy(new Error('Readiness probe timed out')));
-      request.on('error', () => {
-        if (attempts >= maxAttempts) finish(new Error(label + ' failed after ' + maxAttempts + ' attempts'));
-      });
+      request.setTimeout(probeTimeoutMs, () => request.destroy());
+      request.on('error', () => { /* will retry on next interval */ });
     };
-    interval = setInterval(probe, 500);
+    timer = setInterval(probe, intervalMs);
     probe();
   });
 }
@@ -208,7 +241,9 @@ async function startApiService() {
   });
   apiServer.stdout.on('data', (data) => { const value = data.toString().trim(); if (value) log('[api] ' + value); });
   apiServer.stderr.on('data', (data) => { const value = data.toString().trim(); if (value) log('[api:err] ' + value); });
-  await waitForHttp('http://127.0.0.1:' + API_PORT + '/api/internal/ready', apiServer, 'API service', 60, { 'x-bankresaneh-startup-token': STARTUP_TOKEN });
+  await waitForHttp('http://127.0.0.1:' + API_PORT + '/api/internal/ready', apiServer, 'API service', {
+    headers: { 'x-bankresaneh-startup-token': STARTUP_TOKEN },
+  });
 }
 
 // === Start the Next.js standalone server ===
@@ -227,6 +262,14 @@ function startNextServer() {
       PORT: String(NEXT_PORT),
       HOSTNAME: '127.0.0.1',
       BANKRESANEH_STARTUP_TOKEN: STARTUP_TOKEN,
+      // Pass the user-data directory so Next.js API routes (like the
+      // translate endpoint's rate-limit file) can write to a writable
+      // location instead of the (potentially read-only) install dir.
+      BANKRESANEH_DATA_DIR: app.getPath('userData'),
+      // Also pass the API base URL so the translate endpoint knows where
+      // to proxy auth checks (otherwise it defaults to localhost:3002
+      // which is correct in dev but explicit is better).
+      BANKRESANEH_API_BASE: 'http://127.0.0.1:' + API_PORT,
     };
     nextServer = spawn(process.execPath, [serverPath], {
       cwd: staticDir,
@@ -244,7 +287,13 @@ function startNextServer() {
       const value = data.toString().trim();
       if (value) { log('[next:err] ' + value); output += value + '\n'; }
     });
-    waitForHttp('http://127.0.0.1:' + NEXT_PORT + '/api/internal/ready', nextServer, 'Next.js server', 60, { 'x-bankresaneh-startup-token': STARTUP_TOKEN })
+    waitForHttp('http://127.0.0.1:' + NEXT_PORT + '/api/internal/ready', nextServer, 'Next.js server', {
+      // Next.js standalone cold-start on Windows can be slow (antivirus,
+      // HDD, first-time module load). Allow a generous 180s budget so the
+      // launcher doesn't declare FATAL while the server is still booting.
+      timeoutMs: 180 * 1000,
+      headers: { 'x-bankresaneh-startup-token': STARTUP_TOKEN },
+    })
       .then(resolve)
       .catch((error) => reject(new Error(error.message + '\nOutput: ' + output)));
   });
