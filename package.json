@@ -109,12 +109,8 @@
       "electron/**/*",
       "package.json"
     ],
+    "afterPack": "scripts/after-pack.cjs",
     "extraResources": [
-      {
-        "from": ".next/standalone",
-        "to": "next-service-dist",
-        "filter": ["**/*"]
-      },
       {
         "from": "mini-services/api-service",
         "to": "api-service",
