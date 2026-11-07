@@ -15,6 +15,12 @@ import { readFileSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 
 const PORT = parseInt(process.env.PORT || '3002', 10);
+// Bind to loopback by default. Public/server deployments must opt in explicitly.
+const HOST = process.env.BANKRESANEH_HOST || '127.0.0.1';
+const NORMALIZED_HOST = HOST.replace(/^\[|\]$/g, '').toLowerCase();
+const IS_LOOPBACK_HOST = NORMALIZED_HOST === 'localhost' || NORMALIZED_HOST === '::1' ||
+  /^127(?:\.\d{1,3}){3}$/.test(NORMALIZED_HOST);
+const INITIAL_ADMIN_PASSWORD = process.env.BANKRESANEH_ADMIN_PASSWORD || '';
 
 // ---------------------------------------------------------------------------
 // DB setup
@@ -477,16 +483,30 @@ function clearRateLimit(ip) { loginAttempts.delete(ip); }
 // ---------------------------------------------------------------------------
 function seedDefaultAdmin() {
   const existing = db.prepare('SELECT COUNT(*) AS c FROM users').get();
+  const defaultAdmin = db.prepare('SELECT id, password_hash FROM users WHERE username = ?').get('admin');
+  const stillUsingPublicDefault = !!defaultAdmin && defaultAdmin.password_hash === sha256('admin');
+  const needsInitialCredential = existing.c === 0 || stillUsingPublicDefault;
+
+  // Never expose the well-known admin/admin credential on a non-loopback server.
+  if (!IS_LOOPBACK_HOST && needsInitialCredential && INITIAL_ADMIN_PASSWORD.length < 12) {
+    throw new Error('Remote API bootstrap requires BANKRESANEH_ADMIN_PASSWORD with at least 12 characters; refusing public default admin credentials.');
+  }
+
   if (existing.c === 0) {
+    const initialHash = IS_LOOPBACK_HOST ? sha256('admin') : hashPassword(INITIAL_ADMIN_PASSWORD);
     db.prepare('INSERT INTO users (username, password_hash, role, name, must_change_password) VALUES (?, ?, ?, ?, 1)')
-      .run('admin', sha256('admin'), 'admin', 'مدیر سیستم');
+      .run('admin', initialHash, 'admin', 'مدیر سیستم');
     console.log('[seed] created default admin; password change is required at first login');
-  } else {
-    db.prepare('UPDATE users SET must_change_password = 1 WHERE username = ? AND password_hash = ?')
-      .run('admin', sha256('admin'));
+  } else if (stillUsingPublicDefault) {
+    if (!IS_LOOPBACK_HOST) {
+      db.prepare('UPDATE users SET password_hash = ?, must_change_password = 1 WHERE id = ?')
+        .run(hashPassword(INITIAL_ADMIN_PASSWORD), defaultAdmin.id);
+      console.log('[security] replaced public default admin credential using BANKRESANEH_ADMIN_PASSWORD');
+    } else {
+      db.prepare('UPDATE users SET must_change_password = 1 WHERE id = ?').run(defaultAdmin.id);
+    }
   }
 }
-
 function seedShows() {
   const candidates = [
     process.env.BANKRESANEH_SEED_PATH,
@@ -550,7 +570,7 @@ try {
 // ---------------------------------------------------------------------------
 const server = Bun.serve({
   port: PORT,
-  hostname: process.env.BANKRESANEH_HOST || '0.0.0.0',
+  hostname: HOST,
   async fetch(req) {
     const url = new URL(req.url);
     const pathname = url.pathname;
