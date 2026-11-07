@@ -1,10 +1,11 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const dataDir = mkdtempSync(path.join(tmpdir(), 'bankresaneh-prisma-runtime-'));
 const databasePath = path.join(dataDir, 'db', 'translation-rate-limit.sqlite');
+mkdirSync(path.dirname(databasePath), { recursive: true });
 process.env.DATABASE_URL = pathToFileURL(databasePath).href;
 
 const { db } = await import('../src/lib/db.ts');
