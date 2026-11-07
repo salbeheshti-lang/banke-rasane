@@ -320,6 +320,10 @@ function createSession(userId) {
   return token;
 }
 function destroySession(token) { db.prepare('DELETE FROM sessions WHERE token = ?').run(token); }
+function getTokenFromRequest(req) {
+  const auth = req.headers.get('Authorization') || '';
+  return auth.startsWith('Bearer ') ? auth.slice(7) : '';
+}
 
 // === Activity Log — records who did what, when ===
 function logActivity(user, action, targetType, targetId, details) {
@@ -389,8 +393,7 @@ function requirePermission(req, perm) {
 }
 
 function requireUser(req) {
-  const auth = req.headers.get('Authorization') || '';
-  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  const token = getTokenFromRequest(req);
   if (!token) return null;
   const user = getUserByToken(token);
   // Block suspended/inactive users from all API access
@@ -769,8 +772,18 @@ const server = Bun.serve({
       if (newPassword.length < 8) return json({ error: 'رمز جدید باید حداقل ۸ کاراکتر باشد' }, 400, req);
       if (!verifyPassword(oldPassword, user.password_hash)) return json({ error: 'رمز فعلی نادرست است' }, 401, req);
       db.prepare('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?').run(hashPassword(newPassword), user.id);
-      db.prepare('DELETE FROM sessions WHERE user_id = ?').run(user.id);
-      return json({ success: true }, req);
+      // Rotate the session: invalidate the OLD token (so it can't be replayed)
+      // but immediately issue a NEW token so the user doesn't have to re-login.
+      // Previously this deleted ALL sessions and returned { success: true },
+      // which forced the frontend to log out — and if the frontend's logout
+      // was delayed (1.5s timer), any API call in that window got 401
+      // "Unauthorized" with a stale token (e.g. POST /api/users).
+      destroySession(getTokenFromRequest(req));
+      const newToken = createSession(user.id);
+      const refreshed = getUserById(user.id);
+      db.prepare('UPDATE users SET last_seen = ? WHERE id = ?').run(nowSec(), user.id);
+      logActivity(user, 'change_password', 'user', user.id, 'changed own password');
+      return json({ success: true, token: newToken, user: publicUser(refreshed, refreshed) }, req);
     }
 
     // ----- Persian full-text archive search with bounded pagination -----

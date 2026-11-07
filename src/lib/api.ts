@@ -121,7 +121,18 @@ export const api = {
   async getProfile() { return request<User>(getApiUrl('api/profile')); },
   async updateProfile(data: Partial<User>) { return request<User>(getApiUrl('api/profile'), { method: 'PUT', body: JSON.stringify(data) }); },
   async changePassword(oldPassword: string, newPassword: string) {
-    return request(getApiUrl('api/auth/change-password'), { method: 'PUT', body: JSON.stringify({ oldPassword, newPassword }) });
+    const data = await request<{ success: boolean; token?: string; user?: User }>(
+      getApiUrl('api/auth/change-password'),
+      { method: 'PUT', body: JSON.stringify({ oldPassword, newPassword }) }
+    );
+    // The API now rotates the session and returns a fresh token. Persist it
+    // immediately so subsequent requests use the new token instead of the
+    // now-invalidated old one (which was the root cause of the 401
+    // "Unauthorized" errors the user saw after changing password).
+    if (data?.token && typeof window !== 'undefined') {
+      localStorage.setItem(TOKEN_KEY, data.token);
+    }
+    return data;
   },
   async getUsers() { const data = await request<{ users: User[] }>(getApiUrl('api/users')); return data.users || []; },
   async getCurrentUser(): Promise<User | null> {
