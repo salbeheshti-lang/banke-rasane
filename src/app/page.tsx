@@ -4429,6 +4429,57 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
   );
   const [fetchUrl, setFetchUrl] = useState('');
   const [fetching, setFetching] = useState(false);
+  const [translating, setTranslating] = useState(false);
+  const [translatePreview, setTranslatePreview] = useState<Record<string, string> | null>(null);
+
+  // Translate text fields to Persian via the /api/translate endpoint.
+  // The endpoint is server-side only (the SDK key never reaches the client).
+  // We show a PREVIEW first — the user can review, edit, or discard before
+  // the translation is applied to the form.
+  const handleTranslate = async () => {
+    setTranslating(true);
+    setTranslatePreview(null);
+    try {
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: form }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        showToast(`خطای ترجمه: ${data.error}`);
+      } else if (data.translations) {
+        // Only show fields that actually changed (different from original).
+        const changed: Record<string, string> = {};
+        for (const [k, v] of Object.entries(data.translations as Record<string,string>)) {
+          if (v !== (form as Record<string, unknown>)[k]) changed[k] = v;
+        }
+        if (Object.keys(changed).length === 0) {
+          showToast('متن از قبل فارسی است — چیزی برای ترجمه نیست.');
+        } else {
+          setTranslatePreview(changed);
+          showToast(`${Object.keys(changed).length} فیلد ترجمه شد — پیش‌نمایش را بررسی کنید.`);
+        }
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'خطای ناشناخته';
+      showToast('خطا در ارتباط با سرویس ترجمه: ' + msg);
+    } finally {
+      setTranslating(false);
+    }
+  };
+
+  const applyTranslation = () => {
+    if (!translatePreview) return;
+    setForm((prev) => ({ ...prev, ...translatePreview }));
+    setTranslatePreview(null);
+    showToast('ترجمه اعمال شد. برای ذخیره، دکمه ذخیره را بزنید.');
+  };
+
+  const cancelTranslation = () => {
+    setTranslatePreview(null);
+    showToast('ترجمه لغو شد — هیچ تغییری اعمال نشد.');
+  };
 
   const handleAutoFetch = async () => {
     if (!fetchUrl) {
@@ -4578,6 +4629,84 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
               {fetching ? '⏳ در حال دریافت...' : '⚡ دریافت'}
             </button>
           </div>
+        </div>
+
+        {/* 🌐 Translate to Persian — server-side LLM translation.
+            Shows a preview before applying. Original title, URLs, and other
+            protected fields are preserved by the API. */}
+        <div
+          className="p-4 rounded-2xl"
+          style={{ background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.25)' }}
+        >
+          <h4 className="font-bold mb-2" style={{ color: '#f0fdf4' }}>🌐 ترجمه هوشمند به فارسی</h4>
+          <p className="text-xs mb-3" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>
+            توضیحات، خلاصه و سایر فیلدهای متنی برنامه به فارسی روان ترجمه می‌شوند. عنوان اصلی و لینک‌ها تغییر نمی‌کنند. نتیجه را قبل از ذخیره بررسی می‌کنید.
+          </p>
+          <button
+            onClick={handleTranslate}
+            disabled={translating}
+            className="btn-enter-premium"
+            style={{ padding: '10px 24px', fontSize: '14px', whiteSpace: 'nowrap' }}
+          >
+            {translating ? '⏳ در حال ترجمه...' : '🌐 ترجمه به فارسی'}
+          </button>
+
+          {/* Preview dialog — shown after translation completes */}
+          {translatePreview && (
+            <div
+              className="mt-4 p-4 rounded-xl"
+              style={{ background: 'rgba(0, 0, 0, 0.3)', border: '1px solid rgba(99, 102, 241, 0.4)' }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h5 className="font-bold text-sm" style={{ color: '#c7d2fe' }}>
+                  📝 پیش‌نمایش ترجمه ({Object.keys(translatePreview).length} فیلد)
+                </h5>
+                <div className="flex gap-2">
+                  <button
+                    onClick={cancelTranslation}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                    style={{ background: 'rgba(255, 255, 255, 0.1)', color: '#f0fdf4' }}
+                  >
+                    لغو
+                  </button>
+                  <button
+                    onClick={applyTranslation}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
+                    style={{ background: 'rgba(99, 102, 241, 0.8)', color: 'white' }}
+                  >
+                    ✓ اعمال ترجمه
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {Object.entries(translatePreview).map(([field, translated]) => {
+                  const original = (form as Record<string, unknown>)[field];
+                  const fieldName = field === 'summary' ? 'خلاصه' :
+                                    field === 'descriptionFa' ? 'توضیحات فارسی' :
+                                    field === 'elements' ? 'عناصر' :
+                                    field === 'materials' ? 'مواد' :
+                                    field === 'colors' ? 'رنگ‌ها' :
+                                    field === 'lighting' ? 'نورپردازی' :
+                                    field === 'layout' ? 'چیدمان' :
+                                    field === 'style' ? 'سبک' :
+                                    field === 'effects' ? 'افکت‌ها' :
+                                    field === 'viewers' ? 'تماشاگران' :
+                                    field === 'size' ? 'سایز' : field;
+                  return (
+                    <div key={field} className="p-2 rounded-lg" style={{ background: 'rgba(255, 255, 255, 0.05)' }}>
+                      <div className="text-xs font-bold mb-1" style={{ color: '#a5b4fc' }}>{fieldName}</div>
+                      <div className="text-xs mb-1" style={{ color: 'rgba(244, 255, 255, 0.5)' }}>
+                        <span className="opacity-60">اصلی:</span> {String(original || '').substring(0, 80)}{String(original || '').length > 80 ? '...' : ''}
+                      </div>
+                      <div className="text-xs" style={{ color: '#f0fdf4' }}>
+                        <span className="opacity-60">ترجمه:</span> {translated.substring(0, 80)}{translated.length > 80 ? '...' : ''}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         <FormField label="نام برنامه *" value={form.name || ''} onChange={v => setForm({ ...form, name: v })} placeholder="مثلاً: BBC Breakfast" />
