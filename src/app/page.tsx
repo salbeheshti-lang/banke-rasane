@@ -491,6 +491,20 @@ type StoredGenre = {
   description: string;
 };
 
+/**
+ * Legacy custom genres were auto-described as "ژانر سفارشی: <name>". That
+ * placeholder must never appear on a genre card, so any description that
+ * matches the old auto-generated pattern is dropped (empty string → the card
+ * simply omits the description line). User-written descriptions pass through.
+ */
+function stripLegacyGenreDescription(description: string): string {
+  const d = (description || '').trim();
+  if (!d) return '';
+  // Matches "ژانر سفارشی:", "ژانر سفارشی :" and the exact placeholder itself.
+  if (d === 'ژانر سفارشی' || d.startsWith('ژانر سفارشی:')) return '';
+  return d;
+}
+
 function loadCustomGenres(): Genre[] {
   if (typeof window === 'undefined') return [];
   try {
@@ -506,7 +520,10 @@ function loadCustomGenres(): Genre[] {
         nameFa: g.nameFa,
         name: g.name || g.nameFa,
         color: g.color,
-        description: g.description || '',
+        // MIGRATION: older versions auto-filled the card description with
+        // "ژانر سفارشی: <name>" — strip that legacy placeholder so the card
+        // shows the real description (or nothing) instead.
+        description: stripLegacyGenreDescription(g.description || ''),
         // Match shows whose category contains the genre's Persian name
         filterFn: (s: TalkShow) => s.category.includes(g.nameFa) || (g.name ? s.category.includes(g.name) : false),
         isCustom: true,
@@ -920,7 +937,11 @@ function HomeInner() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydrate persisted overrides after mount to preserve the current UI behavior.
     setOverrides(saved);
     // Restore custom genres saved in a previous session.
-    setCustomGenres(loadCustomGenres());
+    const restoredGenres = loadCustomGenres();
+    setCustomGenres(restoredGenres);
+    // Persist migrated (cleaned) genres back so legacy "ژانر سفارشی:" placeholder
+    // descriptions are permanently removed from storage, not just hidden.
+    if (restoredGenres.length > 0) saveCustomGenres(restoredGenres);
     fetch('/talk-shows-data.json')
       .then(r => r.json())
       .then((data: TalkShow[]) => {
@@ -1044,6 +1065,22 @@ function HomeInner() {
     showToast(`ژانر «${g.nameFa}» اضافه شد`);
   };
 
+  // Edit an existing custom Genre (updates state + localStorage).
+  const handleEditGenre = (g: Genre) => {
+    const next = customGenres.map(x => (x.id === g.id ? g : x));
+    setCustomGenres(next);
+    saveCustomGenres(next);
+    showToast(`ژانر «${g.nameFa}» به‌روزرسانی شد`);
+  };
+
+  // Delete a custom Genre (removes from state + localStorage).
+  const handleDeleteGenre = (id: string) => {
+    const next = customGenres.filter(x => x.id !== id);
+    setCustomGenres(next);
+    saveCustomGenres(next);
+    showToast('ژانر حذف شد');
+  };
+
   const handleLogout = async () => {
     try { await api.logout(); } catch {}
     setCurrentUser(null);
@@ -1120,7 +1157,7 @@ function HomeInner() {
       />
 
       <main key={currentView} className={`animate-view-enter ${isMobile ? 'p-4 pt-20 pb-28' : 'p-8 pt-24'}`}>
-        {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} onShowClick={setSelectedShow} />}
+        {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} onEditGenre={handleEditGenre} onDeleteGenre={handleDeleteGenre} onShowClick={setSelectedShow} />}
         {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} onExport={(shows, format, meta) => setExportPreview({ shows, format, ...meta })} />}
@@ -1444,7 +1481,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
 
         <div className="mt-10 text-center">
           <p style={{ color: 'rgba(134, 239, 172, 0.6)' }} className="text-xs tracking-wider">
-            نسخه ۲.۰.۰ • بانک اطلاعاتی برنامه‌های تلویزیونی
+            نسخه ۲.۰.۰ • مرجع جامع برنامه‌های تلویزیونی بین‌المللی
           </p>
         </div>
       </div>
@@ -2570,7 +2607,7 @@ function ContactRow({ icon, label, value, editing, onChange, placeholder, dir }:
 // ============================================
 // DASHBOARD
 // ============================================
-function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isAdmin, genres = GENRES, onAddGenre, onShowClick }: {
+function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isAdmin, genres = GENRES, onAddGenre, onEditGenre, onDeleteGenre, onShowClick }: {
   onGenreClick: (g: Genre) => void;
   talkShows: TalkShow[];
   uploadedCount: number;
@@ -2579,10 +2616,14 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
   isAdmin?: boolean;
   genres?: Genre[];
   onAddGenre?: (g: Genre) => void;
+  onEditGenre?: (g: Genre) => void;
+  onDeleteGenre?: (id: string) => void;
   onShowClick?: (s: TalkShow) => void;
 }) {
   const { t, lang } = useLang();
   const [showAddGenre, setShowAddGenre] = useState(false);
+  const [editingGenre, setEditingGenre] = useState<Genre | null>(null);
+  const [deletingGenre, setDeletingGenre] = useState<Genre | null>(null);
 
   // ----- Analytics computation -----
   // Build ranked genre list with counts and percentages.
@@ -2924,17 +2965,60 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {genres.map((g, idx) => {
           const count = talkShows.filter(g.filterFn).length;
+          const canManage = isAdmin && g.isCustom && onEditGenre && onDeleteGenre;
           return (
             <button
               key={g.id}
               onClick={() => onGenreClick(g)}
-              className="premium-genre-card animate-card-enter text-right"
+              className="premium-genre-card animate-card-enter text-right relative"
               style={{
                 animationDelay: `${idx * 50}ms`,
                 ['--genre-color' as string]: g.color,
                 ['--card-index' as string]: idx,
               }}
             >
+              {canManage && (
+                <div className="absolute top-3 left-3 z-10 flex items-center gap-1">
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => { e.stopPropagation(); setEditingGenre(g); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); setEditingGenre(g); } }}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center transition-all"
+                    title="ویرایش ژانر"
+                    aria-label="ویرایش ژانر"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.18)',
+                      border: '1px solid rgba(255, 255, 255, 0.3)',
+                      color: '#ffffff',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </span>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => { e.stopPropagation(); setDeletingGenre(g); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); setDeletingGenre(g); } }}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center transition-all"
+                    title="حذف ژانر"
+                    aria-label="حذف ژانر"
+                    style={{
+                      background: 'rgba(220, 38, 38, 0.25)',
+                      border: '1px solid rgba(220, 38, 38, 0.45)',
+                      color: '#fecaca',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </span>
+                </div>
+              )}
               <div className="flex items-start justify-between mb-4">
                 <div
                   className="w-14 h-14 rounded-2xl flex items-center justify-center"
@@ -2957,7 +3041,9 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                 </div>
               </div>
               <h3 className="font-bold text-lg mb-1" style={{ color: '#ffffff' }}>{g.nameFa}</h3>
-              <p className="text-sm mt-3" style={{ color: 'rgba(255, 255, 255, 0.75)' }}>{g.description}</p>
+              {g.description ? (
+                <p className="text-sm mt-3" style={{ color: 'rgba(255, 255, 255, 0.75)' }}>{g.description}</p>
+              ) : null}
               <div className="mt-4 flex items-center text-sm font-bold" style={{ color: g.color }}>
                 مشاهده و جستجو
                 <svg className="w-4 h-4 mr-1 rtl-flip" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2973,6 +3059,23 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
         <AddGenreModal
           onClose={() => setShowAddGenre(false)}
           onSave={(g) => { onAddGenre(g); setShowAddGenre(false); }}
+        />
+      )}
+
+      {editingGenre && onEditGenre && (
+        <AddGenreModal
+          editingGenre={editingGenre}
+          onClose={() => setEditingGenre(null)}
+          onSave={(g) => { onEditGenre(g); setEditingGenre(null); }}
+        />
+      )}
+
+      {deletingGenre && onDeleteGenre && (
+        <DeleteGenreConfirm
+          genre={deletingGenre}
+          count={talkShows.filter(deletingGenre.filterFn).length}
+          onClose={() => setDeletingGenre(null)}
+          onConfirm={() => { onDeleteGenre(deletingGenre.id); setDeletingGenre(null); }}
         />
       )}
     </>
@@ -5615,31 +5718,33 @@ const GENRE_COLOR_PRESETS = [
   '#10b981', '#10b981', '#7c3aed', '#db2777', '#dc2626', '#ea580c', '#16a34a', '#0d7c4a',
 ];
 
-function AddGenreModal({ onClose, onSave }: {
+function AddGenreModal({ onClose, onSave, editingGenre }: {
   onClose: () => void;
   onSave: (g: Genre) => void;
+  editingGenre?: Genre | null;
 }) {
   useEscapeKey(onClose);
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [color, setColor] = useState(GENRE_COLOR_PRESETS[0]);
+  const isEditing = !!editingGenre;
+  const [name, setName] = useState(editingGenre?.nameFa ?? '');
+  const [description, setDescription] = useState(editingGenre?.description ?? '');
+  const [color, setColor] = useState(editingGenre?.color ?? GENRE_COLOR_PRESETS[0]);
 
   const handleSave = () => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    const id = 'custom-' + Date.now().toString(36);
+    const id = editingGenre?.id ?? ('custom-' + Date.now().toString(36));
     const g: Genre = {
       id,
-      key: id,
+      key: editingGenre?.key ?? id,
       nameFa: trimmed,
       name: trimmed,
       color,
-      description: description.trim() || `ژانر سفارشی: ${trimmed}`,
+      description: description.trim(),
       filterFn: (s: TalkShow) => s.category.includes(trimmed),
       isCustom: true,
-      tags: DEFAULT_GENRE_TAGS,
-      presetTags: [],
-      searchFields: ['name', 'summary', 'category', 'descriptionFa'] as (keyof TalkShow)[],
+      tags: editingGenre?.tags ?? DEFAULT_GENRE_TAGS,
+      presetTags: editingGenre?.presetTags ?? [],
+      searchFields: editingGenre?.searchFields ?? (['name', 'summary', 'category', 'descriptionFa'] as (keyof TalkShow)[]),
     };
     onSave(g);
   };
@@ -5649,7 +5754,7 @@ function AddGenreModal({ onClose, onSave }: {
       <div className="modal-content animate-modal-enter" style={{ maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(13, 124, 74,0.1)' }}>
-          <h2 className="text-xl font-bold" style={{ color: '#f0fdf4' }}>+ افزودن ژانر جدید</h2>
+          <h2 className="text-xl font-bold" style={{ color: '#f0fdf4' }}>{isEditing ? '✏️ ویرایش ژانر' : '+ افزودن ژانر جدید'}</h2>
           <button onClick={onClose} className="p-2 rounded-lg" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -5745,12 +5850,68 @@ function AddGenreModal({ onClose, onSave }: {
               className="btn-enter-premium flex-1"
               style={{ opacity: name.trim() ? 1 : 0.5, cursor: name.trim() ? 'pointer' : 'not-allowed' }}
             >
-              ✓ ذخیره ژانر
+              ✓ {isEditing ? 'به‌روزرسانی ژانر' : 'ذخیره ژانر'}
             </button>
             <button
               onClick={onClose}
               className="px-6 py-3 rounded-xl text-sm font-medium"
               style={{ background: 'rgba(107, 143, 122,0.15)', color: 'rgba(255, 255, 255, 0.9)', border: '1px solid rgba(107, 143, 122,0.3)' }}
+            >
+              انصراف
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// DELETE GENRE CONFIRM — confirms removal of a custom genre
+// ============================================
+function DeleteGenreConfirm({ genre, count, onClose, onConfirm }: {
+  genre: Genre;
+  count: number;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  useEscapeKey(onClose);
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-content animate-modal-enter" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
+        <div className="p-6 text-center">
+          <div
+            className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+            style={{ background: 'rgba(220, 38, 38, 0.15)', border: '1px solid rgba(220, 38, 38, 0.4)' }}
+          >
+            <svg className="w-7 h-7" style={{ color: '#fca5a5' }} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold mb-2" style={{ color: '#f0fdf4' }}>حذف ژانر</h2>
+          <p className="text-sm mb-1" style={{ color: 'rgba(244, 255, 255, 0.8)' }}>
+            آیا از حذف ژانر «<strong style={{ color: genre.color }}>{genre.nameFa}</strong>» مطمئن هستید؟
+          </p>
+          <p className="text-xs mb-6" style={{ color: 'rgba(244, 255, 255, 0.6)' }}>
+            این ژانر {count > 0 ? `${count.toLocaleString('fa-IR')} برنامه` : 'هیچ برنامه‌ای'} را در بر می‌گیرد. حذف ژانر، خود برنامه‌ها را پاک نمی‌کند.
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={onConfirm}
+              className="flex-1 py-3 rounded-xl text-sm font-bold transition-all"
+              style={{
+                background: 'linear-gradient(135deg, #b91c1c 0%, #dc2626 100%)',
+                color: '#ffffff',
+                border: '1px solid rgba(220, 38, 38, 0.5)',
+                boxShadow: '0 4px 14px rgba(185, 28, 28, 0.4)',
+              }}
+            >
+              ✓ بله، حذف شود
+            </button>
+            <button
+              onClick={onClose}
+              className="px-6 py-3 rounded-xl text-sm font-medium"
+              style={{ background: 'rgba(107, 143, 122, 0.15)', color: 'rgba(255, 255, 255, 0.9)', border: '1px solid rgba(107, 143, 122, 0.3)' }}
             >
               انصراف
             </button>
