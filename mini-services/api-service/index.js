@@ -416,7 +416,7 @@ function sha256(s) { return createHash('sha256').update(s, 'utf8').digest('hex')
 // PBKDF2-HMAC-SHA256 with per-password salt; legacy hashes are upgraded on login.
 function hashPassword(password) {
   const salt = randomBytes(16).toString('hex');
-  const iterations = 310000;
+  const iterations = 600000;
   const hash = pbkdf2Sync(password, salt, iterations, 32, 'sha256').toString('hex');
   return 'pbkdf2$' + iterations + '$' + salt + '$' + hash;
 }
