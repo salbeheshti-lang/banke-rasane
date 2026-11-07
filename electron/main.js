@@ -12,11 +12,7 @@ const { randomBytes } = require('crypto');
 
 function toPrismaSqliteUrl(filePath) {
   const normalized = path.resolve(filePath).replace(/\\/g, '/');
-  const segments = normalized.split('/');
-  const encodedPath = segments.map((segment, index) =>
-    index === 0 && /^[A-Za-z]:$/.test(segment) ? segment : encodeURIComponent(segment)
-  ).join('/');
-  return `file:${encodedPath}`;
+  return `file:${normalized}`;
 }
 
 let mainWindow = null;
