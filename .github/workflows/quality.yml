@@ -30,6 +30,9 @@ jobs:
         env:
           DATABASE_URL: file:./db/custom.db
 
+      - name: Test persistent Prisma SQLite runtime
+        run: bun scripts/test-prisma-runtime.ts
+
       - name: Lint
         run: bun run lint
 
