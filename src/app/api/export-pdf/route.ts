@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { requirePermission } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
 
@@ -64,6 +65,13 @@ function getReportSettings(): { title: string; subtitle: string; organization: s
 }
 
 export async function POST(request: NextRequest) {
+  // --- Auth: requires export_reports permission (admin/editor by default).
+  // Previously this endpoint was unauthenticated, allowing anyone to generate
+  // PDFs from caller-supplied show data — a minor abuse vector. ---
+  const user = await requirePermission(request, 'export_reports');
+  if (!user) {
+    return NextResponse.json({ error: 'دسترسی غیرمجاز — نیاز به دسترسی گزارش‌گیری' }, { status: 403 });
+  }
   try {
     const body = await request.json();
     const shows = body.shows;

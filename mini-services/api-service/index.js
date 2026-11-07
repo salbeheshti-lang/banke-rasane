@@ -714,6 +714,16 @@ const server = Bun.serve({
         recordFailedAttempt(ip);
         return json({ error: 'نام کاربری یا رمز عبور نادرست است' }, 401, req);
       }
+      // SECURITY: suspended users cannot log in. We return the same generic
+      // "invalid credentials" message as a bad password to avoid leaking
+      // which usernames exist and which are suspended (info-disclosure
+      // defense). The previous code issued a valid session token even for
+      // suspended users, which was misleading UX (the token worked for
+      // /api/auth/me but failed everywhere else).
+      if (user.is_active === 0) {
+        recordFailedAttempt(ip);
+        return json({ error: 'نام کاربری یا رمز عبور نادرست است' }, 401, req);
+      }
       clearRateLimit(ip);
       db.prepare('UPDATE users SET last_seen = ? WHERE id = ?').run(nowSec(), user.id);
       user.last_seen = nowSec();
@@ -776,13 +786,13 @@ const server = Bun.serve({
       if (newPassword.length < 8) return json({ error: 'رمز جدید باید حداقل ۸ کاراکتر باشد' }, 400, req);
       if (!verifyPassword(oldPassword, user.password_hash)) return json({ error: 'رمز فعلی نادرست است' }, 401, req);
       db.prepare('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?').run(hashPassword(newPassword), user.id);
-      // Rotate the session: invalidate the OLD token (so it can't be replayed)
-      // but immediately issue a NEW token so the user doesn't have to re-login.
-      // Previously this deleted ALL sessions and returned { success: true },
-      // which forced the frontend to log out — and if the frontend's logout
-      // was delayed (1.5s timer), any API call in that window got 401
-      // "Unauthorized" with a stale token (e.g. POST /api/users).
-      destroySession(getTokenFromRequest(req));
+      // SECURITY: rotate the session. Invalidate ALL of this user's existing
+      // sessions (other devices, stolen tokens) — this is the standard
+      // expectation when a password changes. Previously we only invalidated
+      // the current token, which left stolen tokens valid for up to 7 days.
+      // The trade-off is that other devices get logged out — which is the
+      // desired security behavior on password change.
+      db.prepare('DELETE FROM sessions WHERE user_id = ?').run(user.id);
       const newToken = createSession(user.id);
       const refreshed = getUserById(user.id);
       db.prepare('UPDATE users SET last_seen = ? WHERE id = ?').run(nowSec(), user.id);
@@ -858,11 +868,23 @@ const server = Bun.serve({
     }
 
     // ----- Shows: list -----
+    // NOTE: This endpoint previously returned the ENTIRE shows table
+    // (1302+ rows) in one response with no pagination — a memory and
+    // bandwidth risk. It is now paginated the same way as /api/shows/search.
+    // The default (no params) returns page 1 limit 100 so existing callers
+    // that ignore pagination still get a useful first page.
     if (pathname === '/api/shows' && method === 'GET') {
       const user = requireRole(req, ['admin', 'editor', 'viewer']);
       if (!user) return json({ error: 'Unauthorized' }, 401, req);
-      const rows = db.prepare('SELECT * FROM shows ORDER BY num').all();
-      return json({ shows: rows.map(rowToShow) }, req);
+      const page = Math.max(1, Math.min(1000000, parseInt(url.searchParams.get('page') || '1', 10) || 1));
+      const limit = Math.max(1, Math.min(500, parseInt(url.searchParams.get('limit') || '100', 10) || 100));
+      const offset = (page - 1) * limit;
+      const total = db.prepare('SELECT COUNT(*) AS total FROM shows').get().total;
+      const rows = db.prepare('SELECT * FROM shows ORDER BY num LIMIT ? OFFSET ?').all(limit, offset);
+      return json({
+        shows: rows.map(rowToShow),
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      }, req);
     }
 
     // ----- Shows: create -----
@@ -954,8 +976,21 @@ const server = Bun.serve({
       if (isSuperAdmin(target) && body.role && body.role !== 'admin') {
         return json({ error: 'مدیر اصلی قابل تنزل سطح دسترسی نیست' }, 403, req);
       }
-      if (isSuperAdmin(target) && body.isActive === false) {
+      // CRITICAL FIX: previously the guard was `body.isActive === false` which
+      // could be bypassed by sending `isActive: 0`, `isActive: "false"`, or
+      // `isActive: null`. A regular admin (who has `suspend_users` by default)
+      // could then suspend the super admin, lock them out of every endpoint
+      // (requireUser returns null for is_active=0), and the only recovery was
+      // a manual DB edit (the startup migration does NOT reset is_active).
+      // Fix: coerce to boolean first, so ANY truthy/falsy value is treated
+      // consistently. The super admin can never be suspended via the API.
+      if (isSuperAdmin(target) && body.isActive !== undefined && !body.isActive) {
         return json({ error: 'مدیر اصلی قابل تعلیق نیست' }, 403, req);
+      }
+      // Also block any attempt to change the super admin's role via the
+      // `isActive: true` reactivation path (no-op, but explicit for clarity).
+      if (isSuperAdmin(target) && body.role && body.role !== 'admin') {
+        return json({ error: 'مدیر اصلی قابل تنزل سطح دسترسی نیست' }, 403, req);
       }
 
       // If upgrading a user TO admin role, check create_admins permission
@@ -1000,6 +1035,14 @@ const server = Bun.serve({
       const newName = body.name ?? target.name;
       const newActive = body.isActive !== undefined ? (body.isActive ? 1 : 0) : target.is_active;
       db.prepare('UPDATE users SET name = ?, role = ?, is_active = ?, permissions = ? WHERE id = ?').run(newName, newRole, newActive, newPerms, id);
+      // SECURITY: if the user was just suspended, immediately destroy all
+      // their sessions. Their tokens would otherwise linger in the DB for
+      // up to 7 days (requireUser already blocks them at the auth gate, but
+      // leaving stale rows is a forensic nuisance and inconsistent with
+      // the delete path which DOES clean up sessions).
+      if (newActive === 0 && target.is_active === 1) {
+        db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id);
+      }
       logActivity(admin, 'update_user', 'user', id, `Updated user "${target.username}": role=${newRole}, active=${newActive}`);
       return json(publicUser(getUserById(id), admin), req);
     }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { requirePermission } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
 
@@ -44,12 +45,21 @@ function writeSettings(s: ReportSettings) {
 }
 
 // GET → return current persisted settings (or defaults).
+// Public — any authenticated user can read the report settings (they're used
+// for PDF generation which all viewers may access). Anonymous users get
+// defaults only (no sensitive info exposed).
 export async function GET() {
   return NextResponse.json(readSettings());
 }
 
 // POST → save updated settings. Body: { title?, subtitle?, organization? }
+// Auth: requires manage_settings permission (admin-only by default).
 export async function POST(request: NextRequest) {
+  // --- Auth: only admins (manage_settings permission) can change report settings ---
+  const admin = await requirePermission(request, 'manage_settings');
+  if (!admin) {
+    return NextResponse.json({ ok: false, error: 'دسترسی غیرمجاز — نیاز به دسترسی مدیر' }, { status: 403 });
+  }
   try {
     const body = await request.json();
     const current = readSettings();

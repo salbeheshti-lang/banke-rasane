@@ -1,0 +1,80 @@
+// Shared auth helper for Next.js API routes.
+//
+// The BankResaneh session store lives in the Bun API service (port 3002)
+// — it owns the `sessions` table. Rather than duplicate that logic in
+// Next.js, we proxy the auth check through the Bun service's
+// /api/auth/me endpoint, which reads the same `Authorization: Bearer
+// <token>` header the SPA already sends.
+//
+// Usage:
+//   import { requireUser, requirePermission } from '@/lib/server-auth';
+//   export async function POST(req: NextRequest) {
+//     const user = await requireUser(req);
+//     if (!user) return NextResponse.json({error:'Unauthorized'}, {status:401});
+//     // OR, for permission-gated routes:
+//     const admin = await requirePermission(req, 'manage_settings');
+//     if (!admin) return NextResponse.json({error:'Forbidden'}, {status:403});
+//     ...
+//   }
+
+import type { NextRequest } from 'next/server';
+
+const API_BASE = process.env.BANKRESANEH_API_BASE || 'http://127.0.0.1:3002';
+
+export interface AuthUser {
+  id: number;
+  username: string;
+  role: 'admin' | 'editor' | 'viewer';
+  name: string;
+  isSuperAdmin?: boolean;
+  isActive?: boolean;
+  mustChangePassword?: boolean;
+  permissions?: string[];
+}
+
+/**
+ * Validate the caller's session by proxying to the Bun API service.
+ * Returns the user object on success, or null on any failure
+ * (missing token, invalid token, expired session, suspended user,
+ * API service down, etc.).
+ */
+export async function requireUser(req: NextRequest): Promise<AuthUser | null> {
+  const auth = req.headers.get('Authorization') || '';
+  if (!auth.startsWith('Bearer ')) return null;
+  try {
+    const r = await fetch(`${API_BASE}/api/auth/me`, {
+      headers: { Authorization: auth },
+      // Short timeout so a down API service doesn't hang the request.
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!r.ok) return null;
+    const u = (await r.json()) as AuthUser;
+    if (!u || typeof u.id !== 'number') return null;
+    return u;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Validate the caller's session AND require a specific permission.
+ * Returns the user object if they have the permission, or null otherwise.
+ *
+ * Permissions are checked via the Bun API service's /api/permissions endpoint
+ * shape — we rely on the `permissions` array already present in the /api/auth/me
+ * response (the Bun service populates it via getUserPermissions()).
+ */
+export async function requirePermission(
+  req: NextRequest,
+  permission: string
+): Promise<AuthUser | null> {
+  const user = await requireUser(req);
+  if (!user) return null;
+  // Super admin has all permissions.
+  if (user.isSuperAdmin) return user;
+  // Otherwise, check the permissions array.
+  if (Array.isArray(user.permissions) && user.permissions.includes(permission)) {
+    return user;
+  }
+  return null;
+}

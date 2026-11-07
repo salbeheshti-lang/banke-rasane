@@ -4,22 +4,28 @@ export const runtime = 'nodejs';
 
 // Translation endpoint for the BankResaneh show editor.
 //
-// Design principles (per the user's spec):
-//   1. Server-side only — the SDK key never leaves the server.
-//   2. Auto-detect source language (English, Arabic, Turkish, French, German,
-//      etc.) — the model handles detection; we just ask for a Persian output.
-//   3. Preserve proper nouns: person names, network names, IMDb/Wikipedia
-//      URLs, and the original title are NOT translated.
-//   4. Never clobber — the endpoint returns the translated fields; the
-//      frontend decides whether to apply them (with a preview + user
-//      confirmation). No writes happen here.
-//   5. Single LLM call — we send all fields to the model in one request
-//      (as a JSON object) and ask it to return a JSON object with the
-//      translations. This is ~5x cheaper and faster than calling the model
-//      once per field, and avoids rate-limit issues.
-//
-// Input:  { fields: { name?, summary?, descriptionFa?, elements?, ... } }
-// Output: { translations: { ... }, warnings: string[] }
+// Security design (per Phase 2 audit):
+//   1. Authentication required — caller must send a valid BankResaneh
+//      session token (Authorization: Bearer <token>). The endpoint proxies
+//      the auth check through the Bun API service's /api/auth/me endpoint,
+//      so the SDK key never leaves the server AND we reuse the existing
+//      session infrastructure rather than duplicating it.
+//   2. Rate limited — per-user in-memory token bucket: max 10 requests /
+//      minute, bursts allowed. Prevents denial-of-wallet attacks against
+//      the project's z-ai-web-dev-sdk quota.
+//   3. Input size capped — max 25 fields per request, max 5 000 chars per
+//      field, max 100 KB total payload. Rejects payloads that would
+//      otherwise forward megabytes to the LLM provider.
+//   4. Output sanity-checked — the model's response must be valid JSON
+//      with string values; if a value contains no Persian/Arabic script
+//      characters at all (i.e. the model returned English or echoed the
+//      system prompt), we keep the original text instead.
+//   5. Server-side only — the SDK key never reaches the client.
+//   6. Auto-detect source language — the model handles detection.
+//   7. Preserve proper nouns: original title, URLs, IDs, and image fields
+//      are never translated.
+//   8. Never clobber — the endpoint only RETURNS translations; it never
+//      writes to the DB. The frontend shows a preview before applying.
 
 interface TranslateRequest {
   fields: Record<string, string>;
@@ -35,24 +41,133 @@ const PRESERVED_FIELDS = new Set([
 // "عنوان اصلی تغییر نکند" (the original title must not change).
 const PRESERVE_ORIGINAL_TITLE = true;
 
-export async function POST(request: NextRequest) {
+// === Rate limiter (in-memory token bucket, per user) ===
+// Limits: 10 requests per 60 seconds per user. Bursts up to 10 are allowed.
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const RATE_LIMIT_MAX = 10;
+const rateBuckets = new Map<string, { count: number; resetAt: number }>();
+// Garbage-collect stale buckets every 5 minutes to prevent memory growth.
+let lastGcAt = Date.now();
+function gcRateBuckets() {
+  const now = Date.now();
+  if (now - lastGcAt < 5 * 60 * 1000) return;
+  for (const [k, b] of rateBuckets) {
+    if (b.resetAt < now) rateBuckets.delete(k);
+  }
+  lastGcAt = now;
+}
+function checkRateLimit(userId: string): { ok: true } | { ok: false; retryAfter: number } {
+  gcRateBuckets();
+  const now = Date.now();
+  const bucket = rateBuckets.get(userId);
+  if (!bucket || bucket.resetAt < now) {
+    rateBuckets.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return { ok: true };
+  }
+  if (bucket.count >= RATE_LIMIT_MAX) {
+    return { ok: false, retryAfter: Math.ceil((bucket.resetAt - now) / 1000) };
+  }
+  bucket.count += 1;
+  return { ok: true };
+}
+
+// === Auth proxy: validate the caller's session via the Bun API service ===
+// Returns the user object on success, or null on failure.
+// We use /api/auth/me (which reads the Authorization header) so we don't
+// have to duplicate the session-table logic in Next.js.
+const API_BASE = process.env.BANKRESANEH_API_BASE || 'http://127.0.0.1:3002';
+interface AuthUser { id: number; username: string; role: string; isSuperAdmin?: boolean; }
+async function authenticate(req: NextRequest): Promise<AuthUser | null> {
+  const auth = req.headers.get('Authorization') || '';
+  if (!auth.startsWith('Bearer ')) return null;
   try {
-    const body = await request.json() as TranslateRequest;
-    const fields = body?.fields || {};
-    if (typeof fields !== 'object' || Object.keys(fields).length === 0) {
-      return NextResponse.json({ error: 'fields object is required' }, { status: 400 });
+    const r = await fetch(`${API_BASE}/api/auth/me`, {
+      headers: { Authorization: auth },
+      // Short timeout so a down API service doesn't hang the translate request.
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!r.ok) return null;
+    const u = await r.json() as AuthUser;
+    if (!u || typeof u.id !== 'number') return null;
+    return u;
+  } catch {
+    return null;
+  }
+}
+
+// === Input validation caps ===
+const MAX_FIELDS = 25;
+const MAX_FIELD_CHARS = 5000;
+const MAX_TOTAL_BYTES = 100 * 1024; // 100 KB
+
+// === Output sanity check: must contain at least one Persian/Arabic letter ===
+// Catches the case where the model returns English text, echoes the system
+// prompt, or fails silently. Persian/Arabic Unicode ranges:
+//   Arabic:        U+0600–U+06FF
+//   Arabic Supplement: U+0750–U+077F
+//   Arabic Presentation Forms-B: U+FE70–U+FEFF
+const PERSIAN_RE = /[\u0600-\u06FF\u0750-\u077F\uFE70-\uFEFF]/;
+
+export async function POST(request: NextRequest) {
+  // --- 1. Authentication ---
+  const user = await authenticate(request);
+  if (!user) {
+    return NextResponse.json({ error: 'احراز هویت لازم است' }, { status: 401 });
+  }
+
+  // --- 2. Rate limit ---
+  const rl = checkRateLimit(String(user.id));
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: `محدودیت ترجمه: ${rl.retryAfter} ثانیه صبر کنید` },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
+    );
+  }
+
+  try {
+    // --- 3. Parse + validate input ---
+    const raw = await request.text();
+    if (raw.length > MAX_TOTAL_BYTES) {
+      return NextResponse.json(
+        { error: `حجم درخواست بیش از حد است (حداکثر ${MAX_TOTAL_BYTES} بایت)` },
+        { status: 413 }
+      );
+    }
+    let body: TranslateRequest;
+    try {
+      body = JSON.parse(raw) as TranslateRequest;
+    } catch {
+      return NextResponse.json({ error: 'JSON نامعتبر' }, { status: 400 });
     }
 
-    // Partition fields into:
-    //   - toTranslate: non-empty string fields that are not in PRESERVED_FIELDS
-    //     and not the original title (if PRESERVE_ORIGINAL_TITLE is on).
-    //   - preserved: everything else (returned as-is).
+    const fields = body?.fields || {};
+    if (typeof fields !== 'object' || Array.isArray(fields)) {
+      return NextResponse.json({ error: 'fields باید یک object باشد' }, { status: 400 });
+    }
+    const fieldKeys = Object.keys(fields);
+    if (fieldKeys.length === 0) {
+      return NextResponse.json({ error: 'fields object is required' }, { status: 400 });
+    }
+    if (fieldKeys.length > MAX_FIELDS) {
+      return NextResponse.json(
+        { error: `تعداد فیلدها بیش از حد است (حداکثر ${MAX_FIELDS} فیلد)` },
+        { status: 400 }
+      );
+    }
+
+    // --- 4. Partition fields into translate vs. preserved ---
     const toTranslate: Record<string, string> = {};
     const translations: Record<string, string> = {};
     const warnings: string[] = [];
 
-    for (const [key, value] of Object.entries(fields)) {
-      if (typeof value !== 'string' || !value.trim()) continue;
+    for (const key of fieldKeys) {
+      const value = fields[key];
+      if (typeof value !== 'string') continue;
+      if (value.length > MAX_FIELD_CHARS) {
+        warnings.push(`field "${key}": طول بیش از حد (${value.length} > ${MAX_FIELD_CHARS}); نادیده گرفته شد`);
+        continue;
+      }
+      if (!value.trim()) continue;
       if (PRESERVED_FIELDS.has(key)) continue;
       if (key === 'name' && PRESERVE_ORIGINAL_TITLE) {
         translations[key] = value;
@@ -71,7 +186,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Single LLM call: send all fields as a JSON object, ask for JSON back.
+    // --- 5. Single LLM call ---
     const zai = await ZAI.create();
     const fieldsJson = JSON.stringify(toTranslate, null, 2);
 
@@ -105,20 +220,18 @@ export async function POST(request: NextRequest) {
       thinking: { type: 'disabled' },
     });
 
-    const raw = completion.choices[0]?.message?.content?.trim() || '';
+    const rawResponse = completion.choices[0]?.message?.content?.trim() || '';
 
-    // The model should return a JSON object. Strip any markdown fences if present.
-    let cleaned = raw;
+    // Strip markdown fences if the model wrapped the JSON in them.
+    let cleaned = rawResponse;
     if (cleaned.startsWith('```')) {
-      cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/,'').trim();
+      cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
     }
 
     let parsed: Record<string, string> = {};
     try {
       parsed = JSON.parse(cleaned);
     } catch {
-      // The model didn't return valid JSON. Fall back to returning the original
-      // text for each field with a warning.
       warnings.push('Model did not return valid JSON; all fields kept as original.');
       for (const [key, value] of Object.entries(toTranslate)) {
         translations[key] = value;
@@ -132,15 +245,23 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Merge parsed translations back; for any field the model skipped, keep original.
+    // --- 6. Merge + output sanity check ---
     for (const [key, value] of Object.entries(toTranslate)) {
       const translated = parsed[key];
-      if (typeof translated === 'string' && translated.trim()) {
-        translations[key] = translated.trim();
-      } else {
+      if (typeof translated !== 'string' || !translated.trim()) {
         translations[key] = value;
         warnings.push(`field "${key}": model did not translate; kept original`);
+        continue;
       }
+      // Reject translations that contain NO Persian/Arabic characters —
+      // this catches cases where the model returned English, echoed the
+      // system prompt, or returned garbage. Keep the original instead.
+      if (!PERSIAN_RE.test(translated)) {
+        translations[key] = value;
+        warnings.push(`field "${key}": translation contained no Persian text; kept original`);
+        continue;
+      }
+      translations[key] = translated.trim();
     }
 
     return NextResponse.json({
@@ -159,3 +280,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import sharp from 'sharp';
+import { requirePermission } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
 
@@ -14,8 +15,15 @@ const MAX_IMAGE_DIMENSION = 4096;
  * POST /api/settings/logo
  * Accepts an image upload and normalizes it to PNG so the saved filename,
  * preview URL, and data URL embedded in the PDF all use the same encoding.
+ *
+ * Auth: requires manage_settings permission (admin-only by default).
  */
 export async function POST(request: NextRequest) {
+  // --- Auth: only admins (manage_settings permission) can replace the logo ---
+  const admin = await requirePermission(request, 'manage_settings');
+  if (!admin) {
+    return NextResponse.json({ ok: false, error: 'دسترسی غیرمجاز — نیاز به دسترسی مدیر' }, { status: 403 });
+  }
   try {
     const formData = await request.formData();
     const file = formData.get('file');

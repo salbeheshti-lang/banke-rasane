@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requirePermission } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
 
@@ -19,6 +20,16 @@ interface PublishBody {
 }
 
 export async function POST(request: NextRequest) {
+  // --- Auth: requires export_reports permission (admin/editor by default).
+  // Previously this endpoint was unauthenticated, which let anyone supply
+  // an arbitrary bot token + chatId and use this server as an anonymous
+  // spam relay. The token+chatId are still caller-supplied (per the
+  // existing bot-config feature), but now only authorized users can hit
+  // the endpoint at all. ---
+  const user = await requirePermission(request, 'export_reports');
+  if (!user) {
+    return NextResponse.json({ ok: false, error: 'دسترسی غیرمجاز — نیاز به دسترسی گزارش‌گیری' }, { status: 403 });
+  }
   try {
     const body = (await request.json()) as PublishBody;
     const { platform, token, chatId, text, imageUrl } = body;

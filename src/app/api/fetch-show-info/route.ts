@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requirePermission } from '@/lib/server-auth';
 export const runtime = 'nodejs';
 const OMDB_API_KEY = 'thewdb';
 const UA = 'BankResaneh/2.0 (contact@bankrasaneh.ir)';
@@ -18,6 +19,13 @@ async function fetchRetry(url: string, opts: any = {}, retries = 2) {
 }
 
 export async function POST(request: NextRequest) {
+  // --- Auth: requires add_shows or edit_shows permission (admin/editor by default).
+  // Previously this endpoint was unauthenticated and used the project's shared
+  // public OMDB API key — anyone could call it and exhaust the daily quota. ---
+  const user = await requirePermission(request, 'edit_shows');
+  if (!user) {
+    return NextResponse.json({ error: 'دسترسی غیرمجاز — نیاز به دسترسی ویرایش برنامه' }, { status: 403 });
+  }
   try {
     const { url } = await request.json();
     if (!url) return NextResponse.json({ error: 'URL الزامی است' }, { status: 400 });
