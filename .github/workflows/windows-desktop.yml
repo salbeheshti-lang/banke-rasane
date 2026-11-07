@@ -31,6 +31,9 @@ jobs:
         env:
           DATABASE_URL: file:./db/custom.db
 
+      - name: Test persistent Prisma SQLite runtime
+        run: bun scripts/test-prisma-runtime.ts
+
       - name: Check Electron main-process syntax
         run: node --check electron/main.js
 
@@ -39,6 +42,8 @@ jobs:
 
       - name: Build Windows installer
         run: npm run electron:build
+        env:
+          DATABASE_URL: file:./db/custom.db
 
       - name: Run packaged app smoke test
         run: npm run smoke:desktop
