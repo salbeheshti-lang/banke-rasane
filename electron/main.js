@@ -10,6 +10,15 @@ const http = require('http');
 const fs = require('fs');
 const { randomBytes } = require('crypto');
 
+function toPrismaSqliteUrl(filePath) {
+  const normalized = path.resolve(filePath).replace(/\\/g, '/');
+  const segments = normalized.split('/');
+  const encodedPath = segments.map((segment, index) =>
+    index === 0 && /^[A-Za-z]:$/.test(segment) ? segment : encodeURIComponent(segment)
+  ).join('/');
+  return `file:${encodedPath}`;
+}
+
 let mainWindow = null;
 let nextServer = null;
 let apiServer = null;
@@ -269,7 +278,7 @@ function startNextServer() {
       // location instead of the (potentially read-only) install dir.
       BANKRESANEH_DATA_DIR: userDataDir,
       // Prisma's translation rate-limit database lives in the writable user-data directory.
-      DATABASE_URL: `file:${path.resolve(prismaDbPath).replace(/\\/g, '/')}`,
+      DATABASE_URL: toPrismaSqliteUrl(prismaDbPath),
       // Also pass the API base URL so the translate endpoint knows where
       // to proxy auth checks (otherwise it defaults to localhost:3002
       // which is correct in dev but explicit is better).
