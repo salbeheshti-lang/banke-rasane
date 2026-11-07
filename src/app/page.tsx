@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import { api, setApiBase, getApiBase, getApiUrl, User } from '@/lib/api';
 import { useTheme } from '@/hooks/use-theme';
+import { useEscapeKey } from '@/hooks/use-escape-key';
 import { LangProvider, useLang } from '@/lib/i18n-context';
 
 // ============================================
@@ -2332,6 +2333,7 @@ function UserProfileModal({ user, onClose, showToast }: {
 }) {
   const { t } = useLang();
   const [editing, setEditing] = useState(false);
+  useEscapeKey(onClose, editing); // don't close on Escape while editing
   const [name, setName] = useState(user.name || '');
   const [phone, setPhone] = useState(user.phone || '');
   const [jobTitle, setJobTitle] = useState(user.jobTitle || '');
@@ -4006,6 +4008,9 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
   const { t } = useLang();
   const thumb = getShowThumbnail(show);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Close on Escape — disabled while the delete-confirmation dialog is open
+  // so the user must explicitly choose "بله" or "خیر".
+  useEscapeKey(onClose, confirmDelete);
   // Related programs computed from the full list — capped at 6.
   const related = useMemo(
     () => allShows.length > 0 ? findRelated(show, allShows, 6) : [],
@@ -5416,6 +5421,7 @@ function AddGenreModal({ onClose, onSave }: {
   onClose: () => void;
   onSave: (g: Genre) => void;
 }) {
+  useEscapeKey(onClose);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [color, setColor] = useState(GENRE_COLOR_PRESETS[0]);
@@ -5573,6 +5579,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
   onOpenBotConfig: () => void;
 }) {
   const { t, lang } = useLang();
+  useEscapeKey(onClose);
   const [selectedPlatform, setSelectedPlatform] = useState<string>('');
   const [postText, setPostText] = useState(
     shows.length === 1
@@ -5932,6 +5939,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
 // ============================================
 function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const { t } = useLang();
+  useEscapeKey(onClose);
   const initial = loadBotConfig();
   const [platform, setPlatform] = useState<'telegram' | 'bale'>(initial?.platform || 'telegram');
   const [token, setToken] = useState(initial?.token || '');
@@ -6142,6 +6150,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
   organization?: string;
 }) {
   const { t, lang } = useLang();
+  useEscapeKey(onClose);
   const [downloading, setDownloading] = useState(false);
 
   // Resolve the effective report metadata — caller-provided overrides win,
