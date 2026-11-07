@@ -528,8 +528,8 @@ check "4.6 malformed-json-400" 400 "$HTTP_STATUS"
 
 # 4.7 Cross-user: editor tries to use a path-traversal id
 api PUT "/users?id=../" "$EDITOR_TOKEN" '{"role":"admin"}'
-echo "  editor path traversal → $HTTP_STATUS (should be 401)"
-check "4.7 path-traversal-rejected" 401 "$HTTP_STATUS"
+echo "  editor path traversal → $HTTP_STATUS (should be 403 — authenticated but unauthorized)"
+check "4.7 path-traversal-rejected" 403 "$HTTP_STATUS"
 
 # 4.8 Limited admin tries to modify super admin's permissions (the BIG ONE)
 api PUT "/users?id=$SUPER_ID" "$LIMITED_TOKEN" '{"permissions":[]}'
