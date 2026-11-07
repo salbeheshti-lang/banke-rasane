@@ -1378,7 +1378,7 @@ function HomeInner() {
 // ============================================
 function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
   const { t } = useLang();
-  const [isReady, setIsReady] = useState(false);
+  const [isReady] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -1386,7 +1386,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
   const [error, setError] = useState<string | null>(null);
 
    
-  useEffect(() => { setIsReady(true); }, []);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -7931,15 +7931,12 @@ function SettingsReportTab({ showToast }: { showToast: (msg: string) => void }) 
 // --- Tab: Server URL ---
 function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) {
   const { t } = useLang();
-  const [url, setUrl] = useState('');
+  const [url, setUrl] = useState(() => getApiBase());
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
    
-  useEffect(() => {
-   
-    setUrl(getApiBase());
-  }, []);
+
 
   const handleTest = async () => {
     setTesting(true);
@@ -8154,8 +8151,6 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
   const [showPw, setShowPw] = useState(false);
 
   const load = async () => {
-    setLoading(true);
-    setError(null);
     try {
       const list = await api.getUsers();
       setUsers(list);
@@ -8574,7 +8569,6 @@ function SettingsActivityTab({ showToast }: { showToast: (msg: string) => void }
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
-    setLoading(true);
     try {
       const data = await api.getActivity(100);
       setLogs(data);
