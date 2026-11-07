@@ -7,11 +7,7 @@ const databasePath = path.join(dataDir, 'db', 'translation-rate-limit.sqlite');
 mkdirSync(path.dirname(databasePath), { recursive: true });
 function toPrismaSqliteUrl(filePath: string): string {
   const normalized = path.resolve(filePath).replace(/\\/g, '/')
-  const segments = normalized.split('/')
-  const encodedPath = segments.map((segment, index) =>
-    index === 0 && /^[A-Za-z]:$/.test(segment) ? segment : encodeURIComponent(segment),
-  ).join('/')
-  return `file:${encodedPath}`
+  return `file:${normalized}`
 }
 
 process.env.DATABASE_URL = toPrismaSqliteUrl(databasePath);
