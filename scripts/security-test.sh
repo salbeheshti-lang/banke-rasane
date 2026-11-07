@@ -125,12 +125,14 @@ rm -f "$REMOTE_DB" "$REMOTE_DB-wal" "$REMOTE_DB-shm"
 
 # Positive remote bootstrap: a strong initial password must be scrypt-hashed
 # before the API begins accepting requests (hashPassword is asynchronous).
-REMOTE_SUCCESS_DB="/tmp/bankresaneh-remote-success-$.sqlite"
-REMOTE_SUCCESS_LOG="/tmp/bankresaneh-remote-success-$.log"
+REMOTE_TMP_SUFFIX="\${BASHPID:-$$}"
+REMOTE_SUCCESS_DB="/tmp/bankresaneh-remote-success-\${REMOTE_TMP_SUFFIX}.sqlite"
+REMOTE_SUCCESS_LOG="/tmp/bankresaneh-remote-success-\${REMOTE_TMP_SUFFIX}.log"
+REMOTE_LOGIN_FILE="/tmp/bankresaneh-remote-login-\${REMOTE_TMP_SUFFIX}.json"
 REMOTE_SUCCESS_PORT=3011
 REMOTE_SUCCESS_PASSWORD="RemoteBootstrap-Strong-2026!"
-env NODE_ENV=production BANKRESANEH_HOST=0.0.0.0 PORT="$REMOTE_SUCCESS_PORT" \\
-  DB_PATH="$REMOTE_SUCCESS_DB" BANKRESANEH_ADMIN_PASSWORD="$REMOTE_SUCCESS_PASSWORD" \\
+env NODE_ENV=production BANKRESANEH_HOST=0.0.0.0 PORT="$REMOTE_SUCCESS_PORT" \
+  DB_PATH="$REMOTE_SUCCESS_DB" BANKRESANEH_ADMIN_PASSWORD="$REMOTE_SUCCESS_PASSWORD" \
   bun "$SCRIPT_DIR/mini-services/api-service/index.js" >"$REMOTE_SUCCESS_LOG" 2>&1 &
 REMOTE_SUCCESS_PID=$!
 REMOTE_READY=0
@@ -144,27 +146,28 @@ for attempt in $(seq 1 20); do
 done
 check "0.remote-strong-password-bootstrap-starts" "1" "$REMOTE_READY"
 if [ "$REMOTE_READY" = "1" ]; then
-  REMOTE_HASH=$(bun -e '
+  REMOTE_HASH=$(DB_PATH="$REMOTE_SUCCESS_DB" bun -e '
     import { Database } from "bun:sqlite";
     const db = new Database(process.env.DB_PATH);
     const row = db.prepare("SELECT password_hash FROM users WHERE username = ?").get("admin");
     console.log(row?.password_hash?.startsWith("scrypt$") ? "true" : "false");
-  ' DB_PATH="$REMOTE_SUCCESS_DB")
+  ')
   check "0.remote-admin-password-stored-as-scrypt" "true" "$REMOTE_HASH"
-  REMOTE_LOGIN_STATUS=$(curl -sS -o "/tmp/bankresaneh-remote-login-$.json" -w "%{http_code}" \\
-    --max-time 10 -H "Content-Type: application/json" \\
-    -d "{\\"username\\":\\"admin\\",\\"password\\":\\"$REMOTE_SUCCESS_PASSWORD\\"}" \\
+  REMOTE_LOGIN_BODY=$(printf '{"username":"admin","password":"%s"}' "$REMOTE_SUCCESS_PASSWORD")
+  REMOTE_LOGIN_STATUS=$(curl -sS -o "$REMOTE_LOGIN_FILE" -w "%{http_code}" \
+    --max-time 10 -H "Content-Type: application/json" \
+    -d "$REMOTE_LOGIN_BODY" \
     "http://127.0.0.1:$REMOTE_SUCCESS_PORT/api/auth/login")
   check "0.remote-strong-password-login" "200" "$REMOTE_LOGIN_STATUS"
 else
-  printf '%s\\n' "Remote bootstrap log:"
+  printf '%s\n' "Remote bootstrap log:"
   cat "$REMOTE_SUCCESS_LOG" 2>/dev/null || true
   check "0.remote-admin-password-stored-as-scrypt" "true" "not-tested"
   check "0.remote-strong-password-login" "200" "not-tested"
 fi
 kill "$REMOTE_SUCCESS_PID" 2>/dev/null || true
 wait "$REMOTE_SUCCESS_PID" 2>/dev/null || true
-rm -f "$REMOTE_SUCCESS_DB" "$REMOTE_SUCCESS_DB-wal" "$REMOTE_SUCCESS_DB-shm" "$REMOTE_SUCCESS_LOG" "/tmp/bankresaneh-remote-login-$.json"
+rm -f "$REMOTE_SUCCESS_DB" "$REMOTE_SUCCESS_DB-wal" "$REMOTE_SUCCESS_DB-shm" "$REMOTE_SUCCESS_LOG" "$REMOTE_LOGIN_FILE"
 
 # Always kill any running API first so we have a clean process state
 echo "  killing all existing API processes..."
