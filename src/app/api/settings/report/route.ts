@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { requirePermission } from '@/lib/server-auth';
+import { requireUser, requirePermission } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
 
@@ -45,10 +45,15 @@ function writeSettings(s: ReportSettings) {
 }
 
 // GET → return current persisted settings (or defaults).
-// Public — any authenticated user can read the report settings (they're used
-// for PDF generation which all viewers may access). Anonymous users get
-// defaults only (no sensitive info exposed).
-export async function GET() {
+// Auth: any authenticated user (admin/editor/viewer). The settings contain
+// only the report title/subtitle/organization — no secrets — but we still
+// require login so anonymous users cannot probe the endpoint. Previously
+// this was fully public, which contradicted the file's own comment.
+export async function GET(request: NextRequest) {
+  const user = await requireUser(request);
+  if (!user) {
+    return NextResponse.json({ ok: false, error: 'احراز هویت لازم است' }, { status: 401 });
+  }
   return NextResponse.json(readSettings());
 }
 

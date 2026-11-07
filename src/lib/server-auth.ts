@@ -7,13 +7,16 @@
 // <token>` header the SPA already sends.
 //
 // Usage:
-//   import { requireUser, requirePermission } from '@/lib/server-auth';
+//   import { requireUser, requirePermission, requirePermissionAny } from '@/lib/server-auth';
 //   export async function POST(req: NextRequest) {
 //     const user = await requireUser(req);
 //     if (!user) return NextResponse.json({error:'Unauthorized'}, {status:401});
 //     // OR, for permission-gated routes:
 //     const admin = await requirePermission(req, 'manage_settings');
 //     if (!admin) return NextResponse.json({error:'Forbidden'}, {status:403});
+//     // OR, for routes accessible by EITHER of two permissions:
+//     const editor = await requirePermissionAny(req, 'add_shows', 'edit_shows');
+//     if (!editor) return NextResponse.json({error:'Forbidden'}, {status:403});
 //     ...
 //   }
 
@@ -75,6 +78,31 @@ export async function requirePermission(
   // Otherwise, check the permissions array.
   if (Array.isArray(user.permissions) && user.permissions.includes(permission)) {
     return user;
+  }
+  return null;
+}
+
+/**
+ * Validate the caller's session AND require AT LEAST ONE of the listed
+ * permissions. Useful for endpoints that can be reached by either of two
+ * roles (e.g. translate is allowed for both add_shows and edit_shows).
+ *
+ * Returns the user object if they have ANY of the listed permissions, or
+ * null otherwise.
+ */
+export async function requirePermissionAny(
+  req: NextRequest,
+  ...permissions: string[]
+): Promise<AuthUser | null> {
+  const user = await requireUser(req);
+  if (!user) return null;
+  // Super admin has all permissions.
+  if (user.isSuperAdmin) return user;
+  // Otherwise, check if they have ANY of the listed permissions.
+  if (Array.isArray(user.permissions)) {
+    for (const p of permissions) {
+      if (user.permissions.includes(p)) return user;
+    }
   }
   return null;
 }

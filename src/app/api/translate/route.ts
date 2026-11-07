@@ -1,25 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
 import ZAI from 'z-ai-web-dev-sdk';
+import { requirePermissionAny } from '@/lib/server-auth';
 export const runtime = 'nodejs';
 
 // Translation endpoint for the BankResaneh show editor.
 //
-// Security design (per Phase 2 audit):
-//   1. Authentication required — caller must send a valid BankResaneh
-//      session token (Authorization: Bearer <token>). The endpoint proxies
-//      the auth check through the Bun API service's /api/auth/me endpoint,
-//      so the SDK key never leaves the server AND we reuse the existing
-//      session infrastructure rather than duplicating it.
-//   2. Rate limited — per-user in-memory token bucket: max 10 requests /
-//      minute, bursts allowed. Prevents denial-of-wallet attacks against
-//      the project's z-ai-web-dev-sdk quota.
+// Security design (per Phase 2 audit + Phase 1 hardening):
+//   1. Authentication + permission required — caller must have either
+//      `add_shows` OR `edit_shows` permission (admin/editor by default).
+//      Viewers cannot use the translation service (they can't edit shows
+//      anyway, so translating makes no sense and would waste the LLM quota).
+//   2. Rate limited — per-user PERSISTENT token bucket: max 10 requests /
+//      minute. Stored on disk so it survives server restarts (previous
+//      in-memory Map was lost on every restart, allowing bypass).
 //   3. Input size capped — max 25 fields per request, max 5 000 chars per
-//      field, max 100 KB total payload. Rejects payloads that would
-//      otherwise forward megabytes to the LLM provider.
+//      field, max 100 KB total payload (measured in UTF-8 BYTES, not
+//      characters — Persian text is 2 bytes/char so the previous
+//      `raw.length` check was effectively 2x too lenient).
 //   4. Output sanity-checked — the model's response must be valid JSON
-//      with string values; if a value contains no Persian/Arabic script
-//      characters at all (i.e. the model returned English or echoed the
-//      system prompt), we keep the original text instead.
+//      with string values containing at least one Persian/Arabic character.
 //   5. Server-side only — the SDK key never reaches the client.
 //   6. Auto-detect source language — the model handles detection.
 //   7. Preserve proper nouns: original title, URLs, IDs, and image fields
@@ -41,64 +42,58 @@ const PRESERVED_FIELDS = new Set([
 // "عنوان اصلی تغییر نکند" (the original title must not change).
 const PRESERVE_ORIGINAL_TITLE = true;
 
-// === Rate limiter (in-memory token bucket, per user) ===
+// === Rate limiter (PERSISTENT on-disk token bucket, per user) ===
 // Limits: 10 requests per 60 seconds per user. Bursts up to 10 are allowed.
+// Stored in data/translate-rate-limit.json so it survives server restarts.
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT_MAX = 10;
-const rateBuckets = new Map<string, { count: number; resetAt: number }>();
-// Garbage-collect stale buckets every 5 minutes to prevent memory growth.
-let lastGcAt = Date.now();
-function gcRateBuckets() {
-  const now = Date.now();
-  if (now - lastGcAt < 5 * 60 * 1000) return;
-  for (const [k, b] of rateBuckets) {
-    if (b.resetAt < now) rateBuckets.delete(k);
-  }
-  lastGcAt = now;
+const RATE_LIMIT_FILE = path.join(process.cwd(), 'data', 'translate-rate-limit.json');
+
+interface RateBuckets { [userId: string]: { count: number; resetAt: number } }
+
+function readRateBuckets(): RateBuckets {
+  try {
+    if (fs.existsSync(RATE_LIMIT_FILE)) {
+      const raw = fs.readFileSync(RATE_LIMIT_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') return parsed as RateBuckets;
+    }
+  } catch { /* fall through */ }
+  return {};
 }
+
+function writeRateBuckets(buckets: RateBuckets): void {
+  try {
+    const dir = path.dirname(RATE_LIMIT_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(RATE_LIMIT_FILE, JSON.stringify(buckets), 'utf-8');
+  } catch {
+    // Non-critical — if we can't persist, the in-memory check still works
+    // for the current process lifetime.
+  }
+}
+
 function checkRateLimit(userId: string): { ok: true } | { ok: false; retryAfter: number } {
-  gcRateBuckets();
+  const buckets = readRateBuckets();
   const now = Date.now();
-  const bucket = rateBuckets.get(userId);
+  const bucket = buckets[userId];
   if (!bucket || bucket.resetAt < now) {
-    rateBuckets.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    buckets[userId] = { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS };
+    writeRateBuckets(buckets);
     return { ok: true };
   }
   if (bucket.count >= RATE_LIMIT_MAX) {
     return { ok: false, retryAfter: Math.ceil((bucket.resetAt - now) / 1000) };
   }
   bucket.count += 1;
+  writeRateBuckets(buckets);
   return { ok: true };
-}
-
-// === Auth proxy: validate the caller's session via the Bun API service ===
-// Returns the user object on success, or null on failure.
-// We use /api/auth/me (which reads the Authorization header) so we don't
-// have to duplicate the session-table logic in Next.js.
-const API_BASE = process.env.BANKRESANEH_API_BASE || 'http://127.0.0.1:3002';
-interface AuthUser { id: number; username: string; role: string; isSuperAdmin?: boolean; }
-async function authenticate(req: NextRequest): Promise<AuthUser | null> {
-  const auth = req.headers.get('Authorization') || '';
-  if (!auth.startsWith('Bearer ')) return null;
-  try {
-    const r = await fetch(`${API_BASE}/api/auth/me`, {
-      headers: { Authorization: auth },
-      // Short timeout so a down API service doesn't hang the translate request.
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!r.ok) return null;
-    const u = await r.json() as AuthUser;
-    if (!u || typeof u.id !== 'number') return null;
-    return u;
-  } catch {
-    return null;
-  }
 }
 
 // === Input validation caps ===
 const MAX_FIELDS = 25;
 const MAX_FIELD_CHARS = 5000;
-const MAX_TOTAL_BYTES = 100 * 1024; // 100 KB
+const MAX_TOTAL_BYTES = 100 * 1024; // 100 KB (in UTF-8 bytes, not chars)
 
 // === Output sanity check: must contain at least one Persian/Arabic letter ===
 // Catches the case where the model returns English text, echoes the system
@@ -109,13 +104,16 @@ const MAX_TOTAL_BYTES = 100 * 1024; // 100 KB
 const PERSIAN_RE = /[\u0600-\u06FF\u0750-\u077F\uFE70-\uFEFF]/;
 
 export async function POST(request: NextRequest) {
-  // --- 1. Authentication ---
-  const user = await authenticate(request);
+  // --- 1. Authentication + permission ---
+  // Only users who can edit/add shows should be able to translate them.
+  // Previously this endpoint required only `requireUser`, which let viewers
+  // consume the LLM quota — a cost-amplification vector.
+  const user = await requirePermissionAny(request, 'add_shows', 'edit_shows');
   if (!user) {
-    return NextResponse.json({ error: 'احراز هویت لازم است' }, { status: 401 });
+    return NextResponse.json({ error: 'دسترسی غیرمجاز — نیاز به مجوز ویرایش برنامه' }, { status: 403 });
   }
 
-  // --- 2. Rate limit ---
+  // --- 2. Rate limit (persistent, survives restart) ---
   const rl = checkRateLimit(String(user.id));
   if (!rl.ok) {
     return NextResponse.json(
@@ -127,9 +125,14 @@ export async function POST(request: NextRequest) {
   try {
     // --- 3. Parse + validate input ---
     const raw = await request.text();
-    if (raw.length > MAX_TOTAL_BYTES) {
+    // CRITICAL FIX: measure in UTF-8 BYTES, not characters.
+    // Persian text is 2 bytes/char in UTF-8, so `raw.length` (which counts
+    // chars) was effectively allowing 2x the stated limit. Use
+    // Buffer.byteLength for an accurate byte count.
+    const rawBytes = Buffer.byteLength(raw, 'utf8');
+    if (rawBytes > MAX_TOTAL_BYTES) {
       return NextResponse.json(
-        { error: `حجم درخواست بیش از حد است (حداکثر ${MAX_TOTAL_BYTES} بایت)` },
+        { error: `حجم درخواست بیش از حد است (حداکثر ${MAX_TOTAL_BYTES} بایت، ارسال‌شده: ${rawBytes} بایت)` },
         { status: 413 }
       );
     }
@@ -280,5 +283,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
 
 

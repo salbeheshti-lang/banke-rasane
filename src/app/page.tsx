@@ -6080,7 +6080,21 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
     setTesting(true);
     setTestResult(null);
     try {
-      const res = await fetch(`/api/publish-social?platform=${platform}&token=${encodeURIComponent(token)}`);
+      // SECURITY: previously this used a GET request with the token in the
+      // query string (?token=...), which leaks the bot token into server
+      // access logs, browser history, and any proxy in between. Now we
+      // send the token in the POST body (encrypted in transit via HTTPS)
+      // and use the {verify:true} flag to tell the backend to just validate
+      // the token, not send a message.
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('bankresaneh_token') : '';
+      const res = await fetch('/api/publish-social', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken ? { Authorization: 'Bearer ' + authToken } : {}),
+        },
+        body: JSON.stringify({ platform, token, verify: true }),
+      });
       const data = await res.json();
       if (data.ok) {
         setTestResult({ ok: true, msg: `✅ ربات «@${data.bot.username}» شناسایی شد` });
