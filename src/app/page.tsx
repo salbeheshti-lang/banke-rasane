@@ -1068,19 +1068,80 @@ function HomeInner() {
   };
 
   // Edit an existing custom Genre (updates state + localStorage).
+  // MIGRATION: if the genre is renamed, every show whose `category` references
+  // the old name is migrated so it stays inside the renamed genre instead of
+  // silently disappearing (the genre→show link is an implicit substring match
+  // on `category`, so renaming the genre alone would break the link).
   const handleEditGenre = (g: Genre) => {
+    const prev = customGenres.find(x => x.id === g.id);
+    const oldName = prev?.nameFa ?? '';
+    const newName = g.nameFa;
     const next = customGenres.map(x => (x.id === g.id ? g : x));
     setCustomGenres(next);
     saveCustomGenres(next);
-    showToast(`ژانر «${g.nameFa}» به‌روزرسانی شد`);
+
+    const renamed = oldName && newName && oldName !== newName;
+    if (!renamed) {
+      showToast(`ژانر «${g.nameFa}» به‌روزرسانی شد`);
+      return;
+    }
+    // Replace every occurrence of oldName with newName in each show's category.
+    const migrate = (s: TalkShow): TalkShow =>
+      s.category && s.category.includes(oldName)
+        ? { ...s, category: s.category.split(oldName).join(newName) }
+        : s;
+    const added = overrides.added.map(migrate);
+    const edited: Record<number, TalkShow> = {};
+    for (const [k, v] of Object.entries(overrides.edited)) {
+      edited[Number(k)] = migrate(v);
+    }
+    // Base shows (not yet overridden) that match the old name need an edit
+    // override so their category is migrated too.
+    const editedNums = new Set(Object.keys(edited).map(Number));
+    const addedNums = new Set(added.map(s => s.num));
+    const deleted = new Set(overrides.deleted);
+    let migratedCount = 0;
+    for (const baseShow of baseShows) {
+      if (editedNums.has(baseShow.num) || addedNums.has(baseShow.num) || deleted.has(baseShow.num)) continue;
+      if (baseShow.category && baseShow.category.includes(oldName)) {
+        edited[baseShow.num] = migrate(baseShow);
+        migratedCount++;
+      }
+    }
+    // Count migrated shows in added/edited too (for the toast message).
+    for (const s of added) if (s.category.includes(newName) && (overrides.added.find(o => o.num === s.num)?.category || '').includes(oldName)) migratedCount++;
+    for (const [k, v] of Object.entries(overrides.edited)) if (v.category.includes(oldName)) migratedCount++;
+    commitOverrides({ ...overrides, added, edited });
+    showToast(`ژانر «${newName}» به‌روزرسانی شد — ${migratedCount} برنامه منتقل شد`);
   };
 
   // Delete a custom Genre (removes from state + localStorage).
+  // The shows themselves are NOT deleted (deleting a genre must not destroy
+  // programs), but their `category` field still carries the genre name. We
+  // clear that stale reference from overridden/added shows so the category
+  // doesn't dangle, and document the behavior via the toast.
   const handleDeleteGenre = (id: string) => {
+    const target = customGenres.find(x => x.id === id);
     const next = customGenres.filter(x => x.id !== id);
     setCustomGenres(next);
     saveCustomGenres(next);
-    showToast('ژانر حذف شد');
+    const name = target?.nameFa ?? '';
+    if (!name) {
+      showToast('ژانر حذف شد');
+      return;
+    }
+    // Clear the genre name from the category of user-added/edited shows.
+    const strip = (s: TalkShow): TalkShow =>
+      s.category && s.category.includes(name)
+        ? { ...s, category: s.category.split(name).join('').trim() }
+        : s;
+    const added = overrides.added.map(strip);
+    const edited: Record<number, TalkShow> = {};
+    for (const [k, v] of Object.entries(overrides.edited)) {
+      edited[Number(k)] = strip(v);
+    }
+    commitOverrides({ ...overrides, added, edited });
+    showToast(`ژانر «${name}» حذف شد — برنامه‌ها حفظ شدند، دسته‌بندی پاک شد`);
   };
 
   const handleLogout = async () => {
