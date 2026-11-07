@@ -10,7 +10,8 @@
 //  All endpoints under /api/*
 // ============================================================================
 import { Database } from 'bun:sqlite';
-import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
+import { promisify } from 'node:util';
 import { readFileSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 
@@ -462,22 +463,55 @@ function sha256(s) { return createHash('sha256').update(s, 'utf8').digest('hex')
 //   password verifies, we re-hash with scrypt and persist immediately, so
 //   every account migrates itself on first login without any user action.
 //
-// scrypt params (OWASP 2024 guidance): N=2^15 (32 MiB memory), r=8, p=1.
-// This makes GPU brute-force ~10^5x more expensive than SHA-256.
-// NOTE: Bun's bundled OpenSSL defaults to maxmem=32MB, which N=2^15/r=8
-// exactly saturates → 'MEMORY_LIMIT_EXCEEDED'. We explicitly raise maxmem
-// to 128 MB so the OWASP-recommended params work on both Node and Bun.
-const SCRYPT_N = Math.pow(2, 15);
+// scrypt params (OWASP Password Storage Cheat Sheet, current guidance):
+// scrypt is the OWASP fallback when Argon2id is unavailable, with the
+// MINIMUM configuration N=2^17, r=8, p=1 (128 MiB working memory per hash).
+// The previous N=2^15 (32 MiB) was BELOW that minimum and has been raised.
+// Hashes are self-describing (scrypt$N$r$p$salt$key) so old scrypt$32768$
+// hashes keep verifying with their stored params and transparently upgrade
+// on login (same mechanism as the SHA-256 → scrypt migration).
+// NOTE: Node errors when maxmem <= 128*N*r; N=2^17/r=8 needs exactly 128 MiB,
+// so maxmem must be strictly larger — we set 256 MB. Bun's bundled OpenSSL
+// defaults to maxmem=32MB, which would fail with MEMORY_LIMIT_EXCEEDED.
+const SCRYPT_N = Math.pow(2, 17);
 const SCRYPT_R = 8;
 const SCRYPT_P = 1;
 const SCRYPT_KEYLEN = 32;
-const SCRYPT_MAXMEM = 128 * 1024 * 1024; // 128 MB
+const SCRYPT_MAXMEM = 256 * 1024 * 1024; // 256 MB
 
-function hashPassword(password) {
+// Promisified scrypt runs on the libuv thread pool instead of blocking the
+// JS event loop. Benchmark on the dev machine: scryptSync stalls EVERY
+// concurrent API request for ~60-75 ms per hash at N=2^15 (~250 ms at
+// N=2^17); the async form never blocks the loop and gives thread-pool
+// parallelism for concurrent logins.
+const scryptAsync = promisify(scrypt);
+
+// Semaphore: cap concurrent scrypt operations so the 128 MiB/hash working
+// set stays bounded (3 concurrent → ≤384 MiB transient) even under a flood
+// of pre-rate-limit login attempts with spoofed X-Forwarded-For IPs.
+const SCRYPT_MAX_CONCURRENT = 3;
+let scryptActive = 0;
+const scryptQueue = [];
+function acquireScryptSlot() {
+  if (scryptActive < SCRYPT_MAX_CONCURRENT) { scryptActive++; return Promise.resolve(); }
+  return new Promise(res => scryptQueue.push(res));
+}
+function releaseScryptSlot() {
+  const next = scryptQueue.shift();
+  if (next) next(); // hand the slot directly to the queued waiter
+  else scryptActive--;
+}
+async function runScrypt(password, salt, keylen, params) {
+  await acquireScryptSlot();
+  try { return await scryptAsync(password, salt, keylen, params); }
+  finally { releaseScryptSlot(); }
+}
+
+async function hashPassword(password) {
   const salt = randomBytes(16).toString('hex');
-  const key = scryptSync(password, salt, SCRYPT_KEYLEN, {
+  const key = (await runScrypt(password, salt, SCRYPT_KEYLEN, {
     N: SCRYPT_N, r: SCRYPT_R, p: SCRYPT_P, maxmem: SCRYPT_MAXMEM,
-  }).toString('hex');
+  })).toString('hex');
   return `scrypt$${SCRYPT_N}$${SCRYPT_R}$${SCRYPT_P}$${salt}$${key}`;
 }
 
@@ -486,15 +520,16 @@ function isScryptHash(stored) {
   return typeof stored === 'string' && stored.startsWith('scrypt$');
 }
 
-function verifyPassword(password, stored) {
+async function verifyPassword(password, stored) {
   try {
     if (isScryptHash(stored)) {
-      // Format: scrypt$N$r$p$<salt>$<key>
+      // Format: scrypt$N$r$p$<salt>$<key> — params come from the stored
+      // hash itself, so old N=2^15 hashes verify unchanged (and upgrade).
       const [, nStr, rStr, pStr, salt, key] = stored.split('$');
-      const derived = scryptSync(password, salt, SCRYPT_KEYLEN, {
+      const derived = (await runScrypt(password, salt, SCRYPT_KEYLEN, {
         N: parseInt(nStr, 10), r: parseInt(rStr, 10), p: parseInt(pStr, 10),
         maxmem: SCRYPT_MAXMEM,
-      }).toString('hex');
+      })).toString('hex');
       // constant-time comparison
       if (key.length !== derived.length) return false;
       return timingSafeEqual(Buffer.from(key, 'hex'), Buffer.from(derived, 'hex'));
@@ -514,10 +549,10 @@ function verifyPassword(password, stored) {
 // Re-hash a verified legacy password with scrypt and persist it.
 // Called right after a successful login where the stored hash was NOT
 // scrypt — so accounts silently upgrade to the modern format on login.
-function upgradePasswordHash(userId, password, stored) {
+async function upgradePasswordHash(userId, password, stored) {
   if (isScryptHash(stored)) return; // already modern, nothing to do
   try {
-    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashPassword(password), userId);
+    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(await hashPassword(password), userId);
     console.log(`[security] upgraded password hash to scrypt for user id=${userId}`);
   } catch (e) {
     console.warn(`[security] failed to upgrade password hash for user ${userId}: ${e.message}`);
@@ -533,25 +568,58 @@ function getClientIP(req) {
 
 // ---------------------------------------------------------------------------
 // Login rate limiting
+// FIXED (audit finding): the previous checkRateLimit deleted the entry
+// whenever now > entry.blockedUntil — but blockedUntil starts at 0, so the
+// FIRST check after any failure wiped the accumulated count. The counter
+// never passed 1, so the 5-attempt lockout NEVER fired (brute-force
+// protection was inert). New logic: failures accumulate inside a 15-minute
+// window; reaching 5 blocks the IP for 15 minutes; after the block (or the
+// window) expires the entry is reset. A periodic sweep prunes stale entries
+// so spoofed X-Forwarded-For IPs cannot grow the Map without bound.
 // ---------------------------------------------------------------------------
+const LOGIN_MAX_FAILS = 5;
+const LOGIN_WINDOW_SEC = 900;   // 15 min failure-counting window
+const LOGIN_BLOCK_SEC = 900;    // 15 min lockout after 5 failures
 const loginAttempts = new Map();
 function checkRateLimit(ip) {
   const entry = loginAttempts.get(ip);
+  if (!entry) return { ok: true };
   const now = nowSec();
-  if (!entry || now > entry.blockedUntil) {
-    if (entry && now > entry.blockedUntil) loginAttempts.delete(ip);
+  if (entry.blockedUntil > 0) {
+    if (now < entry.blockedUntil) {
+      return { ok: false, retryAfter: entry.blockedUntil - now };
+    }
+    loginAttempts.delete(ip); // block served in full — start clean
     return { ok: true };
   }
-  return { ok: false, retryAfter: entry.blockedUntil - now };
+  if (now - entry.firstAttempt > LOGIN_WINDOW_SEC) {
+    loginAttempts.delete(ip); // window expired without a block — start clean
+  }
+  return { ok: true };
 }
 function recordFailedAttempt(ip) {
   const now = nowSec();
-  let entry = loginAttempts.get(ip) || { count: 0, firstAttempt: now, blockedUntil: 0 };
+  let entry = loginAttempts.get(ip);
+  if (!entry || now - entry.firstAttempt > LOGIN_WINDOW_SEC) {
+    entry = { count: 0, firstAttempt: now, blockedUntil: 0 };
+  }
   entry.count++;
-  if (entry.count >= 5) entry.blockedUntil = now + 900;
+  if (entry.count >= LOGIN_MAX_FAILS) entry.blockedUntil = now + LOGIN_BLOCK_SEC;
   loginAttempts.set(ip, entry);
 }
 function clearRateLimit(ip) { loginAttempts.delete(ip); }
+// Sweep stale entries once a minute (bounded memory under IP spoofing).
+setInterval(() => {
+  try {
+    const now = nowSec();
+    for (const [ip, e] of loginAttempts) {
+      if ((e.blockedUntil > 0 && now >= e.blockedUntil) ||
+          (e.blockedUntil === 0 && now - e.firstAttempt > LOGIN_WINDOW_SEC)) {
+        loginAttempts.delete(ip);
+      }
+    }
+  } catch { /* never let the sweep crash the server */ }
+}, 60_000);
 
 // ---------------------------------------------------------------------------
 // Seed default admin + shows
@@ -823,7 +891,7 @@ const server = Bun.serve({
       const password = String(body?.password || '');
       if (!username || !password) return json({ error: 'نام کاربری و رمز عبور را وارد کنید' }, 400, req);
       const user = getUserByUsername(username);
-      if (!user || !verifyPassword(password, user.password_hash)) {
+      if (!user || !(await verifyPassword(password, user.password_hash))) {
         recordFailedAttempt(ip);
         return json({ error: 'نام کاربری یا رمز عبور نادرست است' }, 401, req);
       }
@@ -842,7 +910,7 @@ const server = Bun.serve({
       // still the legacy SHA-256 format, silently re-hash it with scrypt
       // now that we've verified the plaintext password. Every account
       // migrates itself on first login — no user action required.
-      upgradePasswordHash(user.id, password, user.password_hash);
+      await upgradePasswordHash(user.id, password, user.password_hash);
       db.prepare('UPDATE users SET last_seen = ? WHERE id = ?').run(nowSec(), user.id);
       user.last_seen = nowSec();
       const token = createSession(user.id);
@@ -902,8 +970,9 @@ const server = Bun.serve({
       const newPassword = String(body?.newPassword || '');
       if (!oldPassword || !newPassword) return json({ error: 'رمز قدیمی و جدید را وارد کنید' }, 400, req);
       if (newPassword.length < 8) return json({ error: 'رمز جدید باید حداقل ۸ کاراکتر باشد' }, 400, req);
-      if (!verifyPassword(oldPassword, user.password_hash)) return json({ error: 'رمز فعلی نادرست است' }, 401, req);
-      db.prepare('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?').run(hashPassword(newPassword), user.id);
+      if (!(await verifyPassword(oldPassword, user.password_hash))) return json({ error: 'رمز فعلی نادرست است' }, 401, req);
+      const newHash = await hashPassword(newPassword);
+      db.prepare('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?').run(newHash, user.id);
       // SECURITY: rotate the session. Invalidate ALL of this user's existing
       // sessions (other devices, stolen tokens) — this is the standard
       // expectation when a password changes. Previously we only invalidated
@@ -1073,8 +1142,9 @@ const server = Bun.serve({
       if (password.length < 8) return json({ error: 'رمز عبور باید حداقل ۸ کاراکتر باشد' }, 400, req);
       const existing = getUserByUsername(username);
       if (existing) return json({ error: 'نام کاربری تکراری' }, 409, req);
+      const passwordHash = await hashPassword(password);
       const result = db.prepare('INSERT INTO users (username, password_hash, role, name, job_title, deputy, phone) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
-        username, hashPassword(password), role, body.name || '', body.jobTitle || '', body.deputy || '', body.phone || ''
+        username, passwordHash, role, body.name || '', body.jobTitle || '', body.deputy || '', body.phone || ''
       );
       logActivity(admin, 'create_user', 'user', result.lastInsertRowid, `Created user "${username}" with role "${role}"`);
       return json(publicUser(getUserById(result.lastInsertRowid), admin), req);

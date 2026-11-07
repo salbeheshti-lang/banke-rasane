@@ -25,8 +25,16 @@ export function getDataDir(): string {
   if (envDir && envDir.trim()) {
     resolvedDataDir = path.resolve(envDir.trim());
   } else {
-    // 2. Fallback: project root /data (dev mode)
-    resolvedDataDir = path.join(process.cwd(), 'data');
+    // 2. Fallback: project root /data (dev mode).
+    //    The Next.js standalone server runs with cwd = <root>/.next/standalone,
+    //    so process.cwd()/data would live INSIDE the build output and be wiped
+    //    on every rebuild. If cwd is inside a .next directory, resolve data
+    //    relative to the project root that contains .next instead.
+    let base = process.cwd();
+    const parts = base.split(path.sep);
+    const nextIdx = parts.lastIndexOf('.next');
+    if (nextIdx > 0) base = parts.slice(0, nextIdx).join(path.sep);
+    resolvedDataDir = path.join(base, 'data');
   }
 
   // Ensure the directory exists. If it can't be created (e.g. read-only
