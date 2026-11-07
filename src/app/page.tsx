@@ -8151,6 +8151,8 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
   const [showPw, setShowPw] = useState(false);
 
   const load = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const list = await api.getUsers();
       setUsers(list);
@@ -8160,10 +8162,21 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
       setLoading(false);
     }
   };
- 
 
-   
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    let cancelled = false;
+    api.getUsers().then((list) => {
+      if (!cancelled) {
+        setUsers(list);
+        setError(null);
+      }
+    }).catch((e: any) => {
+      if (!cancelled) setError(e?.message || t('toast.loadingError'));
+    }).finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [t]);
 
   const handleCreate = async () => {
     if (!newUser.username.trim() || !newUser.password) {
@@ -8568,20 +8581,17 @@ function SettingsActivityTab({ showToast }: { showToast: (msg: string) => void }
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const load = async () => {
-    try {
-      const data = await api.getActivity(100);
-      setLogs(data);
-    } catch (e: any) {
-      // ignore — non-admin users won't have access
-    } finally {
-      setLoading(false);
-    }
-  };
- 
-
-   
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    let cancelled = false;
+    api.getActivity(100).then((data) => {
+      if (!cancelled) setLogs(data);
+    }).catch(() => {
+      // Non-admin users may not have access to the activity log.
+    }).finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const actionLabels: Record<string, string> = {
     create_user: 'ساخت کاربر',
