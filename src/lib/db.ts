@@ -10,7 +10,7 @@ const defaultDbPath = path.join(
 if (!process.env.DATABASE_URL) {
   mkdirSync(path.dirname(defaultDbPath), { recursive: true })
 }
-const databaseUrl = process.env.DATABASE_URL || `file:${path.resolve(defaultDbPath).replace(/\\\\/g, '/')}`
+const databaseUrl = process.env.DATABASE_URL || `file:${path.resolve(defaultDbPath).replace(/\\/g, '/')}`
 
 // SQLite connection tuning:
 //   connection_limit=1 — SQLite allows only ONE writer at a time; a pool of
