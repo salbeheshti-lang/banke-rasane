@@ -205,3 +205,26 @@ Checked 8 November 2026. No new photo passed exact-set and redistribution-licens
 | 139 | Love of 7.7 Billion | No verified image in first pass | No exact licensed studio photograph surfaced. |
 | 140 | Life Bar | No verified image in first pass | News and platform stills show the bar set, but no openly licensed photo verified. |
 
+
+## First-pass checks: records #141–#155
+
+Checked 8 November 2026. One additional verified image was found and added.
+
+| # | Program | First-pass result | Notes |
+|---:|---|---|---|
+| 141 | Lighthouse | No verified image in first pass | Official Netflix material found, but no openly licensed photograph of the actual set verified. |
+| 142 | Lilly Allen and Friends | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 143 | Mad Money w/ Jim Cramer | Verified image added | Commons photograph of the actual Mad Money set, CC BY 2.0; see attribution manifest. |
+| 144 | Magandang Buhay | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 145 | Magic Eye | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 146 | Man with a Van | No verified image in first pass | No reusable image of the actual van setup verified. |
+| 147 | Market Kitchen | No verified image in first pass | No exact licensed kitchen-set photograph surfaced. |
+| 148 | Markus Lanz | No verified image in first pass | Studio photos found through press/photo agencies, but reuse rights are restricted. |
+| 149 | Keiser Report | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 150 | Die Johannes B. Kerner Show | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 151 | !Lafer! Lichter! Lecker | No verified image in first pass | Production references found, but no openly licensed image of the actual cooking set verified. |
+| 152 | La noche con Fuentes y Cía | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 153 | Knowing Bros | No verified image in first pass | No openly licensed photograph of the classroom set verified. |
+| 154 | Koffee with Karan | No verified image in first pass | Set images surfaced in entertainment/photo galleries, but reuse licenses are not established. |
+| 155 | Nación ESPN | No verified image in first pass | NewscastStudio has a set gallery, but no open redistribution license was established. |
+
