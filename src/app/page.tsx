@@ -4795,7 +4795,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
         updated.youtube = `https://www.youtube.com/results?search_query=${encodeURIComponent(updated.name)}`;
       }
       if (updated.name && !updated.socialPost) {
-        updated.socialPost = `🎬 ${updated.name}\\n\\n📝 ${updated.descriptionFa || ''}\\n\\n#بانک_رسانه #تاک_شو`;
+        updated.socialPost = `🎬 ${updated.name}\n\n📝 ${updated.descriptionFa || ''}\n\n#بانک_رسانه #تاک_شو`;
       }
       setForm(updated);
       showToast(t('add.autoFetchSuccess'));
