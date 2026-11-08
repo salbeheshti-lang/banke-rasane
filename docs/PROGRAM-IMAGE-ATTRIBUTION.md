@@ -111,3 +111,17 @@ Attribution: Udo Grimberg, “IMG 4526 Johann König, Johann Lafer, Daniela Zieg
 - Changes: Referenced the original Wikimedia Commons file; no image editing.
 
 Attribution: Barry McGee, “Top Gear studios 2009.jpg”, via Wikimedia Commons, licensed under CC BY 2.0.
+
+
+## Antiques Roadshow (show #767)
+
+- Image: [Antiques Roadshow in the garden (4950915501).jpg](https://commons.wikimedia.org/wiki/File:Antiques_Roadshow_in_the_garden_(4950915501).jpg)
+- Display media: https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ae/Antiques_Roadshow_in_the_garden_%284950915501%29.jpg/1280px-Antiques_Roadshow_in_the_garden_%284950915501%29.jpg
+- Creator: Portable Antiquities Scheme
+- Date: 2 September 2010
+- Source: [Original Flickr photograph](https://www.flickr.com/photos/finds/4950915501/), reviewed and transferred to Wikimedia Commons
+- Description: Actual Antiques Roadshow outdoor recording setup at the British Museum: appraiser's table and chairs under a green parasol, surrounded by the show's garden/forecourt filming area. This is the program's real on-location appraisal environment rather than a generic garden photograph.
+- License: [Creative Commons Attribution-ShareAlike 2.0 Generic (CC BY-SA 2.0)](https://creativecommons.org/licenses/by-sa/2.0/)
+- Changes: Used the 1,280-pixel Wikimedia thumbnail URL for a lighter display asset; no image editing.
+
+Attribution: Portable Antiquities Scheme, “Antiques Roadshow in the garden (4950915501).jpg”, via Wikimedia Commons, licensed under CC BY-SA 2.0.
