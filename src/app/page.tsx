@@ -1112,7 +1112,7 @@ function HomeInner() {
         genres={genres}
       />
 
-      <main key={currentView} className={`animate-view-enter ${isMobile ? 'p-4 pt-20 pb-28' : 'p-8 pt-24'}`}>
+      <main key={currentView} className={`animate-view-enter ${isMobile ? 'p-4 pt-28 pb-28' : 'p-8 pt-32'}`}>
         {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} onShowClick={setSelectedShow} />}
         {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} onEditGenre={(g) => { setEditingGenre(g); setShowEditGenre(true); }} onDeleteGenre={handleDeleteGenre} />}
