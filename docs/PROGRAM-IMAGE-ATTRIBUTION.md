@@ -84,3 +84,16 @@ Attribution: Mickisoke, “Voetbal Inside.jpg”, via Wikimedia Commons, license
 - Changes: Referenced the 1280-pixel Wikimedia Commons thumbnail; no image editing.
 
 Attribution: Martha Hartnett / Los Angeles Times Photographic Collection at UCLA Library, “Phil Donahue with audience members.jpg”, via Wikimedia Commons, licensed under CC BY 4.0.
+
+
+## Lafer! Lichter! Lecker! (show #151)
+
+- Image: [IMG 4526 Johann König, Johann Lafer, Daniela Ziegler.JPG](https://commons.wikimedia.org/wiki/File:IMG_4526_Johann_K%C3%B6nig%2CJohann_Lafer%2CDaniela_Ziegler.JPG)
+- Direct media URL: https://upload.wikimedia.org/wikipedia/commons/6/64/IMG_4526_Johann_K%C3%B6nig%2CJohann_Lafer%2CDaniela_Ziegler.JPG
+- Creator: Udo Grimberg
+- Date: 9 February 2010
+- Description: Photograph made during the actual television recording. The wide frame shows the show's working kitchen set, including the counter, shelving, dishes and cabinetry; unlike the other Commons files checked for this title, it documents the program's real cooking environment.
+- License: [Creative Commons Attribution-ShareAlike 3.0 Germany (CC BY-SA 3.0 DE)](https://creativecommons.org/licenses/by-sa/3.0/de/)
+- Changes: Used the original Wikimedia Commons file as an external image URL; no image editing.
+
+Attribution: Udo Grimberg, “IMG 4526 Johann König, Johann Lafer, Daniela Ziegler.JPG”, via Wikimedia Commons, licensed under CC BY-SA 3.0 DE.
