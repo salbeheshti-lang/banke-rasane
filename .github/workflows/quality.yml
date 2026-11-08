@@ -25,6 +25,9 @@ jobs:
       - name: Install dependencies
         run: bun install --no-save
 
+      - name: Audit dependencies (high and critical)
+        run: bun audit --audit-level=high
+
       - name: Generate Prisma client
         run: bunx prisma generate
         env:
