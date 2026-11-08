@@ -182,3 +182,26 @@ Checked 8 November 2026. No new photo passed exact-set and redistribution-licens
 | 124 | Heads Up with Richard Herring | No verified image in first pass | Creator's archive has episode stills, but no explicit reuse license was established. |
 | 125 | Love Naggers | No verified image in first pass | No exact licensed studio photograph surfaced. |
 
+
+## First-pass checks: records #126–#140
+
+Checked 8 November 2026. No new photo passed exact-set and redistribution-license verification in this batch.
+
+| # | Program | First-pass result | Notes |
+|---:|---|---|---|
+| 126 | Lorraine | No verified image in first pass | ITV and NewscastStudio show actual set photography, but no open redistribution license was established. |
+| 127 | Lopez Tonight | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 128 | Icons | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 129 | In the Qube | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 130 | Internet Superstar | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 131 | Kanon-TV | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 132 | Last Call with Carson Daly | No verified image in first pass | A behind-the-scenes image was found, but not a licensed photograph of the show's decor. |
+| 133 | Le club du Net AOL | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 134 | Le Grand Blond Avec Un Show Sournois | No verified image in first pass | Production references found, but no reusable image of the actual set verified. |
+| 135 | LiteraTOUR | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 136 | Live from Studio Five | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 137 | Live Talk Show Taxi | No verified image in first pass | Taxi-format images found only as program/promotional material; no reusable set image verified. |
+| 138 | Living Smart | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 139 | Love of 7.7 Billion | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 140 | Life Bar | No verified image in first pass | News and platform stills show the bar set, but no openly licensed photo verified. |
+
