@@ -113,3 +113,26 @@ Checked 8 November 2026. Programs without a verified image remain queued for lat
 | 64 | E-Asylum | No verified image in first pass | No exact licensed studio photograph surfaced. |
 | 65 | Eigo de Shabera Night | No verified image in first pass | Commons category contains presenter portraits, not the program's set. |
 
+
+## First-pass checks: records #66–#80
+
+Checked 8 November 2026. These remain provisional no-image results and should be revisited later.
+
+| # | Program | First-pass result | Notes |
+|---:|---|---|---|
+| 66 | Einfach Alsmann | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 67 | El Reporterito | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 68 | El Show de Don Cheto | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 69 | El Show Latino | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 70 | Elton.tv | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 71 | Dancing on Ice Friday | No verified image in first pass | Search results identify the companion interview show, but no reusable image of its own set verified. |
+| 72 | …Five Minutes With | No verified image in first pass | Format uses changing interview locations; no licensed recurring set photograph verified. |
+| 73 | Five Cranky Brothers | No verified image in first pass | Program references found, but no reusable exact-set image verified. |
+| 74 | Filmnut | No verified image in first pass | IMDb references found, but no reusable set photograph verified. |
+| 75 | Fern Britton Meets… | No verified image in first pass | The program is based around interviews at guests' locations; no reusable set photograph verified. |
+| 76 | Happy Together | No verified image in first pass | Official KBS program page found, but no redistributable set photo verified. |
+| 77 | Berman & Berman | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 78 | Autograf | No verified image in first pass | Search results mainly identify an unrelated film production company. |
+| 79 | Anytime with Bob Kushell | No verified image in first pass | Program was reportedly filmed in the host's garage; no licensed image of the actual setup verified. |
+| 80 | Ante Usted | No verified image in first pass | No exact licensed studio photograph surfaced. |
+
