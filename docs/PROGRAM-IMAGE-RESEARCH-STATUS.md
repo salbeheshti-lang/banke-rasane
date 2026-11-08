@@ -251,3 +251,26 @@ Checked 8 November 2026. No new photo passed exact-set and redistribution-licens
 | 169 | Humour Show | No verified image in first pass | Program identity is ambiguous; no exact licensed set image verified. |
 | 170 | Now on my way to meet you | No verified image in first pass | Documentary footage shows the actual set, but no separately licensed reusable still verified. |
 
+
+## First-pass checks: records #171–#185
+
+Checked 8 November 2026. Record #173 is excluded from the 1,161-program decor scope by the app's genre filter.
+
+| # | Program | First-pass result | Notes |
+|---:|---|---|---|
+| 171 | Our Lives | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 172 | Opposing Viewpoints Live Radio for Television | No verified image in first pass | No exact licensed radio-studio photograph surfaced. |
+| 173 | On the Spot | Excluded from decor-program scope | App data classifies this as a competition/reality/documentary outside the talk-show decor set. |
+| 174 | On the Couch | No verified image in first pass | Official AFL content and show thumbnails exist, but no openly licensed set photograph verified. |
+| 175 | On ne peut pas plaire à tout le monde | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 176 | On Cinema | No verified image in first pass | No openly licensed photograph of the recurring green-screen setup verified. |
+| 177 | Prozhektorperiskhilton | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 178 | Programa do Jô | No verified image in first pass | Globo archive has exact set photos, but the images are copyrighted and no redistribution license was established. |
+| 179 | Problematic Men | No verified image in first pass | No openly licensed photograph of the actual set verified. |
+| 180 | Prime Rewind: Inside the Boys | No verified image in first pass | Set designer portfolio documents the virtual set, but no redistribution license for images was established. |
+| 181 | Post Mortem with Mick Garris | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 182 | Rozmowy w toku | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 183 | Rove Live | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 184 | Richard & Judy | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 185 | Radio Star | No verified image in first pass | No openly licensed photograph of the actual set verified. |
+
