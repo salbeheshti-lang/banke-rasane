@@ -25,6 +25,8 @@
 - .env.example documents the loopback default and the strong bootstrap password required for non-loopback deployments.
 - Sharp 0.35.5 compatibility was fixed in the logo-upload route by using inferred metadata dimensions instead of the removed namespace-style type.
 
-## Release gate
+## Final CI result and release gate
 
-This is not a release approval. Keep the security PR in draft until the latest dependency lockfile passes Quality, API security tests, Windows desktop build, NSIS install and installed-app smoke test. Preserve the current visual design; no visual redesign is part of this remediation.
+Latest security-branch CI passed: Quality/Production build, 85/85 fresh-database security tests, 88/88 upgrade-database security tests, Windows desktop build, actual NSIS silent installation, and installed-app smoke tests. The final installer was 397,733,838 bytes (about 398 MB); the install-and-smoke sequence completed successfully in approximately 4 minutes 39 seconds. The packaging check confirmed that the old duplicate standalone path is absent and the single canonical resources/next-service-dist payload is present.
+
+This is not a release approval. A manual install/launch test on the target Windows machine is still recommended. The one moderate minimatch advisory remains in build-time tooling and requires explicit risk acceptance; it is not in the runtime API/application dependency path. The separate decor-image PR also remains incomplete (see its displayability audit). Preserve the current visual design; no visual redesign is part of this remediation.
