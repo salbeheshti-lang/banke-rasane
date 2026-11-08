@@ -40,10 +40,37 @@ jobs:
       - name: Lint
         run: bun run lint
 
+      - name: Cache Electron and electron-builder downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.LOCALAPPDATA }}\electron-builder\Cache
+            ${{ env.LOCALAPPDATA }}\electron
+          key: windows-electron-builder-${{ hashFiles('package.json', 'bun.lock*', 'package-lock.json') }}
+          restore-keys: |
+            windows-electron-builder-
+
       - name: Build Windows installer
-        run: npm run electron:build
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $maxAttempts = 3
+          for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            Write-Host "=== Electron build attempt $attempt/$maxAttempts ==="
+            npm run electron:build
+            if ($LASTEXITCODE -eq 0) {
+              Write-Host "Electron build completed successfully."
+              exit 0
+            }
+            if ($attempt -lt $maxAttempts) {
+              Write-Warning "Build failed (exit $LASTEXITCODE). Retrying with the same persistent download cache..."
+              Start-Sleep -Seconds (15 * $attempt)
+            }
+          }
+          throw "Electron build failed after $maxAttempts attempts. Inspect DEBUG=electron-builder output above."
         env:
           DATABASE_URL: file:./db/custom.db
+          DEBUG: electron-builder
 
       - name: Run packaged app smoke test
         run: npm run smoke:desktop
