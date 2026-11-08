@@ -367,6 +367,15 @@ LIMITED_TOKEN=$(json_get "$RESP_BODY" "token")
 echo "  limited_admin token: ${LIMITED_TOKEN:0:16}..."
 check "1.3 limited-login" 200 "$HTTP_STATUS"
 
+# Custom genres are shared and admin-role accounts can manage them even when
+# their unrelated granular permissions have been revoked.
+api GET /genres "$LIMITED_TOKEN"
+check "1.3b admin-can-read-shared-genres" 200 "$HTTP_STATUS"
+api POST /genres "$LIMITED_TOKEN" '{"id":"security-test-genre","nameFa":"ژانر آزمون امنیتی","name":"ژانر آزمون امنیتی","color":"#0d7c4a","description":"security test"}'
+check "1.3c admin-can-create-genre" 200 "$HTTP_STATUS"
+api PUT "/genres?id=security-test-genre" "$LIMITED_TOKEN" '{"id":"security-test-genre","nameFa":"ژانر آزمون امنیتی ویرایش‌شده","name":"ژانر آزمون امنیتی ویرایش‌شده","color":"#0d7c4a","description":"updated"}'
+check "1.3d admin-can-update-genre" 200 "$HTTP_STATUS"
+
 # Now limited_admin (with empty permissions) tries to list users
 api GET /users "$LIMITED_TOKEN"
 echo "  limited_admin GET /users → $HTTP_STATUS (should be 403 because manage_users was revoked)"
@@ -499,6 +508,23 @@ check "3.1 editor-login" 200 "$HTTP_STATUS"
 api POST /auth/login "" '{"username":"viewer1","password":"Password123"}'
 VIEWER_TOKEN=$(json_get "$RESP_BODY" "token")
 check "3.1b viewer-login" 200 "$HTTP_STATUS"
+
+# Shared genres are readable by editors/viewers, but every mutation is admin-only.
+api GET /genres "$EDITOR_TOKEN"
+check "3.1c editor-can-read-shared-genres" 200 "$HTTP_STATUS"
+api POST /genres "$EDITOR_TOKEN" '{"id":"editor-forbidden-genre","nameFa":"نباید ساخته شود","color":"#0d7c4a"}'
+check "3.1d editor-cannot-create-genre" 403 "$HTTP_STATUS"
+api PUT "/genres?id=security-test-genre" "$EDITOR_TOKEN" '{"nameFa":"نباید ویرایش شود","color":"#0d7c4a"}'
+check "3.1e editor-cannot-update-genre" 403 "$HTTP_STATUS"
+api DELETE "/genres?id=security-test-genre" "$EDITOR_TOKEN"
+check "3.1f editor-cannot-delete-genre" 403 "$HTTP_STATUS"
+api GET /genres "$VIEWER_TOKEN"
+check "3.1g viewer-can-read-shared-genres" 200 "$HTTP_STATUS"
+api POST /genres "$VIEWER_TOKEN" '{"id":"viewer-forbidden-genre","nameFa":"نباید ساخته شود","color":"#0d7c4a"}'
+check "3.1h viewer-cannot-create-genre" 403 "$HTTP_STATUS"
+api DELETE "/genres?id=security-test-genre" "$LIMITED_TOKEN"
+check "3.1i admin-can-delete-genre" 200 "$HTTP_STATUS"
+
 api POST /fetch-image "$VIEWER_TOKEN" '{"num":1,"name":"test show"}'
 echo "  viewer tries fetch-image mutation → $HTTP_STATUS (should be 403)"
 check "3.1c viewer-cannot-fetch-image" 403 "$HTTP_STATUS"
