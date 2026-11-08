@@ -343,3 +343,26 @@ Checked 8 November 2026. No new photo passed exact-set and redistribution-licens
 | 229 | Pardon the Interruption | No verified image in first pass | Actual set galleries and press photos found, but images are ESPN-owned/copyrighted with no open redistribution license. |
 | 230 | Party People | No verified image in first pass | No exact licensed studio photograph surfaced. |
 
+
+## First-pass checks: records #231–#245
+
+Checked 8 November 2026. No new photo passed exact-set and redistribution-license verification in this batch.
+
+| # | Program | First-pass result | Notes |
+|---:|---|---|---|
+| 231 | Patriot Act with Hasan Minhaj | No verified image in first pass | Exact set galleries found, but no open redistribution license was established. |
+| 232 | Peter Hahne | No verified image in first pass | Exact studio images found through rights-managed photo agencies; no open license verified. |
+| 233 | Sleek Geeks | No verified image in first pass | Program references identify studio use, but no openly licensed image of the actual set verified. |
+| 234 | Sma STATION | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 235 | Songbook | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 236 | Spuiten en slikken | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 237 | Strong Heart | No verified image in first pass | No openly licensed photograph of the actual set verified. |
+| 238 | Ugen med Clement | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 239 | Umagang Kay Ganda | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 240 | Unexpected Q | No verified image in first pass | MBC official pages confirm this was a quiz show; no openly licensed set photograph verified. |
+| 241 | Urban Rush | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 242 | Vecher s Vladimirom Solovyovym | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 243 | Vendredi c'est Julie | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 244 | Viererkette | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 245 | Vilket Drama | No verified image in first pass | No exact licensed studio photograph surfaced. |
+
