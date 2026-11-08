@@ -379,6 +379,7 @@ Checked 8 November 2026. One additional verified image was found and added.
 | 249 | Weekend Sunrise | No verified image in first pass | No openly licensed photograph of the actual set verified. |
 | 250 | White Line Fewer | No exact match verified | Program identity remains unclear; no exact licensed set image found. |
 | 251 | Willkommen Österreich | Verified image added | Actual filming photograph with the studio table and broadcast backdrop; CC BY-SA 3.0 with Wikimedia VRT permission confirmation. See attribution manifest. |
+| 582 | Gardeners' World | Verified image added | Monty Don recording a piece to camera for the named BBC program at Gardeners' World Live; CC BY-SA 3.0. See attribution manifest. |
 | 252 | Witch Hunt | No verified image in first pass | No openly licensed photograph of the actual set verified. |
 | 253 | Wook Talk | No verified image in first pass | No exact licensed studio photograph surfaced. |
 | 254 | WWE Confidential | No verified image in first pass | WWE archive references found, but no reusable set photo license established. |
@@ -630,9 +631,9 @@ This section records the continued work after the first-pass review through reco
 ## Verified data status
 
 - Decor-program scope selected by the app's current filter: **1,161 records**.
-- Records with at least one image on this branch: **534**.
-- Records still without an image: **627**.
-- Verified unique image sources recorded in the attribution file: **14**.
+- Records with at least one image on this branch: **535**.
+- Records still without an image: **626**.
+- Verified unique image sources recorded in the attribution file: **15**.
 - Duplicate catalog entry #816 (Full Frontal with Samantha Bee) now reuses the same licensed set photograph as #39; this fills the duplicate record but does not increase the unique-image-source count.
 - New unique images added in this continuation: **6** — #151 Lafer! Lichter! Lecker!, #717 Top Gear, #767 Antiques Roadshow, #1131 Radio 1's Big Weekend, #1227 Comic Book Men, and #1268 Dragons' Den.
 - All new image URLs were checked against the app's existing image-loading path. The app selects external HTTPS URLs from `show.images[]` and renders them as real images for logged-in users; no UI or genre logic was changed.
@@ -664,6 +665,7 @@ The following records have been researched and their findings documented in sepa
 | 1227 | Comic Book Men | CC BY 3.0 | Wikimedia Commons — Luigi Novi |
 | 1268 | Dragons' Den | CC BY 3.0 | Wikimedia Commons — Adam Wimpenny |
 | 251 | Willkommen Österreich | CC BY-SA 3.0 | Wikimedia Commons — Hannes Sallmutter (VRT permission confirmed) |
+| 582 | Gardeners' World | CC BY-SA 3.0 | Wikimedia Commons — Andy Mabbett |
 
 Full creator, date, source, image URL and license details are maintained in `docs/PROGRAM-IMAGE-ATTRIBUTION.md`.
 
@@ -678,12 +680,12 @@ Full creator, date, source, image URL and license details are maintained in `doc
 
 ## Completion state
 
-Research is **not complete**. The current branch still has 627 decor-filter records without images. The PR remains a draft and has not been merged. No release or EXE build has been created from this work. Continue searching for exact, reusable set/production-environment photographs; do not lower the matching or licensing standard merely to force every record to have an image.
+Research is **not complete**. The current branch still has 626 decor-filter records without images. The PR remains a draft and has not been merged. No release or EXE build has been created from this work. Continue searching for exact, reusable set/production-environment photographs; do not lower the matching or licensing standard merely to force every record to have an image.
 
 
 ## Remaining no-image records by data category
 
-Current breakdown of the 627 records without images (using each record's existing `category` field):
+Current breakdown of the 626 records without images (using each record's existing `category` field):
 
 | Category | Missing |
 |---|---:|
@@ -694,7 +696,7 @@ Current breakdown of the 627 records without images (using each record's existin
 | رادیو تصویری | 49 |
 | روستا | 44 |
 | کتاب و کتاب‌خوانی | 29 |
-| کاشت درخت | 20 |
+| کاشت درخت | 19 |
 | پلیسی | 19 |
 | زندان | 18 |
 | اهدای عضو | 18 |
