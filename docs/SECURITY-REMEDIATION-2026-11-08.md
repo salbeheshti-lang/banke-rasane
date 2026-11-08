@@ -6,8 +6,8 @@
 - The first compatible-range remediation updated 23 packages and fixed 95 reported vulnerability instances.
 - Patched direct dependencies now include Next.js 16.4.1, NextAuth 4.24.15, Sharp 0.35.5, Prisma 6.19.2 and Zod 4.6.6.
 - Scoped overrides pin the patched versions required by transitive dependencies: deepmerge-ts 8.0.2 and Effect 3.22.4 under @prisma/config; js-yaml 4.3.2 globally; minimatch 9.0.9 under @electron/universal. The @electron/asar branch retains minimatch 3.1.4 rather than forcing an incompatible major version.
-- Final Bun audit gate: **no high or critical vulnerabilities found across 1,052 packages**. The report notes two items below the high-severity threshold; the full advisory report is emitted by the Quality workflow for review.
-- The Quality workflow now reports all advisory severities and fails the build if any high/critical advisory returns.
+- Final Bun audit gate: **no high or critical vulnerabilities found across 1,052 packages**. The full audit reports one remaining moderate minimatch ReDoS advisory in the development/build-time graph (electron-builder / ESLint tooling); it is not part of the runtime API or app dependency path and is retained as a documented low-exposure residual pending upstream parent-package releases. The full advisory report is emitted by the Quality workflow.
+- PrismJS was also overridden to 1.30.0, removing its moderate DOM-clobbering advisory. The Quality workflow reports all advisory severities and fails the build if any high/critical advisory returns.
 
 ## API and authentication
 
@@ -23,6 +23,7 @@
 - The Windows workflow verifies the packaged Next.js module and required runtime files, runs the actual NSIS installer in silent mode with a 10-minute timeout, then launches the installed BankResaneh.exe and checks Next.js, API, database seeding and authentication.
 - The Prisma translation-rate-limit database is stored in the writable user-data directory.
 - .env.example documents the loopback default and the strong bootstrap password required for non-loopback deployments.
+- Sharp 0.35.5 compatibility was fixed in the logo-upload route by using inferred metadata dimensions instead of the removed namespace-style type.
 
 ## Release gate
 
