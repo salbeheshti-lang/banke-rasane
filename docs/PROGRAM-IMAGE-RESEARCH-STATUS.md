@@ -573,3 +573,26 @@ Checked 8 November 2026. Record #377 is excluded from the decor-program scope by
 | 379 | Penguins | No exact match verified | No exact licensed studio photograph surfaced. |
 | 380 | The Legal Analyst | No exact match verified | No exact licensed studio photograph surfaced. |
 
+
+## First-pass checks: records #381–#395
+
+Checked 8 November 2026. Record #382 is excluded from the decor-program scope by the app's genre filter.
+
+| # | Program | First-pass result | Notes |
+|---:|---|---|---|
+| 381 | The Other Half | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 382 | Gyoretsuno Dekiru Horitsu Sodanjo | Excluded from decor-program scope | App data classifies this as a competition/reality/documentary outside the talk-show decor set. |
+| 383 | Good Mythical Morning | No verified image in first pass | Recent studio-tour photography exists, but reuse license for the images is not established. |
+| 384 | Shabekuri007 | No exact match verified | No exact licensed studio photograph surfaced. |
+| 385 | Showbiz Tonight | No verified image in first pass | No openly licensed photograph of the actual CNN set verified. |
+| 386 | Salvame Deluxe | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 387 | Q & A | No verified image in first pass | ABC set photographs exist in editorial coverage, but no open redistribution license was established. |
+| 388 | Dan Aykroyd's Out There | No exact match verified | No exact licensed studio photograph surfaced. |
+| 389 | Greeks on the Roof | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 390 | Carin 21:30 | No verified image in first pass | SVT archive confirms the show, but viewing rights are territorially restricted and no open image license was found. |
+| 391 | Quite Frankly with Stephen A. Smith | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 392 | T4 Sunday | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 393 | The Colbert Report | No verified image in first pass | Commons candidate titled “Colbert Report studio” is a photograph of the queue outside the studio, not the set; rejected. |
+| 394 | The Daily Habit | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 395 | The Dame Edna Treatment | No verified image in first pass | Format uses a fictional health-retreat/location setting rather than a single recurring studio decor; no reusable exact-set photo verified. |
+
