@@ -325,14 +325,9 @@ async function checkForUpdatesManually() {
   try {
     await autoUpdater.checkForUpdates();
   } catch (error) {
-    manualUpdateCheck = false;
+    // The autoUpdater 'error' event presents the user-facing message.
+    // Keep the promise rejection from producing a duplicate dialog.
     log('Manual update check failed: ' + error.message);
-    dialog.showMessageBox(mainWindow, {
-      type: 'error',
-      title: 'خطا در بررسی به‌روزرسانی',
-      message: 'اتصال به سرویس به‌روزرسانی برقرار نشد.',
-      detail: error.message,
-    });
   }
 }
 
