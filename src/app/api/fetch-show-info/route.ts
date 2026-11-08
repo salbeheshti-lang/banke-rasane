@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     const info: Record<string,string> = {};
 
     if (isImdb) {
-      const imdbMatch = parsed.pathname.match(/(?:^|\\/)title\\/(tt\\d+)/i) || parsed.href.match(/\\b(tt\\d+)\\b/i);
+      const imdbMatch = parsed.pathname.match(/(?:^|\/)title\/(tt\d+)/i) || parsed.href.match(/\b(tt\d+)\b/i);
       const searchQuery = parsed.searchParams.get('q') || parsed.searchParams.get('s');
       let record: any = null;
       if (imdbMatch) {
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       if (record?.Response === 'True') {
         if (record.Title) info.title = record.Title;
         if (record.Plot && record.Plot !== 'N/A') info.description = record.Plot;
-        if (record.Poster && record.Poster !== 'N/A' && /^https:\\/\\//i.test(record.Poster)) info.image = record.Poster;
+        if (record.Poster && record.Poster !== 'N/A' && /^https:\/\//i.test(record.Poster)) info.image = record.Poster;
         if (record.imdbRating && record.imdbRating !== 'N/A') info.rating = record.imdbRating;
         if (record.Genre && record.Genre !== 'N/A') info.genres = record.Genre;
         if (record.Year && record.Year !== 'N/A') info.year = record.Year;
