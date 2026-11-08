@@ -139,9 +139,9 @@ export const api = {
     return data;
   },
   async getCustomGenres() {
-    return request<{ genres: Array<{ id: string; nameFa: string; name?: string; color: string; description: string }> }>(getApiUrl('api/genres'));
+    return request<{ genres: Array<{ id: string; nameFa: string; name?: string; color: string; description: string; aliases?: string[] }> }>(getApiUrl('api/genres'));
   },
-  async createCustomGenre(genre: { id: string; nameFa: string; name?: string; color: string; description: string }) {
+  async createCustomGenre(genre: { id: string; nameFa: string; name?: string; color: string; description: string; aliases?: string[] }) {
     return request<{ genre: typeof genre }>(getApiUrl('api/genres'), { method: 'POST', body: JSON.stringify(genre) });
   },
   async updateCustomGenre(genre: { id: string; nameFa: string; name?: string; color: string; description: string }) {
