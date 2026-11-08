@@ -389,3 +389,26 @@ Checked 8 November 2026. One additional verified image was found and added.
 | 259 | Chevy-florida-insider-fishing-report | No verified image in first pass | No exact licensed studio photograph surfaced. |
 | 260 | Die Kurt Kromer Show | No verified image in first pass | No openly licensed photograph of the actual set verified. |
 
+
+## First-pass checks: records #261–#275
+
+Checked 8 November 2026. No new photo passed exact-set and redistribution-license verification in this batch.
+
+| # | Program | First-pass result | Notes |
+|---:|---|---|---|
+| 261 | Die-schoneberger-show | No verified image in first pass | Production credits found, but no openly licensed set photograph verified. |
+| 262 | Everyday-Italian | No verified image in first pass | Food Network confirms the show used rented homes rather than a fixed studio; no openly licensed exact-set photo verified. |
+| 263 | Faith-Under-Fire | No verified image in first pass | Studio references found, but no openly licensed set photograph surfaced. |
+| 264 | Girl-TV | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 265 | Izzet-Yildizhan-Show | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 266 | Kangxi lai le | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 267 | l-isola-dei-famosi | No verified image in first pass | Studio and set references found, but no openly licensed exact-set photograph verified. |
+| 268 | Ie invasion barbariche | No verified image in first pass | Production source identifies the set designer, but no open image license was established. |
+| 269 | Mark Lawson Talks to | No verified image in first pass | BBC program references found, but no openly licensed photograph of the set verified. |
+| 270 | Marriage Uncensored | No exact match verified | Search results surfaced a newer Norwegian series with the same title; no exact match to this dataset record established. |
+| 271 | Ministry-of-Mayhem | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 272 | Muscle-Tv | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 273 | Now You’re Talking | No exact match verified | Search results surfaced a Terry Wogan retrospective rather than the described morning show; identity needs follow-up. |
+| 274 | Oi Pyles tou anexigitou | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 275 | Pa-Paul | No verified image in first pass | No exact licensed studio photograph surfaced. |
+
