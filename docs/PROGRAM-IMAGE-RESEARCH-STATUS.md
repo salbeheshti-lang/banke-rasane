@@ -19,7 +19,7 @@ logic only renders an external HTTP(S) URL from `show.images[]`, or a separately
 - Records with no `images[]` entry: **626**.
 - Records without a displayable seed image in a clean install: **1,140 / 1,161 (98.2%)**.
 
-The 16 external URLs are all listed in `public/IMAGE-CREDITS.md`, which is bundled with the app.
+The 21 external URLs are all listed in `public/IMAGE-CREDITS.md`, which is bundled with the app.
 Do not count legacy local paths as image coverage.
 
 ## Verified images already added
@@ -704,7 +704,7 @@ Research is **not complete**. Only 21 of 1,161 decor-filter records have display
 
 ## Records with no `images[]` entry by data category (626)
 
-This is only the 626 records with an empty image array. It does not include the additional 519 legacy-local-path-only records, which are also not displayable.
+This is only the 626 records with an empty image array. It does not include the additional 514 legacy-local-path-only records, which are also not displayable.
 
 | Category | Missing |
 |---|---:|
@@ -729,7 +729,7 @@ This is only the 626 records with an empty image array. It does not include the 
 | تاک‌شوی مصاحبه‌محور | 2 |
 | تاک‌شوی موقعیت‌محور/خارج از استودیو | 1 |
 
-## Legacy local-path-only records by data category (519)
+## Legacy local-path-only records by data category (514)
 
 These records have one or more local `/program-images/...` paths but no external URL. The app intentionally skips these paths because they are not verified decor photographs.
 
