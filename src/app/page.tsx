@@ -1084,7 +1084,7 @@ function HomeInner() {
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Add a custom genre to the shared server catalog (server enforces admin role).
+  // Add a custom genre to the shared server catalog (server enforces manage_genres permission).
   const handleAddGenre = async (g: Genre) => {
     if (!canManageGenres) return;
     try {
@@ -1104,7 +1104,7 @@ function HomeInner() {
   // silently disappearing (the genre→show link is an implicit substring match
   // on `category`, so renaming the genre alone would break the link).
   const handleEditGenre = async (g: Genre) => {
-    if (!isAdmin) return;
+    if (!canManageGenres) return;
     const prev = customGenres.find(x => x.id === g.id);
     const aliases = Array.from(new Set([
       ...(prev?.aliases || g.aliases || []),
@@ -1166,7 +1166,7 @@ function HomeInner() {
   // (by creating an edit override) so the category doesn't dangle — mirroring
   // the rename migration in handleEditGenre.
   const handleDeleteGenre = async (id: string) => {
-    if (!isAdmin) return;
+    if (!canManageGenres) return;
     try {
       await api.deleteCustomGenre(id);
     } catch (error: any) {
