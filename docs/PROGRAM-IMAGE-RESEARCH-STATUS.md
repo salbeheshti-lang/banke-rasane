@@ -274,3 +274,26 @@ Checked 8 November 2026. Record #173 is excluded from the 1,161-program decor sc
 | 184 | Richard & Judy | No verified image in first pass | No exact licensed studio photograph surfaced. |
 | 185 | Radio Star | No verified image in first pass | No openly licensed photograph of the actual set verified. |
 
+
+## First-pass checks: records #186–#200
+
+Checked 8 November 2026. No new photo passed exact-set and redistribution-license verification in this batch.
+
+| # | Program | First-pass result | Notes |
+|---:|---|---|---|
+| 186 | Rakt på med K-G Bergström | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 187 | Ranvir Vinay Aur Kaun? | No verified image in first pass | Press photos exist, but no redistribution license for the actual apartment set was established. |
+| 188 | Reimers | No verified image in first pass | Program identity and set match need further verification; no reusable image found. |
+| 189 | Responsible Health | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 190 | Shouto na Slavi | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 191 | Senkveld med HC og Tommy | No verified image in first pass | Reference images found under restricted reuse terms. |
+| 192 | Selena + Chef | No verified image in first pass | HBO/WBD press images are access-controlled; no open redistribution license verified. |
+| 193 | Seffaf Oda | No exact match verified | No exact licensed studio photograph surfaced. |
+| 194 | Scorch's PFG-TV | No verified image in first pass | Official site found, but no explicit reuse license for set images was established. |
+| 195 | Scobel | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 196 | Schmidt & Pocher | No verified image in first pass | Production references identify the studio; no openly licensed set photograph verified. |
+| 197 | ?Sarap, 'di ba | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 198 | Satyamev Jayate | No verified image in first pass | Official production information and press photos found, but reuse rights are not established. |
+| 199 | Swar Shuaib | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 200 | Sunday AM | No verified image in first pass | BBC studio references found, but no openly licensed image of the show's actual set verified. |
+
