@@ -550,3 +550,26 @@ Checked 8 November 2026. No new photo passed exact-set and redistribution-licens
 | 364 | Cycology Today | No exact match verified | No exact licensed studio photograph surfaced. |
 | 365 | Day Day Up | No verified image in first pass | Actual studio photos found through Getty/Corbis; rights-managed and not open for redistribution. |
 
+
+## First-pass checks: records #366–#380
+
+Checked 8 November 2026. Record #377 is excluded from the decor-program scope by the app's genre filter.
+
+| # | Program | First-pass result | Notes |
+|---:|---|---|---|
+| 366 | Estat de Xoc | No exact match verified | No reliable exact program/set match established. |
+| 367 | Fox Kids | No verified image in first pass | Search results mainly show presenters/behind-the-scenes, not the actual program set. |
+| 368 | Gandang Gabi, Vice | No verified image in first pass | Official on-set photo galleries exist, but no open redistribution license was established. |
+| 369 | Geneve e Chaud | No exact match verified | No exact licensed studio photograph surfaced. |
+| 370 | Go Fridge | No verified image in first pass | Tencent/WeTV show stills exist, but no open redistribution license for set images was established. |
+| 371 | Go Show | No exact match verified | No exact licensed studio photograph surfaced. |
+| 372 | Made in Hollywood | No verified image in first pass | No openly licensed photograph of the actual recurring set verified. |
+| 373 | Morgan & Platell | No exact match verified | No exact licensed studio photograph surfaced. |
+| 374 | Mornings with Kerri Anne | No verified image in first pass | No openly licensed photograph of the actual set verified. |
+| 375 | Movies 101 | No exact match verified | No exact licensed studio photograph surfaced. |
+| 376 | MTV Select | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 377 | Music Farm | Excluded from decor-program scope | App data classifies this as reality/competition/documentary outside the talk-show decor set. |
+| 378 | Nexos | No exact match verified | No exact licensed studio photograph surfaced. |
+| 379 | Penguins | No exact match verified | No exact licensed studio photograph surfaced. |
+| 380 | The Legal Analyst | No exact match verified | No exact licensed studio photograph surfaced. |
+
