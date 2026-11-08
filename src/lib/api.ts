@@ -144,7 +144,7 @@ export const api = {
   async createCustomGenre(genre: { id: string; nameFa: string; name?: string; color: string; description: string; aliases?: string[] }) {
     return request<{ genre: typeof genre }>(getApiUrl('api/genres'), { method: 'POST', body: JSON.stringify(genre) });
   },
-  async updateCustomGenre(genre: { id: string; nameFa: string; name?: string; color: string; description: string }) {
+  async updateCustomGenre(genre: { id: string; nameFa: string; name?: string; color: string; description: string; aliases?: string[] }) {
     return request<{ genre: typeof genre }>(getApiUrl('api/genres?id=' + encodeURIComponent(genre.id)), { method: 'PUT', body: JSON.stringify(genre) });
   },
   async deleteCustomGenre(id: string) {
