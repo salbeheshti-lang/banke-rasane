@@ -136,3 +136,26 @@ Checked 8 November 2026. These remain provisional no-image results and should be
 | 79 | Anytime with Bob Kushell | No verified image in first pass | Program was reportedly filmed in the host's garage; no licensed image of the actual setup verified. |
 | 80 | Ante Usted | No verified image in first pass | No exact licensed studio photograph surfaced. |
 
+
+## First-pass checks: records #81–#95
+
+Checked 8 November 2026. No item below has passed both exact-set and redistribution-license verification.
+
+| # | Program | First-pass result | Notes |
+|---:|---|---|---|
+| 81 | Anne Will | No verified image in first pass | Studio press photographs found, but reuse rights are commercial/editorial or unclear. |
+| 82 | Angela and Friends | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 83 | After The Catch | No verified image in first pass | No exact licensed bar/set photograph surfaced. |
+| 84 | After The School Club | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 85 | Ariel Mothers aka Ariel Maa | No verified image in first pass | Program references found; no reusable photograph of the actual set verified. |
+| 86 | Altas Horas | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 87 | Alan Keyes Is Making Sense | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 88 | Aftenshowet | No verified image in first pass | Program is described as broadcasting from Copenhagen City Hall Square; no reusable image of the actual setup verified. |
+| 89 | Hot Ones | No verified image in first pass | Studio setup is identifiable, but no openly licensed photo of the actual set verified. |
+| 90 | Ame Talk | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 91 | Ace Combat Original Aircraft Official Commentary | No verified image in first pass | Official videos exist, but no independently reusable still/photo license verified. |
+| 92 | Acces direct | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 93 | Abnormal Summit | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 94 | Aafareet Hussein ElImam | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 95 | A Little Late with Lilly Singh | No verified image in first pass | NewscastStudio set galleries are useful references, but their photo reuse license is not established. |
+
