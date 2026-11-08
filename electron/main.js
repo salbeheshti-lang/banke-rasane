@@ -328,6 +328,41 @@ function createWindow() {
     }
   });
   mainWindow.loadURL(NEXT_URL);
+
+  // Prevent the main application frame from navigating away from the trusted
+  // local UI. Window-open handling alone is insufficient: ordinary links and
+  // redirects can otherwise replace the app's main frame with remote content.
+  const handleMainFrameNavigation = (event, navigationUrl, reason) => {
+    let target;
+    try {
+      target = new URL(navigationUrl);
+    } catch {
+      event.preventDefault();
+      log('Blocked malformed main-frame navigation (' + reason + ')');
+      return;
+    }
+
+    const isLocalApp = target.protocol === 'http:' &&
+      (target.hostname === '127.0.0.1' || target.hostname === 'localhost') &&
+      target.port === String(NEXT_PORT);
+    if (isLocalApp) return;
+
+    event.preventDefault();
+    if (target.protocol === 'https:' || target.protocol === 'http:') {
+      shell.openExternal(target.toString()).catch((error) => {
+        log('Could not open external navigation URL: ' + error.message);
+      });
+    } else {
+      log('Blocked unsupported main-frame navigation protocol: ' + target.protocol);
+    }
+  };
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    handleMainFrameNavigation(event, url, 'will-navigate');
+  });
+  mainWindow.webContents.on('will-redirect', (event, url) => {
+    handleMainFrameNavigation(event, url, 'will-redirect');
+  });
+
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     let target;
     try {
