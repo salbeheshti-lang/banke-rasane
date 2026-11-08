@@ -47,3 +47,15 @@ Attribution: Rhododendrites, “Full Frontal set - stage manager addressing audi
 - Changes: Referenced the 1280-pixel Wikimedia Commons thumbnail; no image editing.
 
 Attribution: Abi Skipp, “Friday Night with Jonathan Ross set.jpg”, via Wikimedia Commons, licensed under CC BY 2.0.
+
+## Mad Money w/ Jim Cramer (show #143)
+
+- Image: [Mad Money Set 02.jpg](https://commons.wikimedia.org/wiki/File:Mad_Money_Set_02.jpg)
+- Direct media URL: https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/Mad_Money_Set_02.jpg/1280px-Mad_Money_Set_02.jpg
+- Creator: Jeff Maurone
+- Date: 11 March 2008
+- Description: Photograph identified on Wikimedia Commons as a Mad Money set; the visible desks, monitors, and Cramer-branded studio elements match the program's broadcast set.
+- License: [Creative Commons Attribution 2.0 Generic (CC BY 2.0)](https://creativecommons.org/licenses/by/2.0/)
+- Changes: Referenced the 1280-pixel Wikimedia Commons thumbnail; no image editing.
+
+Attribution: Jeff Maurone, “Mad Money Set 02.jpg”, via Wikimedia Commons, licensed under CC BY 2.0.
