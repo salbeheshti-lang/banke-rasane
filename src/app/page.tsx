@@ -910,10 +910,7 @@ function HomeInner() {
 
   // Shared genre catalog: every authenticated role can read; only admins can mutate.
   useEffect(() => {
-    if (!currentUser) {
-      setCustomGenres([]);
-      return;
-    }
+    if (!currentUser) return;
     let cancelled = false;
     (async () => {
       try {
