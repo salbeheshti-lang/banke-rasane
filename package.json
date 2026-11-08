@@ -161,6 +161,7 @@
     "js-yaml": "^4.3.2",
     "@electron/universal": {
       "minimatch": "^9.0.7"
-    }
+    },
+    "prismjs": "^1.30.0"
   }
 }
