@@ -503,9 +503,8 @@ app.whenReady().then(async () => {
     await startApiService();
     await startNextServer();
     createWindow();
-    // Check for updates AFTER the window is shown so the update-available
-    // dialog can attach to mainWindow (previously this ran before
-    // createWindow, so the dialog was silently skipped on fast checks).
+    installApplicationMenu();
+    // Run one automatic check after the window and native menu are ready.
     try { autoUpdater.checkForUpdates().catch(err => log('Update check failed: ' + err.message)); }
     catch(e) { log('Update check skipped: ' + e.message); }
   } catch(err) {
