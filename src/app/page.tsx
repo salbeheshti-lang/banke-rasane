@@ -489,6 +489,7 @@ type StoredGenre = {
   name?: string;
   color: string;
   description: string;
+  aliases?: string[];
 };
 
 /**
@@ -513,7 +514,7 @@ function hydrateCustomGenres(items: StoredGenre[]): Genre[] {
     .map((g: StoredGenre) => ({
       id: g.id, key: g.id, nameFa: g.nameFa, name: g.name || g.nameFa, color: g.color,
       description: stripLegacyGenreDescription(g.description || ''),
-      filterFn: (show: TalkShow) => show.category.includes(g.nameFa) || (g.name ? show.category.includes(g.name) : false),
+      filterFn: (show: TalkShow) => [g.nameFa, g.name, ...(g.aliases || [])].some(name => !!name && show.category.includes(name)),
       isCustom: true, tags: DEFAULT_GENRE_TAGS, presetTags: [],
       searchFields: ['name', 'summary', 'category', 'descriptionFa'] as (keyof TalkShow)[],
     }));
@@ -922,7 +923,7 @@ function HomeInner() {
             try {
               const saved = await api.createCustomGenre({
                 id: genre.id, nameFa: genre.nameFa, name: genre.name,
-                color: genre.color, description: genre.description,
+                color: genre.color, description: genre.description, aliases: genre.aliases,
               });
               items.push(saved.genre);
             } catch (error) {
@@ -1071,7 +1072,7 @@ function HomeInner() {
     if (!isAdmin) return;
     try {
       const result = await api.createCustomGenre({
-        id: g.id, nameFa: g.nameFa, name: g.name, color: g.color, description: g.description,
+        id: g.id, nameFa: g.nameFa, name: g.name, color: g.color, description: g.description, aliases: g.aliases,
       });
       setCustomGenres(prev => [...prev.filter(x => x.id !== g.id), ...hydrateCustomGenres([result.genre])]);
       showToast(`ژانر «${g.nameFa}» اضافه شد`);
@@ -1087,18 +1088,23 @@ function HomeInner() {
   // on `category`, so renaming the genre alone would break the link).
   const handleEditGenre = async (g: Genre) => {
     if (!isAdmin) return;
+    const prev = customGenres.find(x => x.id === g.id);
+    const aliases = Array.from(new Set([
+      ...(prev?.aliases || g.aliases || []),
+      ...(prev?.nameFa && prev.nameFa !== g.nameFa ? [prev.nameFa] : []),
+    ])).filter(Boolean);
+    const updatedGenre = { ...g, aliases };
     try {
       await api.updateCustomGenre({
-        id: g.id, nameFa: g.nameFa, name: g.name, color: g.color, description: g.description,
+        id: g.id, nameFa: g.nameFa, name: g.name, color: g.color, description: g.description, aliases,
       });
     } catch (error: any) {
       showToast(error?.message || 'ویرایش ژانر ناموفق بود');
       return;
     }
-    const prev = customGenres.find(x => x.id === g.id);
     const oldName = prev?.nameFa ?? '';
     const newName = g.nameFa;
-    const next = customGenres.map(x => (x.id === g.id ? g : x));
+    const next = customGenres.map(x => (x.id === g.id ? updatedGenre : x));
     setCustomGenres(next);
 
     const renamed = oldName && newName && oldName !== newName;
