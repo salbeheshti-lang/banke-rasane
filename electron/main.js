@@ -423,11 +423,6 @@ app.whenReady().then(async () => {
     await startApiService();
     await startNextServer();
     createWindow();
-    // Check for updates AFTER the window is shown so the update-available
-    // dialog can attach to mainWindow (previously this ran before
-    // createWindow, so the dialog was silently skipped on fast checks).
-    try { autoUpdater.checkForUpdates().catch(err => log('Update check failed: ' + err.message)); }
-    catch(e) { log('Update check skipped: ' + e.message); }
   } catch(err) {
     log('FATAL: ' + err.message);
     dialog.showErrorBox('خطا در راه‌اندازی', 'خطا: ' + err.message + '\n\nفایل لاگ: ' + getLogPath());
