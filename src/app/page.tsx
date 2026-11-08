@@ -919,23 +919,26 @@ function HomeInner() {
       try {
         let items = (await api.getCustomGenres()).genres || [];
         // Migrate old browser-local genres once, only when the shared catalog is empty.
-        if (items.length === 0 && currentUser.role === 'admin') {
+        if (currentUser.role === 'admin') {
           const legacy = loadCustomGenres();
+          const existingIds = new Set(items.map(genre => genre.id));
           let migrationComplete = true;
           for (const genre of legacy) {
+            if (existingIds.has(genre.id)) continue;
             try {
               const saved = await api.createCustomGenre({
                 id: genre.id, nameFa: genre.nameFa, name: genre.name,
                 color: genre.color, description: genre.description, aliases: genre.aliases,
               });
               items.push(saved.genre);
+              existingIds.add(genre.id);
             } catch (error) {
               migrationComplete = false;
               console.warn('[genres] legacy migration skipped:', error);
             }
           }
-          // Remove the old local snapshot only after a complete migration. This
-          // prevents deleted server genres from being resurrected on a later login.
+          // Retry any partial migration on a later admin sign-in. Remove the old
+          // local snapshot only when every legacy record is present on the server.
           if (legacy.length > 0 && migrationComplete) {
             window.localStorage.removeItem(CUSTOM_GENRES_KEY);
           }
