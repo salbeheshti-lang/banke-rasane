@@ -320,3 +320,26 @@ Checked 8 November 2026. No new photo passed exact-set and redistribution-licens
 | 214 | The Alan Titchmarsh Show | No verified image in first pass | Show archive/blog has set photos, but no explicit redistribution license was established. |
 | 215 | The Balancing Act | No verified image in first pass | No exact licensed studio photograph surfaced. |
 
+
+## First-pass checks: records #216–#230
+
+Checked 8 November 2026. No new photo passed exact-set and redistribution-license verification in this batch.
+
+| # | Program | First-pass result | Notes |
+|---:|---|---|---|
+| 216 | The Big Questions | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 217 | The Bounce | No verified image in first pass | Studio references found, but no openly licensed image of the actual set verified. |
+| 218 | The Break with Michelle Wolf | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 219 | The Chew | No verified image in first pass | Actual set photography found, but no open redistribution license was established. |
+| 220 | Pust govoryat | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 221 | P3 People, Places, Perspectives | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 222 | Pomeroggo Cinque | No exact match verified | Possible title mismatch; no verified set image found. |
+| 223 | Polspoel & Desmet | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 224 | Piper’s Picks TV | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 225 | Pièce d'identité | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 226 | Peut contenir des Rachid | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 227 | Pete's Basement | No verified image in first pass | No exact licensed set photograph surfaced. |
+| 228 | Peter Imhof | No verified image in first pass | Press event references found, but no reusable license for studio photos was established. |
+| 229 | Pardon the Interruption | No verified image in first pass | Actual set galleries and press photos found, but images are ESPN-owned/copyrighted with no open redistribution license. |
+| 230 | Party People | No verified image in first pass | No exact licensed studio photograph surfaced. |
+
