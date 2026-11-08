@@ -44,18 +44,23 @@ export async function POST(request: NextRequest) {
     }
 
     const input = Buffer.from(await file.arrayBuffer());
-    let metadata: sharp.Metadata;
+    let imageWidth = 0;
+    let imageHeight = 0;
     try {
       // Validate the actual image bytes, not the client-supplied MIME type.
-      metadata = await sharp(input, {
+      // Keep only the dimensions needed here; Sharp 0.35 no longer exports
+      // the old namespace-style sharp.Metadata type.
+      const metadata = await sharp(input, {
         limitInputPixels: MAX_IMAGE_DIMENSION * MAX_IMAGE_DIMENSION,
       }).metadata();
+      imageWidth = metadata.width ?? 0;
+      imageHeight = metadata.height ?? 0;
     } catch {
       return NextResponse.json({ ok: false, error: 'فایل تصویری معتبر نیست' }, { status: 415 });
     }
 
-    if (!metadata.width || !metadata.height ||
-        metadata.width > MAX_IMAGE_DIMENSION || metadata.height > MAX_IMAGE_DIMENSION) {
+    if (!imageWidth || !imageHeight ||
+        imageWidth > MAX_IMAGE_DIMENSION || imageHeight > MAX_IMAGE_DIMENSION) {
       return NextResponse.json(
         { ok: false, error: 'ابعاد تصویر باید حداکثر ۴۰۹۶ در ۴۰۹۶ پیکسل باشد' },
         { status: 413 }
