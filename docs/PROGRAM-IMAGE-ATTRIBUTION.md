@@ -97,3 +97,17 @@ Attribution: Martha Hartnett / Los Angeles Times Photographic Collection at UCLA
 - Changes: Used the original Wikimedia Commons file as an external image URL; no image editing.
 
 Attribution: Udo Grimberg, “IMG 4526 Johann König, Johann Lafer, Daniela Ziegler.JPG”, via Wikimedia Commons, licensed under CC BY-SA 3.0 DE.
+
+
+## Top Gear (show #717)
+
+- Image: [Top Gear studios 2009.jpg](https://commons.wikimedia.org/wiki/File:Top_Gear_studios_2009.jpg)
+- Direct media URL: https://upload.wikimedia.org/wikipedia/commons/c/c2/Top_Gear_studios_2009.jpg
+- Creator: Barry McGee
+- Date: 17 June 2009
+- Source: [Original Flickr photograph](https://www.flickr.com/photos/barrymcgee/3641231060/), reviewed and transferred to Wikimedia Commons
+- Description: Wide photograph of the actual 2009 Top Gear studio, showing the two leather presenter chairs, central display/table, branded Top Gear backdrop, studio lighting and a vehicle on the set.
+- License: [Creative Commons Attribution 2.0 Generic (CC BY 2.0)](https://creativecommons.org/licenses/by/2.0/)
+- Changes: Referenced the original Wikimedia Commons file; no image editing.
+
+Attribution: Barry McGee, “Top Gear studios 2009.jpg”, via Wikimedia Commons, licensed under CC BY 2.0.
