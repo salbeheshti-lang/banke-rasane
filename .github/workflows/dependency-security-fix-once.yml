@@ -1,0 +1,61 @@
+name: One-time dependency security remediation
+
+on:
+  push:
+    branches:
+      - fix/release-readiness-v5.3.9-2026-11-07
+    paths:
+      - '.github/workflows/dependency-security-fix-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  remediate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - name: Move sharp to patched release line
+        run: |
+          node -e "const fs=require('node:fs'); const p=JSON.parse(fs.readFileSync('package.json','utf8')); p.dependencies.sharp='^0.35.5'; fs.writeFileSync('package.json', JSON.stringify(p,null,2)+'\\n');"
+
+      - name: Apply non-breaking dependency security fixes
+        shell: bash
+        run: |
+          set +e
+          bun audit fix
+          FIX_EXIT=$?
+          bun audit --audit-level=high > "$RUNNER_TEMP/dependency-audit.txt" 2>&1
+          AUDIT_EXIT=$?
+          cat "$RUNNER_TEMP/dependency-audit.txt"
+          echo "bun audit fix exit: $FIX_EXIT"
+          echo "post-fix audit exit: $AUDIT_EXIT"
+          exit 0
+
+      - name: Commit dependency updates and remove one-time workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/dependency-security-fix-once.yml
+          git add package.json bun.lock
+          if ! git diff --cached --quiet; then
+            git commit -m "fix(deps): remediate audited high and critical vulnerabilities"
+            git push origin HEAD:refs/heads/fix/release-readiness-v5.3.9-2026-11-07
+          fi
+
+      - name: Upload dependency audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-audit-remediation
+          path: ${{ runner.temp }}/dependency-audit.txt
+          retention-days: 30
