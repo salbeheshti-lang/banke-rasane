@@ -14,10 +14,10 @@ logic only renders an external HTTP(S) URL from `show.images[]`, or a separately
 
 - Decor-filter records: **1,161**.
 - Records with any `images[]` entry: **535** (this includes ignored legacy local paths).
-- Records with a displayable external seed-image URL: **16** records, representing **15 unique sources** (record #816 reuses #39).
-- Records with legacy local paths only, which the UI intentionally skips: **519**.
+- Records with a displayable external seed-image URL: **21** records, representing **20 unique sources** (record #816 reuses #39).
+- Records with legacy local paths only, which the UI intentionally skips: **514**.
 - Records with no `images[]` entry: **626**.
-- Records without a displayable seed image in a clean install: **1,145 / 1,161 (98.6%)**.
+- Records without a displayable seed image in a clean install: **1,140 / 1,161 (98.2%)**.
 
 The 16 external URLs are all listed in `public/IMAGE-CREDITS.md`, which is bundled with the app.
 Do not count legacy local paths as image coverage.
@@ -648,13 +648,13 @@ This section records the continued work after the first-pass review through reco
 
 - Decor-program scope selected by the app's current filter: **1,161 records**.
 - Records with any `images[]` entry (including ignored legacy local paths): **535**.
-- Records with a displayable external seed-image URL: **16** records / **15 unique sources**.
-- Records with legacy local paths only, intentionally skipped by the UI: **519**.
+- Records with a displayable external seed-image URL: **21** records / **20 unique sources**.
+- Records with legacy local paths only, intentionally skipped by the UI: **514**.
 - Records with no `images[]` entry: **626**.
-- Records without a displayable seed image in a clean install: **1,145**.
+- Records without a displayable seed image in a clean install: **1,140**.
 - Verified unique image sources recorded in the attribution file: **15**.
 - Duplicate catalog entry #816 (Full Frontal with Samantha Bee) now reuses the same licensed set photograph as #39; this fills the duplicate record but does not increase the unique-image-source count.
-- New unique images added in this continuation: **8** — #151 Lafer! Lichter! Lecker!, #251 Willkommen Österreich, #582 Gardeners' World, #717 Top Gear, #767 Antiques Roadshow, #1131 Radio 1's Big Weekend, #1227 Comic Book Men, and #1268 Dragons' Den.
+- New unique images added in this continuation: **13** — #151 Lafer! Lichter! Lecker!, #251 Willkommen Österreich, #582 Gardeners' World, #717 Top Gear, #767 Antiques Roadshow, #1131 Radio 1's Big Weekend, #1227 Comic Book Men, #1268 Dragons' Den, #419 Morning Joe, #467 The Daily Show, #521 The Oprah Winfrey Show, #522 Meet The Press, and #542 Conan.
 - All new image URLs were checked against the app's existing image-loading path. The app selects external HTTPS URLs from `show.images[]` and renders them as real images for logged-in users; no UI or genre logic was changed.
 
 ## Additional research batches
@@ -699,7 +699,7 @@ Full creator, date, source, image URL and license details are maintained in `doc
 
 ## Completion state
 
-Research is **not complete**. Only 16 of 1,161 decor-filter records have displayable external seed-image URLs (15 unique sources). A further 519 records contain only legacy local paths that the UI deliberately ignores, and 626 have no `images[]` entry. Thus 1,145 records currently have no displayable seed image in a clean install. The PR remains a draft and has not been merged. Continue searching for exact, reusable set/production-environment photographs; do not lower the matching or licensing standard merely to force every record to have an image.
+Research is **not complete**. Only 21 of 1,161 decor-filter records have displayable external seed-image URLs (20 unique sources). A further 514 records contain only legacy local paths that the UI deliberately ignores, and 626 have no `images[]` entry. Thus 1,140 records currently have no displayable seed image in a clean install. The PR remains a draft and has not been merged. Continue searching for exact, reusable set/production-environment photographs; do not lower the matching or licensing standard merely to force every record to have an image.
 
 
 ## Records with no `images[]` entry by data category (626)
@@ -736,14 +736,14 @@ These records have one or more local `/program-images/...` paths but no external
 | Category | Records |
 |---|---:|
 | ۳. تاک‌شوی مصاحبه‌محور | 99 |
-| ۷. تاک‌شوی طنز و کمدی | 85 |
-| ۴. تاک‌شوی سیاسی و خبری | 63 |
+| ۷. تاک‌شوی طنز و کمدی | 84 |
+| ۴. تاک‌شوی سیاسی و خبری | 60 |
 | ۱۲. تاک‌شوی فرهنگی، هنری و روشنفکری | 51 |
 | ۱۳. تاک‌شوی تخصصی و سبک زندگی | 48 |
 | ۶. تاک‌شوی گروهی سلبریتی‌ها | 41 |
 | ۹. تاک‌شوی پنلی و میزگرد | 23 |
 | نیازمند بررسی/فرمت ترکیبی | 22 |
-| ۲. تاک‌شوی روزانه/صبحگاهی | 20 |
+| ۲. تاک‌شوی روزانه/صبحگاهی | 19 |
 | ۱. تاک‌شوی شبانه | 14 |
 | ۱۴. تاک‌شوی صنعت سرگرمی/پشت‌صحنه | 13 |
 | ۸. تاک‌شوی موقعیت‌محور/خارج از استودیو | 11 |
