@@ -1113,7 +1113,7 @@ function HomeInner() {
       />
 
       <main key={currentView} className={`animate-view-enter ${isMobile ? 'p-4 pt-28 pb-28' : 'p-8 pt-32'}`}>
-        {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} onShowClick={setSelectedShow} />}
+        {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} onShowClick={setSelectedShow} onEditGenre={(g) => { setEditingGenre(g); setShowEditGenre(true); }} onDeleteGenre={handleDeleteGenre} />}
         {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} onEditGenre={(g) => { setEditingGenre(g); setShowEditGenre(true); }} onDeleteGenre={handleDeleteGenre} />}
         {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} onExport={(shows, format, meta) => setExportPreview({ shows, format, ...meta })} />}
@@ -1193,6 +1193,7 @@ function HomeInner() {
           editingGenre={editingGenre}
           onEditSave={handleSaveEditGenre}
           onDelete={handleDeleteGenre}
+          existingNames={genres.filter(g => g.id !== editingGenre.id).map(g => g.nameFa)}
         />
       )}
 
@@ -2562,7 +2563,7 @@ function ContactRow({ icon, label, value, editing, onChange, placeholder, dir }:
 // ============================================
 // DASHBOARD
 // ============================================
-function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isAdmin, genres = GENRES, onAddGenre, onShowClick }: {
+function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isAdmin, genres = GENRES, onAddGenre, onShowClick, onEditGenre, onDeleteGenre }: {
   onGenreClick: (g: Genre) => void;
   talkShows: TalkShow[];
   uploadedCount: number;
@@ -2572,6 +2573,8 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
   genres?: Genre[];
   onAddGenre?: (g: Genre) => void;
   onShowClick?: (s: TalkShow) => void;
+  onEditGenre?: (g: Genre) => void;
+  onDeleteGenre?: (id: string) => void;
 }) {
   const { t, lang } = useLang();
   const [showAddGenre, setShowAddGenre] = useState(false);
@@ -2912,50 +2915,105 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* auto-rows-fr ensures every card in a row stretches to the tallest one (uniform height) */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 auto-rows-fr gap-4 items-stretch">
         {genres.map((g, idx) => {
           const count = talkShows.filter(g.filterFn).length;
+          const hasGenreActions = isAdmin && g.isCustom && (!!onEditGenre || !!onDeleteGenre);
           return (
-            <button
-              key={g.id}
-              onClick={() => onGenreClick(g)}
-              className="premium-genre-card animate-card-enter text-right"
-              style={{
-                animationDelay: `${idx * 50}ms`,
-                ['--genre-color' as string]: g.color,
-                ['--card-index' as string]: idx,
-              }}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                  style={{
-                    /* Colored icon container — vibrant, no glow */
-                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                    color: '#ffffff',
-                    border: '1px solid rgba(255, 255, 255, 0.25)',
-                  }}
-                >
-                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+            <div key={g.id} className="relative h-full">
+              <button
+                onClick={() => onGenreClick(g)}
+                className="premium-genre-card animate-card-enter text-right w-full h-full flex flex-col"
+                style={{
+                  animationDelay: `${idx * 50}ms`,
+                  ['--genre-color' as string]: g.color,
+                  ['--card-index' as string]: idx,
+                }}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                    style={{
+                      /* Colored icon container — vibrant, no glow */
+                      backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                      color: '#ffffff',
+                      border: '1px solid rgba(255, 255, 255, 0.25)',
+                    }}
+                  >
+                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <div className="text-4xl font-black leading-none" style={{ color: '#ffffff' }}>
+                      {count.toLocaleString('fa-IR')}
+                    </div>
+                    <div className="text-xs mt-1" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>برنامه</div>
+                  </div>
+                </div>
+                <h3 className="font-bold text-lg mb-1 line-clamp-2" style={{ color: '#ffffff' }}>{g.nameFa}</h3>
+                {/* Clamp description to 3 lines so card height stays consistent */}
+                <p className="text-sm mt-3 line-clamp-3 leading-relaxed" style={{ color: 'rgba(255, 255, 255, 0.75)' }}>{g.description}</p>
+                {/* Push the CTA to the bottom for uniform alignment across cards */}
+                <div className="mt-auto pt-4 flex items-center text-sm font-bold" style={{ color: g.color }}>
+                  مشاهده و جستجو
+                  <svg className="w-4 h-4 mr-1 rtl-flip" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>
                 </div>
-                <div className="text-left">
-                  <div className="text-4xl font-black" style={{ color: '#ffffff' }}>
-                    {count.toLocaleString('fa-IR')}
-                  </div>
-                  <div className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>برنامه</div>
+              </button>
+              {/* Edit / Delete quick actions — ONLY on user-created custom genres (admin) */}
+              {hasGenreActions && (
+                <div
+                  className="absolute z-10 flex gap-1.5"
+                  style={{ top: '10px', insetInlineEnd: '10px' }}
+                  dir="rtl"
+                >
+                  {onEditGenre && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onEditGenre(g); }}
+                      title="ویرایش ژانر"
+                      aria-label="ویرایش ژانر"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center transition-all hover:scale-110"
+                      style={{
+                        background: 'rgba(0, 30, 20, 0.72)',
+                        backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+                        border: '1px solid rgba(255, 255, 255, 0.4)',
+                        color: '#f0fdf4',
+                      }}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                  )}
+                  {onDeleteGenre && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm(`آیا از حذف ژانر «${g.nameFa}» مطمئن هستید؟ این عمل قابل بازگشت نیست.`)) {
+                          onDeleteGenre(g.id);
+                        }
+                      }}
+                      title="حذف ژانر"
+                      aria-label="حذف ژانر"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center transition-all hover:scale-110"
+                      style={{
+                        background: 'rgba(60, 10, 10, 0.72)',
+                        backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+                        border: '1px solid rgba(252, 165, 165, 0.45)',
+                        color: '#fca5a5',
+                      }}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
-              </div>
-              <h3 className="font-bold text-lg mb-1" style={{ color: '#ffffff' }}>{g.nameFa}</h3>
-              <p className="text-sm mt-3" style={{ color: 'rgba(255, 255, 255, 0.75)' }}>{g.description}</p>
-              <div className="mt-4 flex items-center text-sm font-bold" style={{ color: g.color }}>
-                مشاهده و جستجو
-                <svg className="w-4 h-4 mr-1 rtl-flip" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-              </div>
-            </button>
+              )}
+            </div>
           );
         })}
       </div>
@@ -2964,6 +3022,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
         <AddGenreModal
           onClose={() => setShowAddGenre(false)}
           onSave={(g) => { onAddGenre(g); setShowAddGenre(false); }}
+          existingNames={genres.map(x => x.nameFa)}
         />
       )}
     </>
@@ -5315,21 +5374,34 @@ const GENRE_COLOR_PRESETS = [
   '#10b981', '#10b981', '#7c3aed', '#db2777', '#dc2626', '#ea580c', '#16a34a', '#0d7c4a',
 ];
 
-function AddGenreModal({ onClose, onSave, editingGenre, onEditSave, onDelete }: {
+function AddGenreModal({ onClose, onSave, editingGenre, onEditSave, onDelete, existingNames }: {
   onClose: () => void;
   onSave: (g: Genre) => void;
   editingGenre?: Genre | null;
   onEditSave?: (g: Genre) => void;
   onDelete?: (id: string) => void;
+  existingNames?: string[];
 }) {
   const isEditing = !!editingGenre;
   const [name, setName] = useState(editingGenre?.nameFa || '');
   const [description, setDescription] = useState(editingGenre?.description || '');
   const [color, setColor] = useState(editingGenre?.color || GENRE_COLOR_PRESETS[0]);
 
+  // Duplicate-name guard — prevents two genres from sharing the same name
+  // (which previously caused a confusing duplicate card on the dashboard).
+  // In edit mode, keeping the genre's OWN current name is allowed.
+  // Persian names are normalized (ZWNJ/نیم‌فاصله removed, whitespace collapsed)
+  // so typing «تاکشوی» still matches the stored «تاک‌شوی».
+  const normalizeFa = (s: string) => s.replace(/[\u200C\u200B]/g, '').replace(/\s+/g, ' ').trim();
+  const trimmedName = name.trim();
+  const normTrimmed = normalizeFa(trimmedName);
+  const duplicateName = !!normTrimmed
+    && (existingNames || []).some(n => normalizeFa(n) === normTrimmed)
+    && normTrimmed !== normalizeFa(editingGenre?.nameFa || '');
+
   const handleSave = () => {
     const trimmed = name.trim();
-    if (!trimmed) return;
+    if (!trimmed || duplicateName) return;
     if (isEditing && editingGenre && onEditSave) {
       // Edit mode — preserve id, update mutable fields.
       const updated: Genre = {
@@ -5388,13 +5460,18 @@ function AddGenreModal({ onClose, onSave, editingGenre, onEditSave, onDelete }: 
                 width: '100%',
                 padding: '10px 16px',
                 borderRadius: '12px',
-                border: '1px solid rgba(13, 124, 74, 0.15)',
+                border: duplicateName ? '1px solid rgba(220, 38, 38, 0.55)' : '1px solid rgba(13, 124, 74, 0.15)',
                 background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
                 color: '#f0fdf4',
                 fontFamily: 'inherit',
                 outline: 'none',
               }}
             />
+            {duplicateName && (
+              <p className="text-xs mt-2" style={{ color: '#fca5a5' }}>
+                ⚠️ ژانری با این نام از قبل وجود دارد — نام دیگری انتخاب کنید تا کارت تکراری ساخته نشود.
+              </p>
+            )}
           </div>
 
           <div>
@@ -5460,9 +5537,9 @@ function AddGenreModal({ onClose, onSave, editingGenre, onEditSave, onDelete }: 
           <div className="flex gap-3 pt-2">
             <button
               onClick={handleSave}
-              disabled={!name.trim()}
+              disabled={!name.trim() || duplicateName}
               className="btn-enter-premium flex-1"
-              style={{ opacity: name.trim() ? 1 : 0.5, cursor: name.trim() ? 'pointer' : 'not-allowed' }}
+              style={{ opacity: name.trim() && !duplicateName ? 1 : 0.5, cursor: name.trim() && !duplicateName ? 'pointer' : 'not-allowed' }}
             >
               {isEditing ? '✓ ذخیره تغییرات' : '✓ ذخیره ژانر'}
             </button>
