@@ -51,6 +51,7 @@ interface Genre {
   name: string;
   color: string;
   description: string;
+  aliases?: string[];
   filterFn: (s: TalkShow) => boolean;
   // Section-specific tags shown on cards in this genre's view
   tags?: TagSpec[];
@@ -514,6 +515,7 @@ function hydrateCustomGenres(items: StoredGenre[]): Genre[] {
     .map((g: StoredGenre) => ({
       id: g.id, key: g.id, nameFa: g.nameFa, name: g.name || g.nameFa, color: g.color,
       description: stripLegacyGenreDescription(g.description || ''),
+      aliases: Array.isArray(g.aliases) ? g.aliases : [],
       filterFn: (show: TalkShow) => [g.nameFa, g.name, ...(g.aliases || [])].some(name => !!name && show.category.includes(name)),
       isCustom: true, tags: DEFAULT_GENRE_TAGS, presetTags: [],
       searchFields: ['name', 'summary', 'category', 'descriptionFa'] as (keyof TalkShow)[],
@@ -1081,7 +1083,7 @@ function HomeInner() {
     }
   };
 
-  // Edit an existing custom Genre (updates state + localStorage).
+  // Edit a custom genre in the shared server catalog.
   // MIGRATION: if the genre is renamed, every show whose `category` references
   // the old name is migrated so it stays inside the renamed genre instead of
   // silently disappearing (the genre→show link is an implicit substring match
