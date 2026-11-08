@@ -71,3 +71,16 @@ Attribution: Jeff Maurone, “Mad Money Set 02.jpg”, via Wikimedia Commons, li
 - Changes: Referenced the 1280-pixel Wikimedia Commons thumbnail; no image editing.
 
 Attribution: Mickisoke, “Voetbal Inside.jpg”, via Wikimedia Commons, licensed under CC BY-SA 4.0.
+
+## Donahue / The Phil Donahue Show (show #310)
+
+- Image: [Phil Donahue with audience members.jpg](https://commons.wikimedia.org/wiki/File:Phil_Donahue_with_audience_members.jpg)
+- Direct media URL: https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Phil_Donahue_with_audience_members.jpg/1280px-Phil_Donahue_with_audience_members.jpg
+- Creator: Martha Hartnett, Los Angeles Times
+- Date: 18 February 1980
+- Source: Los Angeles Times Photographic Collection, UCLA Library
+- Description: Photograph made during the actual Phil Donahue Show in Chicago. It shows the host with the studio audience and the show's audience barrier/backdrop, documenting the program's distinctive audience-participation studio arrangement.
+- License: [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/)
+- Changes: Referenced the 1280-pixel Wikimedia Commons thumbnail; no image editing.
+
+Attribution: Martha Hartnett / Los Angeles Times Photographic Collection at UCLA Library, “Phil Donahue with audience members.jpg”, via Wikimedia Commons, licensed under CC BY 4.0.
