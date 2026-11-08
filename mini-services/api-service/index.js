@@ -801,7 +801,7 @@ const server = Bun.serve({
     }
 
     if (pathname === '/api/genres' && method === 'POST') {
-      const admin = requirePermission(req, 'manage_genres');
+      const admin = requireRole(req, ['admin']);
       if (!admin) return permissionFailure(req, 'فقط مدیران می‌توانند ژانر بسازند');
       let body;
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
@@ -827,7 +827,7 @@ const server = Bun.serve({
     }
 
     if (pathname === '/api/genres' && method === 'PUT') {
-      const admin = requirePermission(req, 'manage_genres');
+      const admin = requireRole(req, ['admin']);
       if (!admin) return permissionFailure(req, 'فقط مدیران می‌توانند ژانر ویرایش کنند');
       const id = String(url.searchParams.get('id') || '').trim();
       if (!id) return json({ error: 'شناسه ژانر نامعتبر است' }, 400, req);
@@ -850,7 +850,7 @@ const server = Bun.serve({
     }
 
     if (pathname === '/api/genres' && method === 'DELETE') {
-      const admin = requirePermission(req, 'manage_genres');
+      const admin = requireRole(req, ['admin']);
       if (!admin) return permissionFailure(req, 'فقط مدیران می‌توانند ژانر حذف کنند');
       const id = String(url.searchParams.get('id') || '').trim();
       if (!id) return json({ error: 'شناسه ژانر نامعتبر است' }, 400, req);
