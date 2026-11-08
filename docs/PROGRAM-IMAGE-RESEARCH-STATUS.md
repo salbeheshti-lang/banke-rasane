@@ -159,3 +159,26 @@ Checked 8 November 2026. No item below has passed both exact-set and redistribut
 | 94 | Aafareet Hussein ElImam | No verified image in first pass | No exact licensed studio photograph surfaced. |
 | 95 | A Little Late with Lilly Singh | No verified image in first pass | NewscastStudio set galleries are useful references, but their photo reuse license is not established. |
 
+
+## First-pass checks: records #111–#125
+
+Checked 8 November 2026. No new photo passed exact-set and redistribution-license verification in this batch.
+
+| # | Program | First-pass result | Notes |
+|---:|---|---|---|
+| 111 | Jersild Live | No verified image in first pass | No reusable exact-set photograph verified. |
+| 112 | Jewel School - Jewelry Making | No verified image in first pass | Official JTV program page found, but no openly licensed set photo verified. |
+| 113 | Johnny Vegas 18 Stone of Idiot | No verified image in first pass | No exact licensed set photograph surfaced. |
+| 114 | Joni Table Talk | No verified image in first pass | No exact licensed set photograph surfaced. |
+| 115 | Jul med Gud | No verified image in first pass | No reusable image of the actual interview location verified. |
+| 116 | Julekrybben: Helligaandskirken | No verified image in first pass | No exact licensed set photograph surfaced. |
+| 117 | Kaitai-Shin Show | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 118 | Kangsi Coming | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 119 | Half Circle | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 120 | Half in the Bag | No verified image in first pass | No openly licensed image of the actual set verified. |
+| 121 | Happy Hour | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 122 | Die Harald Schmidt Show | No verified image in first pass | Actual set references found, but images surfaced are rights-managed or have no open reuse license. |
+| 123 | Hard Knock TV | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 124 | Heads Up with Richard Herring | No verified image in first pass | Creator's archive has episode stills, but no explicit reuse license was established. |
+| 125 | Love Naggers | No verified image in first pass | No exact licensed studio photograph surfaced. |
+
