@@ -52,3 +52,32 @@ An image is added only after confirming all of the following:
 5. Creator, source, date when available, license, and any changes are recorded in the attribution manifest.
 
 No changes to the app UI, genre logic, or program descriptions are part of this image-research task.
+
+## First-pass checks: records #21–#41
+
+Checked 8 November 2026. Continue past every unresolved record; “no verified image” is provisional.
+
+| # | Program | First-pass result | Notes |
+|---:|---|---|---|
+| 21 | Brand X with Russell Brand | No verified image in first pass | No reusable exact-set photograph verified. |
+| 22 | Brekky Central Sunrise | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 23 | Brian Mørk Show | No verified image in first pass | Program references found, but no licensed photograph of the actual set verified. |
+| 24 | Brian Lehrer Live | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 25 | Bringing it Home with Laura McIntosh | No verified image in first pass | Official PBS program page found; no redistributable set photograph verified. |
+| 26 | BSU Tonight | No verified image in first pass | Ball State confirms studio use, but no reusable photograph of this show's actual set verified. |
+| 27 | C à vous | No verified image in first pass | Studio photographs exist in press coverage, but reuse license is not established. |
+| 28 | Christine Cushing Live | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 29 | Calando fuerte | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 30 | Im Glashaus - Das philosophische Quartett | No verified image in first pass | IMDb episode stills are not a verified reusable license. |
+| 31 | De wereld draait door | Verified image added | See attribution manifest. |
+| 32 | Der Sonntags-Stammtisch | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 33 | Cool Japan | No verified image in first pass | A participant blog shows the studio but does not establish a reusable license. |
+| 34 | Contrarians | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 35 | Comdy Nights with Kapil | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 36 | Conversation with Michael Eisner | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 37 | Conversation from The Edge | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 38 | Fútbol Picante | No verified image in first pass | ESPN press material confirms the studio but does not establish an image reuse license. |
+| 39 | Full Frontal with Samantha Bee | Verified image added | Actual stage-set photo, CC BY-SA 4.0; see attribution manifest. |
+| 40 | Fröhlich lesen | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 41 | Friday Night with Jonathan Ross | Verified image added | Actual set photo, CC BY 2.0; see attribution manifest. |
+
