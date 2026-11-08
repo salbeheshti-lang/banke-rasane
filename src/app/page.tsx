@@ -908,7 +908,12 @@ function HomeInner() {
 
   // Role helpers — viewer is read-only (no add/edit/delete), admin can manage users + settings.
   const role = currentUser?.role || null;
-  const canEdit = role === 'admin' || role === 'editor';
+  const hasPermission = (permission: string) => currentUser?.isSuperAdmin === true ||
+    (Array.isArray(currentUser?.permissions)
+      ? currentUser.permissions.includes(permission)
+      : role === 'admin' || (role === 'editor' && ['add_shows', 'edit_shows', 'export_reports'].includes(permission)));
+  const canEdit = hasPermission('add_shows') || hasPermission('edit_shows');
+  const canManageGenres = hasPermission('manage_genres');
   const isAdmin = role === 'admin';
 
   // Shared genre catalog: every authenticated role can read; only admins can mutate.
@@ -1081,7 +1086,7 @@ function HomeInner() {
 
   // Add a custom genre to the shared server catalog (server enforces admin role).
   const handleAddGenre = async (g: Genre) => {
-    if (!isAdmin) return;
+    if (!canManageGenres) return;
     try {
       const result = await api.createCustomGenre({
         id: g.id, nameFa: g.nameFa, name: g.name, color: g.color, description: g.description, aliases: g.aliases,
@@ -1288,7 +1293,7 @@ function HomeInner() {
       />
 
       <main key={currentView} className={`animate-view-enter ${isMobile ? 'p-4 pt-20 pb-28' : 'p-8 pt-24'}`}>
-        {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} onEditGenre={handleEditGenre} onDeleteGenre={handleDeleteGenre} onShowClick={setSelectedShow} />}
+        {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} canManageGenres={canManageGenres} genres={genres} onAddGenre={handleAddGenre} onEditGenre={handleEditGenre} onDeleteGenre={handleDeleteGenre} onShowClick={setSelectedShow} />}
         {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} onExport={(shows, format, meta) => setExportPreview({ shows, format, ...meta })} />}
@@ -2739,13 +2744,14 @@ function ContactRow({ icon, label, value, editing, onChange, placeholder, dir }:
 // ============================================
 // DASHBOARD
 // ============================================
-function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isAdmin, genres = GENRES, onAddGenre, onEditGenre, onDeleteGenre, onShowClick }: {
+function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isAdmin, canManageGenres, genres = GENRES, onAddGenre, onEditGenre, onDeleteGenre, onShowClick }: {
   onGenreClick: (g: Genre) => void;
   talkShows: TalkShow[];
   uploadedCount: number;
   onAdd: () => void;
   canEdit: boolean;
   isAdmin?: boolean;
+  canManageGenres: boolean;
   genres?: Genre[];
   onAddGenre?: (g: Genre) => void;
   onEditGenre?: (g: Genre) => void;
@@ -3061,7 +3067,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <h2 className="text-xl font-bold" style={{ color: '#f0fdf4' }}>همهٔ ژانرها</h2>
         <div className="flex items-center gap-2 flex-wrap">
-          {isAdmin && onAddGenre && (
+          {canManageGenres && onAddGenre && (
             <button
               onClick={() => setShowAddGenre(true)}
               className="px-4 py-2 rounded-xl text-sm font-bold transition-all"
@@ -3097,7 +3103,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {genres.map((g, idx) => {
           const count = talkShows.filter(g.filterFn).length;
-          const canManage = isAdmin && g.isCustom && onEditGenre && onDeleteGenre;
+          const canManage = canManageGenres && g.isCustom && onEditGenre && onDeleteGenre;
           return (
             <div
               key={g.id}
