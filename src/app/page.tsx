@@ -4763,8 +4763,14 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
         if (info.imdbUrl && !updated.imdb) updated.imdb = info.imdbUrl;
         if (info.wikiUrl && !updated.wikipedia) updated.wikipedia = info.wikiUrl;
         // Preserve the exact source link even when a provider only returned partial metadata.
-        if (!updated.imdb && /^https:\/\/(?:www\.)?imdb\.com\//i.test(fetchUrl)) updated.imdb = fetchUrl;
-        if (!updated.wikipedia && /^https:\/\/(?:[a-z]{2,3}\.)?wikipedia\.org\//i.test(fetchUrl)) updated.wikipedia = fetchUrl;
+        try {
+          const sourceUrl = new URL(fetchUrl);
+          const sourceHost = sourceUrl.hostname.toLowerCase();
+          if (!updated.imdb && (sourceHost === 'imdb.com' || sourceHost.endsWith('.imdb.com'))) updated.imdb = sourceUrl.href;
+          if (!updated.wikipedia && (sourceHost === 'wikipedia.org' || sourceHost.endsWith('.wikipedia.org'))) updated.wikipedia = sourceUrl.href;
+        } catch {
+          // The server validates source URLs; ignore malformed fallback values.
+        }
         // Auto-generate YouTube search link only if not already set.
         if (updated.name && !updated.youtube) {
           updated.youtube = `https://www.youtube.com/results?search_query=${encodeURIComponent(updated.name)}`;
