@@ -59,3 +59,15 @@ Attribution: Abi Skipp, “Friday Night with Jonathan Ross set.jpg”, via Wikim
 - Changes: Referenced the 1280-pixel Wikimedia Commons thumbnail; no image editing.
 
 Attribution: Jeff Maurone, “Mad Money Set 02.jpg”, via Wikimedia Commons, licensed under CC BY 2.0.
+
+## Voetbal International (Voetbal Inside) (show #247)
+
+- Image: [Voetbal Inside.jpg](https://commons.wikimedia.org/wiki/File:Voetbal_Inside.jpg)
+- Direct media URL: https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Voetbal_Inside.jpg/1280px-Voetbal_Inside.jpg
+- Creator: Mickisoke
+- Date: 24 September 2015
+- Description: Wide photograph of the actual Voetbal Inside studio set, with the program's branded display, panel table, studio furniture, and distinctive red-brick backdrop. The Commons category associates the program's former and later titles.
+- License: [Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)](https://creativecommons.org/licenses/by-sa/4.0/)
+- Changes: Referenced the 1280-pixel Wikimedia Commons thumbnail; no image editing.
+
+Attribution: Mickisoke, “Voetbal Inside.jpg”, via Wikimedia Commons, licensed under CC BY-SA 4.0.
