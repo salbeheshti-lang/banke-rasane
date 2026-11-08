@@ -851,6 +851,9 @@ function HomeInner() {
   const [showUserProfile, setShowUserProfile] = useState(false);
   // User-created custom genres (persisted to localStorage) — merged with GENRES.
   const [customGenres, setCustomGenres] = useState<Genre[]>([]);
+  // Genre being edited in the EditGenreModal (null = modal closed).
+  const [editingGenre, setEditingGenre] = useState<Genre | null>(null);
+  const [showEditGenre, setShowEditGenre] = useState(false);
   // When the user clicks "+ افزودن برنامه" from inside a genre view, that genre's
   // Persian name is preset here so AddEditView's category field starts with it.
   const [presetCategory, setPresetCategory] = useState<string | undefined>(undefined);
@@ -1002,6 +1005,38 @@ function HomeInner() {
     showToast(`ژانر «${g.nameFa}» اضافه شد`);
   };
 
+  // Edit an existing custom Genre — updates state + localStorage + selectedGenre.
+  const handleSaveEditGenre = (updated: Genre) => {
+    const next = customGenres.map(g => (g.id === updated.id ? { ...g, ...updated, isCustom: true } : g));
+    setCustomGenres(next);
+    saveCustomGenres(next);
+    // If we're currently viewing this genre, update selectedGenre too so the
+    // header reflects the new name/description/color immediately.
+    if (selectedGenre?.id === updated.id) {
+      setSelectedGenre({ ...selectedGenre, ...updated, isCustom: true });
+    }
+    setShowEditGenre(false);
+    setEditingGenre(null);
+    showToast(`ژانر «${updated.nameFa}» ویرایش شد`);
+  };
+
+  // Delete a custom Genre — removes from state + localStorage. If the user
+  // is currently viewing that genre, navigate back to the dashboard.
+  const handleDeleteGenre = (genreId: string) => {
+    const genre = customGenres.find(g => g.id === genreId);
+    const next = customGenres.filter(g => g.id !== genreId);
+    setCustomGenres(next);
+    saveCustomGenres(next);
+    if (selectedGenre?.id === genreId) {
+      setSelectedGenre(null);
+      setCurrentView('dashboard');
+      setViewStack([]);
+    }
+    setShowEditGenre(false);
+    setEditingGenre(null);
+    showToast(`ژانر «${genre?.nameFa || ''}» حذف شد`);
+  };
+
   const handleLogout = async () => {
     try { await api.logout(); } catch {}
     setCurrentUser(null);
@@ -1080,7 +1115,7 @@ function HomeInner() {
       <main key={currentView} className={`animate-view-enter ${isMobile ? 'p-4 pt-20 pb-28' : 'p-8 pt-24'}`}>
         {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} onShowClick={setSelectedShow} />}
         {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
-        {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
+        {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} onEditGenre={(g) => { setEditingGenre(g); setShowEditGenre(true); }} onDeleteGenre={handleDeleteGenre} />}
         {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} onExport={(shows, format, meta) => setExportPreview({ shows, format, ...meta })} />}
         {currentView === 'add' && canEdit && <AddEditView talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setPresetCategory(undefined); setPresetGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} presetCategory={presetCategory} presetGenre={presetGenre} genres={genres} />}
         {currentView === 'add' && !canEdit && (
@@ -1147,6 +1182,17 @@ function HomeInner() {
           onClose={() => setShowSettings(false)}
           showToast={showToast}
           onLogout={handleLogout}
+        />
+      )}
+
+      {/* Edit genre modal — admin edits a user-created custom genre (name, description, color, delete) */}
+      {showEditGenre && editingGenre && (
+        <AddGenreModal
+          onClose={() => { setShowEditGenre(false); setEditingGenre(null); }}
+          onSave={() => {}}
+          editingGenre={editingGenre}
+          onEditSave={handleSaveEditGenre}
+          onDelete={handleDeleteGenre}
         />
       )}
 
@@ -3054,6 +3100,8 @@ function ProgramsView({
   onGenreSelect,
   onNavigate,
   genres,
+  onEditGenre,
+  onDeleteGenre,
 }: {
   genre?: Genre;
   talkShows: TalkShow[];
@@ -3069,6 +3117,8 @@ function ProgramsView({
   onGenreSelect?: (g: Genre) => void;
   onNavigate?: (v: 'dashboard' | 'programs' | 'reports' | 'add') => void;
   genres?: Genre[];
+  onEditGenre?: (g: Genre) => void;
+  onDeleteGenre?: (id: string) => void;
 }) {
   const { t, lang } = useLang();
   const [search, setSearch] = useState('');
@@ -3179,6 +3229,27 @@ function ProgramsView({
                     style={{ padding: '6px 16px', fontSize: '13px' }}
                   >
                     + افزودن برنامه
+                  </button>
+                )}
+                {/* Edit / Delete genre buttons — only for user-created custom genres */}
+                {canEdit && genre.isCustom && onEditGenre && (
+                  <button
+                    onClick={() => onEditGenre(genre)}
+                    className="px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.12)',
+                      backdropFilter: 'blur(12px)',
+                      WebkitBackdropFilter: 'blur(12px)',
+                      color: '#f0fdf4',
+                      border: '1px solid rgba(255, 255, 255, 0.3)',
+                      padding: '6px 14px',
+                      fontSize: '13px',
+                    }}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    ویرایش ژانر
                   </button>
                 )}
               </div>
@@ -5244,32 +5315,52 @@ const GENRE_COLOR_PRESETS = [
   '#10b981', '#10b981', '#7c3aed', '#db2777', '#dc2626', '#ea580c', '#16a34a', '#0d7c4a',
 ];
 
-function AddGenreModal({ onClose, onSave }: {
+function AddGenreModal({ onClose, onSave, editingGenre, onEditSave, onDelete }: {
   onClose: () => void;
   onSave: (g: Genre) => void;
+  editingGenre?: Genre | null;
+  onEditSave?: (g: Genre) => void;
+  onDelete?: (id: string) => void;
 }) {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [color, setColor] = useState(GENRE_COLOR_PRESETS[0]);
+  const isEditing = !!editingGenre;
+  const [name, setName] = useState(editingGenre?.nameFa || '');
+  const [description, setDescription] = useState(editingGenre?.description || '');
+  const [color, setColor] = useState(editingGenre?.color || GENRE_COLOR_PRESETS[0]);
 
   const handleSave = () => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    const id = 'custom-' + Date.now().toString(36);
-    const g: Genre = {
-      id,
-      key: id,
-      nameFa: trimmed,
-      name: trimmed,
-      color,
-      description: description.trim() || '',
-      filterFn: (s: TalkShow) => s.category.includes(trimmed),
-      isCustom: true,
-      tags: DEFAULT_GENRE_TAGS,
-      presetTags: [],
-      searchFields: ['name', 'summary', 'category', 'descriptionFa'] as (keyof TalkShow)[],
-    };
-    onSave(g);
+    if (isEditing && editingGenre && onEditSave) {
+      // Edit mode — preserve id, update mutable fields.
+      const updated: Genre = {
+        ...editingGenre,
+        nameFa: trimmed,
+        name: trimmed,
+        color,
+        description: description.trim() || '',
+        // Rebuild the filter function with the new name so shows are matched correctly.
+        filterFn: (s: TalkShow) => s.category.includes(trimmed),
+        isCustom: true,
+      };
+      onEditSave(updated);
+    } else {
+      // Add mode — create a brand-new custom genre.
+      const id = 'custom-' + Date.now().toString(36);
+      const g: Genre = {
+        id,
+        key: id,
+        nameFa: trimmed,
+        name: trimmed,
+        color,
+        description: description.trim() || '',
+        filterFn: (s: TalkShow) => s.category.includes(trimmed),
+        isCustom: true,
+        tags: DEFAULT_GENRE_TAGS,
+        presetTags: [],
+        searchFields: ['name', 'summary', 'category', 'descriptionFa'] as (keyof TalkShow)[],
+      };
+      onSave(g);
+    }
   };
 
   return (
@@ -5277,7 +5368,7 @@ function AddGenreModal({ onClose, onSave }: {
       <div className="modal-content animate-modal-enter" style={{ maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(13, 124, 74,0.1)' }}>
-          <h2 className="text-xl font-bold" style={{ color: '#f0fdf4' }}>+ افزودن ژانر جدید</h2>
+          <h2 className="text-xl font-bold" style={{ color: '#f0fdf4' }}>{isEditing ? 'ویرایش ژانر' : '+ افزودن ژانر جدید'}</h2>
           <button onClick={onClose} className="p-2 rounded-lg" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -5373,8 +5464,21 @@ function AddGenreModal({ onClose, onSave }: {
               className="btn-enter-premium flex-1"
               style={{ opacity: name.trim() ? 1 : 0.5, cursor: name.trim() ? 'pointer' : 'not-allowed' }}
             >
-              ✓ ذخیره ژانر
+              {isEditing ? '✓ ذخیره تغییرات' : '✓ ذخیره ژانر'}
             </button>
+            {isEditing && editingGenre && onDelete && (
+              <button
+                onClick={() => {
+                  if (confirm(`آیا از حذف ژانر «${editingGenre.nameFa}» مطمئن هستید؟ این عمل قابل بازگشت نیست.`)) {
+                    onDelete(editingGenre.id);
+                  }
+                }}
+                className="px-4 py-3 rounded-xl text-sm font-bold transition-all"
+                style={{ background: 'rgba(220, 38, 38, 0.2)', color: '#fca5a5', border: '1px solid rgba(220, 38, 38, 0.4)' }}
+              >
+                🗑 حذف ژانر
+              </button>
+            )}
             <button
               onClick={onClose}
               className="px-6 py-3 rounded-xl text-sm font-medium"
