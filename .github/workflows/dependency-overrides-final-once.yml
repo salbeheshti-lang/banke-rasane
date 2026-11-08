@@ -1,0 +1,57 @@
+name: One-time final dependency override verification
+
+on:
+  push:
+    branches:
+      - fix/release-readiness-v5.3.9-2026-11-07
+    paths:
+      - '.github/workflows/dependency-overrides-final-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - name: Regenerate lockfile with correctly scoped overrides
+        run: bun install
+
+      - name: Audit high and critical advisories
+        shell: bash
+        run: |
+          set +e
+          bun audit --audit-level=high > "$RUNNER_TEMP/dependency-audit.txt" 2>&1
+          AUDIT_EXIT=$?
+          cat "$RUNNER_TEMP/dependency-audit.txt"
+          echo "final high/critical audit exit: $AUDIT_EXIT"
+          exit 0
+
+      - name: Commit final lockfile and remove one-time workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/dependency-overrides-final-once.yml
+          git add package.json bun.lock
+          if ! git diff --cached --quiet; then
+            git commit -m "fix(deps): finalize safe scoped dependency overrides"
+            git push origin HEAD:refs/heads/fix/release-readiness-v5.3.9-2026-11-07
+          fi
+
+      - name: Upload final dependency audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-audit-final
+          path: ${{ runner.temp }}/dependency-audit.txt
+          retention-days: 30
