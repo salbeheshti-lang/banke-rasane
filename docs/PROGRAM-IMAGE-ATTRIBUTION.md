@@ -3,7 +3,7 @@
 ## De Wereld Draait Door (show #31)
 
 - Image: [De Wereld Draait Door-studio.jpg](https://commons.wikimedia.org/wiki/File:De_Wereld_Draait_Door-studio.jpg)
-- Direct media URL: https://upload.wikimedia.org/wikipedia/commons/f/fd/De_Wereld_Draait_Door-studio.jpg
+- Direct media URL: https://upload.wikimedia.org/wikipedia/commons/thumb/f/fd/De_Wereld_Draait_Door-studio.jpg/1280px-De_Wereld_Draait_Door-studio.jpg
 - Creator: MatsAlkmaar
 - Date: 31 January 2014
 - Description: Photograph of the De Wereld Draait Door television studio at Zuiveringshal (Oost), Westergasfabriek, Amsterdam.
