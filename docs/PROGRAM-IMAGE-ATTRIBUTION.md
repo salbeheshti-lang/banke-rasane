@@ -24,7 +24,7 @@ Attribution: MatsAlkmaar, “De Wereld Draait Door-studio.jpg”, via Wikimedia 
 
 Attribution: LDPR.ru, “Zhirinovsky on Evening Urgant 2012 03.jpg”, via Wikimedia Commons, licensed under CC BY 3.0.
 
-## Full Frontal with Samantha Bee (show #39)
+## Full Frontal with Samantha Bee (show #39 and duplicate catalog record #816)
 
 - Image: [Full Frontal set - stage manager addressing audience.jpg](https://commons.wikimedia.org/wiki/File:Full_Frontal_set_-_stage_manager_addressing_audience.jpg)
 - Direct media URL: https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Full_Frontal_set_-_stage_manager_addressing_audience.jpg/1280px-Full_Frontal_set_-_stage_manager_addressing_audience.jpg
