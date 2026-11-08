@@ -921,6 +921,7 @@ function HomeInner() {
         // Migrate old browser-local genres once, only when the shared catalog is empty.
         if (items.length === 0 && currentUser.role === 'admin') {
           const legacy = loadCustomGenres();
+          let migrationComplete = true;
           for (const genre of legacy) {
             try {
               const saved = await api.createCustomGenre({
@@ -929,8 +930,14 @@ function HomeInner() {
               });
               items.push(saved.genre);
             } catch (error) {
+              migrationComplete = false;
               console.warn('[genres] legacy migration skipped:', error);
             }
+          }
+          // Remove the old local snapshot only after a complete migration. This
+          // prevents deleted server genres from being resurrected on a later login.
+          if (legacy.length > 0 && migrationComplete) {
+            window.localStorage.removeItem(CUSTOM_GENRES_KEY);
           }
         }
         if (!cancelled) setCustomGenres(hydrateCustomGenres(items));
