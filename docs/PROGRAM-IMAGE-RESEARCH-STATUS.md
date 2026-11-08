@@ -596,3 +596,26 @@ Checked 8 November 2026. Record #382 is excluded from the decor-program scope by
 | 394 | The Daily Habit | No verified image in first pass | No exact licensed studio photograph surfaced. |
 | 395 | The Dame Edna Treatment | No verified image in first pass | Format uses a fictional health-retreat/location setting rather than a single recurring studio decor; no reusable exact-set photo verified. |
 
+
+## First-pass checks: records #396–#410
+
+Checked 8 November 2026. No new photo passed exact-set and redistribution-license verification in this batch.
+
+| # | Program | First-pass result | Notes |
+|---:|---|---|---|
+| 396 | The Dan Patrick Show | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 397 | The Tyra Banks Show | No verified image in first pass | No openly licensed photograph of the actual set verified. |
+| 398 | The Wright Stuff | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 399 | Tietjen und Hirschhausen | No verified image in first pass | Actual studio photos found through IMAGO, but they are rights-managed. |
+| 400 | Tolgshow | No exact match verified | No exact licensed studio photograph surfaced. |
+| 401 | The David Pakman Show | No verified image in first pass | No openly licensed photograph of the actual set verified. |
+| 402 | The Doctors | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 403 | The Edinburgh Show | No exact match verified | No exact licensed studio photograph surfaced. |
+| 404 | The Fix | No verified image in first pass | No openly licensed photograph of the actual set verified. |
+| 405 | The Great Indian Comedy Show | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 406 | The Hour / George Stroumboulopoulos Tonight | No verified image in first pass | No openly licensed photograph of the actual CBC set verified. |
+| 407 | The Jackrabbit Insider | No exact match verified | No exact licensed studio photograph surfaced. |
+| 408 | The Late Late Show with James Corden | No verified image in first pass | Exact set galleries and press photos exist, but no open redistribution license was established. |
+| 409 | The Late Show with Stephen Colbert | No verified image in first pass | Exact set galleries exist, but images found are copyrighted design/press material. |
+| 410 | The Medyo Late Night Show with Jojo A | No exact match verified | No exact licensed studio photograph surfaced. |
+
