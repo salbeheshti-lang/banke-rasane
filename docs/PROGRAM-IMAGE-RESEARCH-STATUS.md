@@ -435,3 +435,26 @@ Checked 8 November 2026. No new photo passed exact-set and redistribution-licens
 | 289 | The New Paul O Grady Show | No verified image in first pass | Exact show references found, but no openly licensed photograph of its set verified. |
 | 290 | The Tim McCarver-Show | No verified image in first pass | No exact licensed studio photograph surfaced. |
 
+
+## First-pass checks: records #291–#305
+
+Checked 8 November 2026. No new photo passed exact-set and redistribution-license verification in this batch.
+
+| # | Program | First-pass result | Notes |
+|---:|---|---|---|
+| 291 | The-Brini-Maxwell Show | No verified image in first pass | Set designer portfolio has exact set images, but no open redistribution license was established. |
+| 292 | The Journal Editoral Report | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 293 | The Tony Danza Show | No verified image in first pass | Actual set photographs and descriptions found, but the images are press/editorial copyrighted material. |
+| 294 | Tout le monde enparle | No verified image in first pass | Exact set photos exist in press coverage; no open redistribution license verified. |
+| 295 | Tubridy-Tonight | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 296 | Tudo em Familia | No verified image in first pass | RTP archive confirms program identity, but explicitly restricts reproduction and redistribution without permission. |
+| 297 | Unscrewed-with-Martin-Sargent | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 298 | Unsere-Besten | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 299 | Vitamin | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 300 | Voce na TV | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 301 | Zibb | No verified image in first pass | Official rbb studio photographs exist, but no open redistribution license was established. |
+| 302 | AOL Sessions | No verified image in first pass | Getty results are mostly artist portraits and performance photos; no open license for set imagery verified. |
+| 303 | Lijn4 | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 304 | El show de Flo | No verified image in first pass | RTVE archive references found, but no openly licensed exact-set photograph verified. |
+| 305 | Dopo Festival | No verified image in first pass | No exact licensed studio photograph surfaced. |
+
