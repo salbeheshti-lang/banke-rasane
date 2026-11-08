@@ -179,3 +179,16 @@ Attribution: Adam Wimpenny, “Dragons 2013.jpg”, via Wikimedia Commons, licen
 - Changes: Referenced the original Wikimedia Commons file; no image editing.
 
 Attribution: Hannes Sallmutter, “Grissemann, Lopatka and Stermann 2007-08.jpg”, via Wikimedia Commons, licensed under CC BY-SA 3.0.
+
+
+## Gardeners' World (show #582)
+
+- Image: [Monty Don records to camera.JPG](https://commons.wikimedia.org/wiki/File:Monty_Don_records_to_camera.JPG)
+- Direct media URL: https://upload.wikimedia.org/wikipedia/commons/a/a8/Monty_Don_records_to_camera.JPG
+- Creator: Andy Mabbett
+- Date: 14 June 2012
+- Description: Photograph of Monty Don recording a piece to camera for BBC Gardeners' World at Gardeners' World Live 2012. The camera operator, broadcast camera and the actual flower-show filming environment are visible; this is a documented production photograph for the named program, not a generic garden image.
+- License: [Creative Commons Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0)](https://creativecommons.org/licenses/by-sa/3.0/)
+- Changes: Referenced the original Wikimedia Commons file; no image editing.
+
+Attribution: Andy Mabbett, “Monty Don records to camera.JPG”, via Wikimedia Commons, licensed under CC BY-SA 3.0.
