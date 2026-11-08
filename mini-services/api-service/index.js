@@ -389,12 +389,17 @@ function seedShows() {
     console.warn('[seed] failed to parse:', e.message); return;
   }
   if (!Array.isArray(shows)) { console.warn('[seed] expected array'); return; }
-  const existing = db.prepare('SELECT COUNT(*) AS c FROM shows').get();
-  if (existing.c >= shows.length) {
-    console.log(`[seed] DB has ${existing.c} shows, JSON has ${shows.length} — up to date, skipping`);
-    return;
-  }
-  console.log(`[seed] DB has ${existing.c} shows, JSON has ${shows.length} — inserting new entries`);
+  // FIX (A): build the set of nums already in the DB and do MEMBERSHIP checks
+  // instead of the brittle `existing.c >= shows.length` count comparison.
+  // Count equality gives a false "up to date" when the DB has the right COUNT
+  // but is missing specific `num`s (deleted rows, swapped ranges, etc.).
+  const existingRows = db.prepare('SELECT num FROM shows').all();
+  const existingNums = new Set(existingRows.map(r => r.num));
+  // Detect duplicate `num`s INSIDE the JSON itself — INSERT OR IGNORE silently
+  // masked these before, so the DB count looked right while records were lost.
+  const seenInJson = new Set();
+  let jsonDuplicateNums = 0;
+  let nonNumericNums = 0;
   const stmt = db.prepare(`
     INSERT OR IGNORE INTO shows
       (num, name, category, source, size, viewers, style, effects, layout,
@@ -402,17 +407,50 @@ function seedShows() {
        youtube, imdb, wikipedia, socialPost, images, videos, tags, is_film)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
-  let inserted = 0;
+  // FIX (B): count REAL inserts via `.changes` (0 when IGNORE skipped,
+  // 1 when actually inserted). The old `inserted++` counted attempts, not
+  // actual inserts — the log line was misleading.
+  let realInserted = 0;
+  let skippedAlreadyPresent = 0;
   const tx = db.transaction(() => {
     for (const s of shows) {
-      if (typeof s.num !== 'number') continue;
-      try { stmt.run(...showToValues(s)); inserted++; } catch (e) {
+      if (typeof s.num !== 'number' || !Number.isFinite(s.num)) {
+        nonNumericNums++;
+        continue;
+      }
+      if (seenInJson.has(s.num)) {
+        jsonDuplicateNums++;
+        continue;
+      }
+      seenInJson.add(s.num);
+      if (existingNums.has(s.num)) {
+        skippedAlreadyPresent++;
+        continue;
+      }
+      try {
+        const res = stmt.run(...showToValues(s));
+        realInserted += res.changes; // 1 if inserted, 0 if IGNORE fired
+        existingNums.add(s.num);     // keep the set in sync within the tx
+      } catch (e) {
         console.warn(`[seed] failed to insert show num=${s.num}:`, e.message);
       }
     }
   });
   tx();
-  console.log(`[seed] inserted ${inserted} shows (now ${shows.length} total)`);
+  // FIX (C): report the ACTUAL DB count, not shows.length.
+  const finalCount = db.prepare('SELECT COUNT(*) AS c FROM shows').get().c;
+  console.log(
+    `[seed] JSON=${shows.length} | inserted=${realInserted} | ` +
+    `already_present=${skippedAlreadyPresent} | ` +
+    `json_dup_nums=${jsonDuplicateNums} | non_numeric=${nonNumericNums} | ` +
+    `db_total_now=${finalCount}`
+  );
+  if (jsonDuplicateNums > 0) {
+    console.warn(`[seed] WARNING: ${jsonDuplicateNums} duplicate num(s) found inside talk-shows-data.json — the JSON itself needs dedup.`);
+  }
+  if (nonNumericNums > 0) {
+    console.warn(`[seed] WARNING: ${nonNumericNums} JSON entries had a non-numeric 'num' and were skipped.`);
+  }
 }
 
 seedDefaultAdmin();

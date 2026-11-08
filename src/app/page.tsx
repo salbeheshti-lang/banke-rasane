@@ -1276,7 +1276,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
               dir="ltr"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="admin"
+              placeholder=""
               disabled={loading}
               style={{
                 width: '100%',
@@ -1395,9 +1395,6 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
         <div className="mt-10 text-center">
           <p style={{ color: 'rgba(134, 239, 172, 0.6)' }} className="text-xs tracking-wider">
             نسخه ۲.۰.۰ • بانک اطلاعاتی برنامه‌های تلویزیونی
-          </p>
-          <p style={{ color: 'rgba(134, 239, 172, 0.45)' }} className="text-xs mt-2">
-            نام کاربری پیش‌فرض: <span dir="ltr">admin</span> / رمز: <span dir="ltr">admin</span>
           </p>
         </div>
       </div>
