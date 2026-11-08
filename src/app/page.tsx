@@ -936,7 +936,7 @@ function HomeInner() {
         if (!cancelled) setCustomGenres(hydrateCustomGenres(items));
       } catch (error) {
         console.error('[genres] failed to load shared genres:', error);
-        if (!cancelled) showToast('بارگذاری ژانرهای مشترک ناموفق بود');
+        // Keep the dashboard usable with built-in genres if the API is temporarily unavailable.
       }
     })();
     return () => { cancelled = true; };
@@ -3162,7 +3162,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                 {g.description ? (
                   <p className="text-sm mt-3" style={{ color: 'rgba(255, 255, 255, 0.75)' }}>{g.description}</p>
                 ) : null}
-                <div className="mt-4 flex items-center text-sm font-bold" style={{ color: g.color }}>
+                <div className="mt-4 flex items-center text-sm font-bold text-white">
                   مشاهده و جستجو
                   <svg className="w-4 h-4 mr-1 rtl-flip" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
