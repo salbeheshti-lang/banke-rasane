@@ -6,6 +6,22 @@ Programs without a verified image remain eligible for later re-checks. Do not su
 guest portrait, generic studio, unrelated event venue, or a photograph whose reuse license is
 unclear.
 
+## Actual image displayability audit
+
+The app deliberately ignores legacy local paths such as `/program-images/p4_img1.png` because
+those are old, incorrect movie posters rather than program-decor photographs. The thumbnail
+logic only renders an external HTTP(S) URL from `show.images[]`, or a separately stored DB BLOB.
+
+- Decor-filter records: **1,161**.
+- Records with any `images[]` entry: **535** (this includes ignored legacy local paths).
+- Records with a displayable external seed-image URL: **16** records, representing **15 unique sources** (record #816 reuses #39).
+- Records with legacy local paths only, which the UI intentionally skips: **519**.
+- Records with no `images[]` entry: **626**.
+- Records without a displayable seed image in a clean install: **1,145 / 1,161 (98.6%)**.
+
+The 16 external URLs are all listed in `public/IMAGE-CREDITS.md`, which is bundled with the app.
+Do not count legacy local paths as image coverage.
+
 ## Verified images already added
 
 - #31 — De Wereld Draait Door — verified Commons studio photograph; attribution is in
@@ -631,11 +647,14 @@ This section records the continued work after the first-pass review through reco
 ## Verified data status
 
 - Decor-program scope selected by the app's current filter: **1,161 records**.
-- Records with at least one image on this branch: **535**.
-- Records still without an image: **626**.
+- Records with any `images[]` entry (including ignored legacy local paths): **535**.
+- Records with a displayable external seed-image URL: **16** records / **15 unique sources**.
+- Records with legacy local paths only, intentionally skipped by the UI: **519**.
+- Records with no `images[]` entry: **626**.
+- Records without a displayable seed image in a clean install: **1,145**.
 - Verified unique image sources recorded in the attribution file: **15**.
 - Duplicate catalog entry #816 (Full Frontal with Samantha Bee) now reuses the same licensed set photograph as #39; this fills the duplicate record but does not increase the unique-image-source count.
-- New unique images added in this continuation: **6** — #151 Lafer! Lichter! Lecker!, #717 Top Gear, #767 Antiques Roadshow, #1131 Radio 1's Big Weekend, #1227 Comic Book Men, and #1268 Dragons' Den.
+- New unique images added in this continuation: **8** — #151 Lafer! Lichter! Lecker!, #251 Willkommen Österreich, #582 Gardeners' World, #717 Top Gear, #767 Antiques Roadshow, #1131 Radio 1's Big Weekend, #1227 Comic Book Men, and #1268 Dragons' Den.
 - All new image URLs were checked against the app's existing image-loading path. The app selects external HTTPS URLs from `show.images[]` and renders them as real images for logged-in users; no UI or genre logic was changed.
 
 ## Additional research batches
@@ -680,12 +699,12 @@ Full creator, date, source, image URL and license details are maintained in `doc
 
 ## Completion state
 
-Research is **not complete**. The current branch still has 626 decor-filter records without images. The PR remains a draft and has not been merged. No release or EXE build has been created from this work. Continue searching for exact, reusable set/production-environment photographs; do not lower the matching or licensing standard merely to force every record to have an image.
+Research is **not complete**. Only 16 of 1,161 decor-filter records have displayable external seed-image URLs (15 unique sources). A further 519 records contain only legacy local paths that the UI deliberately ignores, and 626 have no `images[]` entry. Thus 1,145 records currently have no displayable seed image in a clean install. The PR remains a draft and has not been merged. Continue searching for exact, reusable set/production-environment photographs; do not lower the matching or licensing standard merely to force every record to have an image.
 
 
-## Remaining no-image records by data category
+## Records with no `images[]` entry by data category (626)
 
-Current breakdown of the 626 records without images (using each record's existing `category` field):
+This is only the 626 records with an empty image array. It does not include the additional 519 legacy-local-path-only records, which are also not displayable.
 
 | Category | Missing |
 |---|---:|
@@ -709,5 +728,29 @@ Current breakdown of the 626 records without images (using each record's existin
 | تاک‌شوی طنز و کمدی | 2 |
 | تاک‌شوی مصاحبه‌محور | 2 |
 | تاک‌شوی موقعیت‌محور/خارج از استودیو | 1 |
+
+## Legacy local-path-only records by data category (519)
+
+These records have one or more local `/program-images/...` paths but no external URL. The app intentionally skips these paths because they are not verified decor photographs.
+
+| Category | Records |
+|---|---:|
+| ۳. تاک‌شوی مصاحبه‌محور | 99 |
+| ۷. تاک‌شوی طنز و کمدی | 85 |
+| ۴. تاک‌شوی سیاسی و خبری | 63 |
+| ۱۲. تاک‌شوی فرهنگی، هنری و روشنفکری | 51 |
+| ۱۳. تاک‌شوی تخصصی و سبک زندگی | 48 |
+| ۶. تاک‌شوی گروهی سلبریتی‌ها | 41 |
+| ۹. تاک‌شوی پنلی و میزگرد | 23 |
+| نیازمند بررسی/فرمت ترکیبی | 22 |
+| ۲. تاک‌شوی روزانه/صبحگاهی | 20 |
+| ۱. تاک‌شوی شبانه | 14 |
+| ۱۴. تاک‌شوی صنعت سرگرمی/پشت‌صحنه | 13 |
+| ۸. تاک‌شوی موقعیت‌محور/خارج از استودیو | 11 |
+| ۱۶. تاک‌شوی دیجیتال/اینترنتی | 10 |
+| ۵. تاک‌شوی روابط و تعارض | 8 |
+| ۱۵. تاک‌شوی رادیویی/صوتی | 6 |
+| ۱۱. تاک‌شوی انسانی و داستان‌محور | 5 |
+
 
 This distribution explains why a large part of the remaining queue does not have a conventional studio set: 154 are espionage documentaries, 90 travel-road formats, 63 Ramadan programs, 44 rural programs, and 18 prison documentaries. These are still in the requested decor-filter scope; they are not silently removed. They require a program-specific filming environment or set photograph, not an unrelated subject photograph. The remaining 14 records in explicitly named talk-show categories remain high-priority for further exact-set searches.
