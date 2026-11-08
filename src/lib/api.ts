@@ -138,6 +138,18 @@ export const api = {
     }
     return data;
   },
+  async getCustomGenres() {
+    return request<{ genres: Array<{ id: string; nameFa: string; name?: string; color: string; description: string }> }>(getApiUrl('api/genres'));
+  },
+  async createCustomGenre(genre: { id: string; nameFa: string; name?: string; color: string; description: string }) {
+    return request<{ genre: typeof genre }>(getApiUrl('api/genres'), { method: 'POST', body: JSON.stringify(genre) });
+  },
+  async updateCustomGenre(genre: { id: string; nameFa: string; name?: string; color: string; description: string }) {
+    return request<{ genre: typeof genre }>(getApiUrl('api/genres?id=' + encodeURIComponent(genre.id)), { method: 'PUT', body: JSON.stringify(genre) });
+  },
+  async deleteCustomGenre(id: string) {
+    return request<{ success: boolean }>(getApiUrl('api/genres?id=' + encodeURIComponent(id)), { method: 'DELETE' });
+  },
   async getUsers() { const data = await request<{ users: User[] }>(getApiUrl('api/users')); return data.users || []; },
   async getCurrentUser(): Promise<User | null> {
     if (typeof window === 'undefined' || !localStorage.getItem(TOKEN_KEY)) return null;
