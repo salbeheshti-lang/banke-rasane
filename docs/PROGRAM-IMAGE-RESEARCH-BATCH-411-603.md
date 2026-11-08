@@ -23,3 +23,15 @@ event photographs, generic gardens, and editorial images without an open license
 - Existing image data was not altered.
 - No unlicensed press photographs, presenter/guest portraits, generic garden photographs, or unrelated event stages were substituted.
 - All no-image outcomes remain provisional and eligible for a later re-check.
+
+
+## Additional targeted checks: records #645–#663
+
+| Record | Program | Result | Evidence / reason |
+|---:|---|---|---|
+| 645 | The Story of God with Morgan Freeman | No verified image added | A cinematographer's portfolio contains production stills, but no open redistribution license was stated. See https://timmetzger.com/The-Story-of-God-with-Morgan-Freeman |
+| 646 | Three Meals a Day | No verified image added | Press coverage shows the actual rural house/kitchen used by the production, but the photographs are editorial and no open license was established. See https://www.soompi.com/article/743987wpp/2pms-taecyeon-gives-fans-a-tour-of-three-meals-a-day-house |
+| 647 | Donut Showdown | No verified image added | Editorial stills are available, but no open redistribution license was found. The show's competition kitchen is identifiable from the program description; available photo galleries are not licensed for repository redistribution. See https://www.rottentomatoes.com/tv/donut_showdown |
+| 663 | Tanyalah Ustaz | No verified image added | A Malaysian Air Force PDF documents a recording in an actual studio and shows the program backdrop, but the PDF does not establish an open image-reuse license. See https://www.airforce.mil.my/phocadownloadpap/ARKIB_BERITA/2016/4.APRIL/12%20April%2016%20-%20RAKAMAN%20TV%20PROGRAM%20TANYALAH%20USTAZ%20DI%20TV9%20BAKAT.pdf |
+
+These checks did not produce any image that met both exact-program/set identity and reusable-license requirements.
