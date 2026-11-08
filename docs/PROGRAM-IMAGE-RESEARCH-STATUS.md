@@ -677,3 +677,33 @@ Full creator, date, source, image URL and license details are maintained in `doc
 ## Completion state
 
 Research is **not complete**. The current branch still has 628 decor-filter records without images. The PR remains a draft and has not been merged. No release or EXE build has been created from this work. Continue searching for exact, reusable set/production-environment photographs; do not lower the matching or licensing standard merely to force every record to have an image.
+
+
+## Remaining no-image records by data category
+
+Current breakdown of the 628 records without images (using each record's existing `category` field):
+
+| Category | Missing |
+|---|---:|
+| جاسوسی | 154 |
+| سفر جاده‌ای | 90 |
+| رمضان | 63 |
+| سرمایه‌گذاری در تولید | 60 |
+| رادیو تصویری | 49 |
+| روستا | 44 |
+| کتاب و کتاب‌خوانی | 29 |
+| کاشت درخت | 20 |
+| پلیسی | 19 |
+| زندان | 18 |
+| اهدای عضو | 18 |
+| کریسمس | 15 |
+| تاریخی | 15 |
+| نقد فیلم | 11 |
+| قانون اساسی | 9 |
+| تاک‌شوی سیاسی و خبری | 5 |
+| تاک‌شوی تخصصی و سبک زندگی | 3 |
+| تاک‌شوی طنز و کمدی | 3 |
+| تاک‌شوی مصاحبه‌محور | 2 |
+| تاک‌شوی موقعیت‌محور/خارج از استودیو | 1 |
+
+This distribution explains why a large part of the remaining queue does not have a conventional studio set: 154 are espionage documentaries, 90 travel-road formats, 63 Ramadan programs, 44 rural programs, and 18 prison documentaries. These are still in the requested decor-filter scope; they are not silently removed. They require a program-specific filming environment or set photograph, not an unrelated subject photograph. The remaining 14 records in explicitly named talk-show categories remain high-priority for further exact-set searches.
