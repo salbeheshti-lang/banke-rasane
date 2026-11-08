@@ -4756,12 +4756,15 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
             updated.images = [...existing, info.image];
           }
         }
-        // Only fill these if currently empty — don't clobber curated data.
-        if (info.rating && !updated.colors) updated.colors = `امتیاز: ${info.rating}`;
-        if (info.genres && !updated.category) updated.category = info.genres;
-        if (info.duration && !updated.elements) updated.elements = info.duration;
-        if (fetchUrl.includes('imdb.com') && !updated.imdb) updated.imdb = fetchUrl;
-        if (fetchUrl.includes('wikipedia.org') && !updated.wikipedia) updated.wikipedia = fetchUrl;
+        // Keep imported metadata in semantically correct fields. IMDb ratings,
+        // runtime and content genres must never overwrite decor colors, elements
+        // or the app's curated genre/category taxonomy.
+        if (info.country && !updated.country) updated.country = info.country;
+        if (info.imdbUrl && !updated.imdb) updated.imdb = info.imdbUrl;
+        if (info.wikiUrl && !updated.wikipedia) updated.wikipedia = info.wikiUrl;
+        // Preserve the exact source link even when a provider only returned partial metadata.
+        if (!updated.imdb && /^https:\\/\\/(?:www\\.)?imdb\\.com\\//i.test(fetchUrl)) updated.imdb = fetchUrl;
+        if (!updated.wikipedia && /^https:\\/\\/(?:[a-z]{2,3}\\.)?wikipedia\\.org\\//i.test(fetchUrl)) updated.wikipedia = fetchUrl;
         // Auto-generate YouTube search link only if not already set.
         if (updated.name && !updated.youtube) {
           updated.youtube = `https://www.youtube.com/results?search_query=${encodeURIComponent(updated.name)}`;
