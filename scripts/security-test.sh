@@ -79,6 +79,18 @@ api() {
   RESP_BODY=$(cat /tmp/api_resp.txt 2>/dev/null || echo "")
 }
 
+# Same as api(), but pins a synthetic client IP so lockout tests do not block
+# the runner's normal test traffic.
+api_from_ip() {
+  local ip="$1" method="$2" path="$3" token="${4:-}" body="${5:-}"
+  local args=(-s -o /tmp/api_resp.txt -w "%{http_code}" -X "$method" --max-time 15)
+  args+=(-H "Content-Type: application/json" -H "X-Forwarded-For: $ip")
+  [ -n "$token" ] && args+=(-H "Authorization: Bearer $token")
+  [ -n "$body" ] && args+=(-d "$body")
+  HTTP_STATUS=$(curl "${args[@]}" "${BASE}${path}")
+  RESP_BODY=$(cat /tmp/api_resp.txt 2>/dev/null || echo "")
+}
+
 # Extract a JSON string field: json_get BODY 'field'  (very simple, no jq)
 json_get() {
   local body="$1" field="$2"
@@ -267,6 +279,17 @@ fi
 # Either way, after this step we have a valid SUPER_TOKEN and admin has a
 # known password + must_change_password cleared.
 # ============================================================================
+hdr "TEST 0 — Login brute-force lockout"
+RATE_LIMIT_TEST_IP="198.51.100.77"
+for attempt in 1 2 3 4 5; do
+  api_from_ip "$RATE_LIMIT_TEST_IP" POST "/auth/login" "" '{"username":"__rate_limit_probe__","password":"wrong"}'
+  check "0.rate-limit-failed-login-$attempt" 401 "$HTTP_STATUS"
+done
+api_from_ip "198.51.100.78" POST "/auth/login" "" '{"username":"__rate_limit_probe__","password":"wrong"}'
+check "0.rate-limit-isolated-client-ip" 401 "$HTTP_STATUS"
+api_from_ip "$RATE_LIMIT_TEST_IP" POST "/auth/login" "" '{"username":"admin","password":"admin"}'
+check "0.rate-limit-blocks-sixth-attempt" 429 "$HTTP_STATUS"
+
 hdr "STEP 0 — Login as Super Admin + ensure password is known"
 
 # Try default password first
