@@ -152,3 +152,17 @@ Attribution: Paul Denchfield, “Radio 1 big weekend main stage.jpg”, via Wiki
 - Changes: Used the original Wikimedia Commons file; no image editing.
 
 Attribution: Luigi Novi (Nightscream), “7.9.12SecretStashByLuigiNovi4.jpg”, via Wikimedia Commons, licensed under CC BY 3.0.
+
+
+## Dragons' Den (show #1268)
+
+- Image: [Dragons 2013.jpg](https://commons.wikimedia.org/wiki/File:Dragons_2013.jpg)
+- Direct media URL: https://upload.wikimedia.org/wikipedia/commons/4/40/Dragons_2013.jpg
+- Creator: Adam Wimpenny
+- Date: 19 April 2018 (Vimeo upload; image depicts the Dragons in 2013)
+- Source: [Original Vimeo upload](https://vimeo.com/265543220)
+- Description: The UK Dragons' Den panel in the program's actual pitch setup, with the three investor chairs/phones and the show's studio backdrop visible.
+- License: [Creative Commons Attribution 3.0 Unported (CC BY 3.0)](https://creativecommons.org/licenses/by/3.0/)
+- Changes: Wikimedia Commons file history records levels/color/sharpness adjustments by WikiPedant; no further edits were made for BankResaneh.
+
+Attribution: Adam Wimpenny, “Dragons 2013.jpg”, via Wikimedia Commons, licensed under CC BY 3.0.
