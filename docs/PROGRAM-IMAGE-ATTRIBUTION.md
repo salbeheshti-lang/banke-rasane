@@ -166,3 +166,16 @@ Attribution: Luigi Novi (Nightscream), “7.9.12SecretStashByLuigiNovi4.jpg”, 
 - Changes: Wikimedia Commons file history records levels/color/sharpness adjustments by WikiPedant; no further edits were made for BankResaneh.
 
 Attribution: Adam Wimpenny, “Dragons 2013.jpg”, via Wikimedia Commons, licensed under CC BY 3.0.
+
+
+## Willkommen Österreich (show #251)
+
+- Image: [Grissemann, Lopatka and Stermann 2007-08.jpg](https://commons.wikimedia.org/wiki/File:Grissemann,_Lopatka_and_Stermann_2007-08.jpg)
+- Direct media URL: https://upload.wikimedia.org/wikipedia/commons/d/de/Grissemann%2C_Lopatka_and_Stermann_2007-08.jpg
+- Creator: Hannes Sallmutter
+- Date: August 2007
+- Description: Photograph made during filming of a Willkommen Österreich episode. The hosts and guest are seated at the program's studio table with the broadcast backdrop visible; it documents the actual production environment rather than a presenter portrait or generic venue.
+- License: [Creative Commons Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0)](https://creativecommons.org/licenses/by-sa/3.0/). Wikimedia Commons records VRT permission confirmation (ticket #2014110210014372).
+- Changes: Referenced the original Wikimedia Commons file; no image editing.
+
+Attribution: Hannes Sallmutter, “Grissemann, Lopatka and Stermann 2007-08.jpg”, via Wikimedia Commons, licensed under CC BY-SA 3.0.
