@@ -23,3 +23,27 @@ Attribution: MatsAlkmaar, “De Wereld Draait Door-studio.jpg”, via Wikimedia 
 - Changes: None. The original file is referenced without modification.
 
 Attribution: LDPR.ru, “Zhirinovsky on Evening Urgant 2012 03.jpg”, via Wikimedia Commons, licensed under CC BY 3.0.
+
+## Full Frontal with Samantha Bee (show #39)
+
+- Image: [Full Frontal set - stage manager addressing audience.jpg](https://commons.wikimedia.org/wiki/File:Full_Frontal_set_-_stage_manager_addressing_audience.jpg)
+- Direct media URL: https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Full_Frontal_set_-_stage_manager_addressing_audience.jpg/1280px-Full_Frontal_set_-_stage_manager_addressing_audience.jpg
+- Creator: Rhododendrites
+- Date: 1 February 2017
+- Description: Photograph of the actual Full Frontal with Samantha Bee stage set, including the branded set and audience area.
+- License: [Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)](https://creativecommons.org/licenses/by-sa/4.0/)
+- Changes: Referenced the 1280-pixel Wikimedia Commons thumbnail; no image editing.
+
+Attribution: Rhododendrites, “Full Frontal set - stage manager addressing audience.jpg”, via Wikimedia Commons, licensed under CC BY-SA 4.0.
+
+## Friday Night with Jonathan Ross (show #41)
+
+- Image: [Friday Night with Jonathan Ross set.jpg](https://commons.wikimedia.org/wiki/File:Friday_Night_with_Jonathan_Ross_set.jpg)
+- Direct media URL: https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Friday_Night_with_Jonathan_Ross_set.jpg/1280px-Friday_Night_with_Jonathan_Ross_set.jpg
+- Creator: Abi Skipp
+- Date: 19 June 2008
+- Description: Photograph looking over the actual Friday Night with Jonathan Ross television set from the viewing gallery.
+- License: [Creative Commons Attribution 2.0 Generic (CC BY 2.0)](https://creativecommons.org/licenses/by/2.0/)
+- Changes: Referenced the 1280-pixel Wikimedia Commons thumbnail; no image editing.
+
+Attribution: Abi Skipp, “Friday Night with Jonathan Ross set.jpg”, via Wikimedia Commons, licensed under CC BY 2.0.
