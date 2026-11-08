@@ -458,3 +458,26 @@ Checked 8 November 2026. No new photo passed exact-set and redistribution-licens
 | 304 | El show de Flo | No verified image in first pass | RTVE archive references found, but no openly licensed exact-set photograph verified. |
 | 305 | Dopo Festival | No verified image in first pass | No exact licensed studio photograph surfaced. |
 
+
+## First-pass checks: records #306–#320
+
+Checked 8 November 2026. One additional image was verified and added.
+
+| # | Program | First-pass result | Notes |
+|---:|---|---|---|
+| 306 | Jeena Isi ka Naam Hai | No verified image in first pass | Press galleries contain guest/on-location images, not a reusable exact studio-set image. |
+| 307 | Big Brother's Return | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 308 | V Graham Norton | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 309 | Okna | No exact match verified | Program identity and exact studio image need further confirmation. |
+| 310 | Donahue | Verified image added | UCLA Library / Los Angeles Times photograph from the actual show, CC BY 4.0; see attribution manifest. |
+| 311 | Goedemorgan Nederland | No verified image in first pass | Commons image found is from a 2026 WNL program, not this 2002 show. |
+| 312 | Wayne Brady Show | No verified image in first pass | No openly licensed photograph of the actual set verified. |
+| 313 | John Walsh Show | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 314 | Caroline Rhea Show | No verified image in first pass | Production references found, but no openly licensed set photograph verified. |
+| 315 | Hannah | No exact match verified | Program identity remains ambiguous. |
+| 316 | EWTN Live | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 317 | Natvhtwatcht 2003 | No exact match verified | Likely title spelling issue; no exact program/set match verified. |
+| 318 | Teen Talk | No verified image in first pass | Results surfaced unrelated teen-talk programs; no exact match verified. |
+| 319 | Full Court Press | No exact match verified | Search results primarily identify a later sports/CSR campaign, not the described 2002 Maple Leafs program. |
+| 320 | It’s my Life | No verified image in first pass | Studio location is documented, but no openly licensed photograph of the actual set verified. |
+
