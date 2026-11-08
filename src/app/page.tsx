@@ -913,7 +913,7 @@ function HomeInner() {
       ? currentUser.permissions.includes(permission)
       : role === 'admin' || (role === 'editor' && ['add_shows', 'edit_shows', 'export_reports'].includes(permission)));
   const canEdit = hasPermission('add_shows') || hasPermission('edit_shows');
-  const canManageGenres = hasPermission('manage_genres');
+  const canManageGenres = role === 'admin';
   const isAdmin = role === 'admin';
 
   // Shared genre catalog: every authenticated role can read; only admins can mutate.
