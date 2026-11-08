@@ -527,3 +527,26 @@ Checked 8 November 2026. No new photo passed exact-set and redistribution-licens
 | 349 | Carlos vives Discusses His Influence on Colombian Musicians & Performs “Las Mujeres”_ The View | No verified image in first pass | Search results identify a guest segment on The View, not an independently reusable decor photo. |
 | 350 | George Tonight-CBC | No verified image in first pass | No exact licensed studio photograph surfaced. |
 
+
+## First-pass checks: records #351–#365
+
+Checked 8 November 2026. No new photo passed exact-set and redistribution-license verification in this batch.
+
+| # | Program | First-pass result | Notes |
+|---:|---|---|---|
+| 351 | Go Aften Danmark_ Fodboldtossen Ronni | No exact match verified | Program identity/title variant needs further confirmation. |
+| 352 | Kachelmanns Spatausgabe-Das Kochen mit Karel Gott)2006( | No exact match verified | No exact licensed studio photograph surfaced. |
+| 353 | Mustafas Show_del 2 av 2 | No exact match verified | No reliable match to an identifiable show established. |
+| 354 | PIPEII_Aferdita Paqarada | No exact match verified | No exact licensed studio photograph surfaced. |
+| 355 | The John Kerwin Show | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 356 | You Hee-yeol's Sketchbook | No verified image in first pass | No openly licensed photograph of the actual performance/interview set verified. |
+| 357 | Attack of the Show ! | No verified image in first pass | Commons category contains hosts, panels, autograph booths, and portraits, but no verified photo of the actual studio decor. |
+| 358 | The Rachel Maddow Show | No verified image in first pass | A CC BY-SA image found is a guest portrait on set, not a decor photograph; rejected for this task. |
+| 359 | The Ray Martin Show | No exact match verified | No exact licensed studio photograph surfaced. |
+| 360 | The Steve Wilkos Show | No verified image in first pass | Studio photos found in a permit booklet and press coverage, but no open redistribution license verified. |
+| 361 | The Secret Guide to Women's Health | No exact match verified | No exact licensed studio photograph surfaced. |
+| 362 | The Talk | No verified image in first pass | Exact set galleries/design lookbooks exist, but no open redistribution license was established. |
+| 363 | Crossing Over with John Edward | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 364 | Cycology Today | No exact match verified | No exact licensed studio photograph surfaced. |
+| 365 | Day Day Up | No verified image in first pass | Actual studio photos found through Getty/Corbis; rights-managed and not open for redistribution. |
+
