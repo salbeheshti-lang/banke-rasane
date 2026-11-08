@@ -228,3 +228,26 @@ Checked 8 November 2026. One additional verified image was found and added.
 | 154 | Koffee with Karan | No verified image in first pass | Set images surfaced in entertainment/photo galleries, but reuse licenses are not established. |
 | 155 | Nación ESPN | No verified image in first pass | NewscastStudio has a set gallery, but no open redistribution license was established. |
 
+
+## First-pass checks: records #156–#170
+
+Checked 8 November 2026. No new photo passed exact-set and redistribution-license verification in this batch.
+
+| # | Program | First-pass result | Notes |
+|---:|---|---|---|
+| 156 | Nedjeljom u dva | No verified image in first pass | Public broadcaster archive references found; no openly licensed image of the actual set verified. |
+| 157 | Neeya Naana | No verified image in first pass | No openly licensed photograph of the debate set verified. |
+| 158 | Nigella Bites | No verified image in first pass | No openly licensed photograph of the actual kitchen set verified. |
+| 159 | Norm Macdonald Has a Show | No verified image in first pass | NewscastStudio has actual set photography, but redistribution license is not established. |
+| 160 | Money track | No exact match verified | Search results did not establish the exact program identity or a reusable set photograph. |
+| 161 | All-American Makers | No verified image in first pass | No exact licensed workshop-set photograph surfaced. |
+| 162 | Martha Stewart’s Cooking School | No verified image in first pass | Host's blog documents the kitchen set, but no open redistribution license was established. |
+| 163 | Matutino Express | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 164 | Meet Ricky Gervais | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 165 | Menschen der Woche | No verified image in first pass | Production/location references found, but no reusable photograph of the actual set verified. |
+| 166 | Mike and Mike in the Morning | No verified image in first pass | ESPN press material references the set, but reuse license is not established. |
+| 167 | Mike’s On | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 168 | The Kumars at No. 42 | No verified image in first pass | Exact set is described in production references, but no openly licensed photograph verified. |
+| 169 | Humour Show | No verified image in first pass | Program identity is ambiguous; no exact licensed set image verified. |
+| 170 | Now on my way to meet you | No verified image in first pass | Documentary footage shows the actual set, but no separately licensed reusable still verified. |
+
