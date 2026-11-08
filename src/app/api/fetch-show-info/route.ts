@@ -26,7 +26,6 @@ export async function POST(request: NextRequest) {
   if (!gate.ok) {
     return NextResponse.json({ error: gate.status === 401 ? 'احراز هویت لازم است' : 'دسترسی غیرمجاز — نیاز به دسترسی افزودن یا ویرایش برنامه' }, { status: gate.status });
   }
-  const user = gate.user;
   try {
     const { url } = await request.json();
     if (typeof url !== 'string' || !url.trim()) return NextResponse.json({ error: 'URL الزامی است' }, { status: 400 });
