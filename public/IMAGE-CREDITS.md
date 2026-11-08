@@ -198,3 +198,36 @@ Attribution: Hannes Sallmutter, “Grissemann, Lopatka and Stermann 2007-08.jpg�
 - Changes: Referenced the original Wikimedia Commons file; no image editing.
 
 Attribution: Andy Mabbett, “Monty Don records to camera.JPG”, via Wikimedia Commons, licensed under CC BY-SA 3.0.
+
+
+## Additional verified sources from final sweep (#411–573)
+
+### #419 — Morning Joe
+- Creator / credit: Chief Mass Communication Specialist Sam Shavers, U.S. Navy
+- Source: https://commons.wikimedia.org/wiki/File:Flickr_-_Official_U.S._Navy_Imagery_-_The_SECNAV_interviews_with_MSNBC_broadcast_journalists_on_the_set_of_the_weekday_morning_talk_show_%22Morning_Joe%22_in_New_York..jpg
+- License: Public domain in the United States (official U.S. Navy work)
+- Image: https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e3/Flickr_-_Official_U.S._Navy_Imagery_-_The_SECNAV_interviews_with_MSNBC_broadcast_journalists_on_the_set_of_the_weekday_morning_talk_show_%22Morning_Joe%22_in_New_York..jpg/1280px-thumbnail.jpg
+
+### #467 — The Daily Show
+- Creator: Engrigg22
+- Source: https://commons.wikimedia.org/wiki/File:The_Daily_Show_studio_audience.jpg
+- License: CC BY 4.0 — https://creativecommons.org/licenses/by/4.0/
+- Image: https://thumb.wikimedia.org/wikipedia/commons/thumb/1/15/The_Daily_Show_studio_audience.jpg/1280px-The_Daily_Show_studio_audience.jpg
+
+### #521 — The Oprah Winfrey Show
+- Creator: TonyTheTiger
+- Source: https://commons.wikimedia.org/wiki/File:20080903_Oprah_Winfrey_Show_taping_with_2008_Olympic_medalists.JPG
+- License: CC BY-SA 3.0 — https://creativecommons.org/licenses/by-sa/3.0/
+- Image: https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4a/20080903_Oprah_Winfrey_Show_taping_with_2008_Olympic_medalists.JPG/1280px-20080903_Oprah_Winfrey_Show_taping_with_2008_Olympic_medalists.JPG
+
+### #522 — Meet The Press
+- Creator: Carl Albert Research and Studies Center, Congressional Collection
+- Source: https://commons.wikimedia.org/wiki/File:Carl_Albert_and_other_men_on_the_set_of_Meet_the_Press._January_24,_1971.jpg
+- License: CC BY-SA 4.0 — https://creativecommons.org/licenses/by-sa/4.0/
+- Image: https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b3/Carl_Albert_and_other_men_on_the_set_of_Meet_the_Press._January_24%2C_1971.jpg/1280px-Carl_Albert_and_other_men_on_the_set_of_Meet_the_Press._January_24%2C_1971.jpg
+
+### #542 — Conan
+- Creator: Tertiary7
+- Source: https://commons.wikimedia.org/wiki/File:Conan_Set_Panorama_Stage_15.jpg
+- License: CC BY-SA 3.0 — https://creativecommons.org/licenses/by-sa/3.0/
+- Image: https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Conan_Set_Panorama_Stage_15.jpg/1280px-Conan_Set_Panorama_Stage_15.jpg
