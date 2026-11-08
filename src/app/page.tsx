@@ -2957,7 +2957,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                 <p className="text-sm mt-3 line-clamp-3 leading-relaxed" style={{ color: 'rgba(255, 255, 255, 0.75)' }}>{g.description}</p>
                 {/* Push the CTA to the bottom for uniform alignment across cards.
                     Background highlight removed per user request — plain text only. */}
-                <div className="mt-auto pt-4 inline-flex items-center gap-1.5 self-start text-sm font-bold">
+                <div className="mt-auto pt-4 inline-flex items-center gap-1.5 self-start text-sm font-bold text-white">
                   مشاهده و جستجو
                   <svg className="w-4 h-4 rtl-flip" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
