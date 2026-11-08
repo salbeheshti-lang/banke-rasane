@@ -366,3 +366,26 @@ Checked 8 November 2026. No new photo passed exact-set and redistribution-licens
 | 244 | Viererkette | No verified image in first pass | No exact licensed studio photograph surfaced. |
 | 245 | Vilket Drama | No verified image in first pass | No exact licensed studio photograph surfaced. |
 
+
+## First-pass checks: records #246–#260
+
+Checked 8 November 2026. One additional verified image was found and added.
+
+| # | Program | First-pass result | Notes |
+|---:|---|---|---|
+| 246 | VIVA Live | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 247 | Voetbal International | Verified image added | Exact studio set photo under the later title Voetbal Inside; CC BY-SA 4.0; see attribution manifest. |
+| 248 | We the Students | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 249 | Weekend Sunrise | No verified image in first pass | No openly licensed photograph of the actual set verified. |
+| 250 | White Line Fewer | No exact match verified | Program identity remains unclear; no exact licensed set image found. |
+| 251 | Willkommen Österreich | No verified image in first pass | Official broadcaster material found, but no openly licensed set photograph verified. |
+| 252 | Witch Hunt | No verified image in first pass | No openly licensed photograph of the actual set verified. |
+| 253 | Wook Talk | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 254 | WWE Confidential | No verified image in first pass | WWE archive references found, but no reusable set photo license established. |
+| 255 | WWE Legends of Wrestling | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 256 | On the Record w Britt Hume | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 257 | Alfs-Hit-Talk-Show | No verified image in first pass | Program references found, but no openly licensed set photograph verified. |
+| 258 | At the Movies | No verified image in first pass | Set references found, but no openly licensed photograph of the actual set verified. |
+| 259 | Chevy-florida-insider-fishing-report | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 260 | Die Kurt Kromer Show | No verified image in first pass | No openly licensed photograph of the actual set verified. |
+
