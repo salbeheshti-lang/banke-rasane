@@ -125,3 +125,17 @@ Attribution: Barry McGee, “Top Gear studios 2009.jpg”, via Wikimedia Commons
 - Changes: Used the 1,280-pixel Wikimedia thumbnail URL for a lighter display asset; no image editing.
 
 Attribution: Portable Antiquities Scheme, “Antiques Roadshow in the garden (4950915501).jpg”, via Wikimedia Commons, licensed under CC BY-SA 2.0.
+
+
+## Radio 1's Big Weekend (show #1131)
+
+- Image: [Radio 1 big weekend main stage.jpg](https://commons.wikimedia.org/wiki/File:Radio_1_big_weekend_main_stage.jpg)
+- Direct media URL: https://upload.wikimedia.org/wikipedia/commons/b/bc/Radio_1_big_weekend_main_stage.jpg
+- Creator: Paul Denchfield
+- Date: 19 May 2007
+- Source: [Original Flickr photograph](https://www.flickr.com/photos/7396254@N02/504306760/)
+- Description: Photograph of the actual branded main stage at BBC Radio 1's Big Weekend, showing the event's overhead signage, stage screens, lighting truss and audience-facing performance area.
+- License: [Creative Commons Attribution-ShareAlike 2.0 Generic (CC BY-SA 2.0)](https://creativecommons.org/licenses/by-sa/2.0/)
+- Changes: Used the original Wikimedia Commons file; no image editing.
+
+Attribution: Paul Denchfield, “Radio 1 big weekend main stage.jpg”, via Wikimedia Commons, licensed under CC BY-SA 2.0.
