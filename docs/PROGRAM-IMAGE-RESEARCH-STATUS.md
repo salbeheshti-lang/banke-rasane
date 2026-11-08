@@ -504,3 +504,26 @@ Checked 8 November 2026. Record #325 is excluded from the decor-program scope by
 | 334 | Teen Wire | No exact match verified | Search results did not establish the exact show identity. |
 | 335 | Daily Politics | No verified image in first pass | Actual BBC studio photos exist in press coverage, but reuse license is not open. |
 
+
+## First-pass checks: records #336–#350
+
+Checked 8 November 2026. No new photo passed exact-set and redistribution-license verification in this batch.
+
+| # | Program | First-pass result | Notes |
+|---:|---|---|---|
+| 336 | This Week | No verified image in first pass | BBC studio photos found in editorial coverage; no open redistribution license verified. |
+| 337 | Fraga Doktorn | No exact match verified | Search results surfaced a similarly named current SVT program, not a verified match to this record. |
+| 338 | Jimmy Kimmel Live | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 339 | Bibliotheque Medicis | No verified image in first pass | Library/location references found, but no openly licensed image of the actual program setup verified. |
+| 340 | Pure 24 S2 E15 | No exact match verified | Exact series/program identity needs further confirmation. |
+| 341 | Menschen bei Maischberger | No verified image in first pass | Studio photos found in press coverage, but no open redistribution license verified. |
+| 342 | Che Tempo Che Fa | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 343 | As Ti Tud Not Padu | No exact match verified | Program title spelling/identity could not be reliably confirmed. |
+| 344 | Daniel prevost et Marc_olivier Frogiel se Crepent le Chignon | No exact match verified | No exact licensed studio photograph surfaced. |
+| 345 | The Great Indian Laughter Challenge | No verified image in first pass | On-set photo galleries exist, but they are copyrighted editorial photos with no open reuse license. |
+| 346 | Christ in prophecy with Dr. David Reagan | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 347 | Real Time with Bill Maher | No verified image in first pass | Set photos are available through press/photo agencies, but no open redistribution license verified. |
+| 348 | The Ellen DeGeners Show | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 349 | Carlos vives Discusses His Influence on Colombian Musicians & Performs “Las Mujeres”_ The View | No verified image in first pass | Search results identify a guest segment on The View, not an independently reusable decor photo. |
+| 350 | George Tonight-CBC | No verified image in first pass | No exact licensed studio photograph surfaced. |
+
