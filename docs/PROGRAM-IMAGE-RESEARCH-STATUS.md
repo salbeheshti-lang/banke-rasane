@@ -412,3 +412,26 @@ Checked 8 November 2026. No new photo passed exact-set and redistribution-licens
 | 274 | Oi Pyles tou anexigitou | No verified image in first pass | No exact licensed studio photograph surfaced. |
 | 275 | Pa-Paul | No verified image in first pass | No exact licensed studio photograph surfaced. |
 
+
+## First-pass checks: records #276–#290
+
+Checked 8 November 2026. No new photo passed exact-set and redistribution-license verification in this batch.
+
+| # | Program | First-pass result | Notes |
+|---:|---|---|---|
+| 276 | Premise-de-Penser | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 277 | PSYCHIC-INTERACTIVE | No verified image in first pass | Program history found, but no openly licensed image of its actual studio verified. |
+| 278 | Redbar | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 279 | Sanja | No exact match verified | Search results did not establish the exact show identity. |
+| 280 | Saturday Night Darren and brose | No exact match verified | No reliable program identity or licensed set photograph established. |
+| 281 | Shut up! It’s Stacy London | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 282 | Staten-Island-Comedy-Show | No verified image in first pass | Show references found, but no openly licensed photograph of the actual set verified. |
+| 283 | Stin-Igia-Mas | No exact match verified | Search results did not establish the exact program identity. |
+| 284 | Sunday-Morning-Shootout | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 285 | Sunday-Night-Live-with-Father | No exact match verified | No exact licensed studio photograph surfaced. |
+| 286 | The Al Franken Show | No verified image in first pass | Radio studio references found, but no openly licensed set photograph verified. |
+| 287 | The Graham Norton Effect | No verified image in first pass | No openly licensed photograph of the actual US set verified. |
+| 288 | The Jimm Bakker Show | No verified image in first pass | Official studio photographs exist, but no open redistribution license was established. |
+| 289 | The New Paul O Grady Show | No verified image in first pass | Exact show references found, but no openly licensed photograph of its set verified. |
+| 290 | The Tim McCarver-Show | No verified image in first pass | No exact licensed studio photograph surfaced. |
+
