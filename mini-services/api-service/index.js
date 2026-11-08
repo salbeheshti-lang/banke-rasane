@@ -170,6 +170,23 @@ db.exec(`
     created_at    INTEGER NOT NULL DEFAULT 0
   );
 `);
+// Shared custom genres — stored server-side so every authorized account/device sees the same list.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS custom_genres (
+    id TEXT PRIMARY KEY,
+    name_fa TEXT NOT NULL,
+    name TEXT NOT NULL DEFAULT '',
+    color TEXT NOT NULL DEFAULT '#0d7c4a',
+    description TEXT NOT NULL DEFAULT '',
+    aliases TEXT NOT NULL DEFAULT '[]',
+    created_by INTEGER NOT NULL DEFAULT 0,
+    updated_by INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL DEFAULT 0,
+    updated_at INTEGER NOT NULL DEFAULT 0
+  );
+`);
+addColumnIfMissing('custom_genres', 'aliases', "TEXT NOT NULL DEFAULT '[]'");
+
 addColumnIfMissing('shows', 'image_data', 'BLOB');
 addColumnIfMissing('shows', 'image_mime', "TEXT NOT NULL DEFAULT 'image/jpeg'");
 addColumnIfMissing('shows', 'image_source', "TEXT NOT NULL DEFAULT ''");
@@ -769,6 +786,79 @@ const server = Bun.serve({
     if (pathname === '/api/health' && method === 'GET') {
       const showsCount = db.prepare('SELECT COUNT(*) AS count FROM shows').get()?.count || 0;
       return json({ status: 'ok', time: nowSec(), showsCount }, req);
+    }
+
+    // ----- Shared custom genres -----
+    if (pathname === '/api/genres' && method === 'GET') {
+      const user = requireRole(req, ['admin', 'editor', 'viewer']);
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+      const rows = db.prepare('SELECT id, name_fa, name, color, description, aliases FROM custom_genres ORDER BY created_at, name_fa').all();
+      return json({ genres: rows.map(g => ({
+        id: g.id, nameFa: g.name_fa, name: g.name || g.name_fa,
+        color: g.color, description: g.description || '',
+        aliases: (() => { try { const value = JSON.parse(g.aliases || '[]'); return Array.isArray(value) ? value.filter(x => typeof x === 'string') : []; } catch { return []; } })(),
+      })) }, req);
+    }
+
+    if (pathname === '/api/genres' && method === 'POST') {
+      const admin = requireRole(req, ['admin']);
+      if (!admin) return permissionFailure(req, 'فقط مدیران می‌توانند ژانر بسازند');
+      let body;
+      try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
+      const id = String(body?.id || '').trim();
+      const nameFa = String(body?.nameFa || '').trim();
+      const name = String(body?.name || nameFa).trim();
+      const color = String(body?.color || '#0d7c4a').trim();
+      const description = String(body?.description || '').trim();
+      const aliases = Array.isArray(body?.aliases) ? [...new Set(body.aliases.filter(x => typeof x === 'string').map(x => x.trim()).filter(x => x && x.length <= 80))].slice(0, 20) : [];
+      if (!id || id.length > 100 || !nameFa || nameFa.length > 80 || name.length > 80 ||
+          !/^#[0-9a-fA-F]{6}$/.test(color) || description.length > 1000) {
+        return json({ error: 'اطلاعات ژانر معتبر نیست' }, 400, req);
+      }
+      try {
+        db.prepare('INSERT INTO custom_genres (id, name_fa, name, color, description, aliases, created_by, updated_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+          .run(id, nameFa, name, color, description, JSON.stringify(aliases), admin.id, admin.id, nowSec(), nowSec());
+      } catch (error) {
+        if (String(error?.message || '').includes('UNIQUE')) return json({ error: 'شناسه ژانر تکراری است' }, 409, req);
+        throw error;
+      }
+      logActivity(admin, 'create_genre', 'genre', id, 'Created custom genre "' + nameFa + '"');
+      return json({ genre: { id, nameFa, name, color, description, aliases } }, req);
+    }
+
+    if (pathname === '/api/genres' && method === 'PUT') {
+      const admin = requireRole(req, ['admin']);
+      if (!admin) return permissionFailure(req, 'فقط مدیران می‌توانند ژانر ویرایش کنند');
+      const id = String(url.searchParams.get('id') || '').trim();
+      if (!id) return json({ error: 'شناسه ژانر نامعتبر است' }, 400, req);
+      let body;
+      try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
+      const nameFa = String(body?.nameFa || '').trim();
+      const name = String(body?.name || nameFa).trim();
+      const color = String(body?.color || '#0d7c4a').trim();
+      const description = String(body?.description || '').trim();
+      const aliases = Array.isArray(body?.aliases) ? [...new Set(body.aliases.filter(x => typeof x === 'string').map(x => x.trim()).filter(x => x && x.length <= 80))].slice(0, 20) : [];
+      if (!nameFa || nameFa.length > 80 || name.length > 80 ||
+          !/^#[0-9a-fA-F]{6}$/.test(color) || description.length > 1000) {
+        return json({ error: 'اطلاعات ژانر معتبر نیست' }, 400, req);
+      }
+      const result = db.prepare('UPDATE custom_genres SET name_fa = ?, name = ?, color = ?, description = ?, aliases = ?, updated_by = ?, updated_at = ? WHERE id = ?')
+        .run(nameFa, name, color, description, JSON.stringify(aliases), admin.id, nowSec(), id);
+      if (!result.changes) return json({ error: 'ژانر یافت نشد' }, 404, req);
+      logActivity(admin, 'update_genre', 'genre', id, 'Updated custom genre "' + nameFa + '"');
+      return json({ genre: { id, nameFa, name, color, description, aliases } }, req);
+    }
+
+    if (pathname === '/api/genres' && method === 'DELETE') {
+      const admin = requireRole(req, ['admin']);
+      if (!admin) return permissionFailure(req, 'فقط مدیران می‌توانند ژانر حذف کنند');
+      const id = String(url.searchParams.get('id') || '').trim();
+      if (!id) return json({ error: 'شناسه ژانر نامعتبر است' }, 400, req);
+      const target = db.prepare('SELECT name_fa FROM custom_genres WHERE id = ?').get(id);
+      if (!target) return json({ error: 'ژانر یافت نشد' }, 404, req);
+      db.prepare('DELETE FROM custom_genres WHERE id = ?').run(id);
+      logActivity(admin, 'delete_genre', 'genre', id, 'Deleted custom genre "' + target.name_fa + '"');
+      return json({ success: true }, req);
     }
 
     // ----- Image serving -----

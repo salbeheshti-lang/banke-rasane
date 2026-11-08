@@ -51,6 +51,7 @@ interface Genre {
   name: string;
   color: string;
   description: string;
+  aliases?: string[];
   filterFn: (s: TalkShow) => boolean;
   // Section-specific tags shown on cards in this genre's view
   tags?: TagSpec[];
@@ -489,6 +490,7 @@ type StoredGenre = {
   name?: string;
   color: string;
   description: string;
+  aliases?: string[];
 };
 
 /**
@@ -507,46 +509,29 @@ function stripLegacyGenreDescription(description: string): string {
   return d;
 }
 
+function hydrateCustomGenres(items: StoredGenre[]): Genre[] {
+  return items
+    .filter((g: any) => g && typeof g === 'object' && typeof g.id === 'string' && typeof g.nameFa === 'string' && typeof g.color === 'string')
+    .map((g: StoredGenre) => ({
+      id: g.id, key: g.id, nameFa: g.nameFa, name: g.name || g.nameFa, color: g.color,
+      description: stripLegacyGenreDescription(g.description || ''),
+      aliases: Array.isArray(g.aliases) ? g.aliases : [],
+      filterFn: (show: TalkShow) => [g.nameFa, g.name, ...(g.aliases || [])].some(name => !!name && show.category.includes(name)),
+      isCustom: true, tags: DEFAULT_GENRE_TAGS, presetTags: [],
+      searchFields: ['name', 'summary', 'category', 'descriptionFa'] as (keyof TalkShow)[],
+    }));
+}
+
+// Read only for one-time migration of legacy browser-local genres. Normal reads/writes use the API.
 function loadCustomGenres(): Genre[] {
   if (typeof window === 'undefined') return [];
   try {
     const raw = window.localStorage.getItem(CUSTOM_GENRES_KEY);
     if (!raw) return [];
     const arr = JSON.parse(raw);
-    if (!Array.isArray(arr)) return [];
-    return arr
-      .filter((g: any) => g && typeof g === 'object' && typeof g.id === 'string' && typeof g.nameFa === 'string' && typeof g.color === 'string')
-      .map((g: StoredGenre) => ({
-        id: g.id,
-        key: g.id,
-        nameFa: g.nameFa,
-        name: g.name || g.nameFa,
-        color: g.color,
-        // MIGRATION: older versions auto-filled the card description with
-        // "ژانر سفارشی: <name>" — strip that legacy placeholder so the card
-        // shows the real description (or nothing) instead.
-        description: stripLegacyGenreDescription(g.description || ''),
-        // Match shows whose category contains the genre's Persian name
-        filterFn: (s: TalkShow) => s.category.includes(g.nameFa) || (g.name ? s.category.includes(g.name) : false),
-        isCustom: true,
-        tags: DEFAULT_GENRE_TAGS,
-        presetTags: [],
-        searchFields: ['name', 'summary', 'category', 'descriptionFa'] as (keyof TalkShow)[],
-      }));
+    return Array.isArray(arr) ? hydrateCustomGenres(arr) : [];
   } catch {
     return [];
-  }
-}
-
-function saveCustomGenres(genres: Genre[]) {
-  if (typeof window === 'undefined') return;
-  try {
-    const arr: StoredGenre[] = genres.map(g => ({
-      id: g.id, nameFa: g.nameFa, name: g.name, color: g.color, description: g.description,
-    }));
-    window.localStorage.setItem(CUSTOM_GENRES_KEY, JSON.stringify(arr));
-  } catch {
-    // ignore storage errors
   }
 }
 
@@ -926,6 +911,47 @@ function HomeInner() {
   const canEdit = role === 'admin' || role === 'editor';
   const isAdmin = role === 'admin';
 
+  // Shared genre catalog: every authenticated role can read; only admins can mutate.
+  useEffect(() => {
+    if (!currentUser) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        let items = (await api.getCustomGenres()).genres || [];
+        // Migrate old browser-local genres once, only when the shared catalog is empty.
+        if (currentUser.role === 'admin') {
+          const legacy = loadCustomGenres();
+          const existingIds = new Set(items.map(genre => genre.id));
+          let migrationComplete = true;
+          for (const genre of legacy) {
+            if (existingIds.has(genre.id)) continue;
+            try {
+              const saved = await api.createCustomGenre({
+                id: genre.id, nameFa: genre.nameFa, name: genre.name,
+                color: genre.color, description: genre.description, aliases: genre.aliases,
+              });
+              items.push(saved.genre);
+              existingIds.add(genre.id);
+            } catch (error) {
+              migrationComplete = false;
+              console.warn('[genres] legacy migration skipped:', error);
+            }
+          }
+          // Retry any partial migration on a later admin sign-in. Remove the old
+          // local snapshot only when every legacy record is present on the server.
+          if (legacy.length > 0 && migrationComplete) {
+            window.localStorage.removeItem(CUSTOM_GENRES_KEY);
+          }
+        }
+        if (!cancelled) setCustomGenres(hydrateCustomGenres(items));
+      } catch (error) {
+        console.error('[genres] failed to load shared genres:', error);
+        // Keep the dashboard usable with built-in genres if the API is temporarily unavailable.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [currentUser?.id, currentUser?.role]);
+
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
     check();
@@ -938,12 +964,6 @@ function HomeInner() {
     const saved = loadOverrides();
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydrate persisted overrides after mount to preserve the current UI behavior.
     setOverrides(saved);
-    // Restore custom genres saved in a previous session.
-    const restoredGenres = loadCustomGenres();
-    setCustomGenres(restoredGenres);
-    // Persist migrated (cleaned) genres back so legacy "ژانر سفارشی:" placeholder
-    // descriptions are permanently removed from storage, not just hidden.
-    if (restoredGenres.length > 0) saveCustomGenres(restoredGenres);
     fetch('/talk-shows-data.json')
       .then(r => r.json())
       .then((data: TalkShow[]) => {
@@ -1059,26 +1079,45 @@ function HomeInner() {
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Add a brand-new custom Genre to state + localStorage.
-  const handleAddGenre = (g: Genre) => {
-    const next = [...customGenres, g];
-    setCustomGenres(next);
-    saveCustomGenres(next);
-    showToast(`ژانر «${g.nameFa}» اضافه شد`);
+  // Add a custom genre to the shared server catalog (server enforces admin role).
+  const handleAddGenre = async (g: Genre) => {
+    if (!isAdmin) return;
+    try {
+      const result = await api.createCustomGenre({
+        id: g.id, nameFa: g.nameFa, name: g.name, color: g.color, description: g.description, aliases: g.aliases,
+      });
+      setCustomGenres(prev => [...prev.filter(x => x.id !== g.id), ...hydrateCustomGenres([result.genre])]);
+      showToast(`ژانر «${g.nameFa}» اضافه شد`);
+    } catch (error: any) {
+      showToast(error?.message || 'افزودن ژانر ناموفق بود');
+    }
   };
 
-  // Edit an existing custom Genre (updates state + localStorage).
+  // Edit a custom genre in the shared server catalog.
   // MIGRATION: if the genre is renamed, every show whose `category` references
   // the old name is migrated so it stays inside the renamed genre instead of
   // silently disappearing (the genre→show link is an implicit substring match
   // on `category`, so renaming the genre alone would break the link).
-  const handleEditGenre = (g: Genre) => {
+  const handleEditGenre = async (g: Genre) => {
+    if (!isAdmin) return;
     const prev = customGenres.find(x => x.id === g.id);
+    const aliases = Array.from(new Set([
+      ...(prev?.aliases || g.aliases || []),
+      ...(prev?.nameFa && prev.nameFa !== g.nameFa ? [prev.nameFa] : []),
+    ])).filter(Boolean);
+    const updatedGenre = { ...g, aliases };
+    try {
+      await api.updateCustomGenre({
+        id: g.id, nameFa: g.nameFa, name: g.name, color: g.color, description: g.description, aliases,
+      });
+    } catch (error: any) {
+      showToast(error?.message || 'ویرایش ژانر ناموفق بود');
+      return;
+    }
     const oldName = prev?.nameFa ?? '';
     const newName = g.nameFa;
-    const next = customGenres.map(x => (x.id === g.id ? g : x));
+    const next = customGenres.map(x => (x.id === g.id ? updatedGenre : x));
     setCustomGenres(next);
-    saveCustomGenres(next);
 
     const renamed = oldName && newName && oldName !== newName;
     if (!renamed) {
@@ -1121,11 +1160,17 @@ function HomeInner() {
   // clear that stale reference from overridden/added shows AND from base shows
   // (by creating an edit override) so the category doesn't dangle — mirroring
   // the rename migration in handleEditGenre.
-  const handleDeleteGenre = (id: string) => {
+  const handleDeleteGenre = async (id: string) => {
+    if (!isAdmin) return;
+    try {
+      await api.deleteCustomGenre(id);
+    } catch (error: any) {
+      showToast(error?.message || 'حذف ژانر ناموفق بود');
+      return;
+    }
     const target = customGenres.find(x => x.id === id);
     const next = customGenres.filter(x => x.id !== id);
     setCustomGenres(next);
-    saveCustomGenres(next);
     const name = target?.nameFa ?? '';
     if (!name) {
       showToast('ژانر حذف شد');
@@ -3132,7 +3177,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                 {g.description ? (
                   <p className="text-sm mt-3" style={{ color: 'rgba(255, 255, 255, 0.75)' }}>{g.description}</p>
                 ) : null}
-                <div className="mt-4 flex items-center text-sm font-bold" style={{ color: g.color }}>
+                <div className="mt-4 flex items-center text-sm font-bold text-white">
                   مشاهده و جستجو
                   <svg className="w-4 h-4 mr-1 rtl-flip" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
