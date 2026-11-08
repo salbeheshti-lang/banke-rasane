@@ -481,3 +481,26 @@ Checked 8 November 2026. One additional image was verified and added.
 | 319 | Full Court Press | No exact match verified | Search results primarily identify a later sports/CSR campaign, not the described 2002 Maple Leafs program. |
 | 320 | It’s my Life | No verified image in first pass | Studio location is documented, but no openly licensed photograph of the actual set verified. |
 
+
+## First-pass checks: records #321–#335
+
+Checked 8 November 2026. Record #325 is excluded from the decor-program scope by the app's genre filter.
+
+| # | Program | First-pass result | Notes |
+|---:|---|---|---|
+| 321 | Enough Rope with Andrew Denton | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 322 | Bei Stockl | No exact match verified | No exact program/set match established. |
+| 323 | The Brice Kennedy Show | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 324 | Tough Crowd with Colin Quinn | No verified image in first pass | No openly licensed photograph of the actual set verified. |
+| 325 | Caso Cerrado con la Dra. Ana Maria Polo | Excluded from decor-program scope | App data classifies this as reality/competition/documentary outside the talk-show decor set. |
+| 326 | RaiOt | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 327 | Today with Des and Mel | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 328 | Zelig | No verified image in first pass | Set-design photos exist in press/design coverage, but no open redistribution license was established. |
+| 329 | Grumpy Old Men | No verified image in first pass | Program references confirm a studio production; no openly licensed set photo verified. |
+| 330 | Center Stage | No exact match verified | Search results were ambiguous and did not establish the exact program. |
+| 331 | Breakfast | No verified image in first pass | BBC studio images found through rights-managed sources; no open license verified. |
+| 332 | Tatli ve Huysuz Show | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 333 | Estudio Futbol | No verified image in first pass | A 2020 set photograph is reproduced in an academic PDF with source attributed to Google; original rights and reuse license are not established. |
+| 334 | Teen Wire | No exact match verified | Search results did not establish the exact show identity. |
+| 335 | Daily Politics | No verified image in first pass | Actual BBC studio photos exist in press coverage, but reuse license is not open. |
+
