@@ -297,3 +297,26 @@ Checked 8 November 2026. No new photo passed exact-set and redistribution-licens
 | 199 | Swar Shuaib | No verified image in first pass | No exact licensed studio photograph surfaced. |
 | 200 | Sunday AM | No verified image in first pass | BBC studio references found, but no openly licensed image of the show's actual set verified. |
 
+
+## First-pass checks: records #201–#215
+
+Checked 8 November 2026. No new photo passed exact-set and redistribution-license verification in this batch.
+
+| # | Program | First-pass result | Notes |
+|---:|---|---|---|
+| 201 | Studio voetbal | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 202 | Stars on Stars | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 203 | Sports Nation | No verified image in first pass | NewscastStudio has the actual set gallery, but no open redistribution license was established. |
+| 204 | Sports Jam | No exact match verified | Search results did not establish the exact program identity and reusable image. |
+| 205 | Süper Tiger Show | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 206 | Siamo Stati Uniti | No verified image in first pass | No exact licensed basement-set photograph surfaced. |
+| 207 | T. A. P. Taller de Actores Profesionales | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 208 | Talking Dead | No verified image in first pass | Actual set photos found in press coverage, but rights are not openly licensed. |
+| 209 | Clive James Talking in the Library | No verified image in first pass | Creator archive confirms the living-room setting, but no explicit redistribution license for its images was found. |
+| 210 | Tercer grado | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 211 | Tetris | No verified image in first pass | Program references found, but no reusable set photograph verified. |
+| 212 | Teveteve | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 213 | The 7PM Project | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 214 | The Alan Titchmarsh Show | No verified image in first pass | Show archive/blog has set photos, but no explicit redistribution license was established. |
+| 215 | The Balancing Act | No verified image in first pass | No exact licensed studio photograph surfaced. |
+
