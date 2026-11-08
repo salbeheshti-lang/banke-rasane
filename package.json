@@ -152,5 +152,15 @@
       "repo": "banke-rasane",
       "releaseType": "release"
     }
+  },
+  "overrides": {
+    "@prisma/config": {
+      "deepmerge-ts": "^8.0.1",
+      "effect": "^3.20.0"
+    },
+    "js-yaml": "^4.3.2",
+    "@electron/asar": {
+      "minimatch": "^9.0.7"
+    }
   }
 }
