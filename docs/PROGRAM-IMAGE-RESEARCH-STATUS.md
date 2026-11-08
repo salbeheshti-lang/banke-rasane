@@ -619,3 +619,61 @@ Checked 8 November 2026. No new photo passed exact-set and redistribution-licens
 | 409 | The Late Show with Stephen Colbert | No verified image in first pass | Exact set galleries exist, but images found are copyrighted design/press material. |
 | 410 | The Medyo Late Night Show with Jojo A | No exact match verified | No exact licensed studio photograph surfaced. |
 
+
+
+---
+
+# Ongoing research status — 8 November 2026
+
+This section records the continued work after the first-pass review through record #410.
+
+## Verified data status
+
+- Decor-program scope selected by the app's current filter: **1,161 records**.
+- Records with at least one image on this branch: **533**.
+- Records still without an image: **628**.
+- Verified unique image sources recorded in the attribution file: **13**.
+- Duplicate catalog entry #816 (Full Frontal with Samantha Bee) now reuses the same licensed set photograph as #39; this fills the duplicate record but does not increase the unique-image-source count.
+- New unique images added in this continuation: **6** — #151 Lafer! Lichter! Lecker!, #717 Top Gear, #767 Antiques Roadshow, #1131 Radio 1's Big Weekend, #1227 Comic Book Men, and #1268 Dragons' Den.
+- All new image URLs were checked against the app's existing image-loading path. The app selects external HTTPS URLs from `show.images[]` and renders them as real images for logged-in users; no UI or genre logic was changed.
+
+## Additional research batches
+
+The following records have been researched and their findings documented in separate batch files:
+
+- #574–593 — gardening programs
+- #594–648 — Christmas, police, Ramadan and documentary titles
+- #691–704 — travel / reality programs
+- #705–744 — travel and food programs
+- #745–817 — travel, antiques, film-review and talk-show records
+- #818–934 — constitution and espionage documentaries
+- #935–1024 — espionage and prison documentaries
+- #1025–1156 — reality, late-night, radio and podcast programs
+- #1157–1221 — farming, gardening and book programs
+- #1222–1302 — book, business and entrepreneurship programs
+
+## Newly verified image sources
+
+| Record | Program | License | Source |
+|---:|---|---|---|
+| 151 | Lafer! Lichter! Lecker! | CC BY-SA 3.0 DE | Wikimedia Commons — Udo Grimberg |
+| 717 | Top Gear | CC BY 2.0 | Wikimedia Commons — Barry McGee |
+| 767 | Antiques Roadshow | CC BY-SA 2.0 | Wikimedia Commons — Portable Antiquities Scheme |
+| 1131 | Radio 1's Big Weekend | CC BY-SA 2.0 | Wikimedia Commons — Paul Denchfield |
+| 1227 | Comic Book Men | CC BY 3.0 | Wikimedia Commons — Luigi Novi |
+| 1268 | Dragons' Den | CC BY 3.0 | Wikimedia Commons — Adam Wimpenny |
+
+Full creator, date, source, image URL and license details are maintained in `docs/PROGRAM-IMAGE-ATTRIBUTION.md`.
+
+## Important exclusions
+
+- Presenter/guest portraits that do not show the program environment.
+- Logos, posters and key art.
+- Images from another country's version of the same format.
+- Generic locations, unrelated events and lookalike studio sets.
+- Official broadcaster/production stills without a stated open reuse license.
+- Images that depict the topic of a documentary but not its actual production environment.
+
+## Completion state
+
+Research is **not complete**. The current branch still has 628 decor-filter records without images. The PR remains a draft and has not been merged. No release or EXE build has been created from this work. Continue searching for exact, reusable set/production-environment photographs; do not lower the matching or licensing standard merely to force every record to have an image.
