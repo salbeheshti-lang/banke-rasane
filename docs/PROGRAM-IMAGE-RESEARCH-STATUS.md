@@ -81,3 +81,35 @@ Checked 8 November 2026. Continue past every unresolved record; “no verified i
 | 40 | Fröhlich lesen | No verified image in first pass | No exact licensed studio photograph surfaced. |
 | 41 | Friday Night with Jonathan Ross | Verified image added | Actual set photo, CC BY 2.0; see attribution manifest. |
 
+
+## First-pass checks: records #42–#65
+
+Checked 8 November 2026. Programs without a verified image remain queued for later re-checks.
+
+| # | Program | First-pass result | Notes |
+|---:|---|---|---|
+| 42 | Friday Night Live | No verified image in first pass | No exact licensed image of the show's set surfaced. |
+| 43 | G4tv. com | No verified image in first pass | No exact licensed set photograph verified. |
+| 44 | Elvis Mitchell: Under the Influence | No verified image in first pass | No exact licensed set photograph surfaced. |
+| 45 | Encore with John Palmer | No verified image in first pass | No exact licensed set photograph surfaced. |
+| 46 | Encuentros Zabaltegi | No verified image in first pass | No exact licensed set photograph surfaced. |
+| 47 | ESPN FC | No verified image in first pass | NewscastStudio has actual set galleries, but a repository-redistribution license was not established. |
+| 48 | Evening Urgant | Verified image added | See attribution manifest. |
+| 49 | Face 2 Face | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 50 | Fareed Zakaria GPS | No verified image in first pass | NewscastStudio set photos are editorial/design references, not verified as openly licensed for redistribution. |
+| 51 | Fashion Police | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 52 | Fast Talk with Boy Abunda | No verified image in first pass | Set photos exist in press coverage, but redistribution rights are not established. |
+| 53 | Dorseen 21: 30 | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 54 | Don’t be the First one | No verified image in first pass | Described as filmed in real homes; no reusable studio-set photograph verified. |
+| 55 | dLife | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 56 | Die Tietjen und Dibaba | No verified image in first pass | Press/archive images found, but rights are restricted or unclear. |
+| 57 | Die Oliver Pocher Show | No verified image in first pass | Studio press photos are limited to promotional/editorial use; no reusable license verified. |
+| 58 | Deux Filles le Matin | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 59 | Det nye Talkshow | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 60 | Designing Your Future | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 61 | Dagens Danmark | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 62 | Dr. Laura | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 63 | Dumont 360 | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 64 | E-Asylum | No verified image in first pass | No exact licensed studio photograph surfaced. |
+| 65 | Eigo de Shabera Night | No verified image in first pass | Commons category contains presenter portraits, not the program's set. |
+
