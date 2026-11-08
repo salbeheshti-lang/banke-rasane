@@ -5,7 +5,7 @@ Scope: exact program identity, actual recurring set / filming environment, and a
 
 | Record | Program | Result | Evidence / reason |
 |---:|---|---|---|
-| 151 | Lafer! Lichter! Lecker! | No verified set image added | Wikimedia Commons has a program category and several CC BY-SA photographs, but the inspected files (including Bettina Tietjen, Uschi Glas, Mark Keller and others) are close portraits / guest photographs. The Bettina file is explicitly described as a presenter in the production company's studio, but the image itself is a tight portrait and does not show the program decor. Category: https://commons.wikimedia.org/wiki/Category:Lafer!Lichter!Lecker! ; inspected file: https://commons.wikimedia.org/wiki/File:Bettina_Tietjen.JPG |
+| 151 | Lafer! Lichter! Lecker! | **Verified image added** | A wide Commons photograph from the actual 9 February 2010 recording shows the working kitchen set, counter, shelves, dishes and cabinetry. Original file licensed CC BY-SA 3.0 DE; attribution recorded in `docs/PROGRAM-IMAGE-ATTRIBUTION.md`. https://commons.wikimedia.org/wiki/File:IMG_4526_Johann_K%C3%B6nig%2CJohann_Lafer%2CDaniela_Ziegler.JPG |
 | 251 | Willkommen Österreich | No verified set image added | A Commons image is licensed CC BY-SA 3.0 and documents filming of an episode, but visual inspection shows the hosts and a guest at a table against a generic sports-event promotional backdrop, not the show's recognizable studio set. https://commons.wikimedia.org/wiki/File:Grissemann,_Lopatka_and_Stermann_2007-08.jpg |
 | 357 | Attack of the Show! | No verified set image added | Commons contains host portraits, a Comic-Con panel, an autograph booth and event photographs. These are not photographs of the G4 program's recurring studio set. https://commons.wikimedia.org/wiki/Category:Attack_of_the_Show! |
 | 582 | Gardeners' World | No verified set image added | The CC BY-SA Commons photo of Monty Don recording at Gardeners' World Live is from the separate public event, not the recurring Gardeners' World filming garden/set. https://commons.wikimedia.org/wiki/File:Monty_Don_records_to_camera.JPG |
@@ -23,7 +23,8 @@ Scope: exact program identity, actual recurring set / filming environment, and a
 
 ## Batch outcome
 
-- New verified images added: 0.
-- Existing program image data was not changed.
+- New verified images added: 1 (record #151, Lafer! Lichter! Lecker!).
+- `public/talk-shows-data.json` now contains the external Commons image URL for record #151.
+- Attribution, creator, date, source and CC BY-SA 3.0 DE terms are documented in `docs/PROGRAM-IMAGE-ATTRIBUTION.md`.
 - Rights-managed press material, portraits, logos, unrelated event images and generic lookalikes were excluded.
 - These no-image findings are provisional and may be revisited if a better source or explicit permission becomes available.
