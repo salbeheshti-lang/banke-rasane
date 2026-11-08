@@ -139,3 +139,16 @@ Attribution: Portable Antiquities Scheme, “Antiques Roadshow in the garden (49
 - Changes: Used the original Wikimedia Commons file; no image editing.
 
 Attribution: Paul Denchfield, “Radio 1 big weekend main stage.jpg”, via Wikimedia Commons, licensed under CC BY-SA 2.0.
+
+
+## Comic Book Men (show #1227)
+
+- Image: [7.9.12SecretStashByLuigiNovi4.jpg](https://commons.wikimedia.org/wiki/File:7.9.12SecretStashByLuigiNovi4.jpg)
+- Direct media URL: https://upload.wikimedia.org/wikipedia/commons/f/fa/7.9.12SecretStashByLuigiNovi4.jpg
+- Creator: Luigi Novi (Wikimedia Commons username: Nightscream)
+- Date: 9 July 2012
+- Description: Photograph of Jay and Silent Bob's Secret Stash on the first day of filming season 2 of *Comic Book Men*. The show is set at this comic-book store; the image documents the actual primary filming location, including the show's storefront and the specially tinted windows used during filming.
+- License: [Creative Commons Attribution 3.0 Unported (CC BY 3.0)](https://creativecommons.org/licenses/by/3.0/)
+- Changes: Used the original Wikimedia Commons file; no image editing.
+
+Attribution: Luigi Novi (Nightscream), “7.9.12SecretStashByLuigiNovi4.jpg”, via Wikimedia Commons, licensed under CC BY 3.0.
