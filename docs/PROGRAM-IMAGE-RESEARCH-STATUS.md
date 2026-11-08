@@ -643,6 +643,7 @@ The following records have been researched and their findings documented in sepa
 
 - #574–593 — gardening programs
 - #594–648 — Christmas, police, Ramadan and documentary titles
+- #649–690 — Indonesian, Malaysian and Qatari Ramadan programs
 - #691–704 — travel / reality programs
 - #705–744 — travel and food programs
 - #745–817 — travel, antiques, film-review and talk-show records
