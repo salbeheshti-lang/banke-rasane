@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import ZAI from 'z-ai-web-dev-sdk';
 import { gatePermissionAny } from '@/lib/server-auth';
 import { db } from '@/lib/db';
 export const runtime = 'nodejs';
@@ -259,63 +258,39 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // --- 5. Single LLM call ---
-    const zai = await ZAI.create();
-    const fieldsJson = JSON.stringify(toTranslate, null, 2);
-
-    const completion = await zai.chat.completions.create({
-      messages: [
-        {
-          role: 'assistant',
-          content: [
-            'You are a professional translator for a Persian-language TV-program archive.',
-            'You will receive a JSON object whose values are text in various languages.',
-            'Translate each value into fluent, natural Persian (فارسی).',
-            '',
-            'Rules:',
-            '1. Preserve all proper nouns (person names, network names, brand names) in their original form.',
-            '2. Preserve all URLs (http://, https://) exactly as-is.',
-            '3. Preserve numbers (years, episode counts, ratings) as-is.',
-            '4. If a value is already in Persian, return it unchanged.',
-            '5. If a value is empty or whitespace-only, return an empty string.',
-            '',
-            'CRITICAL: Respond with ONLY a valid JSON object — no markdown, no code fences, no commentary.',
-            'The JSON object must have the EXACT same keys as the input, with translated values.',
-            'Example input: {"summary": "Hello world"}',
-            'Example output: {"summary": "سلام دنیا"}',
-          ].join('\n'),
-        },
-        {
-          role: 'user',
-          content: fieldsJson,
-        },
-      ],
-      thinking: { type: 'disabled' },
-    });
-
-    const rawResponse = completion.choices[0]?.message?.content?.trim() || '';
-
-    // Strip markdown fences if the model wrapped the JSON in them.
-    let cleaned = rawResponse;
-    if (cleaned.startsWith('```')) {
-      cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
-    }
-
-    let parsed: Record<string, string> = {};
-    try {
-      parsed = JSON.parse(cleaned);
-    } catch {
-      warnings.push('Model did not return valid JSON; all fields kept as original.');
-      for (const [key, value] of Object.entries(toTranslate)) {
-        translations[key] = value;
+    // --- 5. Free external translation fallback (no private API key) ---
+    // MyMemory's public endpoint accepts autodetect|fa. Text is sent to this
+    // third-party service; callers are authenticated and rate-limited above.
+    // Keep original values whenever the service is unavailable or rejects a result.
+    const parsed: Record<string, string> = {};
+    const entries = Object.entries(toTranslate);
+    for (const [key, value] of entries) {
+      try {
+        const params = new URLSearchParams({
+          q: value,
+          langpair: 'autodetect|fa',
+        });
+        const response = await fetch(
+          `https://api.mymemory.translated.net/get?${params.toString()}`,
+          { signal: AbortSignal.timeout(12000), headers: { Accept: 'application/json' } }
+        );
+        if (!response.ok) {
+          warnings.push(`field "${key}": سرویس ترجمه پاسخ نداد؛ متن اصلی حفظ شد`);
+          continue;
+        }
+        const payload = await response.json() as {
+          responseStatus?: number;
+          responseData?: { translatedText?: string };
+        };
+        const translated = payload.responseData?.translatedText?.trim() || '';
+        if (payload.responseStatus !== 200 || !translated || !PERSIAN_RE.test(translated)) {
+          warnings.push(`field "${key}": ترجمه معتبر دریافت نشد؛ متن اصلی حفظ شد`);
+          continue;
+        }
+        parsed[key] = translated;
+      } catch {
+        warnings.push(`field "${key}": سرویس ترجمه در دسترس نیست؛ متن اصلی حفظ شد`);
       }
-      return NextResponse.json({
-        translations,
-        warnings,
-        translatedCount: Object.keys(translations).length,
-        preservedFields: Array.from(PRESERVED_FIELDS),
-        originalTitlePreserved: PRESERVE_ORIGINAL_TITLE,
-      });
     }
 
     // --- 6. Merge + output sanity check ---
