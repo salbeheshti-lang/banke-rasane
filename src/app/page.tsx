@@ -3109,6 +3109,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {genres.map((g, idx) => {
           const count = talkShows.filter(g.filterFn).length;
+          const genreDescription = (g.description || '').replace(/^[0-9۰-۹٠-٩]+[\s,٬]*برنامه\s*[—-]?\s*/, '').trim();
           const canManage = isAdmin && onEditGenre && onDeleteGenre;
           return (
             <div
@@ -3186,8 +3187,8 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                   </div>
                 </div>
                 <h3 className="font-bold text-lg mb-1" style={{ color: '#ffffff' }}>{g.nameFa}</h3>
-                {g.description ? (
-                  <p className="text-sm mt-3" style={{ color: 'rgba(255, 255, 255, 0.75)' }}>{g.description}</p>
+                {genreDescription ? (
+                  <p className="text-sm mt-3" style={{ color: 'rgba(255, 255, 255, 0.75)' }}>{genreDescription}</p>
                 ) : null}
                 <div className="mt-4 flex items-center text-sm font-bold text-white">
                   مشاهده و جستجو
