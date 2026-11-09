@@ -52,6 +52,9 @@ if (process.env.DB_PATH && !existsSync(DB_PATH)) {
   }
 }
 
+// Capture this before Bun opens/creates the SQLite file. It distinguishes a
+// genuinely new install from an existing archive whose shows were deleted.
+const databaseExistedBeforeOpen = existsSync(DB_PATH);
 const db = new Database(DB_PATH, { create: true });
 db.exec('PRAGMA journal_mode = WAL;');
 db.exec('PRAGMA recursive_triggers = ON;');
@@ -194,6 +197,7 @@ db.exec(`CREATE TABLE IF NOT EXISTS app_migrations (
   id TEXT PRIMARY KEY,
   applied_at INTEGER NOT NULL
 )`);
+db.exec('CREATE TABLE IF NOT EXISTS seeded_shows (num INTEGER PRIMARY KEY)');
 
 addColumnIfMissing('shows', 'image_data', 'BLOB');
 addColumnIfMissing('shows', 'image_mime', "TEXT NOT NULL DEFAULT 'image/jpeg'");
@@ -821,30 +825,59 @@ function seedShows() {
     }
   }
 
-  const existing = db.prepare('SELECT COUNT(*) AS c FROM shows').get();
-  if (existing.c >= shows.length) {
-    console.log(`[seed] DB has ${existing.c} shows, JSON has ${shows.length} — up to date, skipping`);
-    return;
-  }
-  console.log(`[seed] DB has ${existing.c} shows, JSON has ${shows.length} — inserting new entries`);
-  const stmt = db.prepare(`
-    INSERT OR IGNORE INTO shows
-      (num, name, category, source, size, viewers, style, effects, layout,
-       elements, materials, colors, lighting, summary, descriptionFa,
-       youtube, imdb, wikipedia, socialPost, images, videos, tags, is_film)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
+  const seedBaselineId = 'seed-baseline-v1';
+  const seedBaseline = db.prepare('SELECT 1 FROM app_migrations WHERE id = ?').get(seedBaselineId);
+  const hasSeeded = db.prepare('SELECT 1 FROM seeded_shows WHERE num = ?');
+  const markSeeded = db.prepare('INSERT OR IGNORE INTO seeded_shows (num) VALUES (?)');
+  const insertShow = db.prepare(`INSERT OR IGNORE INTO shows (${SHOW_COLUMNS.join(', ')}) VALUES (${SHOW_COLUMNS.map(() => '?').join(', ')})`);
   let inserted = 0;
-  const tx = db.transaction(() => {
-    for (const s of shows) {
-      if (typeof s.num !== 'number') continue;
-      try { stmt.run(...showToValues(s)); inserted++; } catch (e) {
-        console.warn(`[seed] failed to insert show num=${s.num}:`, e.message);
+  let marked = 0;
+
+  const seedTx = db.transaction(() => {
+    if (!seedBaseline) {
+      if (databaseExistedBeforeOpen) {
+        // Existing DB is authoritative. Mark the bundled baseline as already
+        // considered so intentionally deleted legacy programs never reappear.
+        for (const show of shows) {
+          const num = Number(show?.num);
+          if (!Number.isSafeInteger(num) || num < 1) continue;
+          if (!hasSeeded.get(num)) { markSeeded.run(num); marked++; }
+        }
+      } else {
+        // New installation: seed every bundled record and remember its ID.
+        for (const show of shows) {
+          const num = Number(show?.num);
+          if (!Number.isSafeInteger(num) || num < 1) continue;
+          if (hasSeeded.get(num)) continue;
+          try {
+            insertShow.run(...showToValues({ ...show, num }));
+            markSeeded.run(num);
+            inserted++;
+          } catch (error) {
+            console.warn(`[seed] failed to insert show num=${num}:`, error.message);
+          }
+        }
+      }
+      db.prepare('INSERT INTO app_migrations (id, applied_at) VALUES (?, ?)').run(seedBaselineId, nowSec());
+    } else {
+      // Future bundled data additions are inserted once by stable show ID.
+      // A deleted seeded record remains marked and is never resurrected.
+      for (const show of shows) {
+        const num = Number(show?.num);
+        if (!Number.isSafeInteger(num) || num < 1 || hasSeeded.get(num)) continue;
+        try {
+          insertShow.run(...showToValues({ ...show, num }));
+          markSeeded.run(num);
+          inserted++;
+        } catch (error) {
+          console.warn(`[seed] failed to insert new show num=${num}:`, error.message);
+        }
       }
     }
   });
-  tx();
-  console.log(`[seed] inserted ${inserted} shows (now ${shows.length} total)`);
+  seedTx();
+  const total = db.prepare('SELECT COUNT(*) AS c FROM shows').get().c;
+  console.log(`[seed] baseline handled; inserted ${inserted}, marked ${marked}; archive now has ${total} shows`);
 }
 
 await seedDefaultAdmin();
