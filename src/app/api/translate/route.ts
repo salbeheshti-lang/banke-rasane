@@ -265,7 +265,7 @@ export async function POST(request: NextRequest) {
     const translateOne = async (text: string): Promise<string> => {
       const configuredEndpoint = process.env.TRANSLATE_API_URL?.trim();
       if (configuredEndpoint) {
-        const endpoint = configuredEndpoint.replace(/\/$/, '') + '/translate';
+        const endpoint = (configuredEndpoint.endsWith('/') ? configuredEndpoint.slice(0, -1) : configuredEndpoint) + '/translate';
         const response = await fetch(endpoint, {
           method: 'POST',
           headers: {
