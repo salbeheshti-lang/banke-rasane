@@ -265,7 +265,7 @@ export async function POST(request: NextRequest) {
     const translateOne = async (text: string): Promise<string> => {
       const configuredEndpoint = process.env.TRANSLATE_API_URL?.trim();
       if (configuredEndpoint) {
-        const endpoint = configuredEndpoint.replace(/\\/$/, '') + '/translate';
+        const endpoint = configuredEndpoint.replace(/\/$/, '') + '/translate';
         const response = await fetch(endpoint, {
           method: 'POST',
           headers: {
@@ -289,7 +289,7 @@ export async function POST(request: NextRequest) {
 
       const url = new URL('https://api.mymemory.translated.net/get');
       url.searchParams.set('q', text);
-      url.searchParams.set('langpair', 'autodetect|fa');
+      url.searchParams.set('langpair', 'en|fa');
       const response = await fetch(url, { signal: AbortSignal.timeout(15000) });
       if (!response.ok) throw new Error(`Public translation fallback returned HTTP ${response.status}`);
       const data = await response.json() as {
@@ -338,7 +338,7 @@ export async function POST(request: NextRequest) {
       preservedFields: Array.from(PRESERVED_FIELDS),
       originalTitlePreserved: PRESERVE_ORIGINAL_TITLE,
     });
-  } catch  } catch (err: unknown) {
+  } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[translate] endpoint error:', msg);
     return NextResponse.json(
