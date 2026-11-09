@@ -555,8 +555,8 @@ echo "  editor edits show → $HTTP_STATUS (should be 200)"
 check "3.3 editor-can-edit-show" 200 "$HTTP_STATUS"
 
 # Server-side duplicate protection must reject both normalized-name and IMDb-ID duplicates.
-DUPLICATE_TEST_NAME="Duplicate Guard Test $"
-DUPLICATE_TEST_IMDB="tt999$"
+DUPLICATE_TEST_NAME="Duplicate Guard Test"
+DUPLICATE_TEST_IMDB="tt99912345678"
 api DELETE "/shows?num=99011" "$SUPER_TOKEN"
 api POST /shows "$EDITOR_TOKEN" "{\"num\":99011,\"name\":\"$DUPLICATE_TEST_NAME\",\"category\":\"ژانر تست تکراری\",\"imdb\":\"https://www.imdb.com/title/$DUPLICATE_TEST_IMDB/\"}"
 check "3.3a create-duplicate-guard-fixture" 200 "$HTTP_STATUS"
@@ -567,7 +567,7 @@ if printf '%s' "$RESP_BODY" | grep -q 'ژانر تست تکراری'; then
 else
   check "3.3c duplicate-message-includes-primary-genre" "genre" "missing"
 fi
-api POST /shows "$EDITOR_TOKEN" "{\"num\":99013,\"name\":\"Different Duplicate IMDb $\",\"imdb\":\"https://www.imdb.com/title/$DUPLICATE_TEST_IMDB/\"}"
+api POST /shows "$EDITOR_TOKEN" "{\"num\":99013,\"name\":\"Different Duplicate IMDb\",\"imdb\":\"https://www.imdb.com/title/$DUPLICATE_TEST_IMDB/\"}"
 check "3.3d duplicate-imdb-id-blocked-server-side" 409 "$HTTP_STATUS"
 
 # 3.4 Editor tries to delete the show (should FAIL — no delete_shows for editor)
