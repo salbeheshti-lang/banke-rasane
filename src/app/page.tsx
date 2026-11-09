@@ -35,6 +35,8 @@ interface TalkShow {
   tags?: string[];
   images?: string[];
   videos?: string[];
+  // Explicit user choice; undefined preserves legacy decor classification.
+  decorIncluded?: boolean;
   // Source of the DB-stored image BLOB ('wikipedia', 'imdb', or '' if none).
   // Used as a cache-buster for /api/image/<num> so cards re-fetch after update.
   imageSource?: string;
@@ -92,6 +94,9 @@ const NO_DECOR_PREFIXES: string[] = [
 ];
 
 function hasDecor(show: TalkShow): boolean {
+  // New/edited records honor the explicit checkbox. Legacy records retain their
+  // previous classification until a user makes an explicit choice.
+  if (typeof show.decorIncluded === 'boolean') return show.decorIncluded;
   if (show.isFilm) return false;            // films/series have no TV-studio decor
   const cat = show.category || '';
   if (NO_DECOR_CATEGORIES.includes(cat)) return false;
@@ -973,10 +978,19 @@ function HomeInner() {
       .catch(e => console.error('Failed to load data:', e));
   }, []);
 
-  // On mount: check if a token exists in localStorage, validate via /api/auth/me.
-  // If valid → set currentUser (skip login). If invalid → clear token, show login.
+  // On Electron desktop, require a fresh sign-in once per application launch.
+  // sessionStorage survives in-app reloads but is cleared when the app process exits.
+  // Browser/PWA sessions retain their existing persistent-login behavior.
   useEffect(() => {
-    const stored = typeof window !== 'undefined' ? localStorage.getItem('bankresaneh_token') : null;
+    const params = new URLSearchParams(window.location.search);
+    const isDesktopLaunch = params.get('desktop') === '1';
+    const launchMarker = 'bankresaneh_desktop_login_checked';
+    if (isDesktopLaunch && !sessionStorage.getItem(launchMarker)) {
+      localStorage.removeItem('bankresaneh_token');
+      sessionStorage.setItem(launchMarker, '1');
+    }
+
+    const stored = localStorage.getItem('bankresaneh_token');
     if (!stored) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Resolve the initial auth gate when no persisted session exists.
       setAuthLoading(false);
@@ -1287,7 +1301,7 @@ function HomeInner() {
         genres={genres}
       />
 
-      <main key={currentView} className={`animate-view-enter ${isMobile ? 'p-4 pt-20 pb-28' : 'p-8 pt-24'}`}>
+      <main key={currentView} className={`animate-view-enter ${isMobile ? 'p-4 pt-24 pb-28' : 'p-8 pt-28'}`}>
         {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} onEditGenre={handleEditGenre} onDeleteGenre={handleDeleteGenre} onShowClick={setSelectedShow} />}
         {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
@@ -2777,13 +2791,13 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
   const DONUT_R = (DONUT_SIZE - DONUT_STROKE) / 2;          // 87
   const DONUT_CIRC = 2 * Math.PI * DONUT_R;                  // ~546.6
   const DONUT_CENTER = DONUT_SIZE / 2;                       // 100
-  const TOP_GENRES = genreStats.slice(0, 12);                // top 12 in donut
-  const OTHERS_COUNT = genreStats.slice(12).reduce((s, x) => s + x.count, 0);
-
   // Default: top 4 genres — initialize once with useState lazy initializer
   const [selectedGenreIds, setSelectedGenreIds] = useState<string[]>(() => {
-    // Will be set after first render when genreStats is available
-    return [];
+    if (typeof window === 'undefined') return [];
+    try {
+      const saved = JSON.parse(localStorage.getItem('bankresaneh_analytics_genres_v1') || '[]');
+      return Array.isArray(saved) ? saved.filter((id): id is string => typeof id === 'string') : [];
+    } catch { return []; }
   });
   const [showGenrePicker, setShowGenrePicker] = useState(false);
   const STRIP_COUNT = 5;
@@ -2802,6 +2816,10 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
     }
   }, [defaultGenreIds]);
 
+  useEffect(() => {
+    try { localStorage.setItem('bankresaneh_analytics_genres_v1', JSON.stringify(selectedGenreIds)); } catch { /* storage may be disabled */ }
+  }, [selectedGenreIds]);
+
   const stripGenres = useMemo(() => {
     return selectedGenreIds
       .map(id => genreStats.find(g => g.genre.id === id))
@@ -2812,8 +2830,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
   const donutSegments = useMemo(() => {
     const segs: { color: string; dash: number; offset: number; pct: number }[] = [];
     let acc = 0;
-    const items = TOP_GENRES.map(g => ({ color: g.color, count: g.count }));
-    if (OTHERS_COUNT > 0) items.push({ color: '#6b7280', count: OTHERS_COUNT });
+    const items = stripGenres.map(g => ({ color: g.color, count: g.count }));
     const total = items.reduce((s, x) => s + x.count, 0) || 1;
     for (const it of items) {
       const frac = it.count / total;
@@ -2827,7 +2844,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
       acc += frac;
     }
     return segs;
-  }, [TOP_GENRES, OTHERS_COUNT]);
+  }, [stripGenres]);
 
   // ----- Render -----
   return (
@@ -2846,6 +2863,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                 </div>
                 <h2 className="analytics-card-title">نمای آماری کلی</h2>
                 <p className="analytics-card-subtitle">توزیع برنامه‌ها در ژانرهای مختلف</p>
+                <button type="button" onClick={() => setShowGenrePicker(true)} className="mt-3 rounded-lg px-3 py-2 text-xs font-bold" style={{ color: '#f0fdf4', background: 'rgba(0,65,52,0.35)', border: '1px solid rgba(255,255,255,0.35)' }}>⚙ انتخاب ژانرهای آمار</button>
               </div>
             </div>
           </div>
@@ -2931,7 +2949,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                 </span>
               </div>
               <div className="analytics-list-items">
-                {genreStats.slice(0, 5).map((g, i) => {
+                {stripGenres.map((g, i) => {
                   const pct = totalShows > 0 ? Math.round((g.count / totalShows) * 100) : 0;
                   return (
                     <button
@@ -4659,6 +4677,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       imdb: '',
       wikipedia: '',
       country: '',
+      decorIncluded: false,
       tags: [],
     }
   );
@@ -4959,6 +4978,10 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
             options={genres.map(g => ({ value: g.nameFa, label: g.nameFa }))}
           />
           <FormField label="کشور مبدا" value={form.country || ''} onChange={v => setForm({ ...form, country: v })} placeholder="مثلاً: ایران، ترکیه" />
+          <label className="flex items-center gap-3 rounded-xl p-3 sm:col-span-2" style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(255,255,255,0.22)', color: '#f0fdf4', cursor: 'pointer' }}>
+            <input type="checkbox" checked={form.decorIncluded ?? (editingShow ? hasDecor(editingShow) : false)} onChange={e => setForm({ ...form, decorIncluded: e.target.checked })} />
+            <span><strong>قرار دادن در ژانر «دکور برنامه‌ها»</strong><span className="block text-xs opacity-75 mt-1">فقط با انتخاب این گزینه، برنامه در بخش دکور نمایش داده می‌شود.</span></span>
+          </label>
 
           <FormSelect
             label="اندازهٔ استودیو"
@@ -5144,12 +5167,13 @@ function FormSelect({ label, value, onChange, options }: {
           border: '1px solid rgba(13, 124, 74, 0.15)',
           background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
           color: '#f0fdf4',
+          colorScheme: 'dark',
           fontFamily: 'inherit',
           outline: 'none',
         }}
       >
         {options.map(o => (
-          <option key={o.value} value={o.value}>{o.label}</option>
+          <option key={o.value} value={o.value} style={{ background: '#07372f', color: '#f0fdf4' }}>{o.label}</option>
         ))}
       </select>
     </div>
@@ -5215,31 +5239,76 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
     setUrlInput('');
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const compressImageFile = async (file: File): Promise<string> => {
+    if (!file.type.startsWith('image/')) throw new Error('فایل انتخاب‌شده تصویر نیست');
+    if (file.size > 25 * 1024 * 1024) throw new Error('حجم تصویر اولیه نباید بیشتر از ۲۵ مگابایت باشد');
+
+    // createImageBitmap applies EXIF orientation where supported. The scale
+    // calculation preserves the original aspect ratio; no stretching/cropping.
+    const bitmap = await createImageBitmap(file);
+    try {
+      const maxWidth = 1200;
+      const maxHeight = 1800;
+      const scale = Math.min(1, maxWidth / bitmap.width, maxHeight / bitmap.height);
+      const width = Math.max(1, Math.round(bitmap.width * scale));
+      const height = Math.max(1, Math.round(bitmap.height * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('امکان پردازش تصویر وجود ندارد');
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = 'high';
+      context.drawImage(bitmap, 0, 0, width, height);
+
+      const encode = (type: string, quality: number) => new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('تبدیل تصویر ناموفق بود')), type, quality);
+      });
+      let output = await encode('image/webp', 0.84);
+      let mime = output.type === 'image/webp' ? 'image/webp' : 'image/jpeg';
+      if (output.size > 1.2 * 1024 * 1024) {
+        output = await encode(mime, 0.74);
+      }
+      if (output.size > 1.8 * 1024 * 1024) {
+        output = await encode(mime, 0.66);
+      }
+      if (output.size > 2.5 * 1024 * 1024) {
+        throw new Error('حجم تصویر پس از فشرده‌سازی هنوز زیاد است؛ تصویر کوچک‌تری انتخاب کنید');
+      }
+      return await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('خواندن تصویر ناموفق بود'));
+        reader.onerror = () => reject(new Error('خواندن تصویر ناموفق بود'));
+        reader.readAsDataURL(output);
+      });
+    } finally {
+      bitmap.close();
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     const fileArr = Array.from(files);
-    const remaining = MAX_IMAGES - imagesRef.current.length;
+    const remaining = Math.max(0, MAX_IMAGES - imagesRef.current.length);
     const toAdd = fileArr.slice(0, remaining);
     if (toAdd.length < fileArr.length) {
-      showToast(`فقط ${toAdd.length.toLocaleString('fa-IR')} تصویر اضافه شد (حداکثر ${MAX_IMAGES.toLocaleString('fa-IR')})`);
+      showToast(`فقط ${toAdd.length.toLocaleString('fa-IR')} تصویر اضافه می‌شود (حداکثر ${MAX_IMAGES.toLocaleString('fa-IR')})`);
     }
-    // Read files sequentially to preserve order
-    toAdd.forEach((file, i) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
+
+    // Process sequentially so order is deterministic and memory use stays low.
+    for (const file of toAdd) {
+      try {
+        const result = await compressImageFile(file);
         const current = imagesRef.current;
         if (current.length < MAX_IMAGES && !current.includes(result)) {
           onChange([...current, result]);
         }
-      };
-      reader.onerror = () => {
-        showToast(`خطا در خواندن فایل: ${file.name}`);
-      };
-      reader.readAsDataURL(file);
-    });
-    // Reset file input so same file can be re-selected later
+      } catch (error) {
+        showToast(error instanceof Error ? error.message : `خطا در پردازش تصویر: ${file.name}`);
+      }
+    }
+    showToast('تصاویر بهینه شدند؛ نسبت تصویر حفظ شده و حجم فایل کاهش یافته است.');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 

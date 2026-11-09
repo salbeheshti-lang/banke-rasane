@@ -10,6 +10,40 @@ function decodeHtml(s: string): string {
 function cleanQuery(s: string): string {
   return (s||'').replace(/[?!]+$/,'').replace(/\(.*?\)/g,' ').replace(/[–—-]/g,' ').replace(/\s+/g,' ').trim();
 }
+async function optimizeRemoteCover(sourceUrl: string): Promise<string | null> {
+  try {
+    const parsed = new URL(sourceUrl);
+    const allowed = (host: string) =>
+      host === 'm.media-amazon.com' ||
+      host === 'images-na.ssl-images-amazon.com' ||
+      host === 'upload.wikimedia.org' ||
+      host.endsWith('.wikimedia.org');
+    if (parsed.protocol !== 'https:' || !allowed(parsed.hostname)) return null;
+
+    const response = await fetch(sourceUrl, {
+      headers: { 'User-Agent': UA, Accept: 'image/jpeg,image/png,image/webp,*/*;q=0.5' },
+      signal: AbortSignal.timeout(12000),
+    });
+    const finalUrl = new URL(response.url);
+    if (!response.ok || finalUrl.protocol !== 'https:' || !allowed(finalUrl.hostname)) return null;
+    if (!(response.headers.get('content-type') || '').toLowerCase().startsWith('image/')) return null;
+    const declared = Number(response.headers.get('content-length') || 0);
+    if (declared > 15 * 1024 * 1024) return null;
+    const input = Buffer.from(await response.arrayBuffer());
+    if (input.length < 100 || input.length > 15 * 1024 * 1024) return null;
+    const sharp = (await import('sharp')).default;
+    const output = await sharp(input, { limitInputPixels: 40_000_000 })
+      .rotate()
+      .resize({ width: 900, height: 1350, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 82, effort: 4 })
+      .toBuffer();
+    if (output.length > 1_500_000) return null;
+    return 'data:image/webp;base64,' + output.toString('base64');
+  } catch {
+    return null;
+  }
+}
+
 async function fetchRetry(url: string, opts: any = {}, retries = 2) {
   for (let i=0; i<=retries; i++) {
     try { const r = await fetch(url, opts); if (r.ok) return r; if (r.status===429) { await new Promise(x=>setTimeout(x,3000*(i+1))); continue; } }
@@ -98,6 +132,13 @@ export async function POST(request: NextRequest) {
           info.wikiUrl = url;
         }
       }
+    }
+
+    // Normalize remote poster artwork before returning it to either add/edit form.
+    // Metadata remains usable when an image host blocks requests or decoding fails.
+    if (info.image) {
+      const optimized = await optimizeRemoteCover(info.image);
+      if (optimized) info.image = optimized;
     }
 
     if (!info.title && !info.description && !info.image) {
