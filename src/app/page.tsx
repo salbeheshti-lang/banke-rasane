@@ -5653,7 +5653,8 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
       setError('مدت کلیپ باید بیشتر از صفر و حداکثر ۳۰ ثانیه باشد.');
       return;
     }
-    if (typeof MediaRecorder === 'undefined' || typeof video.captureStream !== 'function') {
+    const captureStream = (video as HTMLVideoElement & { captureStream?: () => MediaStream }).captureStream;
+    if (typeof MediaRecorder === 'undefined' || typeof captureStream !== 'function') {
       setError('پردازش ویدیو در این نسخه پشتیبانی نمی‌شود. لطفاً از نسخه دسکتاپ به‌روز استفاده کنید.');
       return;
     }
@@ -5684,7 +5685,7 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
         }
       });
 
-      stream = video.captureStream();
+      stream = captureStream.call(video);
       const mimeType = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
         .find(type => MediaRecorder.isTypeSupported(type));
       if (!mimeType) throw new Error('کدک خروجی WebM در این سیستم پشتیبانی نمی‌شود.');
