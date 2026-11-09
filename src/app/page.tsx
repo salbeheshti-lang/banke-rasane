@@ -944,110 +944,51 @@ function HomeInner() {
     if (!currentUser) return;
     let cancelled = false;
     (async () => {
-      try {
-        let items = (await api.getCustomGenres()).genres || [];
-        // Migrate old browser-local genres once, only when the shared catalog is empty.
-        if (currentUser.role === 'admin') {
-          const legacy = loadCustomGenres();
-          const existingIds = new Set(items.map(genre => genre.id));
-          let migrationComplete = true;
-          for (const genre of legacy) {
-            if (existingIds.has(genre.id)) continue;
-            try {
-              const saved = await api.createCustomGenre({
-                id: genre.id, nameFa: genre.nameFa, name: genre.name,
-                color: genre.color, description: genre.description, aliases: genre.aliases,
-              });
-              items.push(saved.genre);
-              existingIds.add(genre.id);
-            } catch (error) {
-              migrationComplete = false;
-              console.warn('[genres] legacy migration skipped:', error);
-            }
-          }
-          // Retry any partial migration on a later admin sign-in. Remove the old
-          // local snapshot only when every legacy record is present on the server.
-          if (legacy.length > 0 && migrationComplete) {
-            window.localStorage.removeItem(CUSTOM_GENRES_KEY);
-          }
-
-          // Register every built-in genre in the shared catalog once. This
-          // gives legacy genres the same server-backed edit/delete lifecycle
-          // as user-created genres without changing their stable IDs.
-          for (const genre of GENRES) {
-            if (existingIds.has(genre.id)) continue;
-            try {
-              const saved = await api.createCustomGenre({
-                id: genre.id, nameFa: genre.nameFa, name: genre.name,
-                color: genre.color, description: genre.description, aliases: genre.aliases || [],
-              });
-              items.push(saved.genre);
-              existingIds.add(genre.id);
-            } catch (error) {
-              console.warn('[genres] built-in catalog registration deferred:', genre.id, error);
-            }
-          }
-          // Re-read authoritative active/inactive flags after registration.
-          try { items = (await api.getCustomGenres()).genres || items; } catch {}
-        }
-        if (!cancelled) setCustomGenres(hydrateCustomGenres(items));
-      } catch (error) {
-        console.error('[genres] failed to load shared genres:', error);
-        // Keep the dashboard usable with built-in genres if the API is temporarily unavailable.
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [currentUser?.id, currentUser?.role]);
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
-
-  useEffect(() => {
-    if (!currentUser) return;
-    let cancelled = false;
-    (async () => {
       const saved = loadOverrides();
-      let migrationComplete = true;
+      const remaining: Overrides = { added: [], edited: {}, deleted: [] };
       const hasLegacyChanges = saved.added.length > 0 || Object.keys(saved.edited).length > 0 || saved.deleted.length > 0;
 
       // One-time, loss-aware migration of old browser-only edits into the
-      // shared database. Keep the original local snapshot unless every item
-      // has been accepted by the server.
+      // shared database. Each failed item remains in the local recovery layer.
       if (hasLegacyChanges && (currentUser.role === 'admin' || currentUser.role === 'editor')) {
-        for (const show of Object.values(saved.edited)) {
+        for (const [key, show] of Object.entries(saved.edited)) {
           try { await api.updateShow(show); }
-          catch (error) { migrationComplete = false; console.warn('[migration] edited show retained locally:', show.num, error); }
+          catch (error) { remaining.edited[Number(key)] = show; console.warn('[migration] edited show retained locally:', key, error); }
         }
         for (const show of saved.added) {
           try { await api.saveShow(show); }
-          catch (error) { migrationComplete = false; console.warn('[migration] added show retained locally:', show.name, error); }
+          catch (error) { remaining.added.push(show); console.warn('[migration] added show retained locally:', show.name, error); }
         }
         if (currentUser.role === 'admin') {
           for (const num of saved.deleted) {
             try { await api.deleteShow(num); }
-            catch (error) { migrationComplete = false; console.warn('[migration] deleted show retained locally:', num, error); }
+            catch (error) { remaining.deleted.push(num); console.warn('[migration] deleted show retained locally:', num, error); }
           }
-        } else if (saved.deleted.length > 0) {
-          migrationComplete = false;
+        } else {
+          remaining.deleted = saved.deleted.slice();
         }
-        if (migrationComplete) {
-          try { window.localStorage.removeItem(OVERRIDES_KEY); } catch {}
-        }
+      } else if (hasLegacyChanges) {
+        // Read-only users cannot migrate or discard historical local edits.
+        Object.assign(remaining, saved);
+      }
+
+      const migrationComplete = remaining.added.length === 0
+        && Object.keys(remaining.edited).length === 0
+        && remaining.deleted.length === 0;
+      if (migrationComplete) {
+        try { window.localStorage.removeItem(OVERRIDES_KEY); } catch {}
+      } else {
+        saveOverrides(remaining);
       }
 
       try {
         const data = await api.getAllShows() as TalkShow[];
         if (cancelled) return;
-        const remaining = migrationComplete ? { added: [], edited: {}, deleted: [] } : saved;
         setBaseShows(data);
         setOverrides(remaining);
         setTalkShows(applyOverrides(data, remaining));
         if (hasLegacyChanges && !migrationComplete) {
-          showToast('بخشی از تغییرات قدیمی هنوز منتقل نشده است؛ نسخهٔ محلی برای جلوگیری از حذف اطلاعات حفظ شد');
+          showToast('برخی تغییرات قدیمی هنوز به سرور منتقل نشده‌اند؛ نسخهٔ محلی آن‌ها برای بازیابی حفظ شده است');
         }
       } catch (error) {
         console.error('[shows] failed to load shared archive:', error);
