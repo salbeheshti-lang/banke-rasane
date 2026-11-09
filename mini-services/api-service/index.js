@@ -419,6 +419,9 @@ function findDuplicateShow(candidate, excludeNum = null) {
   }
   return null;
 }
+function getPrimaryGenre(category) {
+  return String(category || '').split('|').map(value => value.trim()).filter(Boolean)[0] || 'تعیین نشده';
+}
 function rewriteGenreCategory(category, oldName, newName) {
   const oldKey = normalizeCatalogValue(oldName);
   if (!oldKey) return String(category || '');
