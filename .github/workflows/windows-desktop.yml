@@ -76,6 +76,51 @@ jobs:
           ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.ci-cache/electron-builder
           ELECTRON_CACHE: ${{ github.workspace }}/.ci-cache/electron
 
+      - name: Verify published 5.3.9 to current-version in-place upgrade
+        shell: pwsh
+        timeout-minutes: 30
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installDir = Join-Path $env:RUNNER_TEMP 'BankResaneh-Upgrade-Test'
+          $oldSetup = Join-Path $env:RUNNER_TEMP 'BankResaneh-5.3.9-Setup.exe'
+          $newSetup = Get-ChildItem release -Filter '*Setup*.exe' | Select-Object -First 1
+          if (-not $newSetup) { throw 'Current-version NSIS installer was not produced.' }
+          Invoke-WebRequest -Uri 'https://github.com/salbeheshti-lang/banke-rasane/releases/download/v5.3.9/BankResaneh-Setup.exe' -OutFile $oldSetup
+          if ((Get-Item $oldSetup).Length -lt 100MB) { throw 'Published 5.3.9 installer download is incomplete.' }
+
+          function Install-App([string]$Path, [string]$Log) {
+            $p = Start-Process -FilePath $Path -ArgumentList @('/S', "/LOG=$Log", "/D=$installDir") -PassThru
+            if (-not $p.WaitForExit(600000)) { try { & taskkill.exe /PID $p.Id /T /F | Out-Null } catch {}; throw "Installer timed out: $Path" }
+            if ($p.ExitCode -ne 0) { if (Test-Path $Log) { Get-Content $Log -Tail 100 }; throw "Installer failed: $Path (exit $($p.ExitCode))" }
+          }
+
+          if (Test-Path $installDir) { Remove-Item $installDir -Recurse -Force }
+          Install-App $oldSetup (Join-Path $env:RUNNER_TEMP 'install-539.log')
+          $exe = Join-Path $installDir 'BankResaneh.exe'
+          node scripts/smoke-electron.cjs "$exe"
+          if ($LASTEXITCODE -ne 0) { throw '5.3.9 baseline startup/API/DB smoke test failed.' }
+
+          $userData = Join-Path $env:APPDATA 'banke-rasane'
+          $db = Join-Path $userData 'db\\bankresaneh.sqlite'
+          if (-not (Test-Path $db)) { throw '5.3.9 baseline did not create the real persistent SQLite database.' }
+          $snapshot = @{}
+          Get-ChildItem $userData -File -Recurse | ForEach-Object {
+            $rel = $_.FullName.Substring($userData.Length).TrimStart('\\')
+            $snapshot[$rel] = (Get-FileHash $_.FullName -Algorithm SHA256).Hash
+          }
+          Set-Content (Join-Path $userData 'upgrade-sentinel.txt') 'created-under-5.3.9' -NoNewline
+          $snapshot['upgrade-sentinel.txt'] = (Get-FileHash (Join-Path $userData 'upgrade-sentinel.txt') -Algorithm SHA256).Hash
+
+          Install-App $newSetup.FullName (Join-Path $env:RUNNER_TEMP 'upgrade-to-current.log')
+          foreach ($rel in $snapshot.Keys) {
+            $file = Join-Path $userData $rel
+            if (-not (Test-Path $file -PathType Leaf)) { throw "Upgrade deleted user data: $rel" }
+            if ((Get-FileHash $file -Algorithm SHA256).Hash -ne $snapshot[$rel]) { throw "Upgrade changed user data: $rel" }
+          }
+          node scripts/smoke-electron.cjs "$exe"
+          if ($LASTEXITCODE -ne 0) { throw 'Upgraded application failed startup/API/DB smoke test.' }
+          Write-Host "PASS: published 5.3.9 upgraded in place to package version 5.4.0; $($snapshot.Count) persistent files including SQLite survived byte-for-byte."
+
       - name: Run packaged app smoke test
         run: npm run smoke:desktop
 
