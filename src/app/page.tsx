@@ -964,8 +964,9 @@ function HomeInner() {
         description: record.description,
         aliases: record.aliases || [],
         isCustom: false,
-        filterFn: (show: TalkShow) => [record.nameFa, record.name, ...(record.aliases || [])]
-          .some(name => !!name && show.category.includes(name)),
+        filterFn: base.id === 'decor' ? base.filterFn : (show: TalkShow) =>
+          [record.nameFa, record.name, ...(record.aliases || [])]
+            .some(name => !!name && show.category.includes(name)),
       }];
     });
     const custom = customGenres.filter(g => !GENRES.some(base => base.id === g.id) && g.isActive !== false);
