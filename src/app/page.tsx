@@ -35,6 +35,8 @@ interface TalkShow {
   tags?: string[];
   images?: string[];
   videos?: string[];
+  // Explicit user choice; undefined preserves legacy decor classification.
+  decorIncluded?: boolean;
   // Source of the DB-stored image BLOB ('wikipedia', 'imdb', or '' if none).
   // Used as a cache-buster for /api/image/<num> so cards re-fetch after update.
   imageSource?: string;
@@ -92,6 +94,9 @@ const NO_DECOR_PREFIXES: string[] = [
 ];
 
 function hasDecor(show: TalkShow): boolean {
+  // New/edited records honor the explicit checkbox. Legacy records retain their
+  // previous classification until a user makes an explicit choice.
+  if (typeof show.decorIncluded === 'boolean') return show.decorIncluded;
   if (show.isFilm) return false;            // films/series have no TV-studio decor
   const cat = show.category || '';
   if (NO_DECOR_CATEGORIES.includes(cat)) return false;
@@ -1287,7 +1292,7 @@ function HomeInner() {
         genres={genres}
       />
 
-      <main key={currentView} className={`animate-view-enter ${isMobile ? 'p-4 pt-20 pb-28' : 'p-8 pt-24'}`}>
+      <main key={currentView} className={`animate-view-enter ${isMobile ? 'p-4 pt-24 pb-28' : 'p-8 pt-28'}`}>
         {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} onEditGenre={handleEditGenre} onDeleteGenre={handleDeleteGenre} onShowClick={setSelectedShow} />}
         {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
@@ -2782,8 +2787,11 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
 
   // Default: top 4 genres — initialize once with useState lazy initializer
   const [selectedGenreIds, setSelectedGenreIds] = useState<string[]>(() => {
-    // Will be set after first render when genreStats is available
-    return [];
+    if (typeof window === 'undefined') return [];
+    try {
+      const saved = JSON.parse(localStorage.getItem('bankresaneh_analytics_genres_v1') || '[]');
+      return Array.isArray(saved) ? saved.filter((id): id is string => typeof id === 'string') : [];
+    } catch { return []; }
   });
   const [showGenrePicker, setShowGenrePicker] = useState(false);
   const STRIP_COUNT = 5;
@@ -2802,6 +2810,10 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
     }
   }, [defaultGenreIds]);
 
+  useEffect(() => {
+    try { localStorage.setItem('bankresaneh_analytics_genres_v1', JSON.stringify(selectedGenreIds)); } catch { /* storage may be disabled */ }
+  }, [selectedGenreIds]);
+
   const stripGenres = useMemo(() => {
     return selectedGenreIds
       .map(id => genreStats.find(g => g.genre.id === id))
@@ -2812,8 +2824,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
   const donutSegments = useMemo(() => {
     const segs: { color: string; dash: number; offset: number; pct: number }[] = [];
     let acc = 0;
-    const items = TOP_GENRES.map(g => ({ color: g.color, count: g.count }));
-    if (OTHERS_COUNT > 0) items.push({ color: '#6b7280', count: OTHERS_COUNT });
+    const items = stripGenres.map(g => ({ color: g.color, count: g.count }));
     const total = items.reduce((s, x) => s + x.count, 0) || 1;
     for (const it of items) {
       const frac = it.count / total;
@@ -2827,7 +2838,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
       acc += frac;
     }
     return segs;
-  }, [TOP_GENRES, OTHERS_COUNT]);
+  }, [stripGenres]);
 
   // ----- Render -----
   return (
@@ -2846,6 +2857,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                 </div>
                 <h2 className="analytics-card-title">نمای آماری کلی</h2>
                 <p className="analytics-card-subtitle">توزیع برنامه‌ها در ژانرهای مختلف</p>
+                <button type="button" onClick={() => setShowGenrePicker(true)} className="mt-3 rounded-lg px-3 py-2 text-xs font-bold" style={{ color: '#f0fdf4', background: 'rgba(0,65,52,0.35)', border: '1px solid rgba(255,255,255,0.35)' }}>⚙ انتخاب ژانرهای آمار</button>
               </div>
             </div>
           </div>
@@ -2931,7 +2943,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                 </span>
               </div>
               <div className="analytics-list-items">
-                {genreStats.slice(0, 5).map((g, i) => {
+                {stripGenres.map((g, i) => {
                   const pct = totalShows > 0 ? Math.round((g.count / totalShows) * 100) : 0;
                   return (
                     <button
@@ -4659,6 +4671,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       imdb: '',
       wikipedia: '',
       country: '',
+      decorIncluded: false,
       tags: [],
     }
   );
@@ -4959,6 +4972,10 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
             options={genres.map(g => ({ value: g.nameFa, label: g.nameFa }))}
           />
           <FormField label="کشور مبدا" value={form.country || ''} onChange={v => setForm({ ...form, country: v })} placeholder="مثلاً: ایران، ترکیه" />
+          <label className="flex items-center gap-3 rounded-xl p-3 sm:col-span-2" style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(255,255,255,0.22)', color: '#f0fdf4', cursor: 'pointer' }}>
+            <input type="checkbox" checked={form.decorIncluded ?? (editingShow ? hasDecor(editingShow) : false)} onChange={e => setForm({ ...form, decorIncluded: e.target.checked })} />
+            <span><strong>قرار دادن در ژانر «دکور برنامه‌ها»</strong><span className="block text-xs opacity-75 mt-1">فقط با انتخاب این گزینه، برنامه در بخش دکور نمایش داده می‌شود.</span></span>
+          </label>
 
           <FormSelect
             label="اندازهٔ استودیو"
@@ -5144,12 +5161,13 @@ function FormSelect({ label, value, onChange, options }: {
           border: '1px solid rgba(13, 124, 74, 0.15)',
           background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
           color: '#f0fdf4',
+          colorScheme: 'dark',
           fontFamily: 'inherit',
           outline: 'none',
         }}
       >
         {options.map(o => (
-          <option key={o.value} value={o.value}>{o.label}</option>
+          <option key={o.value} value={o.value} style={{ background: '#07372f', color: '#f0fdf4' }}>{o.label}</option>
         ))}
       </select>
     </div>
