@@ -1377,7 +1377,7 @@ const server = Bun.serve({
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
       const duplicate = findDuplicateShow(body);
       if (duplicate) {
-        return json({ error: 'این برنامه قبلاً ثبت شده است: «' + duplicate.name + '» — ژانر اصلی: ' + (duplicate.category || 'تعیین نشده'), duplicate: { num: duplicate.num, name: duplicate.name, category: duplicate.category } }, 409, req);
+        return json({ error: 'این برنامه قبلاً ثبت شده است: «' + duplicate.name + '» — ژانر اصلی: ' + getPrimaryGenre(duplicate.category), duplicate: { num: duplicate.num, name: duplicate.name, category: duplicate.category, primaryGenre: getPrimaryGenre(duplicate.category) } }, 409, req);
       }
       const requestedNum = Number.parseInt(String(body.num || ''), 10);
       const requestedNumIsFree = Number.isSafeInteger(requestedNum) && requestedNum > 0
@@ -1406,7 +1406,7 @@ const server = Bun.serve({
       const merged = { ...rowToShow(existing), ...body, num };
       const duplicate = findDuplicateShow(merged, num);
       if (duplicate) {
-        return json({ error: 'این برنامه با رکورد دیگری تکراری است: «' + duplicate.name + '» — ژانر اصلی: ' + (duplicate.category || 'تعیین نشده'), duplicate: { num: duplicate.num, name: duplicate.name, category: duplicate.category } }, 409, req);
+        return json({ error: 'این برنامه با رکورد دیگری تکراری است: «' + duplicate.name + '» — ژانر اصلی: ' + getPrimaryGenre(duplicate.category), duplicate: { num: duplicate.num, name: duplicate.name, category: duplicate.category, primaryGenre: getPrimaryGenre(duplicate.category) } }, 409, req);
       }
       db.prepare(`UPDATE shows SET ${SHOW_COLUMNS.filter(column => column !== 'num').map(column => column + ' = ?').join(', ')} WHERE num = ?`)
         .run(...showToValues(merged).slice(1), num);
