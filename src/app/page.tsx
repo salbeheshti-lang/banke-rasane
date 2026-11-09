@@ -878,12 +878,16 @@ function saveOverrides(o: Overrides) {
 // Merge base shows with the user's overrides: drop deleted ones, replace edited ones, prepend added ones.
 function applyOverrides(base: TalkShow[], o: Overrides): TalkShow[] {
   const deleted = new Set(o.deleted);
+  const baseNums = new Set(base.map(show => show.num));
   const out: TalkShow[] = [];
   for (const s of base) {
     if (deleted.has(s.num)) continue;
     out.push(o.edited[s.num] || s);
   }
-  return [...o.added, ...out];
+  // A legacy edit whose original record is absent from the server must remain
+  // visible in the local recovery view until an administrator resolves it.
+  const orphanedEdits = Object.values(o.edited).filter(show => !baseNums.has(show.num) && !deleted.has(show.num));
+  return [...o.added.filter(show => !deleted.has(show.num)), ...out, ...orphanedEdits];
 }
 
 export default function Home() {
