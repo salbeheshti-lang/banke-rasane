@@ -970,6 +970,25 @@ function HomeInner() {
           if (legacy.length > 0 && migrationComplete) {
             window.localStorage.removeItem(CUSTOM_GENRES_KEY);
           }
+
+          // Register every built-in genre in the shared catalog once. This
+          // gives legacy genres the same server-backed edit/delete lifecycle
+          // as user-created genres without changing their stable IDs.
+          for (const genre of GENRES) {
+            if (existingIds.has(genre.id)) continue;
+            try {
+              const saved = await api.createCustomGenre({
+                id: genre.id, nameFa: genre.nameFa, name: genre.name,
+                color: genre.color, description: genre.description, aliases: genre.aliases || [],
+              });
+              items.push(saved.genre);
+              existingIds.add(genre.id);
+            } catch (error) {
+              console.warn('[genres] built-in catalog registration deferred:', genre.id, error);
+            }
+          }
+          // Re-read authoritative active/inactive flags after registration.
+          try { items = (await api.getCustomGenres()).genres || items; } catch {}
         }
         if (!cancelled) setCustomGenres(hydrateCustomGenres(items));
       } catch (error) {
