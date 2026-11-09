@@ -186,6 +186,7 @@ db.exec(`
   );
 `);
 addColumnIfMissing('custom_genres', 'aliases', "TEXT NOT NULL DEFAULT '[]'");
+addColumnIfMissing('custom_genres', 'is_active', 'INTEGER NOT NULL DEFAULT 1');
 
 addColumnIfMissing('shows', 'image_data', 'BLOB');
 addColumnIfMissing('shows', 'image_mime', "TEXT NOT NULL DEFAULT 'image/jpeg'");
@@ -370,6 +371,52 @@ function showToValues(s) {
     JSON.stringify(Array.isArray(s.tags) ? s.tags : []),
     s.isFilm ? 1 : 0,
   ];
+}
+
+
+function normalizeCatalogValue(value) {
+  return String(value || '').normalize('NFKC').toLowerCase()
+    .replace(/[يى]/g, 'ی').replace(/ك/g, 'ک').replace(/[ۀة]/g, 'ه')
+    .replace(/[\u064B-\u065F\u0670]/g, '').replace(/[\u200c\u200d\uFEFF]/g, ' ')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim();
+}
+function extractIMDbId(value) {
+  const match = String(value || '').match(/tt\d{5,}/i);
+  return match ? match[0].toLowerCase() : '';
+}
+function extractWikipediaTitle(value) {
+  try {
+    const u = new URL(String(value || ''));
+    if (!/(^|\.)wikipedia\.org$/i.test(u.hostname)) return '';
+    const match = u.pathname.match(/^\/wiki\/(.+)$/i);
+    return match ? normalizeCatalogValue(decodeURIComponent(match[1].replace(/_/g, ' '))) : '';
+  } catch { return ''; }
+}
+function findDuplicateShow(candidate, excludeNum = null) {
+  const name = normalizeCatalogValue(candidate?.name);
+  const imdb = extractIMDbId(candidate?.imdb);
+  const wiki = extractWikipediaTitle(candidate?.wikipedia);
+  if (!name && !imdb && !wiki) return null;
+  const rows = db.prepare('SELECT num, name, category, imdb, wikipedia FROM shows').all();
+  for (const row of rows) {
+    if (excludeNum !== null && Number(row.num) === Number(excludeNum)) continue;
+    const sameName = name && normalizeCatalogValue(row.name) === name;
+    const rowIMDb = extractIMDbId(row.imdb);
+    const rowWiki = extractWikipediaTitle(row.wikipedia);
+    if (sameName || (imdb && rowIMDb && imdb === rowIMDb) || (wiki && rowWiki && wiki === rowWiki)) {
+      return row;
+    }
+  }
+  return null;
+}
+function rewriteGenreCategory(category, oldName, newName) {
+  const oldKey = normalizeCatalogValue(oldName);
+  if (!oldKey) return String(category || '');
+  const parts = String(category || '').split('|').map(part => part.trim()).filter(Boolean);
+  const next = newName === null
+    ? parts.filter(part => normalizeCatalogValue(part) !== oldKey)
+    : parts.map(part => normalizeCatalogValue(part) === oldKey ? newName : part);
+  return next.join(' | ');
 }
 
 function getUserById(id) { return db.prepare('SELECT * FROM users WHERE id = ?').get(id); }
@@ -792,10 +839,10 @@ const server = Bun.serve({
     if (pathname === '/api/genres' && method === 'GET') {
       const user = requireRole(req, ['admin', 'editor', 'viewer']);
       if (!user) return json({ error: 'Unauthorized' }, 401, req);
-      const rows = db.prepare('SELECT id, name_fa, name, color, description, aliases FROM custom_genres ORDER BY created_at, name_fa').all();
+      const rows = db.prepare('SELECT id, name_fa, name, color, description, aliases, is_active FROM custom_genres ORDER BY created_at, name_fa').all();
       return json({ genres: rows.map(g => ({
         id: g.id, nameFa: g.name_fa, name: g.name || g.name_fa,
-        color: g.color, description: g.description || '',
+        color: g.color, description: g.description || '', isActive: !!g.is_active,
         aliases: (() => { try { const value = JSON.parse(g.aliases || '[]'); return Array.isArray(value) ? value.filter(x => typeof x === 'string') : []; } catch { return []; } })(),
       })) }, req);
     }
@@ -816,7 +863,7 @@ const server = Bun.serve({
         return json({ error: 'اطلاعات ژانر معتبر نیست' }, 400, req);
       }
       try {
-        db.prepare('INSERT INTO custom_genres (id, name_fa, name, color, description, aliases, created_by, updated_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+        db.prepare('INSERT INTO custom_genres (id, name_fa, name, color, description, aliases, is_active, created_by, updated_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)')
           .run(id, nameFa, name, color, description, JSON.stringify(aliases), admin.id, admin.id, nowSec(), nowSec());
       } catch (error) {
         if (String(error?.message || '').includes('UNIQUE')) return json({ error: 'شناسه ژانر تکراری است' }, 409, req);
@@ -842,11 +889,29 @@ const server = Bun.serve({
           !/^#[0-9a-fA-F]{6}$/.test(color) || description.length > 1000) {
         return json({ error: 'اطلاعات ژانر معتبر نیست' }, 400, req);
       }
-      const result = db.prepare('UPDATE custom_genres SET name_fa = ?, name = ?, color = ?, description = ?, aliases = ?, updated_by = ?, updated_at = ? WHERE id = ?')
-        .run(nameFa, name, color, description, JSON.stringify(aliases), admin.id, nowSec(), id);
-      if (!result.changes) return json({ error: 'ژانر یافت نشد' }, 404, req);
-      logActivity(admin, 'update_genre', 'genre', id, 'Updated custom genre "' + nameFa + '"');
-      return json({ genre: { id, nameFa, name, color, description, aliases } }, req);
+      const target = db.prepare('SELECT name_fa FROM custom_genres WHERE id = ?').get(id);
+      if (!target) return json({ error: 'ژانر یافت نشد' }, 404, req);
+      const oldName = target.name_fa;
+      let migratedCount = 0;
+      db.exec('BEGIN IMMEDIATE');
+      try {
+        if (normalizeCatalogValue(oldName) !== normalizeCatalogValue(nameFa)) {
+          const rows = db.prepare('SELECT num, category FROM shows').all();
+          const updateShowCategory = db.prepare('UPDATE shows SET category = ? WHERE num = ?');
+          for (const row of rows) {
+            const nextCategory = rewriteGenreCategory(row.category, oldName, nameFa);
+            if (nextCategory !== row.category) { updateShowCategory.run(nextCategory, row.num); migratedCount++; }
+          }
+        }
+        db.prepare('UPDATE custom_genres SET name_fa = ?, name = ?, color = ?, description = ?, aliases = ?, is_active = 1, updated_by = ?, updated_at = ? WHERE id = ?')
+          .run(nameFa, name, color, description, JSON.stringify(aliases), admin.id, nowSec(), id);
+        db.exec('COMMIT');
+      } catch (error) {
+        try { db.exec('ROLLBACK'); } catch {}
+        throw error;
+      }
+      logActivity(admin, 'update_genre', 'genre', id, 'Updated genre "' + oldName + '" → "' + nameFa + '"; migrated ' + migratedCount + ' shows');
+      return json({ genre: { id, nameFa, name, color, description, aliases, isActive: true }, migratedCount }, req);
     }
 
     if (pathname === '/api/genres' && method === 'DELETE') {
@@ -856,9 +921,24 @@ const server = Bun.serve({
       if (!id) return json({ error: 'شناسه ژانر نامعتبر است' }, 400, req);
       const target = db.prepare('SELECT name_fa FROM custom_genres WHERE id = ?').get(id);
       if (!target) return json({ error: 'ژانر یافت نشد' }, 404, req);
-      db.prepare('DELETE FROM custom_genres WHERE id = ?').run(id);
-      logActivity(admin, 'delete_genre', 'genre', id, 'Deleted custom genre "' + target.name_fa + '"');
-      return json({ success: true }, req);
+      let clearedCount = 0;
+      db.exec('BEGIN IMMEDIATE');
+      try {
+        const rows = db.prepare('SELECT num, category FROM shows').all();
+        const updateShowCategory = db.prepare('UPDATE shows SET category = ? WHERE num = ?');
+        for (const row of rows) {
+          const nextCategory = rewriteGenreCategory(row.category, target.name_fa, null);
+          if (nextCategory !== row.category) { updateShowCategory.run(nextCategory, row.num); clearedCount++; }
+        }
+        db.prepare('UPDATE custom_genres SET is_active = 0, updated_by = ?, updated_at = ? WHERE id = ?')
+          .run(admin.id, nowSec(), id);
+        db.exec('COMMIT');
+      } catch (error) {
+        try { db.exec('ROLLBACK'); } catch {}
+        throw error;
+      }
+      logActivity(admin, 'delete_genre', 'genre', id, 'Deactivated genre "' + target.name_fa + '"; cleared ' + clearedCount + ' show categories');
+      return json({ success: true, affectedShows: clearedCount }, req);
     }
 
     // ----- Image serving -----
@@ -1223,11 +1303,13 @@ const server = Bun.serve({
       if (!user) return permissionFailure(req, 'شما اجازه افزودن برنامه را ندارید');
       let body;
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
-      if (!body.num) {
-        const max = db.prepare('SELECT MAX(num) AS m FROM shows').get();
-        body.num = (max?.m || 0) + 1;
+      const duplicate = findDuplicateShow(body);
+      if (duplicate) {
+        return json({ error: 'این برنامه قبلاً ثبت شده است: «' + duplicate.name + '» — ژانر اصلی: ' + (duplicate.category || 'تعیین نشده'), duplicate: { num: duplicate.num, name: duplicate.name, category: duplicate.category } }, 409, req);
       }
-      db.prepare(`INSERT OR REPLACE INTO shows (${SHOW_COLUMNS.join(', ')}) VALUES (${SHOW_COLUMNS.map(() => '?').join(', ')})`).run(...showToValues(body));
+      const max = db.prepare('SELECT MAX(num) AS m FROM shows').get();
+      body.num = (max?.m || 0) + 1;
+      db.prepare(`INSERT INTO shows (${SHOW_COLUMNS.join(', ')}) VALUES (${SHOW_COLUMNS.map(() => '?').join(', ')})`).run(...showToValues(body));
       logActivity(user, 'create_show', 'show', body.num, `Created show "${body.name}"`);
       return json(rowToShow(db.prepare('SELECT * FROM shows WHERE num = ?').get(body.num)), req);
     }
@@ -1243,7 +1325,12 @@ const server = Bun.serve({
       const existing = db.prepare('SELECT * FROM shows WHERE num = ?').get(num);
       if (!existing) return json({ error: 'show not found' }, 404, req);
       const merged = { ...rowToShow(existing), ...body, num };
-      db.prepare(`INSERT OR REPLACE INTO shows (${SHOW_COLUMNS.join(', ')}) VALUES (${SHOW_COLUMNS.map(() => '?').join(', ')})`).run(...showToValues(merged));
+      const duplicate = findDuplicateShow(merged, num);
+      if (duplicate) {
+        return json({ error: 'این برنامه با رکورد دیگری تکراری است: «' + duplicate.name + '» — ژانر اصلی: ' + (duplicate.category || 'تعیین نشده'), duplicate: { num: duplicate.num, name: duplicate.name, category: duplicate.category } }, 409, req);
+      }
+      db.prepare(`UPDATE shows SET ${SHOW_COLUMNS.filter(column => column !== 'num').map(column => column + ' = ?').join(', ')} WHERE num = ?`)
+        .run(...showToValues(merged).slice(1), num);
       logActivity(user, 'update_show', 'show', num, `Updated show "${merged.name}"`);
       return json(rowToShow(db.prepare('SELECT * FROM shows WHERE num = ?').get(num)), req);
     }
