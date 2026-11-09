@@ -1007,18 +1007,55 @@ function HomeInner() {
   }, []);
 
   useEffect(() => {
-    // Load persisted overrides first, then merge them with the base JSON data.
-    const saved = loadOverrides();
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydrate persisted overrides after mount to preserve the current UI behavior.
-    setOverrides(saved);
-    fetch('/talk-shows-data.json')
-      .then(r => r.json())
-      .then((data: TalkShow[]) => {
+    if (!currentUser) return;
+    let cancelled = false;
+    (async () => {
+      const saved = loadOverrides();
+      let migrationComplete = true;
+      const hasLegacyChanges = saved.added.length > 0 || Object.keys(saved.edited).length > 0 || saved.deleted.length > 0;
+
+      // One-time, loss-aware migration of old browser-only edits into the
+      // shared database. Keep the original local snapshot unless every item
+      // has been accepted by the server.
+      if (hasLegacyChanges && (currentUser.role === 'admin' || currentUser.role === 'editor')) {
+        for (const show of Object.values(saved.edited)) {
+          try { await api.updateShow(show); }
+          catch (error) { migrationComplete = false; console.warn('[migration] edited show retained locally:', show.num, error); }
+        }
+        for (const show of saved.added) {
+          try { await api.saveShow(show); }
+          catch (error) { migrationComplete = false; console.warn('[migration] added show retained locally:', show.name, error); }
+        }
+        if (currentUser.role === 'admin') {
+          for (const num of saved.deleted) {
+            try { await api.deleteShow(num); }
+            catch (error) { migrationComplete = false; console.warn('[migration] deleted show retained locally:', num, error); }
+          }
+        } else if (saved.deleted.length > 0) {
+          migrationComplete = false;
+        }
+        if (migrationComplete) {
+          try { window.localStorage.removeItem(OVERRIDES_KEY); } catch {}
+        }
+      }
+
+      try {
+        const data = await api.getAllShows() as TalkShow[];
+        if (cancelled) return;
+        const remaining = migrationComplete ? { added: [], edited: {}, deleted: [] } : saved;
         setBaseShows(data);
-        setTalkShows(applyOverrides(data, saved));
-      })
-      .catch(e => console.error('Failed to load data:', e));
-  }, []);
+        setOverrides(remaining);
+        setTalkShows(applyOverrides(data, remaining));
+        if (hasLegacyChanges && !migrationComplete) {
+          showToast('بخشی از تغییرات قدیمی هنوز منتقل نشده است؛ نسخهٔ محلی برای جلوگیری از حذف اطلاعات حفظ شد');
+        }
+      } catch (error) {
+        console.error('[shows] failed to load shared archive:', error);
+        if (!cancelled) showToast('دریافت آرشیو از سرور ناموفق بود؛ اتصال سرور را بررسی کنید');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [currentUser?.id, currentUser?.role]);
 
   // On Electron desktop, require a fresh sign-in once per application launch.
   // sessionStorage survives in-app reloads but is cleared when the app process exits.
@@ -1065,29 +1102,41 @@ function HomeInner() {
     saveOverrides(next);
   };
 
-  // Add a brand-new show, or update an existing one (created/edited by the user).
-  const handleSaveShow = (show: TalkShow, isEdit: boolean) => {
-    if (isEdit) {
-      const inAdded = overrides.added.find(s => s.num === show.num);
-      const next: Overrides = inAdded
-        ? { ...overrides, added: overrides.added.map(s => s.num === show.num ? show : s) }
-        : { ...overrides, edited: { ...overrides.edited, [show.num]: show } };
-      commitOverrides(next);
-      showToast(`برنامه «${show.name}» بروزرسانی شد`);
-    } else {
-      commitOverrides({ ...overrides, added: [show, ...overrides.added] });
-      showToast(`برنامه «${show.name}» اضافه شد`);
+  // All new and existing shows are saved to the shared database.
+  const handleSaveShow = async (show: TalkShow, isEdit: boolean) => {
+    try {
+      const saved = (isEdit ? await api.updateShow(show) : await api.saveShow(show)) as TalkShow;
+      setBaseShows(prev => isEdit
+        ? prev.map(item => item.num === saved.num ? saved : item)
+        : [saved, ...prev.filter(item => item.num !== saved.num)]);
+      const nextOverrides: Overrides = {
+        added: overrides.added.filter(item => item.num !== show.num),
+        edited: Object.fromEntries(Object.entries(overrides.edited).filter(([num]) => Number(num) !== show.num)),
+        deleted: overrides.deleted.filter(num => num !== show.num),
+      };
+      commitOverrides(nextOverrides);
+      showToast(isEdit ? `برنامه «${saved.name}» بروزرسانی شد` : `برنامه «${saved.name}» اضافه شد`);
+    } catch (error: any) {
+      showToast(error?.message || 'ذخیرهٔ برنامه ناموفق بود');
+      throw error;
     }
   };
 
-  // Delete a show (hides it from the list; user-added ones are removed outright).
-  const handleDeleteShow = (num: number) => {
-    const inAdded = overrides.added.find(s => s.num === num);
-    const next: Overrides = inAdded
-      ? { ...overrides, added: overrides.added.filter(s => s.num !== num) }
-      : { ...overrides, deleted: Array.from(new Set([...overrides.deleted, num])) };
-    commitOverrides(next);
-    showToast('برنامه حذف شد');
+  // Deletion is authoritative and shared; it no longer hides records in one browser.
+  const handleDeleteShow = async (num: number) => {
+    try {
+      await api.deleteShow(num);
+      setBaseShows(prev => prev.filter(item => item.num !== num));
+      const nextOverrides: Overrides = {
+        added: overrides.added.filter(item => item.num !== num),
+        edited: Object.fromEntries(Object.entries(overrides.edited).filter(([key]) => Number(key) !== num)),
+        deleted: overrides.deleted.filter(item => item !== num),
+      };
+      commitOverrides(nextOverrides);
+      showToast('برنامه حذف شد');
+    } catch (error: any) {
+      showToast(error?.message || 'حذف برنامه ناموفق بود');
+    }
   };
 
   // Push the current view onto the history stack, then go to `to`.
