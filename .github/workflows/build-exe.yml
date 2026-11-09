@@ -12,6 +12,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: bankresaneh-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -36,10 +40,37 @@ jobs:
       - name: Test persistent Prisma SQLite runtime
         run: bun scripts/test-prisma-runtime.ts
 
+      - name: Cache Electron and electron-builder downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            .ci-cache/electron-builder
+            .ci-cache/electron
+          key: windows-electron-builder-v3-${{ runner.os }}-${{ hashFiles('package.json', 'bun.lock*', 'package-lock.json') }}
+          restore-keys: |
+            windows-electron-builder-v3-${{ runner.os }}-
+
       - name: Build and type-check installer
-        run: npm run electron:build
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $maxAttempts = 6
+          for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            Write-Host "=== Electron build attempt $attempt/$maxAttempts ==="
+            npm run electron:build
+            if ($LASTEXITCODE -eq 0) { exit 0 }
+            if ($attempt -lt $maxAttempts) {
+              $delay = [Math]::Min(180, [int](10 * [Math]::Pow(2, $attempt - 1)))
+              Write-Warning "Build failed (exit $LASTEXITCODE). Retrying in $delay seconds."
+              Start-Sleep -Seconds $delay
+            }
+          }
+          throw "Electron build failed after $maxAttempts attempts."
         env:
           DATABASE_URL: file:./db/custom.db
+          DEBUG: electron-builder
+          ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.ci-cache/electron-builder
+          ELECTRON_CACHE: ${{ github.workspace }}/.ci-cache/electron
 
       # ============================================================
       # CRITICAL: Verify that the Next.js standalone server.js can
@@ -245,13 +276,26 @@ jobs:
 
           Write-Host "=== All checks passed ==="
 
-      - name: Verify and rename installer
+      - name: Verify installer and update manifest consistency
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           $setup = Get-ChildItem release -Filter '*Setup*.exe' | Select-Object -First 1
           if (-not $setup) { throw 'No Setup.exe was produced.' }
-          Copy-Item $setup.FullName 'release/BankResaneh-Setup.exe' -Force
-          if (-not (Test-Path 'release/latest.yml')) { throw 'electron-builder did not produce latest.yml for auto-update.' }
+          $canonicalName = 'BankResaneh-Setup.exe'
+          $canonicalPath = Join-Path 'release' $canonicalName
+          if ($setup.Name -ne $canonicalName) {
+            Copy-Item $setup.FullName $canonicalPath -Force
+            Remove-Item $setup.FullName -Force
+          }
+          $manifestPath = 'release/latest.yml'
+          if (-not (Test-Path $manifestPath)) { throw 'electron-builder did not produce latest.yml for auto-update.' }
+          $manifest = Get-Content $manifestPath -Raw
+          if ($manifest -notmatch [regex]::Escape("url: $canonicalName") -or $manifest -notmatch [regex]::Escape("path: $canonicalName")) {
+            throw "latest.yml does not reference the published installer name $canonicalName. Refusing to publish a broken updater manifest."
+          }
+          if (-not (Test-Path $canonicalPath)) { throw 'Canonical installer file is missing.' }
+          Write-Host "✓ Installer and latest.yml both reference $canonicalName"
           Get-ChildItem release
 
       # ============================================================

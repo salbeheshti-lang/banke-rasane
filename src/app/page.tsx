@@ -63,6 +63,7 @@ interface Genre {
   searchFields?: (keyof TalkShow)[];
   // True for user-created genres (stored in localStorage)
   isCustom?: boolean;
+  isActive?: boolean;
 }
 
 // Reusable tag specifications — each Genre picks a subset for its `tags` array.
@@ -130,6 +131,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'interview', key: 'interview', nameFa: 'تاک‌شوی مصاحبه‌محور', name: 'Interview',
+    aliases: ["مصاحبه"],
     color: '#06B6D4', description: '۱۰۲ برنامه', filterFn: s => s.category.includes('مصاحبه'),
     tags: [TAG_LIBRARY.layout, TAG_LIBRARY.viewers],
     presetTags: ['مصاحبه اختصاصی', 'مهمان ویژه', 'تکنولوژی', 'استودیو', 'مدرن', 'گریل'],
@@ -137,6 +139,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'comedy', key: 'comedy', nameFa: 'تاک‌شوی طنز و کمدی', name: 'Comedy',
+    aliases: ["طنز"],
     color: '#db2777', description: '۸۹ برنامه', filterFn: s => s.category.includes('طنز'),
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
     presetTags: ['طنز', 'استندآپ', 'شخصیت‌محور', 'استودیوی رنگارنگ', 'پویا'],
@@ -144,6 +147,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'news', key: 'news', nameFa: 'تاک‌شوی سیاسی و خبری', name: 'News/Politics',
+    aliases: ["خبری","سیاسی"],
     color: '#dc2626', description: '۶۸ برنامه', filterFn: s => s.category.includes('خبری') || s.category.includes('سیاسی'),
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting],
     presetTags: ['خبری', 'تحلیل سیاسی', 'مهمان سیاسی', 'رسمی', 'مدرن'],
@@ -151,6 +155,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'lifestyle', key: 'lifestyle', nameFa: 'تاک‌شوی تخصصی و سبک زندگی', name: 'Lifestyle',
+    aliases: ["تخصصی"],
     color: '#16a34a', description: '۵۴ برنامه', filterFn: s => s.category.includes('تخصصی'),
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.materials],
     presetTags: ['سبک زندگی', 'آشپزی', 'سلامت', 'مد', 'منزل', 'طبیعت'],
@@ -158,6 +163,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'cultural', key: 'cultural', nameFa: 'تاک‌شوی فرهنگی، هنری', name: 'Cultural',
+    aliases: ["فرهنگی"],
     color: '#b45309', description: '۵۲ برنامه', filterFn: s => s.category.includes('فرهنگی'),
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.materials],
     presetTags: ['فرهنگی', 'هنری', 'سنتی', 'تاریخی', 'موسیقی'],
@@ -165,6 +171,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'celebrity', key: 'celebrity', nameFa: 'تاک‌شوی گروهی سلبریتی‌ها', name: 'Celebrity',
+    aliases: ["سلبریتی"],
     color: '#7c3aed', description: '۴۲ برنامه', filterFn: s => s.category.includes('سلبریتی'),
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.size],
     presetTags: ['سلبریتی', 'گروهی', 'مهمان‌محور', 'سرگرمی', 'لوکس'],
@@ -172,6 +179,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'panel', key: 'panel', nameFa: 'تاک‌شوی پنلی و میزگرد', name: 'Panel',
+    aliases: ["پنلی"],
     color: '#2563eb', description: '۲۳ برنامه', filterFn: s => s.category.includes('پنلی'),
     tags: [TAG_LIBRARY.layout, TAG_LIBRARY.size],
     presetTags: ['پنل', 'میزگرد', 'چندمهمانه', 'بحث', 'تخصصی'],
@@ -179,6 +187,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'morning', key: 'morning', nameFa: 'تاک‌شوی روزانه/صبحگاهی', name: 'Morning Show',
+    aliases: ["صبحگاهی"],
     color: '#f59e0b', description: '۲۰ برنامه', filterFn: s => s.category.includes('صبحگاهی'),
     tags: [TAG_LIBRARY.size, TAG_LIBRARY.viewers],
     presetTags: ['صبحگاهی', 'روزانه', 'پویا', 'با تماشاگر', 'موسیقی زنده'],
@@ -186,6 +195,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'reality', key: 'reality', nameFa: 'ریلیتی شو / مسابقه', name: 'Reality/Competition',
+    aliases: ["مسابقه","رئالیتی"],
     color: '#ea580c', description: '۱۹ برنامه', filterFn: s => s.category.includes('مسابقه') || s.category.includes('رئالیتی'),
     tags: [TAG_LIBRARY.effects, TAG_LIBRARY.style],
     presetTags: ['مسابقه', 'رئالیتی', 'داورمحور', 'پیروز', 'تعاملی'],
@@ -193,6 +203,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'night', key: 'night', nameFa: 'تاک‌شوی شبانه', name: 'Late Night',
+    aliases: ["شبانه"],
     color: '#6366f1', description: '۱۵ برنامه', filterFn: s => s.category.includes('شبانه'),
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting],
     presetTags: ['شبانه', 'تاریک', 'کمدی', 'مصاحبه کوتاه', 'مدرن'],
@@ -200,6 +211,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'entertainment', key: 'entertainment', nameFa: 'صنعت سرگرمی / پشت‌صحنه', name: 'Entertainment',
+    aliases: ["سرگرمی"],
     color: '#c026d3', description: '۱۳ برنامه', filterFn: s => s.category.includes('سرگرمی'),
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
     presetTags: ['سرگرمی', 'پشت‌صحنه', 'گوینده', 'مدرن', 'تعاملی'],
@@ -207,6 +219,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'location', key: 'location', nameFa: 'موقعیت‌محور / خارج از استودیو', name: 'On-Location',
+    aliases: ["موقعیت"],
     color: '#F59E0B', description: '۱۲ برنامه', filterFn: s => s.category.includes('موقعیت'),
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.materials],
     presetTags: ['موقعیت‌محور', 'بیرون از استودیو', 'میدانی', 'طبیعت', 'شهری'],
@@ -214,6 +227,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'digital', key: 'digital', nameFa: 'تاک‌شوی دیجیتال / اینترنتی', name: 'Digital',
+    aliases: ["دیجیتال"],
     color: '#10b981', description: '۱۰ برنامه', filterFn: s => s.category.includes('دیجیتال'),
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
     presetTags: ['دیجیتال', 'اینترنتی', 'استریم', 'تعاملی', 'مدرن'],
@@ -221,6 +235,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'relationships', key: 'relationships', nameFa: 'تاک‌شوی روابط و تعارض', name: 'Relationships',
+    aliases: ["روابط"],
     color: '#be185d', description: '۸ برنامه', filterFn: s => s.category.includes('روابط'),
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
     presetTags: ['روابط', 'تعارض', 'خانوادگی', 'گفتگومحور', 'صمیمی'],
@@ -228,6 +243,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'radio', key: 'radio', nameFa: 'تاک‌شوی رادیویی / صوتی', name: 'Radio/Audio',
+    aliases: ["رادیویی"],
     color: '#14B8A6', description: '۶ برنامه', filterFn: s => s.category.includes('رادیویی'),
     tags: [TAG_LIBRARY.layout, TAG_LIBRARY.effects],
     presetTags: ['رادیویی', 'صوتی', 'گفتگو', 'مدرن', 'استودیویی'],
@@ -235,6 +251,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'human', key: 'human', nameFa: 'تاک‌شوی انسانی و داستان‌محور', name: 'Human Stories',
+    aliases: ["انسانی"],
     color: '#0EA5E9', description: '۵ برنامه', filterFn: s => s.category.includes('انسانی'),
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.materials],
     presetTags: ['انسانی', 'داستان‌محور', 'مصاحبه عمیق', 'صمیمی', 'مستندگونه'],
@@ -242,6 +259,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'deepobs', key: 'deepobs', nameFa: 'پایش تحلیلی', name: 'Deep Observation',
+    aliases: ["پایش تحلیلی"],
     color: '#7c3aed', description: 'تحلیل و رصد عمیق برنامه‌ها',
     filterFn: s => s.category.includes('پایش تحلیلی'),
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting, TAG_LIBRARY.materials],
@@ -250,6 +268,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'funeral', key: 'funeral', nameFa: 'سوگواری و خاکسپاری', name: 'Funeral Coverage',
+    aliases: ["خاکسپاری","سوگواری"],
     color: '#64748B', description: 'پوشش خبری مراسم خاکسپاری و سوگواری شخصیت‌ها',
     filterFn: s => s.category.includes('خاکسپاری') || s.category.includes('سوگواری'),
     tags: [],
@@ -258,6 +277,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'war', key: 'war', nameFa: 'برنامه‌های جنگ و بحران', name: 'War & Conflict',
+    aliases: ["جنگ","بحران"],
     color: '#EF4444', description: 'برنامه‌های تلویزیونی با موضوع جنگ و منازعات',
     filterFn: s => s.category.includes('جنگ') || s.category.includes('بحران'),
     tags: [],
@@ -266,6 +286,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'debate', key: 'debate', nameFa: 'مناظرات انتخاباتی', name: 'Electoral Debates',
+    aliases: ["مناظره","انتخابات"],
     color: '#1e40af', description: 'مناظرات و بحث‌های انتخاباتی',
     filterFn: s => s.category.includes('مناظره') || s.category.includes('انتخابات'),
     tags: [],
@@ -274,6 +295,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'ads', key: 'ads', nameFa: 'آگهی‌های تبلیغاتی', name: 'Advertisements',
+    aliases: ["آگهی"],
     color: '#ea580c', description: 'تبلیغات، آگهی‌ها و پیام‌های خدمت عمومی (PSA)',
     filterFn: s => s.category.includes('آگهی'),
     tags: [],
@@ -283,6 +305,7 @@ const GENRES: Genre[] = [
   // ----- 11 new genre categories (kasht, krismas, polisi, ramazan, etc.) -----
   {
     id: 'kasht', key: 'kasht', nameFa: 'درختکاری', name: 'Tree Planting',
+    aliases: ["کاشت درخت"],
     color: '#16a34a', description: '۲۱ برنامه — باغبانی، کاشت درخت و سبک زندگی سبز',
     filterFn: s => s.category === 'کاشت درخت',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
@@ -291,6 +314,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'krismas', key: 'krismas', nameFa: 'کریسمس', name: 'Christmas',
+    aliases: ["کریسمس"],
     color: '#dc2626', description: '۱۵ برنامه — ویژه‌برنامه‌های کریسمس و سال نو',
     filterFn: s => s.category === 'کریسمس',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting],
@@ -299,6 +323,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'polisi', key: 'polisi', nameFa: 'پلیسی', name: 'Police',
+    aliases: ["پلیسی"],
     color: '#2563EB', description: '۱۹ برنامه — مستند و رئالیتی‌شوی پلیسی',
     filterFn: s => s.category === 'پلیسی',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
@@ -307,6 +332,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'ramazan', key: 'ramazan', nameFa: 'برنامه‌های ماه مبارک رمضان', name: 'Ramadan Programs',
+    aliases: ["رمضان"],
     color: '#F97316', description: '۶۳ برنامه — برنامه‌های ماه رمضان',
     filterFn: s => s.category === 'رمضان',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
@@ -315,6 +341,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'safar', key: 'safar', nameFa: 'سفرنامه و ماجراجویی', name: 'Travel & Adventure',
+    aliases: ["سفر جاده‌ای"],
     color: '#c2410c', description: '۹۳ برنامه — ریلیتی‌شوی سفر و ماجراجویی',
     filterFn: s => s.category === 'سفر جاده‌ای',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
@@ -323,6 +350,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'madrese', key: 'madrese', nameFa: 'مدرسه و دانش‌آموزی', name: 'School & Students',
+    aliases: ["مدرسه"],
     color: '#0284c7', description: '۲۷ برنامه — آگهی و تیزر بازگشت به مدرسه',
     filterFn: s => s.category === 'مدرسه',
     tags: [],
@@ -331,6 +359,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'naghd', key: 'naghd', nameFa: 'نقد فیلم', name: 'Film Review',
+    aliases: ["نقد فیلم"],
     color: '#7c3aed', description: '۱۲ برنامه — تاک‌شو و مستند نقد فیلم',
     filterFn: s => s.category === 'نقد فیلم',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
@@ -339,6 +368,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'ghanun', key: 'ghanun', nameFa: 'قانون اساسی', name: 'Constitution',
+    aliases: ["قانون اساسی"],
     color: '#3B82F6', description: '۹ برنامه — مستند قانون اساسی کشورها',
     filterFn: s => s.category === 'قانون اساسی',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
@@ -347,6 +377,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'pakhsh', key: 'pakhsh', nameFa: 'پخش زنده', name: 'Live Stream',
+    aliases: ["پخش زنده"],
     color: '#0d9488', description: '۲۵ برنامه — پخش زنده دوربین‌های وب',
     filterFn: s => s.category === 'پخش زنده',
     tags: [],
@@ -355,6 +386,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'jasoosi', key: 'jasoosi', nameFa: 'ستون پنجم', name: 'The Fifth Column',
+    aliases: ["جاسوسی"],
     color: '#4F46E5', description: '۱۵۴ برنامه — مستند جاسوسی و عملیات اطلاعاتی',
     filterFn: s => s.category === 'جاسوسی',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting],
@@ -364,6 +396,7 @@ const GENRES: Genre[] = [
   // ----- 5 more new categories (zandan, ehda, tarikhi, radio, rusta) -----
   {
     id: 'zandan', key: 'zandan', nameFa: 'زندان و اصلاح', name: 'Prison & Reform',
+    aliases: ["زندان"],
     color: '#6366F1', description: '۱۸ برنامه — مستند و واقع‌نمای زندان و اصلاح',
     filterFn: s => s.category === 'زندان',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting],
@@ -372,6 +405,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'ehda', key: 'ehda', nameFa: 'اهدا و پیوند اعضا', name: 'Organ Donation & Transplant',
+    aliases: ["اهدای عضو"],
     color: '#dc2626', description: '۶۴ برنامه — سریال و فیلم پیوند و اهدای اعضا',
     filterFn: s => s.category === 'اهدای عضو',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
@@ -380,6 +414,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'tarikhi', key: 'tarikhi', nameFa: 'تاریخ و تمدن', name: 'History & Civilisation',
+    aliases: ["تاریخی"],
     color: '#F97316', description: '۱۵ برنامه — مستند و بازسازی تاریخی',
     filterFn: s => s.category === 'تاریخی',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.materials],
@@ -387,7 +422,8 @@ const GENRES: Genre[] = [
     searchFields: ['name', 'summary', 'tags'],
   },
   {
-    id: 'radio', key: 'radio', nameFa: 'رادیو و پادکست', name: 'Radio & Podcast',
+    id: 'radio-podcast', key: 'radio-podcast', nameFa: 'رادیو و پادکست', name: 'Radio & Podcast',
+    aliases: ["رادیو تصویری"],
     color: '#7c3aed', description: '۵۰ برنامه — رادیو تصویری، پادکست و رسانه شنیداری',
     filterFn: s => s.category === 'رادیو تصویری',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
@@ -396,6 +432,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'rusta', key: 'rusta', nameFa: 'روستا و کشاورزی', name: 'Rural & Agriculture',
+    aliases: ["روستا"],
     color: '#65a30d', description: '۴۴ برنامه — مستند و رئالیتی روستایی و کشاورزی',
     filterFn: s => s.category === 'روستا',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
@@ -404,6 +441,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'ketab', key: 'ketab', nameFa: 'کتاب و کتاب‌خوانی', name: 'Books & Literature',
+    aliases: ["کتاب و کتاب‌خوانی"],
     color: '#F59E0B', description: '۳۰ برنامه — تاک‌شو، مستند و مسابقه ادبی',
     filterFn: s => s.category === 'کتاب و کتاب‌خوانی',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
@@ -412,6 +450,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'sarmaye', key: 'sarmaye', nameFa: 'سرمایه‌گذاری در تولید', name: 'Investment in Production',
+    aliases: ["سرمایه‌گذاری در تولید"],
     color: '#0e7490', description: 'برنامه‌های مرتبط با سرمایه‌گذاری و تولید محتوا',
     filterFn: s => s.category === 'سرمایه‌گذاری در تولید',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
@@ -496,6 +535,7 @@ type StoredGenre = {
   color: string;
   description: string;
   aliases?: string[];
+  isActive?: boolean;
 };
 
 /**
@@ -522,7 +562,7 @@ function hydrateCustomGenres(items: StoredGenre[]): Genre[] {
       description: stripLegacyGenreDescription(g.description || ''),
       aliases: Array.isArray(g.aliases) ? g.aliases : [],
       filterFn: (show: TalkShow) => [g.nameFa, g.name, ...(g.aliases || [])].some(name => !!name && show.category.includes(name)),
-      isCustom: true, tags: DEFAULT_GENRE_TAGS, presetTags: [],
+      isCustom: true, isActive: g.isActive !== false, tags: DEFAULT_GENRE_TAGS, presetTags: [],
       searchFields: ['name', 'summary', 'category', 'descriptionFa'] as (keyof TalkShow)[],
     }));
 }
@@ -838,12 +878,16 @@ function saveOverrides(o: Overrides) {
 // Merge base shows with the user's overrides: drop deleted ones, replace edited ones, prepend added ones.
 function applyOverrides(base: TalkShow[], o: Overrides): TalkShow[] {
   const deleted = new Set(o.deleted);
+  const baseNums = new Set(base.map(show => show.num));
   const out: TalkShow[] = [];
   for (const s of base) {
     if (deleted.has(s.num)) continue;
     out.push(o.edited[s.num] || s);
   }
-  return [...o.added, ...out];
+  // A legacy edit whose original record is absent from the server must remain
+  // visible in the local recovery view until an administrator resolves it.
+  const orphanedEdits = Object.values(o.edited).filter(show => !baseNums.has(show.num) && !deleted.has(show.num));
+  return [...o.added.filter(show => !deleted.has(show.num)), ...out, ...orphanedEdits];
 }
 
 export default function Home() {
@@ -867,9 +911,9 @@ function HomeInner() {
   const [authLoading, setAuthLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [talkShows, setTalkShows] = useState<TalkShow[]>([]);
-  // Base data (raw from JSON, never mutated) used to recompute the merged list.
+  // Base archive data loaded from the authenticated shared API.
   const [baseShows, setBaseShows] = useState<TalkShow[]>([]);
-  // User changes persisted to localStorage so add/edit/delete survive a refresh.
+  // Recovery-only local overrides retained solely for safe migration of legacy browser edits.
   const [overrides, setOverrides] = useState<Overrides>({ added: [], edited: {}, deleted: [] });
   const [uploadedShows, setUploadedShows] = useState<number[]>([]);
   const [selectedShow, setSelectedShow] = useState<TalkShow | null>(null);
@@ -900,7 +944,7 @@ function HomeInner() {
   // Settings modal (admin only)
   const [showSettings, setShowSettings] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
-  // User-created custom genres (persisted to localStorage) — merged with GENRES.
+  // Server-backed genre records — merged with built-in genre definitions.
   const [customGenres, setCustomGenres] = useState<Genre[]>([]);
   // When the user clicks "+ افزودن برنامه" from inside a genre view, that genre's
   // Persian name is preset here so AddEditView's category field starts with it.
@@ -908,8 +952,30 @@ function HomeInner() {
   // When AddEditView opens with a preset genre, its preset tags are offered as quick-adds.
   const [presetGenre, setPresetGenre] = useState<Genre | null>(null);
 
-  // The full list of genres = default GENRES + user customGenres.
-  const genres: Genre[] = useMemo(() => [...GENRES, ...customGenres], [customGenres]);
+  // One shared catalog drives both built-in and user-created genres.
+  // Server records override built-in presentation and can deactivate any genre.
+  const genres: Genre[] = useMemo(() => {
+    const records = new Map(customGenres.map(g => [g.id, g]));
+    const builtIn = GENRES.flatMap(base => {
+      const record = records.get(base.id);
+      if (record?.isActive === false) return [];
+      if (!record) return [base];
+      return [{
+        ...base,
+        nameFa: record.nameFa,
+        name: record.name || record.nameFa,
+        color: record.color,
+        description: record.description,
+        aliases: record.aliases || [],
+        isCustom: false,
+        filterFn: base.id === 'decor' ? base.filterFn : (show: TalkShow) =>
+          [record.nameFa, record.name, ...(record.aliases || [])]
+            .some(name => !!name && show.category.includes(name)),
+      }];
+    });
+    const custom = customGenres.filter(g => !GENRES.some(base => base.id === g.id) && g.isActive !== false);
+    return [...builtIn, ...custom];
+  }, [customGenres]);
 
   // Role helpers — viewer is read-only (no add/edit/delete), admin can manage users + settings.
   const role = currentUser?.role || null;
@@ -921,62 +987,59 @@ function HomeInner() {
     if (!currentUser) return;
     let cancelled = false;
     (async () => {
-      try {
-        let items = (await api.getCustomGenres()).genres || [];
-        // Migrate old browser-local genres once, only when the shared catalog is empty.
-        if (currentUser.role === 'admin') {
-          const legacy = loadCustomGenres();
-          const existingIds = new Set(items.map(genre => genre.id));
-          let migrationComplete = true;
-          for (const genre of legacy) {
-            if (existingIds.has(genre.id)) continue;
-            try {
-              const saved = await api.createCustomGenre({
-                id: genre.id, nameFa: genre.nameFa, name: genre.name,
-                color: genre.color, description: genre.description, aliases: genre.aliases,
-              });
-              items.push(saved.genre);
-              existingIds.add(genre.id);
-            } catch (error) {
-              migrationComplete = false;
-              console.warn('[genres] legacy migration skipped:', error);
-            }
-          }
-          // Retry any partial migration on a later admin sign-in. Remove the old
-          // local snapshot only when every legacy record is present on the server.
-          if (legacy.length > 0 && migrationComplete) {
-            window.localStorage.removeItem(CUSTOM_GENRES_KEY);
-          }
+      const saved = loadOverrides();
+      const remaining: Overrides = { added: [], edited: {}, deleted: [] };
+      const hasLegacyChanges = saved.added.length > 0 || Object.keys(saved.edited).length > 0 || saved.deleted.length > 0;
+
+      // One-time, loss-aware migration of old browser-only edits into the
+      // shared database. Each failed item remains in the local recovery layer.
+      if (hasLegacyChanges && (currentUser.role === 'admin' || currentUser.role === 'editor')) {
+        for (const [key, show] of Object.entries(saved.edited)) {
+          try { await api.updateShow(show); }
+          catch (error) { remaining.edited[Number(key)] = show; console.warn('[migration] edited show retained locally:', key, error); }
         }
-        if (!cancelled) setCustomGenres(hydrateCustomGenres(items));
+        for (const show of saved.added) {
+          try { await api.saveShow(show); }
+          catch (error) { remaining.added.push(show); console.warn('[migration] added show retained locally:', show.name, error); }
+        }
+        if (currentUser.role === 'admin') {
+          for (const num of saved.deleted) {
+            try { await api.deleteShow(num); }
+            catch (error) { remaining.deleted.push(num); console.warn('[migration] deleted show retained locally:', num, error); }
+          }
+        } else {
+          remaining.deleted = saved.deleted.slice();
+        }
+      } else if (hasLegacyChanges) {
+        // Read-only users cannot migrate or discard historical local edits.
+        Object.assign(remaining, saved);
+      }
+
+      const migrationComplete = remaining.added.length === 0
+        && Object.keys(remaining.edited).length === 0
+        && remaining.deleted.length === 0;
+      if (migrationComplete) {
+        try { window.localStorage.removeItem(OVERRIDES_KEY); } catch {}
+      } else {
+        saveOverrides(remaining);
+      }
+
+      try {
+        const data = await api.getAllShows() as TalkShow[];
+        if (cancelled) return;
+        setBaseShows(data);
+        setOverrides(remaining);
+        setTalkShows(applyOverrides(data, remaining));
+        if (hasLegacyChanges && !migrationComplete) {
+          console.warn('[migration] some legacy changes remain in local recovery storage');
+        }
       } catch (error) {
-        console.error('[genres] failed to load shared genres:', error);
-        // Keep the dashboard usable with built-in genres if the API is temporarily unavailable.
+        console.error('[shows] failed to load shared archive:', error);
+        if (!cancelled) showToast('دریافت آرشیو از سرور ناموفق بود؛ اتصال سرور را بررسی کنید');
       }
     })();
     return () => { cancelled = true; };
   }, [currentUser?.id, currentUser?.role]);
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
-
-  useEffect(() => {
-    // Load persisted overrides first, then merge them with the base JSON data.
-    const saved = loadOverrides();
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydrate persisted overrides after mount to preserve the current UI behavior.
-    setOverrides(saved);
-    fetch('/talk-shows-data.json')
-      .then(r => r.json())
-      .then((data: TalkShow[]) => {
-        setBaseShows(data);
-        setTalkShows(applyOverrides(data, saved));
-      })
-      .catch(e => console.error('Failed to load data:', e));
-  }, []);
 
   // On Electron desktop, require a fresh sign-in once per application launch.
   // sessionStorage survives in-app reloads but is cleared when the app process exits.
@@ -1012,10 +1075,10 @@ function HomeInner() {
     }
   }, [baseShows, overrides]);
 
-  const showToast = (msg: string) => {
+  function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
-  };
+  }
 
   // Persist a new set of overrides to state + localStorage in one place.
   const commitOverrides = (next: Overrides) => {
@@ -1023,29 +1086,41 @@ function HomeInner() {
     saveOverrides(next);
   };
 
-  // Add a brand-new show, or update an existing one (created/edited by the user).
-  const handleSaveShow = (show: TalkShow, isEdit: boolean) => {
-    if (isEdit) {
-      const inAdded = overrides.added.find(s => s.num === show.num);
-      const next: Overrides = inAdded
-        ? { ...overrides, added: overrides.added.map(s => s.num === show.num ? show : s) }
-        : { ...overrides, edited: { ...overrides.edited, [show.num]: show } };
-      commitOverrides(next);
-      showToast(`برنامه «${show.name}» بروزرسانی شد`);
-    } else {
-      commitOverrides({ ...overrides, added: [show, ...overrides.added] });
-      showToast(`برنامه «${show.name}» اضافه شد`);
+  // All new and existing shows are saved to the shared database.
+  const handleSaveShow = async (show: TalkShow, isEdit: boolean) => {
+    try {
+      const saved = (isEdit ? await api.updateShow(show) : await api.saveShow(show)) as TalkShow;
+      setBaseShows(prev => isEdit
+        ? prev.map(item => item.num === saved.num ? saved : item)
+        : [saved, ...prev.filter(item => item.num !== saved.num)]);
+      const nextOverrides: Overrides = {
+        added: overrides.added.filter(item => item.num !== show.num),
+        edited: Object.fromEntries(Object.entries(overrides.edited).filter(([num]) => Number(num) !== show.num)),
+        deleted: overrides.deleted.filter(num => num !== show.num),
+      };
+      commitOverrides(nextOverrides);
+      showToast(isEdit ? `برنامه «${saved.name}» بروزرسانی شد` : `برنامه «${saved.name}» اضافه شد`);
+    } catch (error: any) {
+      showToast(error?.message || 'ذخیرهٔ برنامه ناموفق بود');
+      throw error;
     }
   };
 
-  // Delete a show (hides it from the list; user-added ones are removed outright).
-  const handleDeleteShow = (num: number) => {
-    const inAdded = overrides.added.find(s => s.num === num);
-    const next: Overrides = inAdded
-      ? { ...overrides, added: overrides.added.filter(s => s.num !== num) }
-      : { ...overrides, deleted: Array.from(new Set([...overrides.deleted, num])) };
-    commitOverrides(next);
-    showToast('برنامه حذف شد');
+  // Deletion is authoritative and shared; it no longer hides records in one browser.
+  const handleDeleteShow = async (num: number) => {
+    try {
+      await api.deleteShow(num);
+      setBaseShows(prev => prev.filter(item => item.num !== num));
+      const nextOverrides: Overrides = {
+        added: overrides.added.filter(item => item.num !== num),
+        edited: Object.fromEntries(Object.entries(overrides.edited).filter(([key]) => Number(key) !== num)),
+        deleted: overrides.deleted.filter(item => item !== num),
+      };
+      commitOverrides(nextOverrides);
+      showToast('برنامه حذف شد');
+    } catch (error: any) {
+      showToast(error?.message || 'حذف برنامه ناموفق بود');
+    }
   };
 
   // Push the current view onto the history stack, then go to `to`.
@@ -1107,123 +1182,47 @@ function HomeInner() {
     }
   };
 
-  // Edit a custom genre in the shared server catalog.
-  // MIGRATION: if the genre is renamed, every show whose `category` references
-  // the old name is migrated so it stays inside the renamed genre instead of
-  // silently disappearing (the genre→show link is an implicit substring match
-  // on `category`, so renaming the genre alone would break the link).
+  // Edit any genre (built-in or custom) through the shared server catalog.
+  // The API migrates matching category references for every existing show atomically.
   const handleEditGenre = async (g: Genre) => {
     if (!isAdmin) return;
-    const prev = customGenres.find(x => x.id === g.id);
+    const prev = customGenres.find(x => x.id === g.id) || GENRES.find(x => x.id === g.id);
     const aliases = Array.from(new Set([
       ...(prev?.aliases || g.aliases || []),
       ...(prev?.nameFa && prev.nameFa !== g.nameFa ? [prev.nameFa] : []),
     ])).filter(Boolean);
-    const updatedGenre = { ...g, aliases };
     try {
-      await api.updateCustomGenre({
-        id: g.id, nameFa: g.nameFa, name: g.name, color: g.color, description: g.description, aliases,
+      const result = await api.updateCustomGenre({
+        id: g.id, nameFa: g.nameFa, name: g.name, color: g.color,
+        description: g.description, aliases,
       });
+      const refreshedGenres = await api.getCustomGenres();
+      setCustomGenres(hydrateCustomGenres(refreshedGenres.genres || [result.genre]));
+      const refreshedShows = await api.getAllShows();
+      setBaseShows(refreshedShows);
+      setTalkShows(refreshedShows);
+      showToast(`ژانر «${g.nameFa}» به‌روزرسانی شد — ${result.migratedCount || 0} برنامه همگام شد`);
     } catch (error: any) {
       showToast(error?.message || 'ویرایش ژانر ناموفق بود');
-      return;
     }
-    const oldName = prev?.nameFa ?? '';
-    const newName = g.nameFa;
-    const next = customGenres.map(x => (x.id === g.id ? updatedGenre : x));
-    setCustomGenres(next);
-
-    const renamed = oldName && newName && oldName !== newName;
-    if (!renamed) {
-      showToast(`ژانر «${g.nameFa}» به‌روزرسانی شد`);
-      return;
-    }
-    // Replace every occurrence of oldName with newName in each show's category.
-    const migrate = (s: TalkShow): TalkShow =>
-      s.category && s.category.includes(oldName)
-        ? { ...s, category: s.category.split(oldName).join(newName) }
-        : s;
-    const added = overrides.added.map(migrate);
-    const edited: Record<number, TalkShow> = {};
-    for (const [k, v] of Object.entries(overrides.edited)) {
-      edited[Number(k)] = migrate(v);
-    }
-    // Base shows (not yet overridden) that match the old name need an edit
-    // override so their category is migrated too.
-    const editedNums = new Set(Object.keys(edited).map(Number));
-    const addedNums = new Set(added.map(s => s.num));
-    const deleted = new Set(overrides.deleted);
-    let migratedCount = 0;
-    for (const baseShow of baseShows) {
-      if (editedNums.has(baseShow.num) || addedNums.has(baseShow.num) || deleted.has(baseShow.num)) continue;
-      if (baseShow.category && baseShow.category.includes(oldName)) {
-        edited[baseShow.num] = migrate(baseShow);
-        migratedCount++;
-      }
-    }
-    // Count migrated shows in added/edited too (for the toast message).
-    for (const s of added) if (s.category.includes(newName) && (overrides.added.find(o => o.num === s.num)?.category || '').includes(oldName)) migratedCount++;
-    for (const [k, v] of Object.entries(overrides.edited)) if (v.category.includes(oldName)) migratedCount++;
-    commitOverrides({ ...overrides, added, edited });
-    showToast(`ژانر «${newName}» به‌روزرسانی شد — ${migratedCount} برنامه منتقل شد`);
   };
 
-  // Delete a custom Genre (removes from state + localStorage).
-  // The shows themselves are NOT deleted (deleting a genre must not destroy
-  // programs), but their `category` field still carries the genre name. We
-  // clear that stale reference from overridden/added shows AND from base shows
-  // (by creating an edit override) so the category doesn't dangle — mirroring
-  // the rename migration in handleEditGenre.
+  // Deactivate a genre server-side; the API preserves programs and removes
+  // only the matching genre label from their category field.
   const handleDeleteGenre = async (id: string) => {
     if (!isAdmin) return;
+    const target = genres.find(x => x.id === id);
     try {
-      await api.deleteCustomGenre(id);
+      const result = await api.deleteCustomGenre(id);
+      const refreshedGenres = await api.getCustomGenres();
+      setCustomGenres(hydrateCustomGenres(refreshedGenres.genres || []));
+      const refreshedShows = await api.getAllShows();
+      setBaseShows(refreshedShows);
+      setTalkShows(refreshedShows);
+      showToast(`ژانر «${target?.nameFa || id}» حذف شد — برنامه‌ها حفظ شدند؛ ${result.affectedShows || 0} برنامه به‌روزرسانی شد`);
     } catch (error: any) {
       showToast(error?.message || 'حذف ژانر ناموفق بود');
-      return;
     }
-    const target = customGenres.find(x => x.id === id);
-    const next = customGenres.filter(x => x.id !== id);
-    setCustomGenres(next);
-    const name = target?.nameFa ?? '';
-    if (!name) {
-      showToast('ژانر حذف شد');
-      return;
-    }
-    // Clear the genre name from a show's category, then clean up any dangling
-    // separators (e.g. " | خبری" → "خبری", "مستند | " → "مستند") left behind.
-    const strip = (s: TalkShow): TalkShow => {
-      if (!s.category || !s.category.includes(name)) return s;
-      const cat = s.category.split(name).join('')
-        .replace(/\|\s*\|/g, '|')      // collapse "||" / "| |" → "|"
-        .replace(/^\s*\|\s*/, '')       // trim leading separator
-        .replace(/\s*\|\s*$/, '')       // trim trailing separator
-        .trim();
-      return { ...s, category: cat };
-    };
-    const added = overrides.added.map(strip);
-    const edited: Record<number, TalkShow> = {};
-    for (const [k, v] of Object.entries(overrides.edited)) {
-      edited[Number(k)] = strip(v);
-    }
-    // Base shows (not yet overridden) that reference the deleted genre need an
-    // edit override so their stale category is cleared too.
-    const editedNums = new Set(Object.keys(edited).map(Number));
-    const addedNums = new Set(added.map(s => s.num));
-    const deleted = new Set(overrides.deleted);
-    let clearedCount = 0;
-    for (const baseShow of baseShows) {
-      if (editedNums.has(baseShow.num) || addedNums.has(baseShow.num) || deleted.has(baseShow.num)) continue;
-      if (baseShow.category && baseShow.category.includes(name)) {
-        edited[baseShow.num] = strip(baseShow);
-        clearedCount++;
-      }
-    }
-    // Count shows already cleared in added/edited (check original category).
-    for (const s of added) if ((overrides.added.find(o => o.num === s.num)?.category || '').includes(name)) clearedCount++;
-    for (const v of Object.values(overrides.edited)) if (v.category.includes(name)) clearedCount++;
-    commitOverrides({ ...overrides, added, edited });
-    showToast(`ژانر «${name}» حذف شد — برنامه‌ها حفظ شدند${clearedCount > 0 ? `، دسته‌بندی ${clearedCount} برنامه پاک شد` : ''}`);
   };
 
   const handleLogout = async () => {
@@ -1239,17 +1238,10 @@ function HomeInner() {
   };
 
   const handleLoginSuccess = (user: User) => {
-    setAuthLoading(true);
+    // Authentication unlocks the shared API bootstrap effect above. Never
+    // reload the static JSON here: it would overwrite server-side edits.
     setCurrentUser(user);
-    // Reload shows from API (or local JSON) after login
-    fetch('/talk-shows-data.json')
-      .then(r => r.json())
-      .then(data => {
-        setBaseShows(data);
-        setTalkShows(applyOverrides(data, loadOverrides()));
-      })
-      .catch(e => console.error('Failed to load data:', e))
-      .finally(() => setAuthLoading(false));
+    setAuthLoading(false);
   };
 
   if (authLoading) {
@@ -3115,7 +3107,8 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {genres.map((g, idx) => {
           const count = talkShows.filter(g.filterFn).length;
-          const canManage = isAdmin && g.isCustom && onEditGenre && onDeleteGenre;
+          const genreDescription = (g.description || '').replace(/^[0-9۰-۹٠-٩]+[\s,٬]*برنامه\s*[—-]?\s*/, '').trim();
+          const canManage = isAdmin && onEditGenre && onDeleteGenre;
           return (
             <div
               key={g.id}
@@ -3192,8 +3185,8 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                   </div>
                 </div>
                 <h3 className="font-bold text-lg mb-1" style={{ color: '#ffffff' }}>{g.nameFa}</h3>
-                {g.description ? (
-                  <p className="text-sm mt-3" style={{ color: 'rgba(255, 255, 255, 0.75)' }}>{g.description}</p>
+                {genreDescription ? (
+                  <p className="text-sm mt-3" style={{ color: 'rgba(255, 255, 255, 0.75)' }}>{genreDescription}</p>
                 ) : null}
                 <div className="mt-4 flex items-center text-sm font-bold text-white">
                   مشاهده و جستجو
@@ -4646,7 +4639,7 @@ function DetailField({ label, value }: { label: string; value: string }) {
 // ============================================
 function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, showToast, presetCategory, presetGenre, genres = GENRES }: {
   talkShows: TalkShow[];
-  onSave: (show: TalkShow, isEdit: boolean) => void;
+  onSave: (show: TalkShow, isEdit: boolean) => Promise<void> | void;
   editingShow: TalkShow | null;
   setEditingShow: (s: TalkShow | null) => void;
   onDone: () => void;
@@ -4746,60 +4739,78 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
     try {
       const res = await fetch('/api/fetch-show-info', {
         method: 'POST',
-        // Permission-guarded route (edit_shows) — without the Bearer token the
-        // server always replied 403, so fetching info/image from a link
-        // (IMDb/Wikipedia) never added anything to the form.
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ url: fetchUrl }),
       });
       const data = await res.json();
-      if (data.error) {
-        showToast(`خطا: ${data.error}`);
-      } else {
-        const info = data.info;
-        const updated = { ...form };
-        // Only fill fields that are CURRENTLY EMPTY — never overwrite data
-        // the user has already entered or curated. This is the fix for the
-        // user's report: "وقتی با ویکی پدیا عکس رو اضافه کردم بقیه توضیحاتم
-        // تغییر کرده" (when I added the image, my other descriptions changed).
-        if (info.title && !updated.name) updated.name = info.title;
-        if (info.description && !updated.descriptionFa) {
-          updated.descriptionFa = info.description;
-          if (!updated.summary) updated.summary = info.description.substring(0, 200);
-        }
-        // Push auto-fetched image into images[] array (up to 8 total).
-        // This is additive — never removes existing images.
-        if (info.image) {
-          const existing = updated.images || [];
-          if (!existing.includes(info.image) && existing.length < 8) {
-            updated.images = [...existing, info.image];
-          }
-        }
-        // Only fill these if currently empty — don't clobber curated data.
-        if (info.rating && !updated.colors) updated.colors = `امتیاز: ${info.rating}`;
-        if (info.genres && !updated.category) updated.category = info.genres;
-        if (info.duration && !updated.elements) updated.elements = info.duration;
-        if (fetchUrl.includes('imdb.com') && !updated.imdb) updated.imdb = fetchUrl;
-        if (fetchUrl.includes('wikipedia.org') && !updated.wikipedia) updated.wikipedia = fetchUrl;
-        // Auto-generate YouTube search link only if not already set.
-        if (updated.name && !updated.youtube) {
-          updated.youtube = `https://www.youtube.com/results?search_query=${encodeURIComponent(updated.name)}`;
-        }
-        // Auto-generate social post only if not already set.
-        if (updated.name && !updated.socialPost) {
-          updated.socialPost = `🎬 ${updated.name}\n\n📝 ${updated.descriptionFa || ''}\n\n#بانک_رسانه #تاک_شو`;
-        }
-        setForm(updated);
-        showToast(t('add.autoFetchSuccess'));
+      if (!res.ok || data.error) {
+        showToast(`خطا: ${data.error || 'دریافت اطلاعات ناموفق بود'}`);
+        return;
       }
-    } catch (e) {
+
+      const info = data.info || {};
+      if (editingShow) {
+        // Editing an existing program from an external page is image-only.
+        // Existing curated metadata must never be replaced by imported text.
+        if (!info.image || typeof info.image !== 'string') {
+          showToast('از این لینک تصویر قابل دریافت نبود؛ اطلاعات فعلی برنامه بدون تغییر ماند.');
+          return;
+        }
+        const existingImages = Array.isArray(form.images) ? form.images : [];
+        if (existingImages.includes(info.image)) {
+          showToast('این تصویر قبلاً به برنامه اضافه شده است.');
+          return;
+        }
+        if (existingImages.length >= 8) {
+          showToast('حداکثر ۸ تصویر برای هر برنامه قابل ثبت است.');
+          return;
+        }
+        setForm({ ...form, images: [...existingImages, info.image] });
+        showToast('تصویر اضافه شد؛ سایر اطلاعات برنامه بدون تغییر ماند.');
+        return;
+      }
+
+      // On creation, fill available fields without overwriting user-entered data.
+      const updated = { ...form };
+      if (info.title && !updated.name) updated.name = info.title;
+      if (info.description && !updated.descriptionFa) {
+        updated.descriptionFa = info.description;
+        if (!updated.summary) updated.summary = info.description.substring(0, 200);
+      }
+      if (info.image) {
+        const existingImages = updated.images || [];
+        if (!existingImages.includes(info.image) && existingImages.length < 8) {
+          updated.images = [...existingImages, info.image];
+        }
+      }
+      if (info.country && !updated.country) updated.country = info.country;
+      if (info.imdbUrl && !updated.imdb) updated.imdb = info.imdbUrl;
+      if (info.wikiUrl && !updated.wikipedia) updated.wikipedia = info.wikiUrl;
+      try {
+        const sourceUrl = new URL(fetchUrl);
+        const sourceHost = sourceUrl.hostname.toLowerCase();
+        if (!updated.imdb && (sourceHost === 'imdb.com' || sourceHost.endsWith('.imdb.com'))) updated.imdb = sourceUrl.href;
+        if (!updated.wikipedia && (sourceHost === 'wikipedia.org' || sourceHost.endsWith('.wikipedia.org'))) updated.wikipedia = sourceUrl.href;
+      } catch {
+        // The API validates source URLs; do not persist malformed fallback values.
+      }
+      if (updated.name && !updated.youtube) {
+        updated.youtube = `https://www.youtube.com/results?search_query=${encodeURIComponent(updated.name)}`;
+      }
+      if (updated.name && !updated.socialPost) {
+        updated.socialPost = `🎬 ${updated.name}\n\n📝 ${updated.descriptionFa || ''}\n\n#بانک_رسانه #تاک_شو`;
+      }
+      setForm(updated);
+      showToast(t('add.autoFetchSuccess'));
+    } catch (error) {
+      console.error('[show-import] failed:', error);
       showToast(t('add.autoFetchError'));
     } finally {
       setFetching(false);
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!form.name?.trim()) {
       showToast(t('add.field.required'));
       return;
@@ -4830,7 +4841,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       return sameName || (!!candidateImdb && !!existingImdb && candidateImdb === existingImdb);
     });
     if (duplicate) {
-      const mainGenre = duplicate.category?.trim() || 'نامشخص';
+      const mainGenre = duplicate.category?.split('|').map(value => value.trim()).filter(Boolean)[0] || 'نامشخص';
       showToast(`این برنامه قبلاً در آرشیو ثبت شده است؛ ژانر اصلی: «${mainGenre}». ثبت مجدد امکان‌پذیر نیست.`);
       return;
     }
@@ -4865,12 +4876,13 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
     // Update state with the final form
     setForm(finalForm);
 
-    if (editingShow) {
-      onSave(finalForm as TalkShow, true);
-    } else {
-      onSave(finalForm as TalkShow, false);
+    try {
+      if (editingShow) await onSave(finalForm as TalkShow, true);
+      else await onSave(finalForm as TalkShow, false);
+      onDone();
+    } catch {
+      // The parent displays the server error; keep the form open for correction.
     }
-    onDone();
   };
 
   return (

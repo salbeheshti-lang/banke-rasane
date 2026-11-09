@@ -2,7 +2,7 @@
 // Electron Main Process — بانک رسانه
 // Starts the Bun API service (port 3002) and the Next.js standalone server
 // (port 3000), then opens a window pointed at the Next.js UI.
-const { app, BrowserWindow, shell, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, shell, dialog, ipcMain, Menu } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const { spawn } = require('child_process');
 const path = require('path');
@@ -17,6 +17,7 @@ function toPrismaSqliteUrl(filePath) {
 
 let mainWindow = null;
 let nextServer = null;
+let manualUpdateCheck = false;
 let apiServer = null;
 const NEXT_PORT = 3000;
 const API_PORT = 3002;
@@ -308,6 +309,68 @@ function startNextServer() {
   });
 }
 
+
+async function checkForUpdatesManually() {
+  if (!app.isPackaged) {
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: 'بررسی به‌روزرسانی',
+      message: 'بررسی نسخهٔ جدید فقط در نسخهٔ نصب‌شده امکان‌پذیر است.',
+    });
+    return;
+  }
+  if (manualUpdateCheck) return;
+  manualUpdateCheck = true;
+  log('Manual update check requested');
+  try {
+    await autoUpdater.checkForUpdates();
+  } catch (error) {
+    // The autoUpdater 'error' event presents the user-facing message.
+    // Keep the promise rejection from producing a duplicate dialog.
+    log('Manual update check failed: ' + error.message);
+  }
+}
+
+function installApplicationMenu() {
+  const template = [
+    { label: 'فایل', submenu: [{ role: 'quit', label: 'خروج' }] },
+    {
+      label: 'ویرایش',
+      submenu: [
+        { role: 'undo', label: 'واگرد' },
+        { role: 'redo', label: 'ازنو' },
+        { type: 'separator' },
+        { role: 'cut', label: 'برش' },
+        { role: 'copy', label: 'رونوشت' },
+        { role: 'paste', label: 'جای‌گذاری' },
+        { role: 'selectAll', label: 'انتخاب همه' },
+      ],
+    },
+    {
+      label: 'ویندوز',
+      submenu: [
+        { label: 'بررسی به‌روزرسانی', click: () => { void checkForUpdatesManually(); } },
+        { type: 'separator' },
+        { role: 'minimize', label: 'کوچک‌کردن پنجره' },
+        { role: 'close', label: 'بستن پنجره' },
+      ],
+    },
+    {
+      label: 'راهنما',
+      submenu: [{
+        label: 'دربارهٔ بانک رسانه',
+        click: () => dialog.showMessageBox(mainWindow, {
+          type: 'info',
+          title: 'بانک رسانه',
+          message: 'بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی',
+          detail: 'نسخهٔ ' + app.getVersion(),
+        }),
+      }],
+    },
+  ];
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1440, height: 900, minWidth: 1024, minHeight: 700,
@@ -319,15 +382,8 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     mainWindow.maximize();
-    // Only check after the window exists and is visible; otherwise the
-    // update-available handler has no parent window and silently skips prompting.
-    try {
-      autoUpdater.checkForUpdates().catch(err => log('Update check failed: ' + err.message));
-    } catch (error) {
-      log('Update check skipped: ' + error.message);
-    }
   });
-  mainWindow.loadURL(NEXT_URL + '?desktop=1');
+  mainWindow.loadURL(NEXT_URL);
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     let target;
     try {
@@ -380,6 +436,7 @@ app.whenReady().then(async () => {
 
   autoUpdater.on('update-available', (info) => {
     log('Update available: ' + info.version);
+    manualUpdateCheck = false;
     if (mainWindow) {
       dialog.showMessageBox(mainWindow, {
         type: 'info',
@@ -397,6 +454,15 @@ app.whenReady().then(async () => {
 
   autoUpdater.on('update-not-available', (info) => {
     log('No update available (current: ' + app.getVersion() + ')');
+    if (manualUpdateCheck && mainWindow) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'بررسی به‌روزرسانی',
+        message: 'برنامه به‌روز است.',
+        detail: 'نسخهٔ فعلی: ' + app.getVersion(),
+      });
+    }
+    manualUpdateCheck = false;
   });
 
   autoUpdater.on('download-progress', (progress) => {
@@ -417,15 +483,23 @@ app.whenReady().then(async () => {
 
   autoUpdater.on('error', (err) => {
     log('Auto-updater error: ' + err.message);
+    if (manualUpdateCheck && mainWindow) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'error',
+        title: 'خطا در بررسی به‌روزرسانی',
+        message: 'بررسی نسخهٔ جدید با خطا مواجه شد.',
+        detail: err.message,
+      });
+    }
+    manualUpdateCheck = false;
   });
 
   try {
     await startApiService();
     await startNextServer();
     createWindow();
-    // Check for updates AFTER the window is shown so the update-available
-    // dialog can attach to mainWindow (previously this ran before
-    // createWindow, so the dialog was silently skipped on fast checks).
+    installApplicationMenu();
+    // Run one automatic check after the window and native menu are ready.
     try { autoUpdater.checkForUpdates().catch(err => log('Update check failed: ' + err.message)); }
     catch(e) { log('Update check skipped: ' + e.message); }
   } catch(err) {

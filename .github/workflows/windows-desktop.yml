@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: bankresaneh-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -40,10 +44,37 @@ jobs:
       - name: Lint
         run: bun run lint
 
+      - name: Cache Electron and electron-builder downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            .ci-cache/electron-builder
+            .ci-cache/electron
+          key: windows-electron-builder-v3-${{ runner.os }}-${{ hashFiles('package.json', 'bun.lock*', 'package-lock.json') }}
+          restore-keys: |
+            windows-electron-builder-v3-${{ runner.os }}-
+
       - name: Build Windows installer
-        run: npm run electron:build
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $maxAttempts = 6
+          for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            Write-Host "=== Electron build attempt $attempt/$maxAttempts ==="
+            npm run electron:build
+            if ($LASTEXITCODE -eq 0) { exit 0 }
+            if ($attempt -lt $maxAttempts) {
+              $delay = [Math]::Min(180, [int](10 * [Math]::Pow(2, $attempt - 1)))
+              Write-Warning "Build failed (exit $LASTEXITCODE). Retrying in $delay seconds."
+              Start-Sleep -Seconds $delay
+            }
+          }
+          throw "Electron build failed after $maxAttempts attempts."
         env:
           DATABASE_URL: file:./db/custom.db
+          DEBUG: electron-builder
+          ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.ci-cache/electron-builder
+          ELECTRON_CACHE: ${{ github.workspace }}/.ci-cache/electron
 
       - name: Run packaged app smoke test
         run: npm run smoke:desktop

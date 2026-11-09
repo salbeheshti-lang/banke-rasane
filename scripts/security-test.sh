@@ -371,10 +371,19 @@ check "1.3 limited-login" 200 "$HTTP_STATUS"
 # their unrelated granular permissions have been revoked.
 api GET /genres "$LIMITED_TOKEN"
 check "1.3b admin-can-read-shared-genres" 200 "$HTTP_STATUS"
-api POST /genres "$LIMITED_TOKEN" '{"id":"security-test-genre","nameFa":"ژانر آزمون امنیتی","name":"ژانر آزمون امنیتی","color":"#0d7c4a","description":"security test"}'
+api POST /genres "$LIMITED_TOKEN" '{"id":"security-test-genre","nameFa":"ژانر آزمون امنیتی","name":"ژانر آزمون امنیتی","color":"#0d7c4a","description":"security test","aliases":["برچسب آزمون قدیمی"]}'
 check "1.3c admin-can-create-genre" 200 "$HTTP_STATUS"
-api PUT "/genres?id=security-test-genre" "$LIMITED_TOKEN" '{"id":"security-test-genre","nameFa":"ژانر آزمون امنیتی ویرایش‌شده","name":"ژانر آزمون امنیتی ویرایش‌شده","color":"#0d7c4a","description":"updated"}'
+api DELETE "/shows?num=99010" "$SUPER_TOKEN"
+api POST /shows "$SUPER_TOKEN" '{"num":99010,"name":"Genre Migration Test","category":"برچسب آزمون قدیمی"}'
+check "1.3c1 create-legacy-genre-show" 200 "$HTTP_STATUS"
+api PUT "/genres?id=security-test-genre" "$LIMITED_TOKEN" '{"id":"security-test-genre","nameFa":"ژانر آزمون امنیتی ویرایش‌شده","name":"ژانر آزمون امنیتی ویرایش‌شده","color":"#0d7c4a","description":"updated","aliases":["برچسب آزمون قدیمی"]}'
 check "1.3d admin-can-update-genre" 200 "$HTTP_STATUS"
+api GET "/shows/search?q=Genre%20Migration%20Test" "$SUPER_TOKEN"
+if printf '%s' "$RESP_BODY" | grep -q 'ژانر آزمون امنیتی ویرایش‌شده'; then
+  check "1.3d1 genre-rename-migrates-existing-shows" "migrated" "migrated"
+else
+  check "1.3d1 genre-rename-migrates-existing-shows" "migrated" "not-migrated"
+fi
 
 # Now limited_admin (with empty permissions) tries to list users
 api GET /users "$LIMITED_TOKEN"
@@ -524,6 +533,12 @@ api POST /genres "$VIEWER_TOKEN" '{"id":"viewer-forbidden-genre","nameFa":"نب�
 check "3.1h viewer-cannot-create-genre" 403 "$HTTP_STATUS"
 api DELETE "/genres?id=security-test-genre" "$LIMITED_TOKEN"
 check "3.1i admin-can-delete-genre" 200 "$HTTP_STATUS"
+api GET "/shows/search?q=Genre%20Migration%20Test" "$SUPER_TOKEN"
+if printf '%s' "$RESP_BODY" | grep -q '"category":""'; then
+  check "3.1i1 genre-delete-preserves-show-and-clears-label" "preserved" "preserved"
+else
+  check "3.1i1 genre-delete-preserves-show-and-clears-label" "preserved" "not-preserved"
+fi
 
 api POST /fetch-image "$VIEWER_TOKEN" '{"num":1,"name":"test show"}'
 echo "  viewer tries fetch-image mutation → $HTTP_STATUS (should be 403)"
@@ -538,6 +553,22 @@ check "3.2 editor-can-add-show" 200 "$HTTP_STATUS"
 api PUT "/shows/99001" "$EDITOR_TOKEN" '{"name":"Test Show Edited"}'
 echo "  editor edits show → $HTTP_STATUS (should be 200)"
 check "3.3 editor-can-edit-show" 200 "$HTTP_STATUS"
+
+# Server-side duplicate protection must reject both normalized-name and IMDb-ID duplicates.
+DUPLICATE_TEST_NAME="Duplicate Guard Test"
+DUPLICATE_TEST_IMDB="tt99912345678"
+api DELETE "/shows?num=99011" "$SUPER_TOKEN"
+api POST /shows "$EDITOR_TOKEN" "{\"num\":99011,\"name\":\"$DUPLICATE_TEST_NAME\",\"category\":\"ژانر تست تکراری\",\"imdb\":\"https://www.imdb.com/title/$DUPLICATE_TEST_IMDB/\"}"
+check "3.3a create-duplicate-guard-fixture" 200 "$HTTP_STATUS"
+api POST /shows "$EDITOR_TOKEN" "{\"num\":99012,\"name\":\"$DUPLICATE_TEST_NAME\",\"category\":\"ژانر دیگر\"}"
+check "3.3b duplicate-name-blocked-server-side" 409 "$HTTP_STATUS"
+if printf '%s' "$RESP_BODY" | grep -q 'ژانر تست تکراری'; then
+  check "3.3c duplicate-message-includes-primary-genre" "genre" "genre"
+else
+  check "3.3c duplicate-message-includes-primary-genre" "genre" "missing"
+fi
+api POST /shows "$EDITOR_TOKEN" "{\"num\":99013,\"name\":\"Different Duplicate IMDb\",\"imdb\":\"https://www.imdb.com/title/$DUPLICATE_TEST_IMDB/\"}"
+check "3.3d duplicate-imdb-id-blocked-server-side" 409 "$HTTP_STATUS"
 
 # 3.4 Editor tries to delete the show (should FAIL — no delete_shows for editor)
 api DELETE "/shows?num=99001" "$EDITOR_TOKEN"
