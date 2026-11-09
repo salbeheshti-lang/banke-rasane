@@ -977,9 +977,13 @@ function HomeInner() {
     return [...builtIn, ...custom];
   }, [customGenres]);
 
-  // Role helpers — viewer is read-only (no add/edit/delete), admin can manage users + settings.
+  // Role helpers — enforce the effective server-issued permission set in the UI.
   const role = currentUser?.role || null;
-  const canEdit = role === 'admin' || role === 'editor';
+  const hasPermission = (permission: string) => currentUser?.isSuperAdmin === true ||
+    (Array.isArray(currentUser?.permissions)
+      ? currentUser.permissions.includes(permission)
+      : role === 'admin' || (role === 'editor' && ['add_shows', 'edit_shows', 'export_reports'].includes(permission)));
+  const canEdit = hasPermission('add_shows') || hasPermission('edit_shows');
   const isAdmin = role === 'admin';
 
   // Shared genre catalog: every authenticated role can read; only admins can mutate.
