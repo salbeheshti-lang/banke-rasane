@@ -303,59 +303,58 @@ jobs:
       # This catches extraction/install hangs that win-unpacked tests
       # cannot detect. Silent mode still runs the NSIS install sections.
       # ============================================================
-      - name: Install NSIS package and verify installed app
+      - name: Install 5.3.9, upgrade in place to 5.4.0, and verify data preservation
         shell: pwsh
-        timeout-minutes: 15
+        timeout-minutes: 30
         run: |
-          $setup = (Resolve-Path 'release/BankResaneh-Setup.exe').Path
+          $ErrorActionPreference = 'Stop'
           $installDir = Join-Path $env:RUNNER_TEMP 'BankResaneh-Installer-Smoke'
-          $installerLog = Join-Path $env:RUNNER_TEMP 'bankresaneh-installer.log'
+          $oldSetup = Join-Path $env:RUNNER_TEMP 'BankResaneh-5.3.9-Setup.exe'
+          $newSetup = (Resolve-Path 'release/BankResaneh-Setup.exe').Path
+          $oldUrl = 'https://github.com/salbeheshti-lang/banke-rasane/releases/download/v5.3.9/BankResaneh-Setup.exe'
+          Invoke-WebRequest -Uri $oldUrl -OutFile $oldSetup
+          if ((Get-Item $oldSetup).Length -lt 100MB) { throw 'Downloaded 5.3.9 installer is unexpectedly small.' }
 
-          if (Test-Path $installDir) {
-            Remove-Item $installDir -Recurse -Force
+          function Invoke-Installer([string]$Path, [string]$LogPath) {
+            $p = Start-Process -FilePath $Path -ArgumentList @('/S', "/LOG=$LogPath", "/D=$installDir") -PassThru
+            if (-not $p.WaitForExit(600000)) { try { & taskkill.exe /PID $p.Id /T /F | Out-Null } catch {}; throw "Installer timed out: $Path" }
+            if ($p.ExitCode -ne 0) { if (Test-Path $LogPath) { Get-Content $LogPath -Tail 120 }; throw "Installer failed with exit code $($p.ExitCode): $Path" }
           }
 
-          Write-Host "=== Running actual NSIS installer in silent mode ==="
-          Write-Host "Installer: $setup"
-          Write-Host "Install directory: $installDir"
-
-          # NSIS requires /D=... to be the final command-line argument.
-          $installer = Start-Process -FilePath $setup -ArgumentList @('/S', "/LOG=$installerLog", "/D=$installDir") -PassThru
-
-          if (-not $installer.WaitForExit(600000)) {
-            Write-Host "FATAL: Installer did not finish within 10 minutes."
-            if (Test-Path $installerLog) {
-              Get-Content $installerLog -Tail 120 | ForEach-Object { Write-Host $_ }
-            }
-            try { & taskkill.exe /PID $installer.Id /T /F | Out-Null } catch {}
-            throw "FATAL: NSIS installer timed out after 10 minutes."
-          }
-
-          if ($installer.ExitCode -ne 0) {
-            Write-Host "Installer exit code: $($installer.ExitCode)"
-            if (Test-Path $installerLog) {
-              Get-Content $installerLog -Tail 120 | ForEach-Object { Write-Host $_ }
-            }
-            throw "FATAL: NSIS installer returned exit code $($installer.ExitCode)."
-          }
-
+          if (Test-Path $installDir) { Remove-Item $installDir -Recurse -Force }
+          Write-Host '=== Installing the published 5.3.9 baseline ==='
+          Invoke-Installer $oldSetup (Join-Path $env:RUNNER_TEMP 'install-5.3.9.log')
           $installedExe = Join-Path $installDir 'BankResaneh.exe'
-          $installedServer = Join-Path $installDir 'resources\next-service-dist\server.js'
-          $installedApi = Join-Path $installDir 'resources\api-service\index.js'
-          $installedBun = Join-Path $installDir 'resources\bun-runtime\bin\bun.exe'
-
-          foreach ($required in @($installedExe, $installedServer, $installedApi, $installedBun)) {
-            if (-not (Test-Path $required)) {
-              throw "FATAL: Installed file missing: $required"
-            }
-          }
-
-          Write-Host "=== Running smoke test against the INSTALLED executable ==="
+          if (-not (Test-Path $installedExe)) { throw '5.3.9 executable missing after baseline install.' }
           node scripts/smoke-electron.cjs "$installedExe"
-          if ($LASTEXITCODE -ne 0) {
-            throw "FATAL: Installed application smoke test failed."
+          if ($LASTEXITCODE -ne 0) { throw '5.3.9 baseline application did not pass startup/API/database smoke test.' }
+
+          $userData = Join-Path $env:APPDATA 'banke-rasane'
+          $dbPath = Join-Path $userData 'db\\bankresaneh.sqlite'
+          if (-not (Test-Path $dbPath)) { throw "5.3.9 did not create its persistent SQLite database: $dbPath" }
+          $before = @{}
+          Get-ChildItem $userData -File -Recurse | ForEach-Object {
+            $relative = $_.FullName.Substring($userData.Length).TrimStart('\\')
+            $before[$relative] = (Get-FileHash $_.FullName -Algorithm SHA256).Hash
           }
-          Write-Host "=== NSIS install + installed application test passed ==="
+          Set-Content -LiteralPath (Join-Path $userData 'upgrade-preservation-sentinel.txt') -Value 'created-under-5.3.9' -NoNewline
+          $before['upgrade-preservation-sentinel.txt'] = (Get-FileHash (Join-Path $userData 'upgrade-preservation-sentinel.txt') -Algorithm SHA256).Hash
+
+          Write-Host '=== Upgrading the existing 5.3.9 installation in place to the current 5.4.0 build ==='
+          Invoke-Installer $newSetup (Join-Path $env:RUNNER_TEMP 'upgrade-to-5.4.0.log')
+          foreach ($relative in $before.Keys) {
+            $file = Join-Path $userData $relative
+            if (-not (Test-Path $file -PathType Leaf)) { throw "5.4.0 installer deleted 5.3.9 user-data file: $relative" }
+            if ((Get-FileHash $file -Algorithm SHA256).Hash -ne $before[$relative]) { throw "5.4.0 installer modified 5.3.9 user-data file: $relative" }
+          }
+          Write-Host "PASS: 5.3.9 -> 5.4.0 preserved $($before.Count) user-data files byte-for-byte, including the SQLite database."
+
+          foreach ($required in @($installedExe, (Join-Path $installDir 'resources\\next-service-dist\\server.js'), (Join-Path $installDir 'resources\\api-service\\index.js'), (Join-Path $installDir 'resources\\bun-runtime\\bin\\bun.exe'))) {
+            if (-not (Test-Path $required)) { throw "5.4.0 installed file missing: $required" }
+          }
+          node scripts/smoke-electron.cjs "$installedExe"
+          if ($LASTEXITCODE -ne 0) { throw '5.4.0 application failed to start after in-place upgrade.' }
+          Write-Host 'PASS: actual published 5.3.9 NSIS installation upgraded in place to 5.4.0; persistent DB and files survived; upgraded app starts.'
 
       # ============================================================
       # FULL SMOKE TEST — run the actual BankResaneh.exe and verify:
@@ -383,6 +382,47 @@ jobs:
             throw "FATAL: Smoke test failed — the packaged app does not work correctly"
           }
           Write-Host "=== Smoke test passed ==="
+
+      - name: Verify in-place installer upgrade preserves user data
+        shell: pwsh
+        timeout-minutes: 15
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installDir = Join-Path $env:RUNNER_TEMP 'BankResaneh-Installer-Smoke'
+          $setup = (Resolve-Path 'release/BankResaneh-Setup.exe').Path
+          $userData = Join-Path $env:APPDATA 'banke-rasane'
+          if (-not (Test-Path $userData)) { throw "Expected user data directory was not created by installed-app smoke test: $userData" }
+
+          # Snapshot every persistent file after the first real app launch.
+          $before = @{}
+          Get-ChildItem $userData -File -Recurse | ForEach-Object {
+            $relative = $_.FullName.Substring($userData.Length).TrimStart('\\')
+            $before[$relative] = (Get-FileHash $_.FullName -Algorithm SHA256).Hash
+          }
+          if (-not $before.ContainsKey('db\bankresaneh.sqlite')) {
+            throw 'The real user database was not created; cannot claim upgrade preservation was tested.'
+          }
+          Set-Content -LiteralPath (Join-Path $userData 'upgrade-preservation-sentinel.txt') -Value '5.3.9-to-5.4.0-upgrade-preservation' -NoNewline
+          $before['upgrade-preservation-sentinel.txt'] = (Get-FileHash (Join-Path $userData 'upgrade-preservation-sentinel.txt') -Algorithm SHA256).Hash
+
+          Write-Host "Re-running the actual NSIS installer over the existing installation: $installDir"
+          $log = Join-Path $env:RUNNER_TEMP 'bankresaneh-upgrade-installer.log'
+          $proc = Start-Process -FilePath $setup -ArgumentList @('/S', "/LOG=$log", "/D=$installDir") -PassThru
+          if (-not $proc.WaitForExit(600000)) { try { & taskkill.exe /PID $proc.Id /T /F | Out-Null } catch {}; throw 'In-place installer upgrade timed out.' }
+          if ($proc.ExitCode -ne 0) { if (Test-Path $log) { Get-Content $log -Tail 100 }; throw "In-place installer upgrade failed: $($proc.ExitCode)" }
+
+          foreach ($relative in $before.Keys) {
+            $file = Join-Path $userData $relative
+            if (-not (Test-Path $file -PathType Leaf)) { throw "Upgrade deleted persistent user-data file: $relative" }
+            $afterHash = (Get-FileHash $file -Algorithm SHA256).Hash
+            if ($afterHash -ne $before[$relative]) { throw "Upgrade modified persistent user-data file: $relative" }
+          }
+          Write-Host "PASS: in-place NSIS upgrade preserved $($before.Count) user-data files byte-for-byte, including SQLite database and sentinel."
+
+          $installedExe = Join-Path $installDir 'BankResaneh.exe'
+          node scripts/smoke-electron.cjs "$installedExe"
+          if ($LASTEXITCODE -ne 0) { throw 'Application failed to start after in-place installer upgrade.' }
+          Write-Host 'PASS: installed application starts after in-place upgrade.'
 
       # ============================================================
       # INSTALLER SMOKE TEST — install the actual NSIS Setup.exe
