@@ -978,10 +978,19 @@ function HomeInner() {
       .catch(e => console.error('Failed to load data:', e));
   }, []);
 
-  // On mount: check if a token exists in localStorage, validate via /api/auth/me.
-  // If valid → set currentUser (skip login). If invalid → clear token, show login.
+  // On Electron desktop, require a fresh sign-in once per application launch.
+  // sessionStorage survives in-app reloads but is cleared when the app process exits.
+  // Browser/PWA sessions retain their existing persistent-login behavior.
   useEffect(() => {
-    const stored = typeof window !== 'undefined' ? localStorage.getItem('bankresaneh_token') : null;
+    const params = new URLSearchParams(window.location.search);
+    const isDesktopLaunch = params.get('desktop') === '1';
+    const launchMarker = 'bankresaneh_desktop_login_checked';
+    if (isDesktopLaunch && !sessionStorage.getItem(launchMarker)) {
+      localStorage.removeItem('bankresaneh_token');
+      sessionStorage.setItem(launchMarker, '1');
+    }
+
+    const stored = localStorage.getItem('bankresaneh_token');
     if (!stored) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Resolve the initial auth gate when no persisted session exists.
       setAuthLoading(false);
