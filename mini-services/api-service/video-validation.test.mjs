@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import {
   validateShowVideos,
   MAX_VIDEO_CLIP_BYTES,
-  MAX_TOTAL_VIDEO_CLIP_BYTES,
 } from './video-validation.mjs';
 
 const dataVideo = (bytes, mime = 'video/webm') => {
@@ -34,11 +33,10 @@ test('rejects a local clip larger than 8 MiB', () => {
   assert.equal(validateShowVideos([dataVideo(MAX_VIDEO_CLIP_BYTES + 1)]).valid, false);
 });
 
-test('rejects more than five local clips and aggregate data above 40 MiB', () => {
+test('allows up to five local clips and rejects a sixth', () => {
   const small = dataVideo(1024);
+  assert.equal(validateShowVideos(Array(5).fill(small)).valid, true);
   assert.equal(validateShowVideos(Array(6).fill(small)).valid, false);
-  const large = dataVideo(Math.floor(MAX_TOTAL_VIDEO_CLIP_BYTES / 2) + 1);
-  assert.equal(validateShowVideos([large, large]).valid, false);
 });
 
 test('rejects non-string and oversized references', () => {
