@@ -1071,10 +1071,10 @@ function HomeInner() {
     }
   }, [baseShows, overrides]);
 
-  const showToast = (msg: string) => {
+  function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
-  };
+  }
 
   // Persist a new set of overrides to state + localStorage in one place.
   const commitOverrides = (next: Overrides) => {
