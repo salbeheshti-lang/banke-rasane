@@ -188,6 +188,13 @@ db.exec(`
 addColumnIfMissing('custom_genres', 'aliases', "TEXT NOT NULL DEFAULT '[]'");
 addColumnIfMissing('custom_genres', 'is_active', 'INTEGER NOT NULL DEFAULT 1');
 
+// Track one-time data migrations so intentionally cleared fields are never
+// repopulated from the bundled seed on every application launch.
+db.exec(`CREATE TABLE IF NOT EXISTS app_migrations (
+  id TEXT PRIMARY KEY,
+  applied_at INTEGER NOT NULL
+)`);
+
 addColumnIfMissing('shows', 'image_data', 'BLOB');
 addColumnIfMissing('shows', 'image_mime', "TEXT NOT NULL DEFAULT 'image/jpeg'");
 addColumnIfMissing('shows', 'image_source', "TEXT NOT NULL DEFAULT ''");
@@ -772,6 +779,45 @@ function seedShows() {
     console.warn('[seed] failed to parse:', e.message); return;
   }
   if (!Array.isArray(shows)) { console.warn('[seed] expected array'); return; }
+  const metadataMigrationId = 'legacy-show-metadata-v1';
+  const metadataMigration = db.prepare('SELECT 1 FROM app_migrations WHERE id = ?').get(metadataMigrationId);
+  if (!metadataMigration) {
+    let migrated = 0;
+    const read = db.prepare('SELECT country, tags, is_film, decor_included FROM shows WHERE num = ?');
+    const update = db.prepare('UPDATE shows SET country = ?, tags = ?, is_film = ?, decor_included = ? WHERE num = ?');
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      for (const show of shows) {
+        const num = Number(show?.num);
+        if (!Number.isSafeInteger(num) || num < 1) continue;
+        const current = read.get(num);
+        if (!current) continue;
+        let country = current.country || '';
+        let tags = current.tags || '[]';
+        let isFilm = Number(current.is_film) || 0;
+        let decorIncluded = current.decor_included == null ? null : Number(current.decor_included);
+        let changed = false;
+        if (!country && typeof show.country === 'string' && show.country.trim()) {
+          country = show.country.trim(); changed = true;
+        }
+        if ((!tags || tags === '[]') && Array.isArray(show.tags) && show.tags.length) {
+          tags = JSON.stringify(show.tags); changed = true;
+        }
+        if (!isFilm && show.isFilm === true) { isFilm = 1; changed = true; }
+        if (decorIncluded === null && typeof show.decorIncluded === 'boolean') {
+          decorIncluded = show.decorIncluded ? 1 : 0; changed = true;
+        }
+        if (changed) { update.run(country, tags, isFilm, decorIncluded, num); migrated++; }
+      }
+      db.prepare('INSERT INTO app_migrations (id, applied_at) VALUES (?, ?)').run(metadataMigrationId, nowSec());
+      db.exec('COMMIT');
+      console.log(`[migration] backfilled legacy metadata for ${migrated} existing shows`);
+    } catch (error) {
+      try { db.exec('ROLLBACK'); } catch {}
+      throw error;
+    }
+  }
+
   const existing = db.prepare('SELECT COUNT(*) AS c FROM shows').get();
   if (existing.c >= shows.length) {
     console.log(`[seed] DB has ${existing.c} shows, JSON has ${shows.length} — up to date, skipping`);
