@@ -2782,9 +2782,6 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
   const DONUT_R = (DONUT_SIZE - DONUT_STROKE) / 2;          // 87
   const DONUT_CIRC = 2 * Math.PI * DONUT_R;                  // ~546.6
   const DONUT_CENTER = DONUT_SIZE / 2;                       // 100
-  const TOP_GENRES = genreStats.slice(0, 12);                // top 12 in donut
-  const OTHERS_COUNT = genreStats.slice(12).reduce((s, x) => s + x.count, 0);
-
   // Default: top 4 genres — initialize once with useState lazy initializer
   const [selectedGenreIds, setSelectedGenreIds] = useState<string[]>(() => {
     if (typeof window === 'undefined') return [];
