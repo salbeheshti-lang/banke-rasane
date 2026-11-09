@@ -241,7 +241,7 @@ export async function POST(request: NextRequest) {
       }
       if (!value.trim()) continue;
       if (PRESERVED_FIELDS.has(key)) continue;
-      if (key === 'name' && PRESERVE_ORIGINAL_TITLE) {
+      if ((key === 'name' && PRESERVE_ORIGINAL_TITLE) || PERSIAN_RE.test(value)) {
         translations[key] = value;
         continue;
       }
