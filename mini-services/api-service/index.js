@@ -1324,8 +1324,15 @@ const server = Bun.serve({
       if (duplicate) {
         return json({ error: 'این برنامه قبلاً ثبت شده است: «' + duplicate.name + '» — ژانر اصلی: ' + (duplicate.category || 'تعیین نشده'), duplicate: { num: duplicate.num, name: duplicate.name, category: duplicate.category } }, 409, req);
       }
-      const max = db.prepare('SELECT MAX(num) AS m FROM shows').get();
-      body.num = (max?.m || 0) + 1;
+      const requestedNum = Number.parseInt(String(body.num || ''), 10);
+      const requestedNumIsFree = Number.isSafeInteger(requestedNum) && requestedNum > 0
+        && !db.prepare('SELECT 1 FROM shows WHERE num = ?').get(requestedNum);
+      if (requestedNumIsFree) {
+        body.num = requestedNum;
+      } else {
+        const max = db.prepare('SELECT MAX(num) AS m FROM shows').get();
+        body.num = (max?.m || 0) + 1;
+      }
       db.prepare(`INSERT INTO shows (${SHOW_COLUMNS.join(', ')}) VALUES (${SHOW_COLUMNS.map(() => '?').join(', ')})`).run(...showToValues(body));
       logActivity(user, 'create_show', 'show', body.num, `Created show "${body.name}"`);
       return json(rowToShow(db.prepare('SELECT * FROM shows WHERE num = ?').get(body.num)), req);
