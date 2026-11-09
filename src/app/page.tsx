@@ -5239,31 +5239,76 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
     setUrlInput('');
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const compressImageFile = async (file: File): Promise<string> => {
+    if (!file.type.startsWith('image/')) throw new Error('فایل انتخاب‌شده تصویر نیست');
+    if (file.size > 25 * 1024 * 1024) throw new Error('حجم تصویر اولیه نباید بیشتر از ۲۵ مگابایت باشد');
+
+    // createImageBitmap applies EXIF orientation where supported. The scale
+    // calculation preserves the original aspect ratio; no stretching/cropping.
+    const bitmap = await createImageBitmap(file);
+    try {
+      const maxWidth = 1200;
+      const maxHeight = 1800;
+      const scale = Math.min(1, maxWidth / bitmap.width, maxHeight / bitmap.height);
+      const width = Math.max(1, Math.round(bitmap.width * scale));
+      const height = Math.max(1, Math.round(bitmap.height * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('امکان پردازش تصویر وجود ندارد');
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = 'high';
+      context.drawImage(bitmap, 0, 0, width, height);
+
+      const encode = (type: string, quality: number) => new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('تبدیل تصویر ناموفق بود')), type, quality);
+      });
+      let output = await encode('image/webp', 0.84);
+      let mime = output.type === 'image/webp' ? 'image/webp' : 'image/jpeg';
+      if (output.size > 1.2 * 1024 * 1024) {
+        output = await encode(mime, 0.74);
+      }
+      if (output.size > 1.8 * 1024 * 1024) {
+        output = await encode(mime, 0.66);
+      }
+      if (output.size > 2.5 * 1024 * 1024) {
+        throw new Error('حجم تصویر پس از فشرده‌سازی هنوز زیاد است؛ تصویر کوچک‌تری انتخاب کنید');
+      }
+      return await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('خواندن تصویر ناموفق بود'));
+        reader.onerror = () => reject(new Error('خواندن تصویر ناموفق بود'));
+        reader.readAsDataURL(output);
+      });
+    } finally {
+      bitmap.close();
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     const fileArr = Array.from(files);
-    const remaining = MAX_IMAGES - imagesRef.current.length;
+    const remaining = Math.max(0, MAX_IMAGES - imagesRef.current.length);
     const toAdd = fileArr.slice(0, remaining);
     if (toAdd.length < fileArr.length) {
-      showToast(`فقط ${toAdd.length.toLocaleString('fa-IR')} تصویر اضافه شد (حداکثر ${MAX_IMAGES.toLocaleString('fa-IR')})`);
+      showToast(`فقط ${toAdd.length.toLocaleString('fa-IR')} تصویر اضافه می‌شود (حداکثر ${MAX_IMAGES.toLocaleString('fa-IR')})`);
     }
-    // Read files sequentially to preserve order
-    toAdd.forEach((file, i) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
+
+    // Process sequentially so order is deterministic and memory use stays low.
+    for (const file of toAdd) {
+      try {
+        const result = await compressImageFile(file);
         const current = imagesRef.current;
         if (current.length < MAX_IMAGES && !current.includes(result)) {
           onChange([...current, result]);
         }
-      };
-      reader.onerror = () => {
-        showToast(`خطا در خواندن فایل: ${file.name}`);
-      };
-      reader.readAsDataURL(file);
-    });
-    // Reset file input so same file can be re-selected later
+      } catch (error) {
+        showToast(error instanceof Error ? error.message : `خطا در پردازش تصویر: ${file.name}`);
+      }
+    }
+    showToast('تصاویر بهینه شدند؛ نسبت تصویر حفظ شده و حجم فایل کاهش یافته است.');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
