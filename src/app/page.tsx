@@ -4742,53 +4742,71 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
     try {
       const res = await fetch('/api/fetch-show-info', {
         method: 'POST',
-        // Permission-guarded route (edit_shows) — without the Bearer token the
-        // server always replied 403, so fetching info/image from a link
-        // (IMDb/Wikipedia) never added anything to the form.
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ url: fetchUrl }),
       });
       const data = await res.json();
-      if (data.error) {
-        showToast(`خطا: ${data.error}`);
-      } else {
-        const info = data.info;
-        const updated = { ...form };
-        // Only fill fields that are CURRENTLY EMPTY — never overwrite data
-        // the user has already entered or curated. This is the fix for the
-        // user's report: "وقتی با ویکی پدیا عکس رو اضافه کردم بقیه توضیحاتم
-        // تغییر کرده" (when I added the image, my other descriptions changed).
-        if (info.title && !updated.name) updated.name = info.title;
-        if (info.description && !updated.descriptionFa) {
-          updated.descriptionFa = info.description;
-          if (!updated.summary) updated.summary = info.description.substring(0, 200);
-        }
-        // Push auto-fetched image into images[] array (up to 8 total).
-        // This is additive — never removes existing images.
-        if (info.image) {
-          const existing = updated.images || [];
-          if (!existing.includes(info.image) && existing.length < 8) {
-            updated.images = [...existing, info.image];
-          }
-        }
-        // Only fill these if currently empty — don't clobber curated data.
-        if (info.rating && !updated.colors) updated.colors = `امتیاز: ${info.rating}`;
-        if (info.genres && !updated.category) updated.category = info.genres;
-        if (info.duration && !updated.elements) updated.elements = info.duration;
-        if (fetchUrl.includes('imdb.com') && !updated.imdb) updated.imdb = fetchUrl;
-        if (fetchUrl.includes('wikipedia.org') && !updated.wikipedia) updated.wikipedia = fetchUrl;
-        // Auto-generate YouTube search link only if not already set.
-        if (updated.name && !updated.youtube) {
-          updated.youtube = `https://www.youtube.com/results?search_query=${encodeURIComponent(updated.name)}`;
-        }
-        // Auto-generate social post only if not already set.
-        if (updated.name && !updated.socialPost) {
-          updated.socialPost = `🎬 ${updated.name}\n\n📝 ${updated.descriptionFa || ''}\n\n#بانک_رسانه #تاک_شو`;
-        }
-        setForm(updated);
-        showToast(t('add.autoFetchSuccess'));
+      if (!res.ok || data.error) {
+        showToast(`خطا: ${data.error || 'دریافت اطلاعات ناموفق بود'}`);
+        return;
       }
-    } catch (e) {
+
+      const info = data.info || {};
+      if (editingShow) {
+        // Editing an existing program from an external page is image-only.
+        // Existing curated metadata must never be replaced by imported text.
+        if (!info.image || typeof info.image !== 'string') {
+          showToast('از این لینک تصویر قابل دریافت نبود؛ اطلاعات فعلی برنامه بدون تغییر ماند.');
+          return;
+        }
+        const existingImages = Array.isArray(form.images) ? form.images : [];
+        if (existingImages.includes(info.image)) {
+          showToast('این تصویر قبلاً به برنامه اضافه شده است.');
+          return;
+        }
+        if (existingImages.length >= 8) {
+          showToast('حداکثر ۸ تصویر برای هر برنامه قابل ثبت است.');
+          return;
+        }
+        setForm({ ...form, images: [...existingImages, info.image] });
+        showToast('تصویر اضافه شد؛ سایر اطلاعات برنامه بدون تغییر ماند.');
+        return;
+      }
+
+      // On creation, fill available fields without overwriting user-entered data.
+      const updated = { ...form };
+      if (info.title && !updated.name) updated.name = info.title;
+      if (info.description && !updated.descriptionFa) {
+        updated.descriptionFa = info.description;
+        if (!updated.summary) updated.summary = info.description.substring(0, 200);
+      }
+      if (info.image) {
+        const existingImages = updated.images || [];
+        if (!existingImages.includes(info.image) && existingImages.length < 8) {
+          updated.images = [...existingImages, info.image];
+        }
+      }
+      if (info.country && !updated.country) updated.country = info.country;
+      if (info.imdbUrl && !updated.imdb) updated.imdb = info.imdbUrl;
+      if (info.wikiUrl && !updated.wikipedia) updated.wikipedia = info.wikiUrl;
+      try {
+        const sourceUrl = new URL(fetchUrl);
+        const sourceHost = sourceUrl.hostname.toLowerCase();
+        if (!updated.imdb && (sourceHost === 'imdb.com' || sourceHost.endsWith('.imdb.com'))) updated.imdb = sourceUrl.href;
+        if (!updated.wikipedia && (sourceHost === 'wikipedia.org' || sourceHost.endsWith('.wikipedia.org'))) updated.wikipedia = sourceUrl.href;
+      } catch {
+        // The API validates source URLs; do not persist malformed fallback values.
+      }
+      if (updated.name && !updated.youtube) {
+        updated.youtube = `https://www.youtube.com/results?search_query=${encodeURIComponent(updated.name)}`;
+      }
+      if (updated.name && !updated.socialPost) {
+        updated.socialPost = `🎬 ${updated.name}\n\n📝 ${updated.descriptionFa || ''}\n\n#بانک_رسانه #تاک_شو`;
+      }
+      setForm(updated);
+      showToast(t('add.autoFetchSuccess'));
+    } catch (error) {
+      console.error('[show-import] failed:', error);
       showToast(t('add.autoFetchError'));
     } finally {
       setFetching(false);
