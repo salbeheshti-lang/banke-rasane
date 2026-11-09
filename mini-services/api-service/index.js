@@ -949,6 +949,12 @@ const server = Bun.serve({
         }
         db.prepare('UPDATE custom_genres SET is_active = 0, updated_by = ?, updated_at = ? WHERE id = ?')
           .run(admin.id, nowSec(), id);
+        // The decor genre is backed by an explicit boolean, not category text.
+        // Deactivating it must clear that classification for every existing show.
+        if (id === 'decor') {
+          const result = db.prepare('UPDATE shows SET decor_included = 0 WHERE decor_included = 1').run();
+          clearedCount += result.changes || 0;
+        }
         db.exec('COMMIT');
       } catch (error) {
         try { db.exec('ROLLBACK'); } catch {}
