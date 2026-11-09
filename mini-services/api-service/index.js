@@ -892,17 +892,24 @@ const server = Bun.serve({
           !/^#[0-9a-fA-F]{6}$/.test(color) || description.length > 1000) {
         return json({ error: 'اطلاعات ژانر معتبر نیست' }, 400, req);
       }
-      const target = db.prepare('SELECT name_fa FROM custom_genres WHERE id = ?').get(id);
+      const target = db.prepare('SELECT name_fa, aliases FROM custom_genres WHERE id = ?').get(id);
       if (!target) return json({ error: 'ژانر یافت نشد' }, 404, req);
       const oldName = target.name_fa;
+      let oldLabels = [oldName];
+      try {
+        const storedAliases = JSON.parse(target.aliases || '[]');
+        if (Array.isArray(storedAliases)) oldLabels.push(...storedAliases.filter(value => typeof value === 'string'));
+      } catch {}
+      oldLabels = [...new Set(oldLabels.map(value => String(value || '').trim()).filter(Boolean))];
       let migratedCount = 0;
       db.exec('BEGIN IMMEDIATE');
       try {
-        if (normalizeCatalogValue(oldName) !== normalizeCatalogValue(nameFa)) {
+        if (oldLabels.some(label => normalizeCatalogValue(label) !== normalizeCatalogValue(nameFa))) {
           const rows = db.prepare('SELECT num, category FROM shows').all();
           const updateShowCategory = db.prepare('UPDATE shows SET category = ? WHERE num = ?');
           for (const row of rows) {
-            const nextCategory = rewriteGenreCategory(row.category, oldName, nameFa);
+            let nextCategory = row.category;
+            for (const label of oldLabels) nextCategory = rewriteGenreCategory(nextCategory, label, nameFa);
             if (nextCategory !== row.category) { updateShowCategory.run(nextCategory, row.num); migratedCount++; }
           }
         }
@@ -922,15 +929,22 @@ const server = Bun.serve({
       if (!admin) return permissionFailure(req, 'فقط مدیران می‌توانند ژانر حذف کنند');
       const id = String(url.searchParams.get('id') || '').trim();
       if (!id) return json({ error: 'شناسه ژانر نامعتبر است' }, 400, req);
-      const target = db.prepare('SELECT name_fa FROM custom_genres WHERE id = ?').get(id);
+      const target = db.prepare('SELECT name_fa, aliases FROM custom_genres WHERE id = ?').get(id);
       if (!target) return json({ error: 'ژانر یافت نشد' }, 404, req);
+      let oldLabels = [target.name_fa];
+      try {
+        const storedAliases = JSON.parse(target.aliases || '[]');
+        if (Array.isArray(storedAliases)) oldLabels.push(...storedAliases.filter(value => typeof value === 'string'));
+      } catch {}
+      oldLabels = [...new Set(oldLabels.map(value => String(value || '').trim()).filter(Boolean))];
       let clearedCount = 0;
       db.exec('BEGIN IMMEDIATE');
       try {
         const rows = db.prepare('SELECT num, category FROM shows').all();
         const updateShowCategory = db.prepare('UPDATE shows SET category = ? WHERE num = ?');
         for (const row of rows) {
-          const nextCategory = rewriteGenreCategory(row.category, target.name_fa, null);
+          let nextCategory = row.category;
+          for (const label of oldLabels) nextCategory = rewriteGenreCategory(nextCategory, label, null);
           if (nextCategory !== row.category) { updateShowCategory.run(nextCategory, row.num); clearedCount++; }
         }
         db.prepare('UPDATE custom_genres SET is_active = 0, updated_by = ?, updated_at = ? WHERE id = ?')
