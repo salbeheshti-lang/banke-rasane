@@ -14,6 +14,7 @@ import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 import { readFileSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
+import { validateShowVideos } from './video-validation.mjs';
 
 const PORT = parseInt(process.env.PORT || '3002', 10);
 // Bind to loopback by default. Public/server deployments must opt in explicitly.
