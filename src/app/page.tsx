@@ -5599,6 +5599,163 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
 }
 
 // ============================================
+// LOCAL VIDEO CLIP EDITOR — browser-native trim/transcode, max 30 seconds
+// ============================================
+function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [duration, setDuration] = useState(0);
+  const [start, setStart] = useState(0);
+  const [end, setEnd] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (!file) { setPreviewUrl(''); return; }
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  const chooseFile = (next: File | null) => {
+    setError('');
+    if (!next) return;
+    if (!next.type.startsWith('video/')) { setError('لطفاً یک فایل ویدیویی انتخاب کنید.'); return; }
+    if (next.size > 200 * 1024 * 1024) { setError('حجم فایل ورودی نباید بیشتر از ۲۰۰ مگابایت باشد.'); return; }
+    setFile(next);
+  };
+
+  const formatTime = (value: number) => {
+    const n = Math.max(0, Math.floor(value || 0));
+    return String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0');
+  };
+
+  const exportClip = async () => {
+    const video = videoRef.current;
+    if (!video || !previewUrl || busy) return;
+    const clipLength = end - start;
+    if (!(clipLength > 0) || clipLength > 30.001) {
+      setError('مدت کلیپ باید بیشتر از صفر و حداکثر ۳۰ ثانیه باشد.');
+      return;
+    }
+    if (typeof MediaRecorder === 'undefined' || typeof video.captureStream !== 'function') {
+      setError('ویرایش و خروجی ویدیو در این نسخه از مرورگر پشتیبانی نمی‌شود.');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      video.pause();
+      video.currentTime = start;
+      await new Promise<void>((resolve, reject) => {
+        const timeout = window.setTimeout(() => reject(new Error('بارگذاری فریم ویدیو بیش از حد طول کشید.')), 10000);
+        video.onseeked = () => { window.clearTimeout(timeout); resolve(); };
+        video.onerror = () => { window.clearTimeout(timeout); reject(new Error('خواندن فایل ویدیو ناموفق بود.')); };
+      });
+      const stream = video.captureStream();
+      const mimeType = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
+        .find(type => MediaRecorder.isTypeSupported(type));
+      if (!mimeType) throw new Error('کدک WebM در این سیستم پشتیبانی نمی‌شود.');
+      const recorder = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: 1000000,
+        audioBitsPerSecond: 96000,
+      });
+      const chunks: BlobPart[] = [];
+      const finished = new Promise<Blob>((resolve, reject) => {
+        recorder.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
+        recorder.onerror = () => reject(new Error('پردازش ویدیو با خطا متوقف شد.'));
+        recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType }));
+      });
+      recorder.start(250);
+      await video.play();
+      await new Promise<void>((resolve, reject) => {
+        const timer = window.setTimeout(() => {
+          if (recorder.state !== 'inactive') recorder.stop();
+          resolve();
+        }, Math.ceil(clipLength * 1000) + 1200);
+        const check = () => {
+          if (video.currentTime >= end || video.ended) {
+            window.clearTimeout(timer);
+            video.pause();
+            if (recorder.state !== 'inactive') recorder.stop();
+            resolve();
+          }
+        };
+        video.addEventListener('timeupdate', check);
+        video.addEventListener('ended', check, { once: true });
+        recorder.addEventListener('stop', () => {
+          window.clearTimeout(timer);
+          video.removeEventListener('timeupdate', check);
+        }, { once: true });
+      });
+      const blob = await finished;
+      stream.getTracks().forEach(track => track.stop());
+      if (!blob.size) throw new Error('فایل خروجی خالی است؛ دوباره تلاش کنید.');
+      if (blob.size > 8 * 1024 * 1024) throw new Error('حجم خروجی بیش از ۸ مگابایت شد. بازه کوتاه‌تری انتخاب کنید یا فایل سبک‌تری بدهید.');
+      const reader = new FileReader();
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(new Error('ذخیره فایل پردازش‌شده ناموفق بود.'));
+        reader.readAsDataURL(blob);
+      });
+      onAdd(dataUrl);
+      setFile(null);
+      setDuration(0);
+      setStart(0);
+      setEnd(0);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'پردازش ویدیو ناموفق بود.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="p-3 rounded-xl mb-3" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)' }}>
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+        <strong className="text-sm" style={{ color: '#d1fae5' }}>✂️ ویرایش ویدیو از سیستم (حداکثر ۳۰ ثانیه)</strong>
+        <label className="px-3 py-2 rounded-lg text-xs font-bold cursor-pointer" style={{ background: '#0d7c4a', color: 'white' }}>
+          انتخاب فایل ویدیو
+          <input type="file" accept="video/*" onChange={e => chooseFile(e.target.files?.[0] || null)} style={{ display: 'none' }} />
+        </label>
+      </div>
+      {file && previewUrl && (
+        <div className="space-y-3">
+          <video ref={videoRef} src={previewUrl} controls playsInline preload="metadata" onLoadedMetadata={e => {
+            const d = Number.isFinite(e.currentTarget.duration) ? e.currentTarget.duration : 0;
+            setDuration(d); setStart(0); setEnd(Math.min(30, d));
+          }} style={{ width: '100%', maxHeight: 260, borderRadius: 10, background: '#000', objectFit: 'contain' }} />
+          <div className="text-xs" style={{ color: '#d1fae5' }}>
+            {file.name} · {(file.size / 1024 / 1024).toFixed(1)} MB · مدت اصلی {formatTime(duration)}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="text-xs" style={{ color: '#d1fae5' }}>شروع: {formatTime(start)}
+              <input type="range" min={0} max={Math.max(0, duration)} step={0.1} value={start} onChange={e => {
+                const value = Number(e.target.value); setStart(value); if (end - value > 30) setEnd(value + 30); if (value >= end) setEnd(Math.min(duration, value + 1));
+              }} className="w-full" />
+            </label>
+            <label className="text-xs" style={{ color: '#d1fae5' }}>پایان: {formatTime(end)}
+              <input type="range" min={0} max={Math.max(0, duration)} step={0.1} value={end} onChange={e => setEnd(Number(e.target.value))} className="w-full" />
+            </label>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs" style={{ color: end > start && end - start <= 30 ? '#6ee7b7' : '#fca5a5' }}>مدت خروجی: {formatTime(end - start)} / ۰۰:۳۰</span>
+            <button type="button" onClick={exportClip} disabled={busy || end <= start || end - start > 30} className="px-4 py-2 rounded-lg text-xs font-bold disabled:opacity-50" style={{ background: '#059669', color: 'white' }}>
+              {busy ? 'در حال پردازش ویدیو…' : 'پردازش و افزودن کلیپ'}
+            </button>
+            <button type="button" onClick={() => { setFile(null); setError(''); }} disabled={busy} className="px-3 py-2 rounded-lg text-xs" style={{ background: 'rgba(255,255,255,.12)', color: '#d1fae5' }}>انصراف</button>
+          </div>
+          <p className="text-[11px]" style={{ color: 'rgba(209,250,229,.75)' }}>خروجی WebM با حفظ نسبت تصویر و نرخ بیت کنترل‌شده ساخته می‌شود؛ فایل اصلی تغییر نمی‌کند. حداکثر حجم خروجی ۸ مگابایت است.</p>
+        </div>
+      )}
+      {error && <p role="alert" className="text-xs mt-2" style={{ color: '#fca5a5' }}>{error}</p>}
+    </div>
+  );
+}
+
+// ============================================
 // VIDEO LINKS EDITOR — multiple video URLs per show
 // ============================================
 function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: {
@@ -5652,6 +5809,8 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
           }}
         />
       </div>
+
+      <VideoClipEditor onAdd={(dataUrl) => onVideosChange([...videos, dataUrl])} />
 
       {/* Add video URL */}
       <div className="flex gap-2 mb-3">
@@ -5707,7 +5866,9 @@ function VideoLinksEditor({ videos, youtube, onVideosChange, onYoutubeChange }: 
                   className="w-16 h-12 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
                   style={{ background: thumb ? '#000' : `${platform.color}20` }}
                 >
-                  {thumb ? (
+                  {url.startsWith('data:video/') ? (
+                    <video src={url} muted playsInline preload="metadata" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : thumb ? (
                     <img src={thumb} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                   ) : (
                     <span className="text-xl">{platform.icon}</span>
