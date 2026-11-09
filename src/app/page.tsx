@@ -63,6 +63,7 @@ interface Genre {
   searchFields?: (keyof TalkShow)[];
   // True for user-created genres (stored in localStorage)
   isCustom?: boolean;
+  isActive?: boolean;
 }
 
 // Reusable tag specifications — each Genre picks a subset for its `tags` array.
@@ -496,6 +497,7 @@ type StoredGenre = {
   color: string;
   description: string;
   aliases?: string[];
+  isActive?: boolean;
 };
 
 /**
@@ -522,7 +524,7 @@ function hydrateCustomGenres(items: StoredGenre[]): Genre[] {
       description: stripLegacyGenreDescription(g.description || ''),
       aliases: Array.isArray(g.aliases) ? g.aliases : [],
       filterFn: (show: TalkShow) => [g.nameFa, g.name, ...(g.aliases || [])].some(name => !!name && show.category.includes(name)),
-      isCustom: true, tags: DEFAULT_GENRE_TAGS, presetTags: [],
+      isCustom: true, isActive: g.isActive !== false, tags: DEFAULT_GENRE_TAGS, presetTags: [],
       searchFields: ['name', 'summary', 'category', 'descriptionFa'] as (keyof TalkShow)[],
     }));
 }
@@ -908,8 +910,29 @@ function HomeInner() {
   // When AddEditView opens with a preset genre, its preset tags are offered as quick-adds.
   const [presetGenre, setPresetGenre] = useState<Genre | null>(null);
 
-  // The full list of genres = default GENRES + user customGenres.
-  const genres: Genre[] = useMemo(() => [...GENRES, ...customGenres], [customGenres]);
+  // One shared catalog drives both built-in and user-created genres.
+  // Server records override built-in presentation and can deactivate any genre.
+  const genres: Genre[] = useMemo(() => {
+    const records = new Map(customGenres.map(g => [g.id, g]));
+    const builtIn = GENRES.flatMap(base => {
+      const record = records.get(base.id);
+      if (record?.isActive === false) return [];
+      if (!record) return [base];
+      return [{
+        ...base,
+        nameFa: record.nameFa,
+        name: record.name || record.nameFa,
+        color: record.color,
+        description: record.description,
+        aliases: record.aliases || [],
+        isCustom: false,
+        filterFn: (show: TalkShow) => [record.nameFa, record.name, ...(record.aliases || [])]
+          .some(name => !!name && show.category.includes(name)),
+      }];
+    });
+    const custom = customGenres.filter(g => !GENRES.some(base => base.id === g.id) && g.isActive !== false);
+    return [...builtIn, ...custom];
+  }, [customGenres]);
 
   // Role helpers — viewer is read-only (no add/edit/delete), admin can manage users + settings.
   const role = currentUser?.role || null;
@@ -3115,7 +3138,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {genres.map((g, idx) => {
           const count = talkShows.filter(g.filterFn).length;
-          const canManage = isAdmin && g.isCustom && onEditGenre && onDeleteGenre;
+          const canManage = isAdmin && onEditGenre && onDeleteGenre;
           return (
             <div
               key={g.id}
