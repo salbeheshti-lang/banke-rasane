@@ -272,13 +272,26 @@ jobs:
 
           Write-Host "=== All checks passed ==="
 
-      - name: Verify and rename installer
+      - name: Verify installer and update manifest consistency
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           $setup = Get-ChildItem release -Filter '*Setup*.exe' | Select-Object -First 1
           if (-not $setup) { throw 'No Setup.exe was produced.' }
-          Copy-Item $setup.FullName 'release/BankResaneh-Setup.exe' -Force
-          if (-not (Test-Path 'release/latest.yml')) { throw 'electron-builder did not produce latest.yml for auto-update.' }
+          $canonicalName = 'BankResaneh-Setup.exe'
+          $canonicalPath = Join-Path 'release' $canonicalName
+          if ($setup.Name -ne $canonicalName) {
+            Copy-Item $setup.FullName $canonicalPath -Force
+            Remove-Item $setup.FullName -Force
+          }
+          $manifestPath = 'release/latest.yml'
+          if (-not (Test-Path $manifestPath)) { throw 'electron-builder did not produce latest.yml for auto-update.' }
+          $manifest = Get-Content $manifestPath -Raw
+          if ($manifest -notmatch [regex]::Escape("url: $canonicalName") -or $manifest -notmatch [regex]::Escape("path: $canonicalName")) {
+            throw "latest.yml does not reference the published installer name $canonicalName. Refusing to publish a broken updater manifest."
+          }
+          if (-not (Test-Path $canonicalPath)) { throw 'Canonical installer file is missing.' }
+          Write-Host "✓ Installer and latest.yml both reference $canonicalName"
           Get-ChildItem release
 
       # ============================================================
