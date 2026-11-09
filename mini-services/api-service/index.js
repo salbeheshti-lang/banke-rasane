@@ -193,6 +193,8 @@ addColumnIfMissing('shows', 'image_mime', "TEXT NOT NULL DEFAULT 'image/jpeg'");
 addColumnIfMissing('shows', 'image_source', "TEXT NOT NULL DEFAULT ''");
 addColumnIfMissing('shows', 'is_film', 'INTEGER NOT NULL DEFAULT 0');
 addColumnIfMissing('shows', 'tags', "TEXT NOT NULL DEFAULT '[]'");
+addColumnIfMissing('shows', 'country', "TEXT NOT NULL DEFAULT ''");
+addColumnIfMissing('shows', 'decor_included', 'INTEGER');
 
 // Full-text search index for the archive. Triggers keep it in sync with show edits.
 let showsFtsAvailable = false;
@@ -344,8 +346,8 @@ function rowToShow(r) {
     layout: r.layout, elements: r.elements, materials: r.materials,
     colors: r.colors, lighting: r.lighting, summary: r.summary,
     descriptionFa: r.descriptionFa, youtube: r.youtube, imdb: r.imdb,
-    wikipedia: r.wikipedia, socialPost: r.socialPost,
-    images, videos, tags,
+    wikipedia: r.wikipedia, socialPost: r.socialPost, country: r.country || '',
+    images, videos, tags, decorIncluded: r.decor_included == null ? undefined : !!r.decor_included,
     isFilm: !!(r.is_film),
     // Expose the image source so the frontend can:
     //   1. know whether a BLOB image exists (non-empty string)
@@ -358,7 +360,7 @@ const SHOW_COLUMNS = [
   'num', 'name', 'category', 'source', 'size', 'viewers', 'style', 'effects', 'layout',
   'elements', 'materials', 'colors', 'lighting', 'summary', 'descriptionFa',
   'youtube', 'imdb', 'wikipedia', 'socialPost', 'images', 'videos', 'tags',
-  'is_film',
+  'is_film', 'country', 'decor_included',
 ];
 function showToValues(s) {
   return [
@@ -369,7 +371,8 @@ function showToValues(s) {
     JSON.stringify(Array.isArray(s.images) ? s.images : []),
     JSON.stringify(Array.isArray(s.videos) ? s.videos : []),
     JSON.stringify(Array.isArray(s.tags) ? s.tags : []),
-    s.isFilm ? 1 : 0,
+    s.isFilm ? 1 : 0, s.country || '',
+    s.decorIncluded === undefined ? null : (s.decorIncluded ? 1 : 0),
   ];
 }
 
