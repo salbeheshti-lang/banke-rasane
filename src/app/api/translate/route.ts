@@ -241,7 +241,7 @@ export async function POST(request: NextRequest) {
       }
       if (!value.trim()) continue;
       if (PRESERVED_FIELDS.has(key)) continue;
-      if ((key === 'name' && PRESERVE_ORIGINAL_TITLE) || PERSIAN_RE.test(value)) {
+      if (key === 'name' && PRESERVE_ORIGINAL_TITLE) {
         translations[key] = value;
         continue;
       }
@@ -258,83 +258,64 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // --- 5. Translate without the unavailable Z.ai project config ---
-    // Prefer a self-hosted LibreTranslate-compatible endpoint when configured.
-    // Otherwise use MyMemory's public EN/auto -> Persian endpoint. The public
-    // fallback is quota-limited and must not be treated as an SLA-backed service.
-    const translateOne = async (text: string): Promise<string> => {
-      const configuredEndpoint = process.env.TRANSLATE_API_URL?.trim();
-      if (configuredEndpoint) {
-        const endpoint = (configuredEndpoint.endsWith('/') ? configuredEndpoint.slice(0, -1) : configuredEndpoint) + '/translate';
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(process.env.TRANSLATE_API_KEY ? { 'X-API-Key': process.env.TRANSLATE_API_KEY } : {}),
-          },
-          body: JSON.stringify({
-            q: text,
-            source: 'auto',
-            target: 'fa',
-            format: 'text',
-            ...(process.env.TRANSLATE_API_KEY ? { api_key: process.env.TRANSLATE_API_KEY } : {}),
-          }),
-          signal: AbortSignal.timeout(15000),
+    // --- 5. Free external translation fallback (no private API key) ---
+    // MyMemory's public endpoint accepts autodetect|fa. Text is sent to this
+    // third-party service; callers are authenticated and rate-limited above.
+    // Keep original values whenever the service is unavailable or rejects a result.
+    const parsed: Record<string, string> = {};
+    const entries = Object.entries(toTranslate);
+    for (const [key, value] of entries) {
+      try {
+        const params = new URLSearchParams({
+          q: value,
+          langpair: 'autodetect|fa',
         });
-        if (!response.ok) throw new Error(`Translation endpoint returned HTTP ${response.status}`);
-        const data = await response.json() as { translatedText?: string };
-        if (typeof data.translatedText === 'string' && data.translatedText.trim()) return data.translatedText.trim();
-        throw new Error('Translation endpoint returned an empty result');
-      }
-
-      const url = new URL('https://api.mymemory.translated.net/get');
-      url.searchParams.set('q', text);
-      url.searchParams.set('langpair', 'en|fa');
-      const response = await fetch(url, { signal: AbortSignal.timeout(15000) });
-      if (!response.ok) throw new Error(`Public translation fallback returned HTTP ${response.status}`);
-      const data = await response.json() as {
-        responseStatus?: number;
-        responseData?: { translatedText?: string };
-      };
-      const translated = data.responseData?.translatedText?.trim();
-      if (data.responseStatus !== 200 || !translated) {
-        throw new Error('Public translation fallback is unavailable or its free quota is exhausted');
-      }
-      return translated;
-    };
-
-    const translationEntries = Object.entries(toTranslate);
-    const results = await Promise.allSettled(
-      translationEntries.map(async ([key, value]) => [key, await translateOne(value)] as const)
-    );
-    let translatedCount = 0;
-    for (let i = 0; i < results.length; i++) {
-      const result = results[i];
-      const [key, original] = translationEntries[i];
-      if (result.status === 'fulfilled' && PERSIAN_RE.test(result.value[1])) {
-        translations[key] = result.value[1];
-        translatedCount++;
-      } else {
-        translations[key] = original;
-        warnings.push(`فیلد «${key}» ترجمه نشد؛ متن اصلی حفظ شد.`);
+        const response = await fetch(
+          `https://api.mymemory.translated.net/get?${params.toString()}`,
+          { signal: AbortSignal.timeout(12000), headers: { Accept: 'application/json' } }
+        );
+        if (!response.ok) {
+          warnings.push(`field "${key}": سرویس ترجمه پاسخ نداد؛ متن اصلی حفظ شد`);
+          continue;
+        }
+        const payload = await response.json() as {
+          responseStatus?: number;
+          responseData?: { translatedText?: string };
+        };
+        const translated = payload.responseData?.translatedText?.trim() || '';
+        if (payload.responseStatus !== 200 || !translated || !PERSIAN_RE.test(translated)) {
+          warnings.push(`field "${key}": ترجمه معتبر دریافت نشد؛ متن اصلی حفظ شد`);
+          continue;
+        }
+        parsed[key] = translated;
+      } catch {
+        warnings.push(`field "${key}": سرویس ترجمه در دسترس نیست؛ متن اصلی حفظ شد`);
       }
     }
 
-    if (translatedCount === 0) {
-      return NextResponse.json({
-        error: 'سرویس ترجمه در دسترس نیست یا سهمیه رایگان آن تمام شده است. متن‌های واردشده حفظ شدند.',
-        translations,
-        warnings,
-        translatedCount: 0,
-        preservedFields: Array.from(PRESERVED_FIELDS),
-        originalTitlePreserved: PRESERVE_ORIGINAL_TITLE,
-      }, { status: 503 });
+    // --- 6. Merge + output sanity check ---
+    for (const [key, value] of Object.entries(toTranslate)) {
+      const translated = parsed[key];
+      if (typeof translated !== 'string' || !translated.trim()) {
+        translations[key] = value;
+        warnings.push(`field "${key}": model did not translate; kept original`);
+        continue;
+      }
+      // Reject translations that contain NO Persian/Arabic characters —
+      // this catches cases where the model returned English, echoed the
+      // system prompt, or returned garbage. Keep the original instead.
+      if (!PERSIAN_RE.test(translated)) {
+        translations[key] = value;
+        warnings.push(`field "${key}": translation contained no Persian text; kept original`);
+        continue;
+      }
+      translations[key] = translated.trim();
     }
 
     return NextResponse.json({
       translations,
       warnings,
-      translatedCount,
+      translatedCount: Object.keys(translations).length,
       preservedFields: Array.from(PRESERVED_FIELDS),
       originalTitlePreserved: PRESERVE_ORIGINAL_TITLE,
     });
