@@ -835,7 +835,9 @@ function seedShows() {
 
   const seedTx = db.transaction(() => {
     if (!seedBaseline) {
-      if (databaseExistedBeforeOpen) {
+      const currentShowCount = db.prepare('SELECT COUNT(*) AS c FROM shows').get().c;
+      const isExistingArchive = databaseExistedBeforeOpen && (databaseHadUsersBeforeStartup || currentShowCount > 0);
+      if (isExistingArchive) {
         // Existing DB is authoritative. Mark the bundled baseline as already
         // considered so intentionally deleted legacy programs never reappear.
         for (const show of shows) {
@@ -880,6 +882,9 @@ function seedShows() {
   console.log(`[seed] baseline handled; inserted ${inserted}, marked ${marked}; archive now has ${total} shows`);
 }
 
+// Capture whether this was an established user database before the
+// default admin bootstrap creates a user in a genuinely fresh database.
+const databaseHadUsersBeforeStartup = (db.prepare('SELECT COUNT(*) AS c FROM users').get()?.c || 0) > 0;
 await seedDefaultAdmin();
 seedShows();
 
