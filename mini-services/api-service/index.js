@@ -1435,6 +1435,8 @@ const server = Bun.serve({
         body.num = (max?.m || 0) + 1;
       }
       db.prepare(`INSERT INTO shows (${SHOW_COLUMNS.join(', ')}) VALUES (${SHOW_COLUMNS.map(() => '?').join(', ')})`).run(...showToValues(body));
+      // User-created records are also protected from future seed resurrection.
+      db.prepare('INSERT OR IGNORE INTO seeded_shows (num) VALUES (?)').run(body.num);
       logActivity(user, 'create_show', 'show', body.num, `Created show "${body.name}"`);
       return json(rowToShow(db.prepare('SELECT * FROM shows WHERE num = ?').get(body.num)), req);
     }
