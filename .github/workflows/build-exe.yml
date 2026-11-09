@@ -399,7 +399,7 @@ jobs:
             $relative = $_.FullName.Substring($userData.Length).TrimStart('\\')
             $before[$relative] = (Get-FileHash $_.FullName -Algorithm SHA256).Hash
           }
-          if (-not $before.ContainsKey('db\\bankresaneh.sqlite')) {
+          if (-not $before.ContainsKey('db\bankresaneh.sqlite')) {
             throw 'The real user database was not created; cannot claim upgrade preservation was tested.'
           }
           Set-Content -LiteralPath (Join-Path $userData 'upgrade-preservation-sentinel.txt') -Value '5.3.9-to-5.4.0-upgrade-preservation' -NoNewline
