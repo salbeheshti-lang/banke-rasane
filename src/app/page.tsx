@@ -5628,7 +5628,7 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
     // Some Windows formats (notably MKV/AVI) are reported with an empty MIME type.
     // Accept the known video extensions here and let the browser's decoder validate playback.
     const hasVideoMime = next.type.startsWith('video/');
-    const hasSupportedExtension = /\\.(mp4|mov|m4v|webm|mkv|avi)$/i.test(next.name);
+    const hasSupportedExtension = /\.(mp4|mov|m4v|webm|mkv|avi)$/i.test(next.name);
     if (!hasVideoMime && !hasSupportedExtension) { setError('لطفاً یک فایل ویدیویی معتبر انتخاب کنید.'); return; }
     if (next.size > 200 * 1024 * 1024) { setError('حجم فایل ورودی نباید بیشتر از ۲۰۰ مگابایت باشد.'); return; }
     const url = URL.createObjectURL(next);
