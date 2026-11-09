@@ -104,7 +104,22 @@ export const api = {
     }
     if (typeof window !== 'undefined') localStorage.removeItem(TOKEN_KEY);
   },
-  async getShows() { return request(getApiUrl('api/shows')); },
+  async getShows() { return request<{ shows: any[]; pagination?: { totalPages?: number } }>(getApiUrl('api/shows?page=1&limit=500')); },
+  async getAllShows() {
+    const all: any[] = [];
+    let page = 1;
+    let totalPages = 1;
+    do {
+      const result = await request<{ shows: any[]; pagination?: { totalPages?: number } }>(
+        getApiUrl('api/shows?page=' + page + '&limit=500')
+      );
+      all.push(...(Array.isArray(result.shows) ? result.shows : []));
+      totalPages = Math.max(1, Number(result.pagination?.totalPages) || 1);
+      page += 1;
+      if (page > 10000) throw new Error('تعداد صفحات آرشیو غیرعادی است');
+    } while (page <= totalPages);
+    return all;
+  },
   async searchShows(params: { query?: string; category?: string; page?: number; limit?: number }) {
     const query = new URLSearchParams();
     if (params.query) query.set('q', params.query);
@@ -118,6 +133,9 @@ export const api = {
     }>(getApiUrl('api/shows/search?' + query.toString()));
   },
   async saveShow(show: any) { return request(getApiUrl('api/shows'), { method: 'POST', body: JSON.stringify(show) }); },
+  async updateShow(show: any) {
+    return request(getApiUrl('api/shows/' + encodeURIComponent(show.num)), { method: 'PUT', body: JSON.stringify(show) });
+  },
   async deleteShow(num: number) { return request(getApiUrl('api/shows?num=' + encodeURIComponent(num)), { method: 'DELETE' }); },
   async fetchImage(data: { num: number; imdb?: string; wikipedia?: string; name?: string }) {
     return request(getApiUrl('api/fetch-image'), { method: 'POST', body: JSON.stringify(data) });
