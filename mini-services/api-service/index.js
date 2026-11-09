@@ -1457,7 +1457,7 @@ const server = Bun.serve({
       const existing = db.prepare('SELECT * FROM shows WHERE num = ?').get(num);
       if (!existing) return json({ error: 'show not found' }, 404, req);
       const merged = { ...rowToShow(existing), ...body, num };
-      const videoValidation = validateShowVideos(merged.videos);
+      const videoValidation = validateShowVideos(merged.videos, rowToShow(existing).videos);
       if (!videoValidation.valid) return json({ error: videoValidation.error }, 400, req);
       const duplicate = findDuplicateShow(merged, num);
       if (duplicate) {
