@@ -907,9 +907,9 @@ function HomeInner() {
   const [authLoading, setAuthLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [talkShows, setTalkShows] = useState<TalkShow[]>([]);
-  // Base data (raw from JSON, never mutated) used to recompute the merged list.
+  // Base archive data loaded from the authenticated shared API.
   const [baseShows, setBaseShows] = useState<TalkShow[]>([]);
-  // User changes persisted to localStorage so add/edit/delete survive a refresh.
+  // Recovery-only local overrides retained solely for safe migration of legacy browser edits.
   const [overrides, setOverrides] = useState<Overrides>({ added: [], edited: {}, deleted: [] });
   const [uploadedShows, setUploadedShows] = useState<number[]>([]);
   const [selectedShow, setSelectedShow] = useState<TalkShow | null>(null);
@@ -940,7 +940,7 @@ function HomeInner() {
   // Settings modal (admin only)
   const [showSettings, setShowSettings] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
-  // User-created custom genres (persisted to localStorage) — merged with GENRES.
+  // Server-backed genre records — merged with built-in genre definitions.
   const [customGenres, setCustomGenres] = useState<Genre[]>([]);
   // When the user clicks "+ افزودن برنامه" from inside a genre view, that genre's
   // Persian name is preset here so AddEditView's category field starts with it.
@@ -1234,17 +1234,10 @@ function HomeInner() {
   };
 
   const handleLoginSuccess = (user: User) => {
-    setAuthLoading(true);
+    // Authentication unlocks the shared API bootstrap effect above. Never
+    // reload the static JSON here: it would overwrite server-side edits.
     setCurrentUser(user);
-    // Reload shows from API (or local JSON) after login
-    fetch('/talk-shows-data.json')
-      .then(r => r.json())
-      .then(data => {
-        setBaseShows(data);
-        setTalkShows(applyOverrides(data, loadOverrides()));
-      })
-      .catch(e => console.error('Failed to load data:', e))
-      .finally(() => setAuthLoading(false));
+    setAuthLoading(false);
   };
 
   if (authLoading) {
