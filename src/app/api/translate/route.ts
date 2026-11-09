@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import ZAI from 'z-ai-web-dev-sdk';
 import { gatePermissionAny } from '@/lib/server-auth';
 import { db } from '@/lib/db';
 export const runtime = 'nodejs';
@@ -259,92 +258,87 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // --- 5. Single LLM call ---
-    const zai = await ZAI.create();
-    const fieldsJson = JSON.stringify(toTranslate, null, 2);
+    // --- 5. Translate without the unavailable Z.ai project config ---
+    // Prefer a self-hosted LibreTranslate-compatible endpoint when configured.
+    // Otherwise use MyMemory's public EN/auto -> Persian endpoint. The public
+    // fallback is quota-limited and must not be treated as an SLA-backed service.
+    const translateOne = async (text: string): Promise<string> => {
+      const configuredEndpoint = process.env.TRANSLATE_API_URL?.trim();
+      if (configuredEndpoint) {
+        const endpoint = configuredEndpoint.replace(/\\/$/, '') + '/translate';
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(process.env.TRANSLATE_API_KEY ? { 'X-API-Key': process.env.TRANSLATE_API_KEY } : {}),
+          },
+          body: JSON.stringify({
+            q: text,
+            source: 'auto',
+            target: 'fa',
+            format: 'text',
+            ...(process.env.TRANSLATE_API_KEY ? { api_key: process.env.TRANSLATE_API_KEY } : {}),
+          }),
+          signal: AbortSignal.timeout(15000),
+        });
+        if (!response.ok) throw new Error(`Translation endpoint returned HTTP ${response.status}`);
+        const data = await response.json() as { translatedText?: string };
+        if (typeof data.translatedText === 'string' && data.translatedText.trim()) return data.translatedText.trim();
+        throw new Error('Translation endpoint returned an empty result');
+      }
 
-    const completion = await zai.chat.completions.create({
-      messages: [
-        {
-          role: 'assistant',
-          content: [
-            'You are a professional translator for a Persian-language TV-program archive.',
-            'You will receive a JSON object whose values are text in various languages.',
-            'Translate each value into fluent, natural Persian (فارسی).',
-            '',
-            'Rules:',
-            '1. Preserve all proper nouns (person names, network names, brand names) in their original form.',
-            '2. Preserve all URLs (http://, https://) exactly as-is.',
-            '3. Preserve numbers (years, episode counts, ratings) as-is.',
-            '4. If a value is already in Persian, return it unchanged.',
-            '5. If a value is empty or whitespace-only, return an empty string.',
-            '',
-            'CRITICAL: Respond with ONLY a valid JSON object — no markdown, no code fences, no commentary.',
-            'The JSON object must have the EXACT same keys as the input, with translated values.',
-            'Example input: {"summary": "Hello world"}',
-            'Example output: {"summary": "سلام دنیا"}',
-          ].join('\n'),
-        },
-        {
-          role: 'user',
-          content: fieldsJson,
-        },
-      ],
-      thinking: { type: 'disabled' },
-    });
+      const url = new URL('https://api.mymemory.translated.net/get');
+      url.searchParams.set('q', text);
+      url.searchParams.set('langpair', 'autodetect|fa');
+      const response = await fetch(url, { signal: AbortSignal.timeout(15000) });
+      if (!response.ok) throw new Error(`Public translation fallback returned HTTP ${response.status}`);
+      const data = await response.json() as {
+        responseStatus?: number;
+        responseData?: { translatedText?: string };
+      };
+      const translated = data.responseData?.translatedText?.trim();
+      if (data.responseStatus !== 200 || !translated) {
+        throw new Error('Public translation fallback is unavailable or its free quota is exhausted');
+      }
+      return translated;
+    };
 
-    const rawResponse = completion.choices[0]?.message?.content?.trim() || '';
-
-    // Strip markdown fences if the model wrapped the JSON in them.
-    let cleaned = rawResponse;
-    if (cleaned.startsWith('```')) {
-      cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    const translationEntries = Object.entries(toTranslate);
+    const results = await Promise.allSettled(
+      translationEntries.map(async ([key, value]) => [key, await translateOne(value)] as const)
+    );
+    let translatedCount = 0;
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      const [key, original] = translationEntries[i];
+      if (result.status === 'fulfilled' && PERSIAN_RE.test(result.value[1])) {
+        translations[key] = result.value[1];
+        translatedCount++;
+      } else {
+        translations[key] = original;
+        warnings.push(`فیلد «${key}» ترجمه نشد؛ متن اصلی حفظ شد.`);
+      }
     }
 
-    let parsed: Record<string, string> = {};
-    try {
-      parsed = JSON.parse(cleaned);
-    } catch {
-      warnings.push('Model did not return valid JSON; all fields kept as original.');
-      for (const [key, value] of Object.entries(toTranslate)) {
-        translations[key] = value;
-      }
+    if (translatedCount === 0) {
       return NextResponse.json({
+        error: 'سرویس ترجمه در دسترس نیست یا سهمیه رایگان آن تمام شده است. متن‌های واردشده حفظ شدند.',
         translations,
         warnings,
-        translatedCount: Object.keys(translations).length,
+        translatedCount: 0,
         preservedFields: Array.from(PRESERVED_FIELDS),
         originalTitlePreserved: PRESERVE_ORIGINAL_TITLE,
-      });
-    }
-
-    // --- 6. Merge + output sanity check ---
-    for (const [key, value] of Object.entries(toTranslate)) {
-      const translated = parsed[key];
-      if (typeof translated !== 'string' || !translated.trim()) {
-        translations[key] = value;
-        warnings.push(`field "${key}": model did not translate; kept original`);
-        continue;
-      }
-      // Reject translations that contain NO Persian/Arabic characters —
-      // this catches cases where the model returned English, echoed the
-      // system prompt, or returned garbage. Keep the original instead.
-      if (!PERSIAN_RE.test(translated)) {
-        translations[key] = value;
-        warnings.push(`field "${key}": translation contained no Persian text; kept original`);
-        continue;
-      }
-      translations[key] = translated.trim();
+      }, { status: 503 });
     }
 
     return NextResponse.json({
       translations,
       warnings,
-      translatedCount: Object.keys(translations).length,
+      translatedCount,
       preservedFields: Array.from(PRESERVED_FIELDS),
       originalTitlePreserved: PRESERVE_ORIGINAL_TITLE,
     });
-  } catch (err: unknown) {
+  } catch  } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[translate] endpoint error:', msg);
     return NextResponse.json(
