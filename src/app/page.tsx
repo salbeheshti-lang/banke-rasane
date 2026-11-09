@@ -4661,7 +4661,7 @@ function DetailField({ label, value }: { label: string; value: string }) {
 // ============================================
 function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, showToast, presetCategory, presetGenre, genres = GENRES }: {
   talkShows: TalkShow[];
-  onSave: (show: TalkShow, isEdit: boolean) => void;
+  onSave: (show: TalkShow, isEdit: boolean) => Promise<void> | void;
   editingShow: TalkShow | null;
   setEditingShow: (s: TalkShow | null) => void;
   onDone: () => void;
@@ -4814,7 +4814,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!form.name?.trim()) {
       showToast(t('add.field.required'));
       return;
@@ -4880,12 +4880,13 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
     // Update state with the final form
     setForm(finalForm);
 
-    if (editingShow) {
-      onSave(finalForm as TalkShow, true);
-    } else {
-      onSave(finalForm as TalkShow, false);
+    try {
+      if (editingShow) await onSave(finalForm as TalkShow, true);
+      else await onSave(finalForm as TalkShow, false);
+      onDone();
+    } catch {
+      // The parent displays the server error; keep the form open for correction.
     }
-    onDone();
   };
 
   return (
