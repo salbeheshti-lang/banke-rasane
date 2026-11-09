@@ -4800,10 +4800,41 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
   };
 
   const handleSubmit = () => {
-    if (!form.name) {
+    if (!form.name?.trim()) {
       showToast(t('add.field.required'));
       return;
     }
+
+    // Prevent duplicate entries regardless of whether the admin used an
+    // IMDb/Wikipedia import or entered the record manually. Compare normalized
+    // Persian/Arabic titles and stable IMDb title IDs; exclude the record being
+    // edited so ordinary edits are never blocked.
+    const normalizeShowName = (value: string) => value
+      .normalize('NFKC')
+      .toLocaleLowerCase()
+      .replace(/[يى]/g, 'ی')
+      .replace(/ك/g, 'ک')
+      .replace(/[ۀة]/g, 'ه')
+      .replace(/[\\u064B-\\u065F\\u0670]/g, '')
+      .replace(/[\\u200c\\u200d\\uFEFF]/g, ' ')
+      .replace(/[^\\p{L}\\p{N}]+/gu, ' ')
+      .replace(/\\s+/g, ' ')
+      .trim();
+    const imdbId = (value?: string) => value?.match(/\\btt\\d+\\b/i)?.[0]?.toLowerCase() || '';
+    const candidateName = normalizeShowName(form.name);
+    const candidateImdb = imdbId(form.imdb || '') || imdbId(fetchUrl);
+    const duplicate = talkShows.find(existing => {
+      if (editingShow && existing.num === editingShow.num) return false;
+      const sameName = normalizeShowName(existing.name) === candidateName;
+      const existingImdb = imdbId(existing.imdb);
+      return sameName || (!!candidateImdb && !!existingImdb && candidateImdb === existingImdb);
+    });
+    if (duplicate) {
+      const mainGenre = duplicate.category?.trim() || 'نامشخص';
+      showToast(`این برنامه قبلاً در آرشیو ثبت شده است؛ ژانر اصلی: «${mainGenre}». ثبت مجدد امکان‌پذیر نیست.`);
+      return;
+    }
+
     // Create a clean copy — never mutate state directly.
     const finalForm = { ...form };
 
