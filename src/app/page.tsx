@@ -988,7 +988,7 @@ function HomeInner() {
         setOverrides(remaining);
         setTalkShows(applyOverrides(data, remaining));
         if (hasLegacyChanges && !migrationComplete) {
-          showToast('برخی تغییرات قدیمی هنوز به سرور منتقل نشده‌اند؛ نسخهٔ محلی آن‌ها برای بازیابی حفظ شده است');
+          console.warn('[migration] some legacy changes remain in local recovery storage');
         }
       } catch (error) {
         console.error('[shows] failed to load shared archive:', error);
