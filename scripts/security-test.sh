@@ -367,6 +367,8 @@ LIMITED_TOKEN=$(json_get "$RESP_BODY" "token")
 echo "  limited_admin token: ${LIMITED_TOKEN:0:16}..."
 check "1.3 limited-login" 200 "$HTTP_STATUS"
 
+# This test locks in the policy: custom genre mutations are admin-role-only,
+# independent of unrelated granular permissions; editor/viewer mutations stay denied.
 # Custom genres are shared and admin-role accounts can manage them even when
 # their unrelated granular permissions have been revoked.
 api GET /genres "$LIMITED_TOKEN"

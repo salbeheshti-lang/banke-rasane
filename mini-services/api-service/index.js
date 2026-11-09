@@ -789,6 +789,8 @@ const server = Bun.serve({
     }
 
     // ----- Shared custom genres -----
+    // Policy: every authenticated role may read the shared catalog; mutations
+    // are restricted to the admin role (as asserted by security-test.sh).
     if (pathname === '/api/genres' && method === 'GET') {
       const user = requireRole(req, ['admin', 'editor', 'viewer']);
       if (!user) return json({ error: 'Unauthorized' }, 401, req);

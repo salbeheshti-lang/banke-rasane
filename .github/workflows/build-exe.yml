@@ -35,10 +35,40 @@ jobs:
       - name: Test persistent Prisma SQLite runtime
         run: bun scripts/test-prisma-runtime.ts
 
+      - name: Cache Electron and electron-builder downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            .ci-cache/electron-builder
+            .ci-cache/electron
+          key: windows-electron-builder-v2-${{ runner.os }}-${{ hashFiles('package.json', 'bun.lock*', 'package-lock.json') }}
+          restore-keys: |
+            windows-electron-builder-v2-${{ runner.os }}-
+
       - name: Build and type-check installer
-        run: npm run electron:build
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $maxAttempts = 6
+          for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            Write-Host "=== Electron build attempt $attempt/$maxAttempts ==="
+            npm run electron:build
+            if ($LASTEXITCODE -eq 0) {
+              Write-Host "Electron build completed successfully."
+              exit 0
+            }
+            if ($attempt -lt $maxAttempts) {
+              $delay = [Math]::Min(180, [int](10 * [Math]::Pow(2, $attempt - 1)))
+              Write-Warning "Build failed (exit $LASTEXITCODE). Retrying in $delay seconds; cached downloads will be reused."
+              Start-Sleep -Seconds $delay
+            }
+          }
+          throw "Electron build failed after $maxAttempts attempts. Inspect DEBUG=electron-builder output above."
         env:
           DATABASE_URL: file:./db/custom.db
+          DEBUG: electron-builder
+          ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.ci-cache/electron-builder
+          ELECTRON_CACHE: ${{ github.workspace }}/.ci-cache/electron
 
       # ============================================================
       # CRITICAL: Verify that the Next.js standalone server.js can

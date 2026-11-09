@@ -908,7 +908,12 @@ function HomeInner() {
 
   // Role helpers — viewer is read-only (no add/edit/delete), admin can manage users + settings.
   const role = currentUser?.role || null;
-  const canEdit = role === 'admin' || role === 'editor';
+  const hasPermission = (permission: string) => currentUser?.isSuperAdmin === true ||
+    (Array.isArray(currentUser?.permissions)
+      ? currentUser.permissions.includes(permission)
+      : role === 'admin' || (role === 'editor' && ['add_shows', 'edit_shows', 'export_reports'].includes(permission)));
+  const canEdit = hasPermission('add_shows') || hasPermission('edit_shows');
+  const canManageGenres = role === 'admin';
   const isAdmin = role === 'admin';
 
   // Shared genre catalog: every authenticated role can read; only admins can mutate.
@@ -1079,9 +1084,9 @@ function HomeInner() {
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Add a custom genre to the shared server catalog (server enforces admin role).
+  // Add a custom genre to the shared server catalog (server enforces manage_genres permission).
   const handleAddGenre = async (g: Genre) => {
-    if (!isAdmin) return;
+    if (!canManageGenres) return;
     try {
       const result = await api.createCustomGenre({
         id: g.id, nameFa: g.nameFa, name: g.name, color: g.color, description: g.description, aliases: g.aliases,
@@ -1099,7 +1104,7 @@ function HomeInner() {
   // silently disappearing (the genre→show link is an implicit substring match
   // on `category`, so renaming the genre alone would break the link).
   const handleEditGenre = async (g: Genre) => {
-    if (!isAdmin) return;
+    if (!canManageGenres) return;
     const prev = customGenres.find(x => x.id === g.id);
     const aliases = Array.from(new Set([
       ...(prev?.aliases || g.aliases || []),
@@ -1161,7 +1166,7 @@ function HomeInner() {
   // (by creating an edit override) so the category doesn't dangle — mirroring
   // the rename migration in handleEditGenre.
   const handleDeleteGenre = async (id: string) => {
-    if (!isAdmin) return;
+    if (!canManageGenres) return;
     try {
       await api.deleteCustomGenre(id);
     } catch (error: any) {
@@ -1288,7 +1293,7 @@ function HomeInner() {
       />
 
       <main key={currentView} className={`animate-view-enter ${isMobile ? 'p-4 pt-20 pb-28' : 'p-8 pt-24'}`}>
-        {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} onEditGenre={handleEditGenre} onDeleteGenre={handleDeleteGenre} onShowClick={setSelectedShow} />}
+        {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} canManageGenres={canManageGenres} genres={genres} onAddGenre={handleAddGenre} onEditGenre={handleEditGenre} onDeleteGenre={handleDeleteGenre} onShowClick={setSelectedShow} />}
         {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} onExport={(shows, format, meta) => setExportPreview({ shows, format, ...meta })} />}
@@ -2739,13 +2744,14 @@ function ContactRow({ icon, label, value, editing, onChange, placeholder, dir }:
 // ============================================
 // DASHBOARD
 // ============================================
-function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isAdmin, genres = GENRES, onAddGenre, onEditGenre, onDeleteGenre, onShowClick }: {
+function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isAdmin, canManageGenres, genres = GENRES, onAddGenre, onEditGenre, onDeleteGenre, onShowClick }: {
   onGenreClick: (g: Genre) => void;
   talkShows: TalkShow[];
   uploadedCount: number;
   onAdd: () => void;
   canEdit: boolean;
   isAdmin?: boolean;
+  canManageGenres: boolean;
   genres?: Genre[];
   onAddGenre?: (g: Genre) => void;
   onEditGenre?: (g: Genre) => void;
@@ -3061,7 +3067,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <h2 className="text-xl font-bold" style={{ color: '#f0fdf4' }}>همهٔ ژانرها</h2>
         <div className="flex items-center gap-2 flex-wrap">
-          {isAdmin && onAddGenre && (
+          {canManageGenres && onAddGenre && (
             <button
               onClick={() => setShowAddGenre(true)}
               className="px-4 py-2 rounded-xl text-sm font-bold transition-all"
@@ -3097,7 +3103,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {genres.map((g, idx) => {
           const count = talkShows.filter(g.filterFn).length;
-          const canManage = isAdmin && g.isCustom && onEditGenre && onDeleteGenre;
+          const canManage = canManageGenres && g.isCustom && onEditGenre && onDeleteGenre;
           return (
             <div
               key={g.id}
@@ -4727,52 +4733,72 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
     try {
       const res = await fetch('/api/fetch-show-info', {
         method: 'POST',
-        // Permission-guarded route (edit_shows) — without the Bearer token the
-        // server always replied 403, so fetching info/image from a link
-        // (IMDb/Wikipedia) never added anything to the form.
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ url: fetchUrl }),
       });
       const data = await res.json();
-      if (data.error) {
-        showToast(`خطا: ${data.error}`);
-      } else {
-        const info = data.info;
-        const updated = { ...form };
-        // Only fill fields that are CURRENTLY EMPTY — never overwrite data
-        // the user has already entered or curated. This is the fix for the
-        // user's report: "وقتی با ویکی پدیا عکس رو اضافه کردم بقیه توضیحاتم
-        // تغییر کرده" (when I added the image, my other descriptions changed).
-        if (info.title && !updated.name) updated.name = info.title;
-        if (info.description && !updated.descriptionFa) {
-          updated.descriptionFa = info.description;
-          if (!updated.summary) updated.summary = info.description.substring(0, 200);
-        }
-        // Push auto-fetched image into images[] array (up to 8 total).
-        // This is additive — never removes existing images.
-        if (info.image) {
-          const existing = updated.images || [];
-          if (!existing.includes(info.image) && existing.length < 8) {
-            updated.images = [...existing, info.image];
-          }
-        }
-        // Only fill these if currently empty — don't clobber curated data.
-        if (info.rating && !updated.colors) updated.colors = `امتیاز: ${info.rating}`;
-        if (info.genres && !updated.category) updated.category = info.genres;
-        if (info.duration && !updated.elements) updated.elements = info.duration;
-        if (fetchUrl.includes('imdb.com') && !updated.imdb) updated.imdb = fetchUrl;
-        if (fetchUrl.includes('wikipedia.org') && !updated.wikipedia) updated.wikipedia = fetchUrl;
-        // Auto-generate YouTube search link only if not already set.
-        if (updated.name && !updated.youtube) {
-          updated.youtube = `https://www.youtube.com/results?search_query=${encodeURIComponent(updated.name)}`;
-        }
-        // Auto-generate social post only if not already set.
-        if (updated.name && !updated.socialPost) {
-          updated.socialPost = `🎬 ${updated.name}\n\n📝 ${updated.descriptionFa || ''}\n\n#بانک_رسانه #تاک_شو`;
-        }
-        setForm(updated);
-        showToast(t('add.autoFetchSuccess'));
+      if (!res.ok || data.error) {
+        showToast(`خطا: ${data.error || 'دریافت اطلاعات ناموفق بود'}`);
+        return;
       }
+
+      const info = data.info || {};
+
+      // Edit mode is intentionally image-only: preserve every other form value.
+      if (editingShow) {
+        if (!info.image || typeof info.image !== 'string') {
+          showToast('از این لینک تصویر کاور قابل دریافت نبود؛ سایر اطلاعات برنامه تغییر نکردند.');
+          return;
+        }
+        const existingImages = Array.isArray(form.images) ? form.images : [];
+        if (existingImages.includes(info.image)) {
+          showToast('این تصویر قبلاً به برنامه اضافه شده است.');
+          return;
+        }
+        if (existingImages.length >= 8) {
+          showToast('حداکثر ۸ تصویر برای هر برنامه قابل ثبت است.');
+          return;
+        }
+        setForm({ ...form, images: [...existingImages, info.image] });
+        showToast('تصویر کاور اضافه شد؛ سایر اطلاعات برنامه بدون تغییر ماند.');
+        return;
+      }
+
+      // Add mode: populate only the appropriate fields available in this form.
+      const updated = { ...form };
+      if (info.title && !updated.name) updated.name = info.title;
+      if (info.description && !updated.descriptionFa) {
+        updated.descriptionFa = info.description;
+        if (!updated.summary) updated.summary = info.description.substring(0, 200);
+      }
+      if (info.image) {
+        const existingImages = updated.images || [];
+        if (!existingImages.includes(info.image) && existingImages.length < 8) {
+          updated.images = [...existingImages, info.image];
+        }
+      }
+      // External ratings/genres/runtime are not decor fields or app categories.
+      if (info.country && !updated.country) updated.country = info.country;
+      if (info.imdbUrl && !updated.imdb) updated.imdb = info.imdbUrl;
+      if (info.wikiUrl && !updated.wikipedia) updated.wikipedia = info.wikiUrl;
+
+      // Preserve the submitted source link even if the provider returns partial data.
+      try {
+        const sourceUrl = new URL(fetchUrl);
+        const sourceHost = sourceUrl.hostname.toLowerCase();
+        if (!updated.imdb && (sourceHost === 'imdb.com' || sourceHost.endsWith('.imdb.com'))) updated.imdb = sourceUrl.href;
+        if (!updated.wikipedia && (sourceHost === 'wikipedia.org' || sourceHost.endsWith('.wikipedia.org'))) updated.wikipedia = sourceUrl.href;
+      } catch {
+        // The API validates source URLs; ignore malformed fallback values.
+      }
+      if (updated.name && !updated.youtube) {
+        updated.youtube = `https://www.youtube.com/results?search_query=${encodeURIComponent(updated.name)}`;
+      }
+      if (updated.name && !updated.socialPost) {
+        updated.socialPost = `🎬 ${updated.name}\n\n📝 ${updated.descriptionFa || ''}\n\n#بانک_رسانه #تاک_شو`;
+      }
+      setForm(updated);
+      showToast(t('add.autoFetchSuccess'));
     } catch (e) {
       showToast(t('add.autoFetchError'));
     } finally {
@@ -4839,7 +4865,9 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
         <div className="p-4 rounded-xl" style={{ background: 'rgba(13, 124, 74,0.06)', border: '1px solid rgba(13, 124, 74,0.15)' }}>
           <h4 className="font-bold mb-2" style={{ color: '#f0fdf4' }}>⚡ دریافت خودکار اطلاعات</h4>
           <p className="text-xs mb-3" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>
-            لینک IMDb یا ویکی‌پدیا برنامه را وارد کنید تا نام، توضیحات، تصویر و سایر اطلاعات خودکار دریافت شود.
+{editingShow
+              ? 'لینک IMDb یا ویکی‌پدیا را وارد کنید تا فقط تصویر کاور دریافت و به تصاویر برنامه اضافه شود؛ سایر اطلاعات تغییر نمی‌کنند.'
+              : 'لینک IMDb یا ویکی‌پدیا برنامه را وارد کنید تا نام، توضیحات، تصویر و اطلاعات قابل‌استخراج برای تکمیل فرم دریافت شود.'}
           </p>
           <div className="flex gap-2">
             <input
