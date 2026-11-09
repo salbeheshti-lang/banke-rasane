@@ -838,8 +838,16 @@ function seedShows() {
       const currentShowCount = db.prepare('SELECT COUNT(*) AS c FROM shows').get().c;
       const isExistingArchive = databaseExistedBeforeOpen && (databaseHadUsersBeforeStartup || currentShowCount > 0);
       if (isExistingArchive) {
-        // Existing DB is authoritative. Mark the bundled baseline as already
-        // considered so intentionally deleted legacy programs never reappear.
+        // Existing DB is authoritative. Mark every current record plus the
+        // bundled baseline as considered, so neither deleted seeded records
+        // nor previously user-added records can be resurrected by later seed updates.
+        const existingNums = db.prepare('SELECT num FROM shows').all();
+        for (const row of existingNums) {
+          const num = Number(row.num);
+          if (Number.isSafeInteger(num) && num > 0 && !hasSeeded.get(num)) {
+            markSeeded.run(num); marked++;
+          }
+        }
         for (const show of shows) {
           const num = Number(show?.num);
           if (!Number.isSafeInteger(num) || num < 1) continue;
