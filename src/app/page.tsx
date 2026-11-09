@@ -4815,12 +4815,12 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       .replace(/[يى]/g, 'ی')
       .replace(/ك/g, 'ک')
       .replace(/[ۀة]/g, 'ه')
-      .replace(/[\\u064B-\\u065F\\u0670]/g, '')
-      .replace(/[\\u200c\\u200d\\uFEFF]/g, ' ')
-      .replace(/[^\\p{L}\\p{N}]+/gu, ' ')
-      .replace(/\\s+/g, ' ')
+      .replace(/[\u064B-\u065F\u0670]/g, '')
+      .replace(/[\u200c\u200d\uFEFF]/g, ' ')
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .replace(/\s+/g, ' ')
       .trim();
-    const imdbId = (value?: string) => value?.match(/\\btt\\d+\\b/i)?.[0]?.toLowerCase() || '';
+    const imdbId = (value?: string) => value?.match(/\btt\d+\b/i)?.[0]?.toLowerCase() || '';
     const candidateName = normalizeShowName(form.name);
     const candidateImdb = imdbId(form.imdb || '') || imdbId(fetchUrl);
     const duplicate = talkShows.find(existing => {
