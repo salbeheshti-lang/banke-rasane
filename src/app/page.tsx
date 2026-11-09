@@ -4905,7 +4905,9 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
         <div className="p-4 rounded-xl" style={{ background: 'rgba(13, 124, 74,0.06)', border: '1px solid rgba(13, 124, 74,0.15)' }}>
           <h4 className="font-bold mb-2" style={{ color: '#f0fdf4' }}>⚡ دریافت خودکار اطلاعات</h4>
           <p className="text-xs mb-3" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>
-            لینک IMDb یا ویکی‌پدیا برنامه را وارد کنید تا نام، توضیحات، تصویر و سایر اطلاعات خودکار دریافت شود.
+{editingShow
+              ? 'لینک IMDb یا ویکی‌پدیا را وارد کنید تا فقط تصویر کاور دریافت و به تصاویر برنامه اضافه شود؛ سایر اطلاعات تغییر نمی‌کنند.'
+              : 'لینک IMDb یا ویکی‌پدیا برنامه را وارد کنید تا نام، توضیحات، تصویر و اطلاعات قابل‌استخراج برای تکمیل فرم دریافت شود.'}
           </p>
           <div className="flex gap-2">
             <input
