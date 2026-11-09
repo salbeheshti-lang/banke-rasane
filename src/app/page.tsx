@@ -131,6 +131,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'interview', key: 'interview', nameFa: 'تاک‌شوی مصاحبه‌محور', name: 'Interview',
+    aliases: ["مصاحبه"],
     color: '#06B6D4', description: '۱۰۲ برنامه', filterFn: s => s.category.includes('مصاحبه'),
     tags: [TAG_LIBRARY.layout, TAG_LIBRARY.viewers],
     presetTags: ['مصاحبه اختصاصی', 'مهمان ویژه', 'تکنولوژی', 'استودیو', 'مدرن', 'گریل'],
@@ -138,6 +139,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'comedy', key: 'comedy', nameFa: 'تاک‌شوی طنز و کمدی', name: 'Comedy',
+    aliases: ["طنز"],
     color: '#db2777', description: '۸۹ برنامه', filterFn: s => s.category.includes('طنز'),
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
     presetTags: ['طنز', 'استندآپ', 'شخصیت‌محور', 'استودیوی رنگارنگ', 'پویا'],
@@ -145,6 +147,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'news', key: 'news', nameFa: 'تاک‌شوی سیاسی و خبری', name: 'News/Politics',
+    aliases: ["خبری","سیاسی"],
     color: '#dc2626', description: '۶۸ برنامه', filterFn: s => s.category.includes('خبری') || s.category.includes('سیاسی'),
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting],
     presetTags: ['خبری', 'تحلیل سیاسی', 'مهمان سیاسی', 'رسمی', 'مدرن'],
@@ -152,6 +155,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'lifestyle', key: 'lifestyle', nameFa: 'تاک‌شوی تخصصی و سبک زندگی', name: 'Lifestyle',
+    aliases: ["تخصصی"],
     color: '#16a34a', description: '۵۴ برنامه', filterFn: s => s.category.includes('تخصصی'),
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.materials],
     presetTags: ['سبک زندگی', 'آشپزی', 'سلامت', 'مد', 'منزل', 'طبیعت'],
@@ -159,6 +163,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'cultural', key: 'cultural', nameFa: 'تاک‌شوی فرهنگی، هنری', name: 'Cultural',
+    aliases: ["فرهنگی"],
     color: '#b45309', description: '۵۲ برنامه', filterFn: s => s.category.includes('فرهنگی'),
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.materials],
     presetTags: ['فرهنگی', 'هنری', 'سنتی', 'تاریخی', 'موسیقی'],
@@ -166,6 +171,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'celebrity', key: 'celebrity', nameFa: 'تاک‌شوی گروهی سلبریتی‌ها', name: 'Celebrity',
+    aliases: ["سلبریتی"],
     color: '#7c3aed', description: '۴۲ برنامه', filterFn: s => s.category.includes('سلبریتی'),
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.size],
     presetTags: ['سلبریتی', 'گروهی', 'مهمان‌محور', 'سرگرمی', 'لوکس'],
@@ -173,6 +179,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'panel', key: 'panel', nameFa: 'تاک‌شوی پنلی و میزگرد', name: 'Panel',
+    aliases: ["پنلی"],
     color: '#2563eb', description: '۲۳ برنامه', filterFn: s => s.category.includes('پنلی'),
     tags: [TAG_LIBRARY.layout, TAG_LIBRARY.size],
     presetTags: ['پنل', 'میزگرد', 'چندمهمانه', 'بحث', 'تخصصی'],
@@ -180,6 +187,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'morning', key: 'morning', nameFa: 'تاک‌شوی روزانه/صبحگاهی', name: 'Morning Show',
+    aliases: ["صبحگاهی"],
     color: '#f59e0b', description: '۲۰ برنامه', filterFn: s => s.category.includes('صبحگاهی'),
     tags: [TAG_LIBRARY.size, TAG_LIBRARY.viewers],
     presetTags: ['صبحگاهی', 'روزانه', 'پویا', 'با تماشاگر', 'موسیقی زنده'],
@@ -187,6 +195,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'reality', key: 'reality', nameFa: 'ریلیتی شو / مسابقه', name: 'Reality/Competition',
+    aliases: ["مسابقه","رئالیتی"],
     color: '#ea580c', description: '۱۹ برنامه', filterFn: s => s.category.includes('مسابقه') || s.category.includes('رئالیتی'),
     tags: [TAG_LIBRARY.effects, TAG_LIBRARY.style],
     presetTags: ['مسابقه', 'رئالیتی', 'داورمحور', 'پیروز', 'تعاملی'],
@@ -194,6 +203,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'night', key: 'night', nameFa: 'تاک‌شوی شبانه', name: 'Late Night',
+    aliases: ["شبانه"],
     color: '#6366f1', description: '۱۵ برنامه', filterFn: s => s.category.includes('شبانه'),
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting],
     presetTags: ['شبانه', 'تاریک', 'کمدی', 'مصاحبه کوتاه', 'مدرن'],
@@ -201,6 +211,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'entertainment', key: 'entertainment', nameFa: 'صنعت سرگرمی / پشت‌صحنه', name: 'Entertainment',
+    aliases: ["سرگرمی"],
     color: '#c026d3', description: '۱۳ برنامه', filterFn: s => s.category.includes('سرگرمی'),
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
     presetTags: ['سرگرمی', 'پشت‌صحنه', 'گوینده', 'مدرن', 'تعاملی'],
@@ -208,6 +219,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'location', key: 'location', nameFa: 'موقعیت‌محور / خارج از استودیو', name: 'On-Location',
+    aliases: ["موقعیت"],
     color: '#F59E0B', description: '۱۲ برنامه', filterFn: s => s.category.includes('موقعیت'),
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.materials],
     presetTags: ['موقعیت‌محور', 'بیرون از استودیو', 'میدانی', 'طبیعت', 'شهری'],
@@ -215,6 +227,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'digital', key: 'digital', nameFa: 'تاک‌شوی دیجیتال / اینترنتی', name: 'Digital',
+    aliases: ["دیجیتال"],
     color: '#10b981', description: '۱۰ برنامه', filterFn: s => s.category.includes('دیجیتال'),
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
     presetTags: ['دیجیتال', 'اینترنتی', 'استریم', 'تعاملی', 'مدرن'],
@@ -222,6 +235,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'relationships', key: 'relationships', nameFa: 'تاک‌شوی روابط و تعارض', name: 'Relationships',
+    aliases: ["روابط"],
     color: '#be185d', description: '۸ برنامه', filterFn: s => s.category.includes('روابط'),
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
     presetTags: ['روابط', 'تعارض', 'خانوادگی', 'گفتگومحور', 'صمیمی'],
@@ -229,6 +243,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'radio', key: 'radio', nameFa: 'تاک‌شوی رادیویی / صوتی', name: 'Radio/Audio',
+    aliases: ["رادیویی"],
     color: '#14B8A6', description: '۶ برنامه', filterFn: s => s.category.includes('رادیویی'),
     tags: [TAG_LIBRARY.layout, TAG_LIBRARY.effects],
     presetTags: ['رادیویی', 'صوتی', 'گفتگو', 'مدرن', 'استودیویی'],
@@ -236,6 +251,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'human', key: 'human', nameFa: 'تاک‌شوی انسانی و داستان‌محور', name: 'Human Stories',
+    aliases: ["انسانی"],
     color: '#0EA5E9', description: '۵ برنامه', filterFn: s => s.category.includes('انسانی'),
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.materials],
     presetTags: ['انسانی', 'داستان‌محور', 'مصاحبه عمیق', 'صمیمی', 'مستندگونه'],
@@ -243,6 +259,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'deepobs', key: 'deepobs', nameFa: 'پایش تحلیلی', name: 'Deep Observation',
+    aliases: ["پایش تحلیلی"],
     color: '#7c3aed', description: 'تحلیل و رصد عمیق برنامه‌ها',
     filterFn: s => s.category.includes('پایش تحلیلی'),
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting, TAG_LIBRARY.materials],
@@ -251,6 +268,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'funeral', key: 'funeral', nameFa: 'سوگواری و خاکسپاری', name: 'Funeral Coverage',
+    aliases: ["خاکسپاری","سوگواری"],
     color: '#64748B', description: 'پوشش خبری مراسم خاکسپاری و سوگواری شخصیت‌ها',
     filterFn: s => s.category.includes('خاکسپاری') || s.category.includes('سوگواری'),
     tags: [],
@@ -259,6 +277,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'war', key: 'war', nameFa: 'برنامه‌های جنگ و بحران', name: 'War & Conflict',
+    aliases: ["جنگ","بحران"],
     color: '#EF4444', description: 'برنامه‌های تلویزیونی با موضوع جنگ و منازعات',
     filterFn: s => s.category.includes('جنگ') || s.category.includes('بحران'),
     tags: [],
@@ -267,6 +286,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'debate', key: 'debate', nameFa: 'مناظرات انتخاباتی', name: 'Electoral Debates',
+    aliases: ["مناظره","انتخابات"],
     color: '#1e40af', description: 'مناظرات و بحث‌های انتخاباتی',
     filterFn: s => s.category.includes('مناظره') || s.category.includes('انتخابات'),
     tags: [],
@@ -275,6 +295,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'ads', key: 'ads', nameFa: 'آگهی‌های تبلیغاتی', name: 'Advertisements',
+    aliases: ["آگهی"],
     color: '#ea580c', description: 'تبلیغات، آگهی‌ها و پیام‌های خدمت عمومی (PSA)',
     filterFn: s => s.category.includes('آگهی'),
     tags: [],
@@ -284,6 +305,7 @@ const GENRES: Genre[] = [
   // ----- 11 new genre categories (kasht, krismas, polisi, ramazan, etc.) -----
   {
     id: 'kasht', key: 'kasht', nameFa: 'درختکاری', name: 'Tree Planting',
+    aliases: ["کاشت درخت"],
     color: '#16a34a', description: '۲۱ برنامه — باغبانی، کاشت درخت و سبک زندگی سبز',
     filterFn: s => s.category === 'کاشت درخت',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
@@ -292,6 +314,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'krismas', key: 'krismas', nameFa: 'کریسمس', name: 'Christmas',
+    aliases: ["کریسمس"],
     color: '#dc2626', description: '۱۵ برنامه — ویژه‌برنامه‌های کریسمس و سال نو',
     filterFn: s => s.category === 'کریسمس',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting],
@@ -300,6 +323,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'polisi', key: 'polisi', nameFa: 'پلیسی', name: 'Police',
+    aliases: ["پلیسی"],
     color: '#2563EB', description: '۱۹ برنامه — مستند و رئالیتی‌شوی پلیسی',
     filterFn: s => s.category === 'پلیسی',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
@@ -308,6 +332,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'ramazan', key: 'ramazan', nameFa: 'برنامه‌های ماه مبارک رمضان', name: 'Ramadan Programs',
+    aliases: ["رمضان"],
     color: '#F97316', description: '۶۳ برنامه — برنامه‌های ماه رمضان',
     filterFn: s => s.category === 'رمضان',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
@@ -316,6 +341,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'safar', key: 'safar', nameFa: 'سفرنامه و ماجراجویی', name: 'Travel & Adventure',
+    aliases: ["سفر جاده‌ای"],
     color: '#c2410c', description: '۹۳ برنامه — ریلیتی‌شوی سفر و ماجراجویی',
     filterFn: s => s.category === 'سفر جاده‌ای',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
@@ -324,6 +350,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'madrese', key: 'madrese', nameFa: 'مدرسه و دانش‌آموزی', name: 'School & Students',
+    aliases: ["مدرسه"],
     color: '#0284c7', description: '۲۷ برنامه — آگهی و تیزر بازگشت به مدرسه',
     filterFn: s => s.category === 'مدرسه',
     tags: [],
@@ -332,6 +359,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'naghd', key: 'naghd', nameFa: 'نقد فیلم', name: 'Film Review',
+    aliases: ["نقد فیلم"],
     color: '#7c3aed', description: '۱۲ برنامه — تاک‌شو و مستند نقد فیلم',
     filterFn: s => s.category === 'نقد فیلم',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
@@ -340,6 +368,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'ghanun', key: 'ghanun', nameFa: 'قانون اساسی', name: 'Constitution',
+    aliases: ["قانون اساسی"],
     color: '#3B82F6', description: '۹ برنامه — مستند قانون اساسی کشورها',
     filterFn: s => s.category === 'قانون اساسی',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
@@ -348,6 +377,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'pakhsh', key: 'pakhsh', nameFa: 'پخش زنده', name: 'Live Stream',
+    aliases: ["پخش زنده"],
     color: '#0d9488', description: '۲۵ برنامه — پخش زنده دوربین‌های وب',
     filterFn: s => s.category === 'پخش زنده',
     tags: [],
@@ -356,6 +386,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'jasoosi', key: 'jasoosi', nameFa: 'ستون پنجم', name: 'The Fifth Column',
+    aliases: ["جاسوسی"],
     color: '#4F46E5', description: '۱۵۴ برنامه — مستند جاسوسی و عملیات اطلاعاتی',
     filterFn: s => s.category === 'جاسوسی',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting],
@@ -365,6 +396,7 @@ const GENRES: Genre[] = [
   // ----- 5 more new categories (zandan, ehda, tarikhi, radio, rusta) -----
   {
     id: 'zandan', key: 'zandan', nameFa: 'زندان و اصلاح', name: 'Prison & Reform',
+    aliases: ["زندان"],
     color: '#6366F1', description: '۱۸ برنامه — مستند و واقع‌نمای زندان و اصلاح',
     filterFn: s => s.category === 'زندان',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.lighting],
@@ -373,6 +405,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'ehda', key: 'ehda', nameFa: 'اهدا و پیوند اعضا', name: 'Organ Donation & Transplant',
+    aliases: ["اهدای عضو"],
     color: '#dc2626', description: '۶۴ برنامه — سریال و فیلم پیوند و اهدای اعضا',
     filterFn: s => s.category === 'اهدای عضو',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
@@ -381,6 +414,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'tarikhi', key: 'tarikhi', nameFa: 'تاریخ و تمدن', name: 'History & Civilisation',
+    aliases: ["تاریخی"],
     color: '#F97316', description: '۱۵ برنامه — مستند و بازسازی تاریخی',
     filterFn: s => s.category === 'تاریخی',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.materials],
@@ -388,7 +422,8 @@ const GENRES: Genre[] = [
     searchFields: ['name', 'summary', 'tags'],
   },
   {
-    id: 'radio', key: 'radio', nameFa: 'رادیو و پادکست', name: 'Radio & Podcast',
+    id: 'radio-podcast', key: 'radio-podcast', nameFa: 'رادیو و پادکست', name: 'Radio & Podcast',
+    aliases: ["رادیو تصویری"],
     color: '#7c3aed', description: '۵۰ برنامه — رادیو تصویری، پادکست و رسانه شنیداری',
     filterFn: s => s.category === 'رادیو تصویری',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
@@ -397,6 +432,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'rusta', key: 'rusta', nameFa: 'روستا و کشاورزی', name: 'Rural & Agriculture',
+    aliases: ["روستا"],
     color: '#65a30d', description: '۴۴ برنامه — مستند و رئالیتی روستایی و کشاورزی',
     filterFn: s => s.category === 'روستا',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.effects],
@@ -405,6 +441,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'ketab', key: 'ketab', nameFa: 'کتاب و کتاب‌خوانی', name: 'Books & Literature',
+    aliases: ["کتاب و کتاب‌خوانی"],
     color: '#F59E0B', description: '۳۰ برنامه — تاک‌شو، مستند و مسابقه ادبی',
     filterFn: s => s.category === 'کتاب و کتاب‌خوانی',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
@@ -413,6 +450,7 @@ const GENRES: Genre[] = [
   },
   {
     id: 'sarmaye', key: 'sarmaye', nameFa: 'سرمایه‌گذاری در تولید', name: 'Investment in Production',
+    aliases: ["سرمایه‌گذاری در تولید"],
     color: '#0e7490', description: 'برنامه‌های مرتبط با سرمایه‌گذاری و تولید محتوا',
     filterFn: s => s.category === 'سرمایه‌گذاری در تولید',
     tags: [TAG_LIBRARY.style, TAG_LIBRARY.layout],
