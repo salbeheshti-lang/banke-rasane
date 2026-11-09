@@ -7,8 +7,9 @@ import {
 } from './video-validation.mjs';
 
 const dataVideo = (bytes, mime = 'video/webm') => {
-  const payloadBytes = Math.ceil(bytes / 3) * 4;
-  const payload = 'A'.repeat(payloadBytes).replace(/A{1,2}$/, '==');
+  const groups = Math.floor(bytes / 3);
+  const remainder = bytes % 3;
+  const payload = 'A'.repeat(groups * 4) + (remainder === 1 ? 'AA==' : remainder === 2 ? 'AAA=' : '');
   return `data:${mime};base64,${payload}`;
 };
 
