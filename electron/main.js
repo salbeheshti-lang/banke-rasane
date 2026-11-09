@@ -327,7 +327,7 @@ function createWindow() {
       log('Update check skipped: ' + error.message);
     }
   });
-  mainWindow.loadURL(NEXT_URL);
+  mainWindow.loadURL(NEXT_URL + '?desktop=1');
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     let target;
     try {
