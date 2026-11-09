@@ -5612,17 +5612,15 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    if (!file) { setPreviewUrl(''); return; }
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
+    return () => { if (previewUrl) URL.revokeObjectURL(previewUrl); };
+  }, [previewUrl]);
 
   const chooseFile = (next: File | null) => {
     setError('');
     if (!next) return;
     if (!next.type.startsWith('video/')) { setError('لطفاً یک فایل ویدیویی انتخاب کنید.'); return; }
     if (next.size > 200 * 1024 * 1024) { setError('حجم فایل ورودی نباید بیشتر از ۲۰۰ مگابایت باشد.'); return; }
+    setPreviewUrl(URL.createObjectURL(next));
     setFile(next);
   };
 
@@ -5702,6 +5700,7 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
       });
       onAdd(dataUrl);
       setFile(null);
+      setPreviewUrl('');
       setDuration(0);
       setStart(0);
       setEnd(0);
@@ -5745,7 +5744,7 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
             <button type="button" onClick={exportClip} disabled={busy || end <= start || end - start > 30} className="px-4 py-2 rounded-lg text-xs font-bold disabled:opacity-50" style={{ background: '#059669', color: 'white' }}>
               {busy ? 'در حال پردازش ویدیو…' : 'پردازش و افزودن کلیپ'}
             </button>
-            <button type="button" onClick={() => { setFile(null); setError(''); }} disabled={busy} className="px-3 py-2 rounded-lg text-xs" style={{ background: 'rgba(255,255,255,.12)', color: '#d1fae5' }}>انصراف</button>
+            <button type="button" onClick={() => { setFile(null); setPreviewUrl(''); setError(''); }} disabled={busy} className="px-3 py-2 rounded-lg text-xs" style={{ background: 'rgba(255,255,255,.12)', color: '#d1fae5' }}>انصراف</button>
           </div>
           <p className="text-[11px]" style={{ color: 'rgba(209,250,229,.75)' }}>خروجی WebM با حفظ نسبت تصویر و نرخ بیت کنترل‌شده ساخته می‌شود؛ فایل اصلی تغییر نمی‌کند. حداکثر حجم خروجی ۸ مگابایت است.</p>
         </div>
