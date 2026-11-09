@@ -384,6 +384,47 @@ jobs:
           }
           Write-Host "=== Smoke test passed ==="
 
+      - name: Verify in-place installer upgrade preserves user data
+        shell: pwsh
+        timeout-minutes: 15
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installDir = Join-Path $env:RUNNER_TEMP 'BankResaneh-Installer-Smoke'
+          $setup = (Resolve-Path 'release/BankResaneh-Setup.exe').Path
+          $userData = Join-Path $env:APPDATA 'banke-rasane'
+          if (-not (Test-Path $userData)) { throw "Expected user data directory was not created by installed-app smoke test: $userData" }
+
+          # Snapshot every persistent file after the first real app launch.
+          $before = @{}
+          Get-ChildItem $userData -File -Recurse | ForEach-Object {
+            $relative = $_.FullName.Substring($userData.Length).TrimStart('\\')
+            $before[$relative] = (Get-FileHash $_.FullName -Algorithm SHA256).Hash
+          }
+          if (-not $before.ContainsKey('db\\bankresaneh.sqlite')) {
+            throw 'The real user database was not created; cannot claim upgrade preservation was tested.'
+          }
+          Set-Content -LiteralPath (Join-Path $userData 'upgrade-preservation-sentinel.txt') -Value '5.3.9-to-5.4.0-upgrade-preservation' -NoNewline
+          $before['upgrade-preservation-sentinel.txt'] = (Get-FileHash (Join-Path $userData 'upgrade-preservation-sentinel.txt') -Algorithm SHA256).Hash
+
+          Write-Host "Re-running the actual NSIS installer over the existing installation: $installDir"
+          $log = Join-Path $env:RUNNER_TEMP 'bankresaneh-upgrade-installer.log'
+          $proc = Start-Process -FilePath $setup -ArgumentList @('/S', "/LOG=$log", "/D=$installDir") -PassThru
+          if (-not $proc.WaitForExit(600000)) { try { & taskkill.exe /PID $proc.Id /T /F | Out-Null } catch {}; throw 'In-place installer upgrade timed out.' }
+          if ($proc.ExitCode -ne 0) { if (Test-Path $log) { Get-Content $log -Tail 100 }; throw "In-place installer upgrade failed: $($proc.ExitCode)" }
+
+          foreach ($relative in $before.Keys) {
+            $file = Join-Path $userData $relative
+            if (-not (Test-Path $file -PathType Leaf)) { throw "Upgrade deleted persistent user-data file: $relative" }
+            $afterHash = (Get-FileHash $file -Algorithm SHA256).Hash
+            if ($afterHash -ne $before[$relative]) { throw "Upgrade modified persistent user-data file: $relative" }
+          }
+          Write-Host "PASS: in-place NSIS upgrade preserved $($before.Count) user-data files byte-for-byte, including SQLite database and sentinel."
+
+          $installedExe = Join-Path $installDir 'BankResaneh.exe'
+          node scripts/smoke-electron.cjs "$installedExe"
+          if ($LASTEXITCODE -ne 0) { throw 'Application failed to start after in-place installer upgrade.' }
+          Write-Host 'PASS: installed application starts after in-place upgrade.'
+
       # ============================================================
       # INSTALLER SMOKE TEST — install the actual NSIS Setup.exe
       # and run the installed app. This catches extraction/install
