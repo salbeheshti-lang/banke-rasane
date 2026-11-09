@@ -45,3 +45,9 @@ test('rejects non-string and oversized references', () => {
   assert.equal(validateShowVideos([42]).valid, false);
   assert.equal(validateShowVideos(['x'.repeat(4097)]).valid, false);
 });
+
+test('allows unrelated edits to legacy records already over the new clip limit', () => {
+  const legacyClips = Array(6).fill(dataVideo(1024));
+  assert.equal(validateShowVideos(legacyClips, legacyClips).valid, true);
+  assert.equal(validateShowVideos([...legacyClips, dataVideo(1024)], legacyClips).valid, false);
+});
