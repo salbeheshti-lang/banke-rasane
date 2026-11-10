@@ -5659,6 +5659,7 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
   const [exportedUrl, setExportedUrl] = useState('');
   const [filmstrip, setFilmstrip] = useState<Array<{ time: number; src: string }>>([]);
   const [filmstripLoading, setFilmstripLoading] = useState(false);
+  const [activeFilmstripHandle, setActiveFilmstripHandle] = useState<'start' | 'end' | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -5914,18 +5915,45 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
                 ))}
               </div>
               <div className="absolute inset-y-0 pointer-events-none" style={{ left: duration ? `${(start / duration) * 100}%` : '0%', right: duration ? `${100 - (end / duration) * 100}%` : '0%', borderLeft: '3px solid #34d399', borderRight: '3px solid #34d399', background: 'rgba(16,185,129,.16)', boxShadow: '0 0 0 999px rgba(0,0,0,.48)' }} />
-              <input aria-label="دستگیره شروع روی نوار فریم‌ها" type="range" min={0} max={Math.max(0, duration)} step={0.1} value={Math.min(start, duration)} disabled={busy || duration <= 0} onChange={e => {
-                const value = Number(e.target.value);
-                const next = Math.min(value, Math.max(0, end - 0.1));
-                setStart(next);
-                if (end - next > 30) setEnd(Math.min(duration, next + 30));
-                if (videoRef.current) videoRef.current.currentTime = next;
-              }} className="absolute inset-0 h-full w-full cursor-ew-resize opacity-0" style={{ zIndex: 3 }} />
-              <input aria-label="دستگیره پایان روی نوار فریم‌ها" type="range" min={Math.min(duration, start + 0.1)} max={Math.min(duration, start + 30)} step={0.1} value={Math.min(end, duration)} disabled={busy || duration <= 0} onChange={e => {
-                const next = Number(e.target.value);
-                setEnd(next);
-                if (videoRef.current) videoRef.current.currentTime = next;
-              }} className="absolute inset-0 h-full w-full cursor-ew-resize opacity-0" style={{ zIndex: 4 }} />
+              <div role="group" aria-label="انتخاب محدوده برش روی فریم‌ها" className="absolute inset-0 cursor-crosshair touch-none" style={{ zIndex: 5 }}
+                onPointerDown={e => {
+                  if (busy || duration <= 0) return;
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                  const targetTime = ratio * duration;
+                  const handle = Math.abs(targetTime - start) <= Math.abs(targetTime - end) ? 'start' : 'end';
+                  setActiveFilmstripHandle(handle);
+                  e.currentTarget.setPointerCapture(e.pointerId);
+                  if (handle === 'start') {
+                    const next = Math.min(targetTime, Math.max(0, end - 0.1));
+                    setStart(next);
+                    if (end - next > 30) setEnd(Math.min(duration, next + 30));
+                    if (videoRef.current) videoRef.current.currentTime = next;
+                  } else {
+                    const next = Math.max(start + 0.1, Math.min(Math.min(duration, start + 30), targetTime));
+                    setEnd(next);
+                    if (videoRef.current) videoRef.current.currentTime = next;
+                  }
+                }}
+                onPointerMove={e => {
+                  if (!activeFilmstripHandle || busy || duration <= 0) return;
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                  const targetTime = ratio * duration;
+                  if (activeFilmstripHandle === 'start') {
+                    const next = Math.min(targetTime, Math.max(0, end - 0.1));
+                    setStart(next);
+                    if (end - next > 30) setEnd(Math.min(duration, next + 30));
+                    if (videoRef.current) videoRef.current.currentTime = next;
+                  } else {
+                    const next = Math.max(start + 0.1, Math.min(Math.min(duration, start + 30), targetTime));
+                    setEnd(next);
+                    if (videoRef.current) videoRef.current.currentTime = next;
+                  }
+                }}
+                onPointerUp={() => setActiveFilmstripHandle(null)}
+                onPointerCancel={() => setActiveFilmstripHandle(null)}
+              />
             </div>
             <div className="flex items-center justify-between gap-2 text-[11px]" style={{ color: '#9ccfc0' }}>
               <span>شروع: <b className="font-mono" style={{ color: '#6ee7b7' }}>{formatTime(start)}</b></span>
