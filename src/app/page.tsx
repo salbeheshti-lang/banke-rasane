@@ -5724,7 +5724,7 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
         thumbVideo.onerror = () => { window.clearTimeout(timeout); reject(new Error('decode')); };
         thumbVideo.load();
       });
-      const count = Math.min(28, Math.max(8, Math.ceil(videoDuration / 2)));
+      const count = Math.min(48, Math.max(12, Math.ceil(videoDuration / 1.25)));
       const frames: Array<{ time: number; src: string }> = [];
       for (let index = 0; index < count; index++) {
         const time = count === 1 ? 0 : (videoDuration * index) / (count - 1);
@@ -5909,7 +5909,10 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
                   </div>
                 ))}
               </div>
-              <div className="absolute inset-y-0 pointer-events-none" style={{ left: duration ? `${(start / duration) * 100}%` : '0%', right: duration ? `${100 - (end / duration) * 100}%` : '0%', borderLeft: '3px solid #34d399', borderRight: '3px solid #34d399', background: 'rgba(16,185,129,.16)', boxShadow: '0 0 0 999px rgba(0,0,0,.48)' }} />
+              <div className="absolute inset-y-0 pointer-events-none" style={{ left: duration ? `${(start / duration) * 100}%` : '0%', right: duration ? `${100 - (end / duration) * 100}%` : '0%', borderLeft: '3px solid #34d399', borderRight: '3px solid #34d399', background: 'rgba(16,185,129,.16)', boxShadow: '0 0 0 999px rgba(0,0,0,.48)' }}>
+                <span className="absolute -left-1.5 top-1/2 h-9 w-3 -translate-y-1/2 rounded-md" style={{ background: '#34d399', boxShadow: '0 1px 8px rgba(0,0,0,.5)' }} />
+                <span className="absolute -right-1.5 top-1/2 h-9 w-3 -translate-y-1/2 rounded-md" style={{ background: '#34d399', boxShadow: '0 1px 8px rgba(0,0,0,.5)' }} />
+              </div>
               <div role="group" aria-label="انتخاب محدوده برش روی فریم‌ها" className="absolute inset-0 cursor-crosshair touch-none" style={{ zIndex: 5 }}
                 onPointerDown={e => {
                   if (busy || duration <= 0) return;
