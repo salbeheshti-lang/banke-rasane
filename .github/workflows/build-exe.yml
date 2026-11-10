@@ -291,11 +291,17 @@ jobs:
           $manifestPath = 'release/latest.yml'
           if (-not (Test-Path $manifestPath)) { throw 'electron-builder did not produce latest.yml for auto-update.' }
           $manifest = Get-Content $manifestPath -Raw
+          $currentVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $manifestVersionMatch = [regex]::Match($manifest, '(?m)^version:\s*["'']?([^"''\r\n]+)')
+          if (-not $manifestVersionMatch.Success -or $manifestVersionMatch.Groups[1].Value.Trim() -ne $currentVersion) {
+            throw "latest.yml version does not match package.json version $currentVersion. Refusing to publish a broken updater manifest."
+          }
           if ($manifest -notmatch [regex]::Escape("url: $canonicalName") -or $manifest -notmatch [regex]::Escape("path: $canonicalName")) {
             throw "latest.yml does not reference the published installer name $canonicalName. Refusing to publish a broken updater manifest."
           }
           if (-not (Test-Path $canonicalPath)) { throw 'Canonical installer file is missing.' }
-          Write-Host "✓ Installer and latest.yml both reference $canonicalName"
+          if ($manifest -notmatch '(?m)^\s+sha512:\s*\S+') { throw 'latest.yml is missing the installer SHA-512 checksum required by electron-updater.' }
+          Write-Host "✓ Installer and latest.yml match version $currentVersion, filename $canonicalName, and include SHA-512"
           Get-ChildItem release
 
       # ============================================================
