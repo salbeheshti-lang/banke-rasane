@@ -2796,6 +2796,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
     } catch { return []; }
   });
   const [showGenrePicker, setShowGenrePicker] = useState(false);
+  const [draftGenreIds, setDraftGenreIds] = useState<string[]>([]);
   const STRIP_COUNT = 5;
 
   // Use memo for default selection — computed from genreStats
@@ -2859,7 +2860,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                 </div>
                 <h2 className="analytics-card-title">نمای آماری کلی</h2>
                 <p className="analytics-card-subtitle">توزیع برنامه‌ها در ژانرهای مختلف</p>
-                <button type="button" onClick={() => setShowGenrePicker(true)} className="mt-3 rounded-lg px-3 py-2 text-xs font-bold" style={{ color: '#f0fdf4', background: 'rgba(0,65,52,0.35)', border: '1px solid rgba(255,255,255,0.35)' }}>⚙ انتخاب ژانرهای آمار</button>
+                <button type="button" onClick={() => { setDraftGenreIds(selectedGenreIds); setShowGenrePicker(true); }} className="mt-3 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-extrabold transition-all hover:-translate-y-0.5" style={{ color: '#ecfdf5', background: 'linear-gradient(135deg, rgba(16,185,129,.22), rgba(20,184,166,.12))', border: '1px solid rgba(110,231,183,.38)', boxShadow: '0 8px 24px rgba(2,44,34,.18)' }}><span aria-hidden>⚙</span><span>شخصی‌سازی ژانرهای آمار</span><span className="rounded-full px-2 py-0.5" style={{ background: 'rgba(16,185,129,.22)', color: '#a7f3d0' }}>{selectedGenreIds.length}/{STRIP_COUNT}</span></button>
               </div>
             </div>
           </div>
@@ -2975,93 +2976,111 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
         </div>
       </div>
 
-      {/* Genre picker modal — lets user change which genres are shown in the strip */}
+      {/* Genre picker — staged selection with clear feedback and explicit apply/cancel */}
       {showGenrePicker && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(4px)' }}
+          style={{ background: 'rgba(2, 12, 10, .76)', backdropFilter: 'blur(12px)' }}
           onClick={() => setShowGenrePicker(false)}
+          role="presentation"
         >
-          <div
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="analytics-genre-picker-title"
             onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-2xl overflow-hidden"
             style={{
-              background: 'linear-gradient(135deg, rgba(7, 55, 48, 0.95) 0%, rgba(10, 70, 60, 0.92) 100%)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(84, 217, 192, 0.3)',
-              borderRadius: '20px',
-              padding: '24px',
-              maxWidth: '480px',
-              width: '100%',
-              maxHeight: '70vh',
-              overflowY: 'auto',
-              boxShadow: '0 12px 40px rgba(0, 30, 25, 0.4)',
+              background: 'linear-gradient(145deg, rgba(7, 39, 34, .98), rgba(9, 61, 51, .97))',
+              border: '1px solid rgba(110, 231, 183, .24)',
+              borderRadius: '24px',
+              boxShadow: '0 28px 90px rgba(0,0,0,.48)',
+              maxHeight: 'min(82vh, 760px)',
+              display: 'flex',
+              flexDirection: 'column',
             }}
           >
-            <h3 style={{ color: '#f0fdf4', marginBottom: '8px', fontWeight: 800 }}>
-              انتخاب ژانرهای نمایش داده‌شده
-            </h3>
-            <p style={{ color: '#7ba8a0', fontSize: '12px', marginBottom: '16px' }}>
-              {STRIP_COUNT.toLocaleString('fa-IR')} ژانر برای نمایش در نوار افقی انتخاب کنید (برای حذف، دوباره کلیک کنید)
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
-              {genreStats.map(g => {
-                const checked = selectedGenreIds.includes(g.genre.id);
-                return (
-                  <button
-                    key={g.genre.id}
-                    onClick={() => {
-                      setSelectedGenreIds(prev => {
-                        if (prev.includes(g.genre.id)) {
-                          return prev.filter(id => id !== g.genre.id);
-                        }
-                        if (prev.length >= STRIP_COUNT) return prev; // Max limit
-                        return [...prev, g.genre.id];
-                      });
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '10px 12px',
-                      borderRadius: '12px',
-                      cursor: 'pointer',
-                      background: checked ? `rgba(84, 217, 192, 0.18)` : 'rgba(255, 255, 255, 0.04)',
-                      border: checked ? `1px solid ${g.color}` : '1px solid rgba(255, 255, 255, 0.08)',
-                      color: '#f0fdf4',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      textAlign: 'right',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: g.color, flexShrink: 0 }} />
-                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {g.genre.nameFa}
-                    </span>
-                    <span style={{ fontSize: '11px', opacity: 0.7 }}>
-                      {g.count.toLocaleString('fa-IR')}
-                    </span>
-                  </button>
-                );
-              })}
+            <div className="px-5 pt-5 pb-4 sm:px-7 sm:pt-6" style={{ borderBottom: '1px solid rgba(167,243,208,.12)' }}>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="mb-2 flex items-center gap-2 text-[11px] font-bold" style={{ color: '#6ee7b7' }}>
+                    <span className="h-2 w-2 rounded-full" style={{ background: '#34d399', boxShadow: '0 0 12px #34d399' }} />
+                    تنظیمات نمای آماری
+                  </div>
+                  <h3 id="analytics-genre-picker-title" className="text-lg sm:text-xl font-black" style={{ color: '#f0fdf4' }}>
+                    ژانرهای موردنظر برای مقایسه
+                  </h3>
+                  <p className="mt-1 text-xs sm:text-sm" style={{ color: '#9bbdb3' }}>
+                    حداکثر {STRIP_COUNT.toLocaleString('fa-IR')} ژانر را انتخاب کن؛ ترتیب انتخاب، ترتیب نمایش در نمودار است.
+                  </p>
+                </div>
+                <button type="button" aria-label="بستن" onClick={() => setShowGenrePicker(false)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-lg" style={{ color: '#d1fae5', background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.1)' }}>×</button>
+              </div>
+              <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl px-4 py-3" style={{ background: 'rgba(2, 20, 17, .38)', border: '1px solid rgba(110,231,183,.14)' }}>
+                <div>
+                  <div className="text-sm font-extrabold" style={{ color: '#ecfdf5' }}>انتخاب‌های فعلی</div>
+                  <div className="mt-0.5 text-[11px]" style={{ color: '#8eafa4' }}>برای حذف، روی ژانر انتخاب‌شده دوباره بزن</div>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <strong className="text-2xl tabular-nums" style={{ color: '#6ee7b7' }}>{draftGenreIds.length}</strong>
+                  <span className="text-xs" style={{ color: '#8eafa4' }}>/ {STRIP_COUNT}</span>
+                </div>
+              </div>
             </div>
-            <button
-              onClick={() => setShowGenrePicker(false)}
-              style={{
-                marginTop: '16px',
-                width: '100%',
-                padding: '10px',
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
-                color: 'white',
-                fontWeight: 700,
-                border: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              ✓ تأیید
-            </button>
-          </div>
+            <div className="overflow-y-auto px-5 py-4 sm:px-7">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {genreStats.map((g, index) => {
+                  const checked = draftGenreIds.includes(g.genre.id);
+                  const atLimit = draftGenreIds.length >= STRIP_COUNT && !checked;
+                  return (
+                    <button
+                      key={g.genre.id}
+                      type="button"
+                      aria-pressed={checked}
+                      disabled={atLimit}
+                      onClick={() => setDraftGenreIds(prev => {
+                        if (prev.includes(g.genre.id)) return prev.filter(id => id !== g.genre.id);
+                        if (prev.length >= STRIP_COUNT) return prev;
+                        return [...prev, g.genre.id];
+                      })}
+                      className="group flex min-w-0 items-center gap-3 rounded-2xl p-3 text-right transition-all duration-150"
+                      style={{
+                        background: checked ? 'linear-gradient(110deg, rgba(16,185,129,.2), rgba(20,184,166,.08))' : 'rgba(255,255,255,.035)',
+                        border: checked ? `1px solid ${g.color}` : '1px solid rgba(255,255,255,.085)',
+                        boxShadow: checked ? `inset 0 0 0 1px ${g.color}22, 0 6px 18px rgba(0,0,0,.12)` : 'none',
+                        opacity: atLimit ? .42 : 1,
+                        cursor: atLimit ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-black" style={{ background: `${g.color}20`, color: g.color, border: `1px solid ${g.color}55` }}>
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-extrabold" style={{ color: '#ecfdf5' }}>{g.genre.nameFa}</span>
+                        <span className="mt-1 block text-[11px]" style={{ color: '#91b2a7' }}>{g.count.toLocaleString('fa-IR')} برنامه</span>
+                      </span>
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-black" style={{ color: checked ? '#052e24' : '#a7c4b9', background: checked ? '#6ee7b7' : 'rgba(255,255,255,.07)', border: checked ? '1px solid #6ee7b7' : '1px solid rgba(255,255,255,.16)' }}>
+                        {checked ? '✓' : '+'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="flex flex-col-reverse gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7" style={{ borderTop: '1px solid rgba(167,243,208,.12)', background: 'rgba(1, 18, 15, .35)' }}>
+              <button type="button" onClick={() => setDraftGenreIds(defaultGenreIds)} className="rounded-xl px-4 py-2.5 text-xs font-bold" style={{ color: '#a7f3d0', background: 'rgba(16,185,129,.08)', border: '1px solid rgba(110,231,183,.2)' }}>
+                بازگشت به انتخاب پیش‌فرض
+              </button>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setShowGenrePicker(false)} className="rounded-xl px-4 py-2.5 text-xs font-bold" style={{ color: '#c3d8d0', background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.1)' }}>
+                  انصراف
+                </button>
+                <button type="button" disabled={draftGenreIds.length === 0} onClick={() => { setSelectedGenreIds(draftGenreIds); setShowGenrePicker(false); }} className="rounded-xl px-5 py-2.5 text-xs font-extrabold transition-all disabled:opacity-40" style={{ color: '#042f24', background: 'linear-gradient(135deg, #6ee7b7, #2dd4bf)', boxShadow: '0 8px 22px rgba(16,185,129,.2)' }}>
+                  اعمال تغییرات و نمایش
+                </button>
+              </div>
+            </div>
+          </section>
         </div>
       )}
 
@@ -4691,12 +4710,35 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
     setTranslating(true);
     setTranslatePreview(null);
     try {
+      // Send ONLY translatable text. The full form also contains image/video
+      // data URLs (often several megabytes), which must never be posted to the
+      // 100 KB translation endpoint.
+      const translationKeys = [
+        'summary', 'descriptionFa', 'elements', 'materials', 'colors',
+        'lighting', 'layout', 'style', 'effects', 'viewers', 'size',
+        'category', 'country',
+      ] as const;
+      const translationFields: Record<string, string> = {};
+      for (const key of translationKeys) {
+        const value = form[key];
+        if (typeof value === 'string' && value.trim()) {
+          translationFields[key] = value;
+        }
+      }
+      if (Object.keys(translationFields).length === 0) {
+        showToast('متن قابل ترجمه‌ای وارد نشده است.');
+        return;
+      }
+      const payloadBytes = new TextEncoder().encode(JSON.stringify({ fields: translationFields })).length;
+      if (payloadBytes > 90 * 1024) {
+        showToast('حجم متن‌های قابل ترجمه زیاد است؛ لطفاً توضیحات را کوتاه‌تر کنید.');
+        return;
+      }
       const res = await fetch('/api/translate', {
         method: 'POST',
-        // Permission-guarded route (add_shows/edit_shows) — without the Bearer
-        // token the server always replied 403 and translation silently failed.
+        // Permission-guarded route (add_shows/edit_shows).
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({ fields: form }),
+        body: JSON.stringify({ fields: translationFields }),
       });
       const data = await res.json();
       if (data.error) {
@@ -5650,10 +5692,15 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
     if (inputRef.current) inputRef.current.value = '';
   };
 
+  // Show tenths of a second: the sliders use 0.1s precision, so the UI
+  // must not hide that precision by flooring the displayed value.
   const formatTime = (value: number) => {
-    const n = Math.max(0, Math.floor(value || 0));
-    return String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0');
+    const tenths = Math.max(0, Math.round((Number.isFinite(value) ? value : 0) * 10));
+    const minutes = Math.floor(tenths / 600);
+    const seconds = (tenths % 600) / 10;
+    return String(minutes).padStart(2, '0') + ':' + seconds.toFixed(1).padStart(4, '0');
   };
+
 
   const exportClip = async () => {
     const video = videoRef.current;
@@ -5791,17 +5838,52 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
           <div className="text-xs" style={{ color: '#d1fae5' }}>
             {file.name} · {(file.size / 1024 / 1024).toFixed(1)} MB · مدت اصلی {formatTime(duration)}
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="text-xs" style={{ color: '#d1fae5' }}>شروع: {formatTime(start)}
-              <input type="range" min={0} max={Math.max(0, duration)} step={0.1} value={Math.min(start, duration)} onChange={e => {
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="block min-w-0 text-xs" style={{ color: '#d1fae5' }}>
+              <span className="mb-2 flex items-center justify-between gap-2">
+                <span className="font-bold">نقطه شروع</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="text-[11px]" style={{ color: '#9ccfc0' }}>ثانیه دقیق</span>
+                  <input type="number" aria-label="زمان شروع بر حسب ثانیه" min={0} max={Math.max(0, duration)} step={0.1} value={start.toFixed(1)} disabled={busy || duration <= 0}
+                    onChange={e => {
+                      const raw = Number(e.target.value);
+                      if (!Number.isFinite(raw)) return;
+                      const value = Math.max(0, Math.min(duration, raw));
+                      setStart(value);
+                      if (end - value > 30) setEnd(Math.min(duration, value + 30));
+                      if (value >= end) setEnd(Math.min(duration, value + 0.1));
+                      if (videoRef.current && !busy) videoRef.current.currentTime = value;
+                    }}
+                    className="w-20 rounded-lg px-2 py-1 text-center font-mono text-sm font-bold"
+                    style={{ color: '#ecfdf5', background: 'rgba(1,20,16,.55)', border: '1px solid rgba(110,231,183,.3)' }} />
+                  <span className="font-mono font-bold" style={{ color: '#6ee7b7' }}>{formatTime(start)}</span>
+                </span>
+              </span>
+              <input type="range" aria-label="انتخاب نقطه شروع" min={0} max={Math.max(0, duration)} step={0.1} value={Math.min(start, duration)} disabled={busy || duration <= 0} onChange={e => {
                 const value = Number(e.target.value);
                 setStart(value);
-                if (end - value > 30) setEnd(value + 30);
-                if (value >= end) setEnd(Math.min(duration, value + 1));
+                if (end - value > 30) setEnd(Math.min(duration, value + 30));
+                if (value >= end) setEnd(Math.min(duration, value + 0.1));
+                if (videoRef.current && !busy) videoRef.current.currentTime = value;
               }} className="w-full" />
             </label>
-            <label className="text-xs" style={{ color: '#d1fae5' }}>پایان: {formatTime(end)}
-              <input type="range" min={0} max={Math.max(0, duration)} step={0.1} value={Math.min(end, duration)} onChange={e => setEnd(Number(e.target.value))} className="w-full" />
+            <label className="block min-w-0 text-xs" style={{ color: '#d1fae5' }}>
+              <span className="mb-2 flex items-center justify-between gap-2">
+                <span className="font-bold">نقطه پایان</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="text-[11px]" style={{ color: '#9ccfc0' }}>ثانیه دقیق</span>
+                  <input type="number" aria-label="زمان پایان بر حسب ثانیه" min={Math.min(duration, start + 0.1)} max={Math.min(duration, start + 30)} step={0.1} value={end.toFixed(1)} disabled={busy || duration <= 0}
+                    onChange={e => {
+                      const raw = Number(e.target.value);
+                      if (!Number.isFinite(raw)) return;
+                      setEnd(Math.max(Math.min(duration, start + 0.1), Math.min(Math.min(duration, start + 30), raw)));
+                    }}
+                    className="w-20 rounded-lg px-2 py-1 text-center font-mono text-sm font-bold"
+                    style={{ color: '#ecfdf5', background: 'rgba(1,20,16,.55)', border: '1px solid rgba(110,231,183,.3)' }} />
+                  <span className="font-mono font-bold" style={{ color: '#6ee7b7' }}>{formatTime(end)}</span>
+                </span>
+              </span>
+              <input type="range" aria-label="انتخاب نقطه پایان" min={Math.min(duration, start + 0.1)} max={Math.min(duration, start + 30)} step={0.1} value={Math.min(end, duration)} disabled={busy || duration <= 0} onChange={e => setEnd(Number(e.target.value))} className="w-full" />
             </label>
           </div>
           <div className="flex flex-wrap items-center gap-2">

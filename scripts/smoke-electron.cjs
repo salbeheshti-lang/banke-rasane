@@ -19,7 +19,7 @@ if (process.env.BANKRESANEH_EXE || process.argv[2]) {
   process.stdout.write('No executable argument — falling back to win-unpacked build: ' + executable + '\n');
 }
 let spawnError = null;
-const child = spawn(executable, ['--disable-gpu', '--no-sandbox', '--enable-logging=stderr'], {
+const child = spawn(executable, ['--disable-gpu', '--no-sandbox', '--enable-logging=stderr', '--remote-debugging-port=9229'], {
   stdio: ['ignore', 'pipe', 'pipe'],
   windowsHide: false,
   env: { ...process.env, ELECTRON_DISABLE_SECURITY_WARNINGS: 'true' },
@@ -70,6 +70,51 @@ function getResponse(url) {
   });
 }
 
+async function verifyLoginScreen(timeoutMs = 30000) {
+  const deadline = Date.now() + timeoutMs;
+  let lastError = 'DevTools target not available';
+  while (Date.now() < deadline) {
+    try {
+      const response = await getResponse('http://127.0.0.1:9229/json/list');
+      const page = JSON.parse(response.body).find((target) => target.type === 'page' && target.webSocketDebuggerUrl);
+      if (page) {
+        const socket = new WebSocket(page.webSocketDebuggerUrl);
+        await new Promise((resolve, reject) => {
+          socket.addEventListener('open', resolve, { once: true });
+          socket.addEventListener('error', reject, { once: true });
+        });
+        let commandId = 0;
+        const pending = new Map();
+        socket.addEventListener('message', (event) => {
+          const message = JSON.parse(event.data);
+          if (message.id && pending.has(message.id)) {
+            const entry = pending.get(message.id);
+            pending.delete(message.id);
+            message.error ? entry.reject(new Error(message.error.message)) : entry.resolve(message.result);
+          }
+        });
+        const stateResult = await new Promise((resolve, reject) => {
+          const id = ++commandId;
+          pending.set(id, { resolve, reject });
+          socket.send(JSON.stringify({ id, method: 'Runtime.evaluate', params: {
+            expression: "({ user: !!document.querySelector('#login-username'), password: !!document.querySelector('#login-password'), login: !!document.querySelector('.login-screen'), url: location.href })",
+            returnByValue: true
+          }}));
+        });
+        socket.close();
+        const state = stateResult.result && stateResult.result.value;
+        if (state && state.user && state.password && state.login) {
+          process.stdout.write('Fresh desktop launch displays username/password login screen (' + state.url + ').\\n');
+          return;
+        }
+        lastError = 'Login form missing: ' + JSON.stringify(state);
+      }
+    } catch (error) { lastError = error.message; }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  throw new Error('Fresh desktop launch did not display the required username/password login screen: ' + lastError);
+}
+
 async function waitFor(url, label, timeoutMs = 90000) {
   const deadline = Date.now() + timeoutMs;
   let lastError = 'not started';
@@ -107,6 +152,7 @@ async function waitFor(url, label, timeoutMs = 90000) {
       throw new Error('Archive search endpoint did not enforce authentication (HTTP ' + searchProbe.statusCode + ').');
     }
     process.stdout.write('Archive search endpoint is reachable and protected.\n');
+    await verifyLoginScreen();
     process.stdout.write('Packaged Electron smoke test passed.\n');
   } catch (error) {
     process.stderr.write(error.stack || error.message);
