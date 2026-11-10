@@ -5904,14 +5904,9 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
             <div className="relative overflow-hidden rounded-lg" style={{ height: 76, background: '#071510' }}>
               <div className="absolute inset-0 flex">
                 {filmstrip.map((frame, index) => (
-                  <button key={index} type="button" aria-label={`رفتن به فریم ${formatTime(frame.time)}`} onClick={() => {
-                    const midpoint = (start + end) / 2;
-                    if (frame.time < midpoint) setStart(Math.min(frame.time, Math.max(0, end - 0.1)));
-                    else setEnd(Math.max(start + 0.1, Math.min(duration, frame.time)));
-                    if (videoRef.current) videoRef.current.currentTime = frame.time;
-                  }} className="h-full min-w-0 flex-1 p-0 border-0" title={formatTime(frame.time)}>
+                  <div key={index} aria-hidden="true" className="h-full min-w-0 flex-1">
                     <img src={frame.src} alt="" draggable={false} className="h-full w-full object-cover" />
-                  </button>
+                  </div>
                 ))}
               </div>
               <div className="absolute inset-y-0 pointer-events-none" style={{ left: duration ? `${(start / duration) * 100}%` : '0%', right: duration ? `${100 - (end / duration) * 100}%` : '0%', borderLeft: '3px solid #34d399', borderRight: '3px solid #34d399', background: 'rgba(16,185,129,.16)', boxShadow: '0 0 0 999px rgba(0,0,0,.48)' }} />
