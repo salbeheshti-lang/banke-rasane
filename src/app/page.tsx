@@ -4881,7 +4881,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
     const candidateName = normalizeShowName(form.name);
     const candidateImdb = imdbId(form.imdb || '') || imdbId(fetchUrl);
     const duplicate = talkShows.find(existing => {
-      if (editingShow && existing.num === editingShow.num) return false;
+      if (editingShow && Number(existing.num) === Number(editingShow.num)) return false;
       const sameName = normalizeShowName(existing.name) === candidateName;
       const existingImdb = imdbId(existing.imdb);
       return sameName || (!!candidateImdb && !!existingImdb && candidateImdb === existingImdb);
@@ -5656,6 +5656,7 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
   const [end, setEnd] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [exportedUrl, setExportedUrl] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -5666,6 +5667,7 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
 
   const chooseFile = (next: File | null) => {
     setError('');
+    setExportedUrl('');
     if (!next) return;
     // Some Windows formats (notably MKV/AVI) are reported with an empty MIME type.
     // Accept the known video extensions here and let the browser's decoder validate playback.
@@ -5689,6 +5691,7 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
     setStart(0);
     setEnd(0);
     setError('');
+    setExportedUrl('');
     if (inputRef.current) inputRef.current.value = '';
   };
 
@@ -5802,8 +5805,7 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
         reader.onerror = () => reject(new Error('ذخیره فایل پردازش‌شده ناموفق بود.'));
         reader.readAsDataURL(blob);
       });
-      onAdd(dataUrl);
-      resetEditor();
+      setExportedUrl(dataUrl);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'پردازش ویدیو ناموفق بود.');
     } finally {
@@ -5894,6 +5896,20 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
             <button type="button" onClick={resetEditor} disabled={busy} className="px-3 py-2 rounded-lg text-xs" style={{ background: 'rgba(255,255,255,.12)', color: '#d1fae5' }}>انصراف</button>
           </div>
           <p className="text-[11px]" style={{ color: 'rgba(209,250,229,.75)' }}>خروجی WebM با حفظ نسبت تصویر و صدای اصلی ساخته می‌شود؛ فایل اصلی تغییر نمی‌کند. حجم ورودی حداکثر ۲۰۰ مگابایت و خروجی حداکثر ۸ مگابایت است. پشتیبانی از فرمت ورودی به کدک‌های نصب‌شده در مرورگر وابسته است.</p>
+        </div>
+      )}
+      {exportedUrl && (
+        <div className="mt-4 space-y-3 rounded-xl p-3" style={{ background: 'rgba(2, 20, 16, .55)', border: '1px solid rgba(110,231,183,.35)' }}>
+          <div className="flex items-center justify-between gap-2">
+            <strong className="text-sm" style={{ color: '#d1fae5' }}>پیش‌نمایش خروجی نهایی</strong>
+            <span className="text-xs" style={{ color: '#6ee7b7' }}>هنوز به برنامه اضافه نشده</span>
+          </div>
+          <video src={exportedUrl} controls playsInline preload="metadata" style={{ width: '100%', maxHeight: 260, borderRadius: 10, background: '#000', objectFit: 'contain' }} />
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => { onAdd(exportedUrl); resetEditor(); }} className="px-4 py-2 rounded-lg text-sm font-bold" style={{ background: '#0d7c4a', color: 'white' }}>تأیید و افزودن خروجی به برنامه</button>
+            <a href={exportedUrl} download="bankresaneh-edited-clip.webm" className="px-4 py-2 rounded-lg text-sm" style={{ background: 'rgba(255,255,255,.12)', color: '#d1fae5' }}>دانلود فایل خروجی</a>
+            <button type="button" onClick={() => setExportedUrl('')} className="px-4 py-2 rounded-lg text-sm" style={{ color: '#fca5a5' }}>حذف پیش‌نمایش</button>
+          </div>
         </div>
       )}
       {error && <p role="alert" className="text-xs mt-2" style={{ color: '#fca5a5' }}>{error}</p>}
