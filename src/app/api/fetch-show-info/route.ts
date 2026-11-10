@@ -10,6 +10,42 @@ function decodeHtml(s: string): string {
 function cleanQuery(s: string): string {
   return (s||'').replace(/[?!]+$/,'').replace(/\(.*?\)/g,' ').replace(/[–—-]/g,' ').replace(/\s+/g,' ').trim();
 }
+
+async function fetchImdbPoster(imdbId: string): Promise<string | null> {
+  // OMDb sometimes returns a valid title record without a poster. Fall back to
+  // IMDb's public page metadata so editing can still import the title artwork.
+  const pageUrl = `https://www.imdb.com/title/${encodeURIComponent(imdbId)}/`;
+  const response = await fetchRetry(pageUrl, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml',
+      'Accept-Language': 'en-US,en;q=0.9',
+    },
+  }, 1);
+  if (!response) return null;
+  const html = await response.text();
+  const candidates = [
+    /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i,
+    /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i,
+  ];
+  for (const pattern of candidates) {
+    const match = html.match(pattern);
+    if (!match?.[1]) continue;
+    const imageUrl = decodeHtml(match[1].replace(/\\u0026/g, '&'));
+    try {
+      const image = new URL(imageUrl);
+      if (image.protocol === 'https:' && (image.hostname === 'm.media-amazon.com' || image.hostname.endsWith('.media-amazon.com'))) {
+        return image.href;
+      }
+    } catch {
+      // Ignore malformed metadata URLs and try the next candidate.
+    }
+  }
+  return null;
+}
+
 async function fetchRetry(url: string, opts: any = {}, retries = 2) {
   for (let i=0; i<=retries; i++) {
     try { const r = await fetch(url, opts); if (r.ok) return r; if (r.status===429) { await new Promise(x=>setTimeout(x,3000*(i+1))); continue; } }
@@ -68,6 +104,10 @@ export async function POST(request: NextRequest) {
         if (record.Actors && record.Actors !== 'N/A') info.actors = record.Actors;
         if (record.Country && record.Country !== 'N/A') info.country = record.Country;
         info.imdbUrl = parsed.href;
+      }
+      if (!info.image && imdbMatch) {
+        const fallbackPoster = await fetchImdbPoster(imdbMatch[1]);
+        if (fallbackPoster) info.image = fallbackPoster;
       }
     }
 
