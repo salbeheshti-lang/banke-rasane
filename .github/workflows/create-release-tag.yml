@@ -1,7 +1,6 @@
 name: Create release tag from release branch
 
 on:
-  create:
   push:
     branches:
       - 'release/v*'
