@@ -303,11 +303,12 @@ jobs:
       # This catches extraction/install hangs that win-unpacked tests
       # cannot detect. Silent mode still runs the NSIS install sections.
       # ============================================================
-      - name: Install 5.3.9, upgrade in place to 5.4.0, and verify data preservation
+      - name: Install 5.3.9, upgrade in place to current version, and verify data preservation
         shell: pwsh
         timeout-minutes: 30
         run: |
           $ErrorActionPreference = 'Stop'
+          $currentVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
           $installDir = Join-Path $env:RUNNER_TEMP 'BankResaneh-Installer-Smoke'
           $oldSetup = Join-Path $env:RUNNER_TEMP 'BankResaneh-5.3.9-Setup.exe'
           $newSetup = (Resolve-Path 'release/BankResaneh-Setup.exe').Path
@@ -340,21 +341,21 @@ jobs:
           Set-Content -LiteralPath (Join-Path $userData 'upgrade-preservation-sentinel.txt') -Value 'created-under-5.3.9' -NoNewline
           $before['upgrade-preservation-sentinel.txt'] = (Get-FileHash (Join-Path $userData 'upgrade-preservation-sentinel.txt') -Algorithm SHA256).Hash
 
-          Write-Host '=== Upgrading the existing 5.3.9 installation in place to the current 5.4.0 build ==='
-          Invoke-Installer $newSetup (Join-Path $env:RUNNER_TEMP 'upgrade-to-5.4.0.log')
+          Write-Host "=== Upgrading the existing 5.3.9 installation in place to the current $currentVersion build ==="
+          Invoke-Installer $newSetup (Join-Path $env:RUNNER_TEMP "upgrade-to-$currentVersion.log")
           foreach ($relative in $before.Keys) {
             $file = Join-Path $userData $relative
-            if (-not (Test-Path $file -PathType Leaf)) { throw "5.4.0 installer deleted 5.3.9 user-data file: $relative" }
-            if ((Get-FileHash $file -Algorithm SHA256).Hash -ne $before[$relative]) { throw "5.4.0 installer modified 5.3.9 user-data file: $relative" }
+            if (-not (Test-Path $file -PathType Leaf)) { throw "$currentVersion installer deleted 5.3.9 user-data file: $relative" }
+            if ((Get-FileHash $file -Algorithm SHA256).Hash -ne $before[$relative]) { throw "$currentVersion installer modified 5.3.9 user-data file: $relative" }
           }
-          Write-Host "PASS: 5.3.9 -> 5.4.0 preserved $($before.Count) user-data files byte-for-byte, including the SQLite database."
+          Write-Host "PASS: 5.3.9 -> $currentVersion preserved $($before.Count) user-data files byte-for-byte, including the SQLite database."
 
           foreach ($required in @($installedExe, (Join-Path $installDir 'resources\\next-service-dist\\server.js'), (Join-Path $installDir 'resources\\api-service\\index.js'), (Join-Path $installDir 'resources\\bun-runtime\\bin\\bun.exe'))) {
-            if (-not (Test-Path $required)) { throw "5.4.0 installed file missing: $required" }
+            if (-not (Test-Path $required)) { throw "$currentVersion installed file missing: $required" }
           }
           node scripts/smoke-electron.cjs "$installedExe"
-          if ($LASTEXITCODE -ne 0) { throw '5.4.0 application failed to start after in-place upgrade.' }
-          Write-Host 'PASS: actual published 5.3.9 NSIS installation upgraded in place to 5.4.0; persistent DB and files survived; upgraded app starts.'
+          if ($LASTEXITCODE -ne 0) { throw "$currentVersion application failed to start after in-place upgrade." }
+          Write-Host "PASS: actual published 5.3.9 NSIS installation upgraded in place to $currentVersion; persistent DB and files survived; upgraded app starts."
 
       # ============================================================
       # FULL SMOKE TEST — run the actual BankResaneh.exe and verify:
