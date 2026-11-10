@@ -1,6 +1,6 @@
 {
   "name": "banke-rasane",
-  "version": "5.4.0",
+  "version": "5.4.1",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
@@ -121,7 +121,8 @@
           "talk-shows-data.json",
           "bankresaneh.sqlite-wal",
           "download-images.js",
-          "download-all-images.bat"
+          "download-all-images.bat",
+          "video-validation.mjs"
         ]
       },
       {

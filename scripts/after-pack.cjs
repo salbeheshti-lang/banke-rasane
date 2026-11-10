@@ -20,6 +20,11 @@ module.exports = async function afterPack(context) {
     preserveTimestamps: false,
   });
 
+  const apiValidator = path.join(context.appOutDir, 'resources', 'api-service', 'video-validation.mjs');
+  if (!fs.existsSync(apiValidator)) {
+    throw new Error('[afterPack] Required API video-validation.mjs is missing from packaged resources/api-service');
+  }
+
   const required = [
     path.join(destination, 'server.js'),
     path.join(destination, 'node_modules', 'next', 'package.json'),

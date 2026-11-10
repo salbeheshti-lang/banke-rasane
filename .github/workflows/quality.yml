@@ -2,7 +2,7 @@ name: Quality checks
 
 on:
   push:
-    branches: [main, fix/complete-v5.3.1-mainline]
+    branches: [main, 'fix/**']
   pull_request:
     branches: [main]
 
@@ -32,6 +32,9 @@ jobs:
 
       - name: Test persistent Prisma SQLite runtime
         run: bun scripts/test-prisma-runtime.ts
+
+      - name: Test API video upload validation
+        run: node --test mini-services/api-service/video-validation.test.mjs
 
       - name: Lint
         run: bun run lint

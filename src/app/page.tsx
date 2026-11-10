@@ -5625,7 +5625,11 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
   const chooseFile = (next: File | null) => {
     setError('');
     if (!next) return;
-    if (!next.type.startsWith('video/')) { setError('لطفاً یک فایل ویدیویی معتبر انتخاب کنید.'); return; }
+    // Some Windows formats (notably MKV/AVI) are reported with an empty MIME type.
+    // Accept the known video extensions here and let the browser's decoder validate playback.
+    const hasVideoMime = next.type.startsWith('video/');
+    const hasSupportedExtension = /\.(mp4|mov|m4v|webm|mkv|avi)$/i.test(next.name);
+    if (!hasVideoMime && !hasSupportedExtension) { setError('لطفاً یک فایل ویدیویی معتبر انتخاب کنید.'); return; }
     if (next.size > 200 * 1024 * 1024) { setError('حجم فایل ورودی نباید بیشتر از ۲۰۰ مگابایت باشد.'); return; }
     const url = URL.createObjectURL(next);
     setPreviewUrl(url);
@@ -5725,7 +5729,16 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
           if (video.currentTime >= end || video.ended) stop();
         };
         video.addEventListener('timeupdate', checkEnd);
-        stopTimer = window.setTimeout(stop, Math.ceil(clipLength * 1000) + 2500);
+        stopTimer = window.setTimeout(() => {
+          // Do not silently save a truncated clip when decoding stalls or playback is throttled.
+          if (video.currentTime < end - 0.25) {
+            video.pause();
+            if (recorder && recorder.state !== 'inactive') recorder.stop();
+            finish(new Error('پردازش پیش از رسیدن به نقطه پایان متوقف شد؛ فایل را دوباره انتخاب یا بازه کوتاه‌تری تعیین کنید.'));
+            return;
+          }
+          stop();
+        }, Math.ceil(clipLength * 1000) + 2500);
         video.play().then(() => {
           if (video.currentTime >= end) stop();
         }).catch(() => finish(new Error('پخش ویدیو برای پردازش آغاز نشد.')));

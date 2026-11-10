@@ -14,6 +14,7 @@ import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 import { readFileSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
+import { validateShowVideos } from './video-validation.mjs';
 
 const PORT = parseInt(process.env.PORT || '3002', 10);
 // Bind to loopback by default. Public/server deployments must opt in explicitly.
@@ -906,6 +907,9 @@ try {
 // Bun server
 // ---------------------------------------------------------------------------
 const server = Bun.serve({
+  // A bounded JSON body protects the local service from unbounded uploads.
+  // The 64 MiB ceiling accommodates up to 40 MiB of decoded local clips (base64 overhead included).
+  maxRequestBodySize: 64 * 1024 * 1024,
   port: PORT,
   // Default to loopback (127.0.0.1) for security: the API service owns auth,
   // sessions, and the database, so it must not be exposed to the network by
@@ -1421,6 +1425,8 @@ const server = Bun.serve({
       if (!user) return permissionFailure(req, 'شما اجازه افزودن برنامه را ندارید');
       let body;
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
+      const videoValidation = validateShowVideos(body?.videos);
+      if (!videoValidation.valid) return json({ error: videoValidation.error }, 400, req);
       const duplicate = findDuplicateShow(body);
       if (duplicate) {
         return json({ error: 'این برنامه قبلاً ثبت شده است: «' + duplicate.name + '» — ژانر اصلی: ' + getPrimaryGenre(duplicate.category), duplicate: { num: duplicate.num, name: duplicate.name, category: duplicate.category, primaryGenre: getPrimaryGenre(duplicate.category) } }, 409, req);
@@ -1452,6 +1458,8 @@ const server = Bun.serve({
       const existing = db.prepare('SELECT * FROM shows WHERE num = ?').get(num);
       if (!existing) return json({ error: 'show not found' }, 404, req);
       const merged = { ...rowToShow(existing), ...body, num };
+      const videoValidation = validateShowVideos(merged.videos, rowToShow(existing).videos);
+      if (!videoValidation.valid) return json({ error: videoValidation.error }, 400, req);
       const duplicate = findDuplicateShow(merged, num);
       if (duplicate) {
         return json({ error: 'این برنامه با رکورد دیگری تکراری است: «' + duplicate.name + '» — ژانر اصلی: ' + getPrimaryGenre(duplicate.category), duplicate: { num: duplicate.num, name: duplicate.name, category: duplicate.category, primaryGenre: getPrimaryGenre(duplicate.category) } }, 409, req);
