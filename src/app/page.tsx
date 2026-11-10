@@ -4691,12 +4691,35 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
     setTranslating(true);
     setTranslatePreview(null);
     try {
+      // Send ONLY translatable text. The full form also contains image/video
+      // data URLs (often several megabytes), which must never be posted to the
+      // 100 KB translation endpoint.
+      const translationKeys = [
+        'summary', 'descriptionFa', 'elements', 'materials', 'colors',
+        'lighting', 'layout', 'style', 'effects', 'viewers', 'size',
+        'category', 'country',
+      ] as const;
+      const translationFields: Record<string, string> = {};
+      for (const key of translationKeys) {
+        const value = form[key];
+        if (typeof value === 'string' && value.trim()) {
+          translationFields[key] = value;
+        }
+      }
+      if (Object.keys(translationFields).length === 0) {
+        showToast('متن قابل ترجمه‌ای وارد نشده است.');
+        return;
+      }
+      const payloadBytes = new TextEncoder().encode(JSON.stringify({ fields: translationFields })).length;
+      if (payloadBytes > 90 * 1024) {
+        showToast('حجم متن‌های قابل ترجمه زیاد است؛ لطفاً توضیحات را کوتاه‌تر کنید.');
+        return;
+      }
       const res = await fetch('/api/translate', {
         method: 'POST',
-        // Permission-guarded route (add_shows/edit_shows) — without the Bearer
-        // token the server always replied 403 and translation silently failed.
+        // Permission-guarded route (add_shows/edit_shows).
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({ fields: form }),
+        body: JSON.stringify({ fields: translationFields }),
       });
       const data = await res.json();
       if (data.error) {
