@@ -5657,8 +5657,12 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [exportedUrl, setExportedUrl] = useState('');
+  const [filmstrip, setFilmstrip] = useState<Array<{ time: number; src: string }>>([]);
+  const [filmstripLoading, setFilmstripLoading] = useState(false);
+  const [activeFilmstripHandle, setActiveFilmstripHandle] = useState<'start' | 'end' | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const filmstripTrackRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!previewUrl) return;
@@ -5668,6 +5672,8 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
   const chooseFile = (next: File | null) => {
     setError('');
     setExportedUrl('');
+    setFilmstrip([]);
+    setFilmstripLoading(false);
     if (!next) return;
     // Some Windows formats (notably MKV/AVI) are reported with an empty MIME type.
     // Accept the known video extensions here and let the browser's decoder validate playback.
@@ -5692,7 +5698,85 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
     setEnd(0);
     setError('');
     setExportedUrl('');
+    setFilmstrip([]);
+    setFilmstripLoading(false);
     if (inputRef.current) inputRef.current.value = '';
+  };
+
+  // Build a visual filmstrip from real decoded frames. A separate muted video keeps
+  // thumbnail seeking independent from the user's playback position.
+  const buildFilmstrip = async (url: string, videoDuration: number) => {
+    setFilmstripLoading(true);
+    setFilmstrip([]);
+    const thumbVideo = document.createElement('video');
+    thumbVideo.src = url;
+    thumbVideo.muted = true;
+    thumbVideo.preload = 'auto';
+    thumbVideo.playsInline = true;
+    const canvas = document.createElement('canvas');
+    canvas.width = 120;
+    canvas.height = 68;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) { setFilmstripLoading(false); return; }
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const timeout = window.setTimeout(() => reject(new Error('timeout')), 15000);
+        thumbVideo.onloadedmetadata = () => { window.clearTimeout(timeout); resolve(); };
+        thumbVideo.onerror = () => { window.clearTimeout(timeout); reject(new Error('decode')); };
+        thumbVideo.load();
+      });
+      const count = Math.min(48, Math.max(12, Math.ceil(videoDuration / 1.25)));
+      const frames: Array<{ time: number; src: string }> = [];
+      let skippedFrames = 0;
+      for (let index = 0; index < count; index++) {
+        const time = count === 1 ? 0 : (videoDuration * index) / (count - 1);
+        const seekTime = Math.min(time, Math.max(0, videoDuration - 0.05));
+        try {
+          await new Promise<void>((resolve, reject) => {
+            let settled = false;
+            const cleanup = () => {
+              window.clearTimeout(timeout);
+              thumbVideo.removeEventListener('seeked', onSeeked);
+            };
+            const finish = (error?: Error) => {
+              if (settled) return;
+              settled = true;
+              cleanup();
+              if (error) reject(error); else resolve();
+            };
+            const onSeeked = () => {
+              if (thumbVideo.readyState < 2 || Math.abs(thumbVideo.currentTime - seekTime) > 0.25) {
+                finish(new Error('فریم موردنظر decode نشد.'));
+              } else {
+                finish();
+              }
+            };
+            const timeout = window.setTimeout(() => finish(new Error('مهلت استخراج این فریم تمام شد.')), 5000);
+            thumbVideo.addEventListener('seeked', onSeeked);
+            try {
+              thumbVideo.currentTime = seekTime;
+              if (Math.abs(thumbVideo.currentTime - seekTime) < 0.02 && thumbVideo.readyState >= 2) finish();
+            } catch {
+              finish(new Error('پرش به زمان فریم ممکن نشد.'));
+            }
+          });
+          if (thumbVideo.readyState < 2) throw new Error('داده تصویری فریم آماده نیست.');
+          ctx.drawImage(thumbVideo, 0, 0, canvas.width, canvas.height);
+          frames.push({ time, src: canvas.toDataURL('image/jpeg', 0.58) });
+        } catch {
+          skippedFrames++;
+        }
+      }
+      if (!frames.length) throw new Error('هیچ فریم قابل‌نمایشی از ویدیو استخراج نشد.');
+      setFilmstrip(frames);
+      if (skippedFrames) setError(`${skippedFrames} فریم به‌دلیل محدودیت رمزگشایی رد شد؛ فریم‌های قابل‌خواندن نمایش داده شده‌اند.`);
+    } catch {
+      setError('ساخت نوار فریم‌ها ممکن نشد؛ ممکن است کدک این ویدیو پشتیبانی نشود.');
+    } finally {
+      thumbVideo.removeAttribute('src');
+      thumbVideo.load();
+      setFilmstripLoading(false);
+    }
   };
 
   // Show tenths of a second: the sliders use 0.1s precision, so the UI
@@ -5704,6 +5788,23 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
     return String(minutes).padStart(2, '0') + ':' + seconds.toFixed(1).padStart(4, '0');
   };
 
+
+  const updateFilmstripHandle = (clientX: number, handle: 'start' | 'end') => {
+    const rect = filmstripTrackRef.current?.getBoundingClientRect();
+    if (!rect || rect.width <= 0 || duration <= 0 || busy) return;
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const targetTime = ratio * duration;
+    if (handle === 'start') {
+      const next = Math.min(targetTime, Math.max(0, end - 0.1));
+      setStart(next);
+      if (end - next > 30) setEnd(Math.min(duration, next + 30));
+      if (videoRef.current) videoRef.current.currentTime = next;
+    } else {
+      const next = Math.max(start + 0.1, Math.min(Math.min(duration, start + 30), targetTime));
+      setEnd(next);
+      if (videoRef.current) videoRef.current.currentTime = next;
+    }
+  };
 
   const exportClip = async () => {
     const video = videoRef.current;
@@ -5836,62 +5937,98 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
             setStart(0);
             setEnd(Math.min(30, d));
             if (!d) setError('مدت ویدیو قابل تشخیص نیست یا فرمت آن پشتیبانی نمی‌شود.');
+            else if (previewUrl) void buildFilmstrip(previewUrl, d);
           }} onError={() => setError('این فرمت یا کدک ویدیویی قابل خواندن نیست. فایل را به MP4 (H.264) یا WebM تبدیل کنید.')} style={{ width: '100%', maxHeight: 260, borderRadius: 10, background: '#000', objectFit: 'contain' }} />
           <div className="text-xs" style={{ color: '#d1fae5' }}>
             {file.name} · {(file.size / 1024 / 1024).toFixed(1)} MB · مدت اصلی {formatTime(duration)}
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="block min-w-0 text-xs" style={{ color: '#d1fae5' }}>
-              <span className="mb-2 flex items-center justify-between gap-2">
-                <span className="font-bold">نقطه شروع</span>
-                <span className="flex items-center gap-1.5">
-                  <span className="text-[11px]" style={{ color: '#9ccfc0' }}>ثانیه دقیق</span>
-                  <input type="number" aria-label="زمان شروع بر حسب ثانیه" min={0} max={Math.max(0, duration)} step={0.1} value={start.toFixed(1)} disabled={busy || duration <= 0}
-                    onChange={e => {
-                      const raw = Number(e.target.value);
-                      if (!Number.isFinite(raw)) return;
-                      const value = Math.max(0, Math.min(duration, raw));
-                      setStart(value);
-                      if (end - value > 30) setEnd(Math.min(duration, value + 30));
-                      if (value >= end) setEnd(Math.min(duration, value + 0.1));
-                      if (videoRef.current && !busy) videoRef.current.currentTime = value;
-                    }}
-                    className="w-20 rounded-lg px-2 py-1 text-center font-mono text-sm font-bold"
-                    style={{ color: '#ecfdf5', background: 'rgba(1,20,16,.55)', border: '1px solid rgba(110,231,183,.3)' }} />
-                  <span className="font-mono font-bold" style={{ color: '#6ee7b7' }}>{formatTime(start)}</span>
-                </span>
-              </span>
-              <input type="range" aria-label="انتخاب نقطه شروع" min={0} max={Math.max(0, duration)} step={0.1} value={Math.min(start, duration)} disabled={busy || duration <= 0} onChange={e => {
-                const value = Number(e.target.value);
-                setStart(value);
-                if (end - value > 30) setEnd(Math.min(duration, value + 30));
-                if (value >= end) setEnd(Math.min(duration, value + 0.1));
-                if (videoRef.current && !busy) videoRef.current.currentTime = value;
-              }} className="w-full" />
-            </label>
-            <label className="block min-w-0 text-xs" style={{ color: '#d1fae5' }}>
-              <span className="mb-2 flex items-center justify-between gap-2">
-                <span className="font-bold">نقطه پایان</span>
-                <span className="flex items-center gap-1.5">
-                  <span className="text-[11px]" style={{ color: '#9ccfc0' }}>ثانیه دقیق</span>
-                  <input type="number" aria-label="زمان پایان بر حسب ثانیه" min={Math.min(duration, start + 0.1)} max={Math.min(duration, start + 30)} step={0.1} value={end.toFixed(1)} disabled={busy || duration <= 0}
-                    onChange={e => {
-                      const raw = Number(e.target.value);
-                      if (!Number.isFinite(raw)) return;
-                      setEnd(Math.max(Math.min(duration, start + 0.1), Math.min(Math.min(duration, start + 30), raw)));
-                    }}
-                    className="w-20 rounded-lg px-2 py-1 text-center font-mono text-sm font-bold"
-                    style={{ color: '#ecfdf5', background: 'rgba(1,20,16,.55)', border: '1px solid rgba(110,231,183,.3)' }} />
-                  <span className="font-mono font-bold" style={{ color: '#6ee7b7' }}>{formatTime(end)}</span>
-                </span>
-              </span>
-              <input type="range" aria-label="انتخاب نقطه پایان" min={Math.min(duration, start + 0.1)} max={Math.min(duration, start + 30)} step={0.1} value={Math.min(end, duration)} disabled={busy || duration <= 0} onChange={e => setEnd(Number(e.target.value))} className="w-full" />
-            </label>
+          <div className="rounded-xl p-3 space-y-3" style={{ background: 'rgba(1,20,16,.58)', border: '1px solid rgba(110,231,183,.22)' }}>
+            <div className="flex items-center justify-between gap-2 text-xs" style={{ color: '#d1fae5' }}>
+              <strong>نوار فریم‌های ویدیو</strong>
+              <span style={{ color: '#9ccfc0' }}>{filmstripLoading ? 'در حال استخراج فریم‌ها…' : filmstrip.length ? `${filmstrip.length} فریم` : 'در انتظار فریم‌ها'}</span>
+            </div>
+            <div ref={filmstripTrackRef} className="relative overflow-hidden rounded-lg" style={{ height: 76, background: '#071510' }}
+              onPointerMove={e => { if (activeFilmstripHandle) updateFilmstripHandle(e.clientX, activeFilmstripHandle); }}
+              onPointerUp={() => setActiveFilmstripHandle(null)}
+              onPointerCancel={() => setActiveFilmstripHandle(null)}
+              onLostPointerCapture={() => setActiveFilmstripHandle(null)}
+            >
+              <div className="absolute inset-0 flex">
+                {filmstrip.map((frame, index) => (
+                  <div key={index} aria-hidden="true" className="h-full min-w-0 flex-1">
+                    <img src={frame.src} alt="" draggable={false} className="h-full w-full object-cover" />
+                  </div>
+                ))}
+              </div>
+              <div className="absolute inset-y-0 pointer-events-none" style={{ zIndex: 6, left: duration ? `${(start / duration) * 100}%` : '0%', right: duration ? `${100 - (end / duration) * 100}%` : '0%', borderLeft: '3px solid #34d399', borderRight: '3px solid #34d399', background: 'rgba(16,185,129,.16)', boxShadow: '0 0 0 999px rgba(0,0,0,.48)' }}>
+                <button type="button" aria-label="دستگیره شروع برش" title="کشیدن برای تغییر زمان شروع"
+                  className="absolute -left-3 top-0 h-full w-6 cursor-ew-resize touch-none"
+                  style={{ pointerEvents: 'auto', background: 'transparent' }}
+                  onPointerDown={e => { e.preventDefault(); e.stopPropagation(); setActiveFilmstripHandle('start'); e.currentTarget.setPointerCapture(e.pointerId); updateFilmstripHandle(e.clientX, 'start'); }}
+                >
+                  <span className="absolute left-2.5 top-1/2 h-10 w-1.5 -translate-y-1/2 rounded-full" style={{ background: '#34d399', boxShadow: '0 1px 8px rgba(0,0,0,.65)' }} />
+                </button>
+                <button type="button" aria-label="دستگیره پایان برش" title="کشیدن برای تغییر زمان پایان"
+                  className="absolute -right-3 top-0 h-full w-6 cursor-ew-resize touch-none"
+                  style={{ pointerEvents: 'auto', background: 'transparent' }}
+                  onPointerDown={e => { e.preventDefault(); e.stopPropagation(); setActiveFilmstripHandle('end'); e.currentTarget.setPointerCapture(e.pointerId); updateFilmstripHandle(e.clientX, 'end'); }}
+                >
+                  <span className="absolute right-2.5 top-1/2 h-10 w-1.5 -translate-y-1/2 rounded-full" style={{ background: '#34d399', boxShadow: '0 1px 8px rgba(0,0,0,.65)' }} />
+                </button>
+              </div>
+              <div role="group" aria-label="انتخاب محدوده برش روی فریم‌ها" className="absolute inset-0 cursor-crosshair touch-none" style={{ zIndex: 5 }}
+                onPointerDown={e => {
+                  if (busy || duration <= 0) return;
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                  const targetTime = ratio * duration;
+                  const handle = Math.abs(targetTime - start) <= Math.abs(targetTime - end) ? 'start' : 'end';
+                  setActiveFilmstripHandle(handle);
+                  e.currentTarget.setPointerCapture(e.pointerId);
+                  if (handle === 'start') {
+                    const next = Math.min(targetTime, Math.max(0, end - 0.1));
+                    setStart(next);
+                    if (end - next > 30) setEnd(Math.min(duration, next + 30));
+                    if (videoRef.current) videoRef.current.currentTime = next;
+                  } else {
+                    const next = Math.max(start + 0.1, Math.min(Math.min(duration, start + 30), targetTime));
+                    setEnd(next);
+                    if (videoRef.current) videoRef.current.currentTime = next;
+                  }
+                }}
+                onPointerUp={() => setActiveFilmstripHandle(null)}
+                onPointerCancel={() => setActiveFilmstripHandle(null)}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-2 text-[11px]" style={{ color: '#9ccfc0' }}>
+              <span>شروع: <b className="font-mono" style={{ color: '#6ee7b7' }}>{formatTime(start)}</b></span>
+              <span>پایان: <b className="font-mono" style={{ color: '#6ee7b7' }}>{formatTime(end)}</b></span>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="block min-w-0 text-xs" style={{ color: '#d1fae5' }}>
+                <span className="mb-1 flex items-center justify-between"><b>شروع دقیق</b><span className="font-mono">{formatTime(start)}</span></span>
+                <input type="number" aria-label="زمان شروع بر حسب ثانیه" min={0} max={Math.max(0, duration)} step={0.1} value={start.toFixed(1)} disabled={busy || duration <= 0} onChange={e => {
+                  const raw = Number(e.target.value); if (!Number.isFinite(raw)) return;
+                  const next = Math.max(0, Math.min(Math.min(duration, end - 0.1), raw));
+                  setStart(next); if (end - next > 30) setEnd(Math.min(duration, next + 30));
+                  if (videoRef.current) videoRef.current.currentTime = next;
+                }} className="w-full rounded-lg px-2 py-2 text-center font-mono" style={{ color: '#ecfdf5', background: 'rgba(1,20,16,.7)', border: '1px solid rgba(110,231,183,.3)' }} />
+              </label>
+              <label className="block min-w-0 text-xs" style={{ color: '#d1fae5' }}>
+                <span className="mb-1 flex items-center justify-between"><b>پایان دقیق</b><span className="font-mono">{formatTime(end)}</span></span>
+                <input type="number" aria-label="زمان پایان بر حسب ثانیه" min={Math.min(duration, start + 0.1)} max={Math.min(duration, start + 30)} step={0.1} value={end.toFixed(1)} disabled={busy || duration <= 0} onChange={e => {
+                  const raw = Number(e.target.value); if (!Number.isFinite(raw)) return;
+                  const next = Math.max(Math.min(duration, start + 0.1), Math.min(Math.min(duration, start + 30), raw));
+                  setEnd(next); if (videoRef.current) videoRef.current.currentTime = next;
+                }} className="w-full rounded-lg px-2 py-2 text-center font-mono" style={{ color: '#ecfdf5', background: 'rgba(1,20,16,.7)', border: '1px solid rgba(110,231,183,.3)' }} />
+              </label>
+            </div>
+            <p className="text-[11px]" style={{ color: 'rgba(209,250,229,.7)' }}>روی فریم‌ها بزن تا زمان نزدیک به آن انتخاب شود؛ محدوده سبز بخش انتخاب‌شده است. برای تنظیم دقیق‌تر، زمان شروع و پایان را وارد کن.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs" style={{ color: end > start && end - start <= 30 ? '#6ee7b7' : '#fca5a5' }}>مدت خروجی: {formatTime(end - start)} / ۰۰:۳۰</span>
             <button type="button" onClick={exportClip} disabled={busy || duration <= 0 || end <= start || end - start > 30} className="px-4 py-2 rounded-lg text-xs font-bold disabled:opacity-50" style={{ background: '#059669', color: 'white' }}>
-              {busy ? 'در حال پردازش ویدیو…' : 'پردازش و افزودن کلیپ'}
+              {busy ? 'در حال پردازش ویدیو…' : 'پردازش و پیش‌نمایش'}
             </button>
             <button type="button" onClick={resetEditor} disabled={busy} className="px-3 py-2 rounded-lg text-xs" style={{ background: 'rgba(255,255,255,.12)', color: '#d1fae5' }}>انصراف</button>
           </div>
