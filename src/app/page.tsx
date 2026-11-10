@@ -2796,6 +2796,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
     } catch { return []; }
   });
   const [showGenrePicker, setShowGenrePicker] = useState(false);
+  const [draftGenreIds, setDraftGenreIds] = useState<string[]>([]);
   const STRIP_COUNT = 5;
 
   // Use memo for default selection — computed from genreStats
@@ -2859,7 +2860,7 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                 </div>
                 <h2 className="analytics-card-title">نمای آماری کلی</h2>
                 <p className="analytics-card-subtitle">توزیع برنامه‌ها در ژانرهای مختلف</p>
-                <button type="button" onClick={() => setShowGenrePicker(true)} className="mt-3 rounded-lg px-3 py-2 text-xs font-bold" style={{ color: '#f0fdf4', background: 'rgba(0,65,52,0.35)', border: '1px solid rgba(255,255,255,0.35)' }}>⚙ انتخاب ژانرهای آمار</button>
+                <button type="button" onClick={() => { setDraftGenreIds(selectedGenreIds); setShowGenrePicker(true); }} className="mt-3 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-extrabold transition-all hover:-translate-y-0.5" style={{ color: '#ecfdf5', background: 'linear-gradient(135deg, rgba(16,185,129,.22), rgba(20,184,166,.12))', border: '1px solid rgba(110,231,183,.38)', boxShadow: '0 8px 24px rgba(2,44,34,.18)' }}><span aria-hidden>⚙</span><span>شخصی‌سازی ژانرهای آمار</span><span className="rounded-full px-2 py-0.5" style={{ background: 'rgba(16,185,129,.22)', color: '#a7f3d0' }}>{selectedGenreIds.length}/{STRIP_COUNT}</span></button>
               </div>
             </div>
           </div>
@@ -2975,93 +2976,111 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
         </div>
       </div>
 
-      {/* Genre picker modal — lets user change which genres are shown in the strip */}
+      {/* Genre picker — staged selection with clear feedback and explicit apply/cancel */}
       {showGenrePicker && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(4px)' }}
+          style={{ background: 'rgba(2, 12, 10, .76)', backdropFilter: 'blur(12px)' }}
           onClick={() => setShowGenrePicker(false)}
+          role="presentation"
         >
-          <div
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="analytics-genre-picker-title"
             onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-2xl overflow-hidden"
             style={{
-              background: 'linear-gradient(135deg, rgba(7, 55, 48, 0.95) 0%, rgba(10, 70, 60, 0.92) 100%)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(84, 217, 192, 0.3)',
-              borderRadius: '20px',
-              padding: '24px',
-              maxWidth: '480px',
-              width: '100%',
-              maxHeight: '70vh',
-              overflowY: 'auto',
-              boxShadow: '0 12px 40px rgba(0, 30, 25, 0.4)',
+              background: 'linear-gradient(145deg, rgba(7, 39, 34, .98), rgba(9, 61, 51, .97))',
+              border: '1px solid rgba(110, 231, 183, .24)',
+              borderRadius: '24px',
+              boxShadow: '0 28px 90px rgba(0,0,0,.48)',
+              maxHeight: 'min(82vh, 760px)',
+              display: 'flex',
+              flexDirection: 'column',
             }}
           >
-            <h3 style={{ color: '#f0fdf4', marginBottom: '8px', fontWeight: 800 }}>
-              انتخاب ژانرهای نمایش داده‌شده
-            </h3>
-            <p style={{ color: '#7ba8a0', fontSize: '12px', marginBottom: '16px' }}>
-              {STRIP_COUNT.toLocaleString('fa-IR')} ژانر برای نمایش در نوار افقی انتخاب کنید (برای حذف، دوباره کلیک کنید)
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
-              {genreStats.map(g => {
-                const checked = selectedGenreIds.includes(g.genre.id);
-                return (
-                  <button
-                    key={g.genre.id}
-                    onClick={() => {
-                      setSelectedGenreIds(prev => {
-                        if (prev.includes(g.genre.id)) {
-                          return prev.filter(id => id !== g.genre.id);
-                        }
-                        if (prev.length >= STRIP_COUNT) return prev; // Max limit
-                        return [...prev, g.genre.id];
-                      });
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '10px 12px',
-                      borderRadius: '12px',
-                      cursor: 'pointer',
-                      background: checked ? `rgba(84, 217, 192, 0.18)` : 'rgba(255, 255, 255, 0.04)',
-                      border: checked ? `1px solid ${g.color}` : '1px solid rgba(255, 255, 255, 0.08)',
-                      color: '#f0fdf4',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      textAlign: 'right',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: g.color, flexShrink: 0 }} />
-                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {g.genre.nameFa}
-                    </span>
-                    <span style={{ fontSize: '11px', opacity: 0.7 }}>
-                      {g.count.toLocaleString('fa-IR')}
-                    </span>
-                  </button>
-                );
-              })}
+            <div className="px-5 pt-5 pb-4 sm:px-7 sm:pt-6" style={{ borderBottom: '1px solid rgba(167,243,208,.12)' }}>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="mb-2 flex items-center gap-2 text-[11px] font-bold" style={{ color: '#6ee7b7' }}>
+                    <span className="h-2 w-2 rounded-full" style={{ background: '#34d399', boxShadow: '0 0 12px #34d399' }} />
+                    تنظیمات نمای آماری
+                  </div>
+                  <h3 id="analytics-genre-picker-title" className="text-lg sm:text-xl font-black" style={{ color: '#f0fdf4' }}>
+                    ژانرهای موردنظر برای مقایسه
+                  </h3>
+                  <p className="mt-1 text-xs sm:text-sm" style={{ color: '#9bbdb3' }}>
+                    حداکثر {STRIP_COUNT.toLocaleString('fa-IR')} ژانر را انتخاب کن؛ ترتیب انتخاب، ترتیب نمایش در نمودار است.
+                  </p>
+                </div>
+                <button type="button" aria-label="بستن" onClick={() => setShowGenrePicker(false)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-lg" style={{ color: '#d1fae5', background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.1)' }}>×</button>
+              </div>
+              <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl px-4 py-3" style={{ background: 'rgba(2, 20, 17, .38)', border: '1px solid rgba(110,231,183,.14)' }}>
+                <div>
+                  <div className="text-sm font-extrabold" style={{ color: '#ecfdf5' }}>انتخاب‌های فعلی</div>
+                  <div className="mt-0.5 text-[11px]" style={{ color: '#8eafa4' }}>برای حذف، روی ژانر انتخاب‌شده دوباره بزن</div>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <strong className="text-2xl tabular-nums" style={{ color: '#6ee7b7' }}>{draftGenreIds.length}</strong>
+                  <span className="text-xs" style={{ color: '#8eafa4' }}>/ {STRIP_COUNT}</span>
+                </div>
+              </div>
             </div>
-            <button
-              onClick={() => setShowGenrePicker(false)}
-              style={{
-                marginTop: '16px',
-                width: '100%',
-                padding: '10px',
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)',
-                color: 'white',
-                fontWeight: 700,
-                border: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              ✓ تأیید
-            </button>
-          </div>
+            <div className="overflow-y-auto px-5 py-4 sm:px-7">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {genreStats.map((g, index) => {
+                  const checked = draftGenreIds.includes(g.genre.id);
+                  const atLimit = draftGenreIds.length >= STRIP_COUNT && !checked;
+                  return (
+                    <button
+                      key={g.genre.id}
+                      type="button"
+                      aria-pressed={checked}
+                      disabled={atLimit}
+                      onClick={() => setDraftGenreIds(prev => {
+                        if (prev.includes(g.genre.id)) return prev.filter(id => id !== g.genre.id);
+                        if (prev.length >= STRIP_COUNT) return prev;
+                        return [...prev, g.genre.id];
+                      })}
+                      className="group flex min-w-0 items-center gap-3 rounded-2xl p-3 text-right transition-all duration-150"
+                      style={{
+                        background: checked ? 'linear-gradient(110deg, rgba(16,185,129,.2), rgba(20,184,166,.08))' : 'rgba(255,255,255,.035)',
+                        border: checked ? `1px solid ${g.color}` : '1px solid rgba(255,255,255,.085)',
+                        boxShadow: checked ? `inset 0 0 0 1px ${g.color}22, 0 6px 18px rgba(0,0,0,.12)` : 'none',
+                        opacity: atLimit ? .42 : 1,
+                        cursor: atLimit ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-black" style={{ background: `${g.color}20`, color: g.color, border: `1px solid ${g.color}55` }}>
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-extrabold" style={{ color: '#ecfdf5' }}>{g.genre.nameFa}</span>
+                        <span className="mt-1 block text-[11px]" style={{ color: '#91b2a7' }}>{g.count.toLocaleString('fa-IR')} برنامه</span>
+                      </span>
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-black" style={{ color: checked ? '#052e24' : '#a7c4b9', background: checked ? '#6ee7b7' : 'rgba(255,255,255,.07)', border: checked ? '1px solid #6ee7b7' : '1px solid rgba(255,255,255,.16)' }}>
+                        {checked ? '✓' : '+'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="flex flex-col-reverse gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7" style={{ borderTop: '1px solid rgba(167,243,208,.12)', background: 'rgba(1, 18, 15, .35)' }}>
+              <button type="button" onClick={() => setDraftGenreIds(defaultGenreIds)} className="rounded-xl px-4 py-2.5 text-xs font-bold" style={{ color: '#a7f3d0', background: 'rgba(16,185,129,.08)', border: '1px solid rgba(110,231,183,.2)' }}>
+                بازگشت به انتخاب پیش‌فرض
+              </button>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setShowGenrePicker(false)} className="rounded-xl px-4 py-2.5 text-xs font-bold" style={{ color: '#c3d8d0', background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.1)' }}>
+                  انصراف
+                </button>
+                <button type="button" disabled={draftGenreIds.length === 0} onClick={() => { setSelectedGenreIds(draftGenreIds); setShowGenrePicker(false); }} className="rounded-xl px-5 py-2.5 text-xs font-extrabold transition-all disabled:opacity-40" style={{ color: '#042f24', background: 'linear-gradient(135deg, #6ee7b7, #2dd4bf)', boxShadow: '0 8px 22px rgba(16,185,129,.2)' }}>
+                  اعمال تغییرات و نمایش
+                </button>
+              </div>
+            </div>
+          </section>
         </div>
       )}
 
