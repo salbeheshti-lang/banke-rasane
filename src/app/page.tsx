@@ -5692,10 +5692,15 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
     if (inputRef.current) inputRef.current.value = '';
   };
 
+  // Show tenths of a second: the sliders use 0.1s precision, so the UI
+  // must not hide that precision by flooring the displayed value.
   const formatTime = (value: number) => {
-    const n = Math.max(0, Math.floor(value || 0));
-    return String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0');
+    const tenths = Math.max(0, Math.round((Number.isFinite(value) ? value : 0) * 10));
+    const minutes = Math.floor(tenths / 600);
+    const seconds = (tenths % 600) / 10;
+    return String(minutes).padStart(2, '0') + ':' + seconds.toFixed(1).padStart(4, '0');
   };
+
 
   const exportClip = async () => {
     const video = videoRef.current;
@@ -5833,17 +5838,52 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
           <div className="text-xs" style={{ color: '#d1fae5' }}>
             {file.name} · {(file.size / 1024 / 1024).toFixed(1)} MB · مدت اصلی {formatTime(duration)}
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="text-xs" style={{ color: '#d1fae5' }}>شروع: {formatTime(start)}
-              <input type="range" min={0} max={Math.max(0, duration)} step={0.1} value={Math.min(start, duration)} onChange={e => {
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="block min-w-0 text-xs" style={{ color: '#d1fae5' }}>
+              <span className="mb-2 flex items-center justify-between gap-2">
+                <span className="font-bold">نقطه شروع</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="text-[11px]" style={{ color: '#9ccfc0' }}>ثانیه دقیق</span>
+                  <input type="number" aria-label="زمان شروع بر حسب ثانیه" min={0} max={Math.max(0, duration)} step={0.1} value={start.toFixed(1)} disabled={busy || duration <= 0}
+                    onChange={e => {
+                      const raw = Number(e.target.value);
+                      if (!Number.isFinite(raw)) return;
+                      const value = Math.max(0, Math.min(duration, raw));
+                      setStart(value);
+                      if (end - value > 30) setEnd(Math.min(duration, value + 30));
+                      if (value >= end) setEnd(Math.min(duration, value + 0.1));
+                      if (videoRef.current && !busy) videoRef.current.currentTime = value;
+                    }}
+                    className="w-20 rounded-lg px-2 py-1 text-center font-mono text-sm font-bold"
+                    style={{ color: '#ecfdf5', background: 'rgba(1,20,16,.55)', border: '1px solid rgba(110,231,183,.3)' }} />
+                  <span className="font-mono font-bold" style={{ color: '#6ee7b7' }}>{formatTime(start)}</span>
+                </span>
+              </span>
+              <input type="range" aria-label="انتخاب نقطه شروع" min={0} max={Math.max(0, duration)} step={0.1} value={Math.min(start, duration)} disabled={busy || duration <= 0} onChange={e => {
                 const value = Number(e.target.value);
                 setStart(value);
-                if (end - value > 30) setEnd(value + 30);
-                if (value >= end) setEnd(Math.min(duration, value + 1));
+                if (end - value > 30) setEnd(Math.min(duration, value + 30));
+                if (value >= end) setEnd(Math.min(duration, value + 0.1));
+                if (videoRef.current && !busy) videoRef.current.currentTime = value;
               }} className="w-full" />
             </label>
-            <label className="text-xs" style={{ color: '#d1fae5' }}>پایان: {formatTime(end)}
-              <input type="range" min={0} max={Math.max(0, duration)} step={0.1} value={Math.min(end, duration)} onChange={e => setEnd(Number(e.target.value))} className="w-full" />
+            <label className="block min-w-0 text-xs" style={{ color: '#d1fae5' }}>
+              <span className="mb-2 flex items-center justify-between gap-2">
+                <span className="font-bold">نقطه پایان</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="text-[11px]" style={{ color: '#9ccfc0' }}>ثانیه دقیق</span>
+                  <input type="number" aria-label="زمان پایان بر حسب ثانیه" min={Math.min(duration, start + 0.1)} max={Math.min(duration, start + 30)} step={0.1} value={end.toFixed(1)} disabled={busy || duration <= 0}
+                    onChange={e => {
+                      const raw = Number(e.target.value);
+                      if (!Number.isFinite(raw)) return;
+                      setEnd(Math.max(Math.min(duration, start + 0.1), Math.min(Math.min(duration, start + 30), raw)));
+                    }}
+                    className="w-20 rounded-lg px-2 py-1 text-center font-mono text-sm font-bold"
+                    style={{ color: '#ecfdf5', background: 'rgba(1,20,16,.55)', border: '1px solid rgba(110,231,183,.3)' }} />
+                  <span className="font-mono font-bold" style={{ color: '#6ee7b7' }}>{formatTime(end)}</span>
+                </span>
+              </span>
+              <input type="range" aria-label="انتخاب نقطه پایان" min={Math.min(duration, start + 0.1)} max={Math.min(duration, start + 30)} step={0.1} value={Math.min(end, duration)} disabled={busy || duration <= 0} onChange={e => setEnd(Number(e.target.value))} className="w-full" />
             </label>
           </div>
           <div className="flex flex-wrap items-center gap-2">
