@@ -5824,7 +5824,7 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
               <span className="mb-2 flex items-center justify-between gap-2">
                 <span className="font-bold">نقطه شروع</span>
                 <span className="flex items-center gap-1.5">
-                  <span className="text-[11px]" style={{ color: '#9ccfc0' }}>دقیقه:ثانیه</span>
+                  <span className="text-[11px]" style={{ color: '#9ccfc0' }}>ثانیه دقیق</span>
                   <input type="number" aria-label="زمان شروع بر حسب ثانیه" min={0} max={Math.max(0, duration)} step={0.1} value={start.toFixed(1)} disabled={busy || duration <= 0}
                     onChange={e => {
                       const raw = Number(e.target.value);
@@ -5852,7 +5852,7 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
               <span className="mb-2 flex items-center justify-between gap-2">
                 <span className="font-bold">نقطه پایان</span>
                 <span className="flex items-center gap-1.5">
-                  <span className="text-[11px]" style={{ color: '#9ccfc0' }}>دقیقه:ثانیه</span>
+                  <span className="text-[11px]" style={{ color: '#9ccfc0' }}>ثانیه دقیق</span>
                   <input type="number" aria-label="زمان پایان بر حسب ثانیه" min={Math.min(duration, start + 0.1)} max={Math.min(duration, start + 30)} step={0.1} value={end.toFixed(1)} disabled={busy || duration <= 0}
                     onChange={e => {
                       const raw = Number(e.target.value);
