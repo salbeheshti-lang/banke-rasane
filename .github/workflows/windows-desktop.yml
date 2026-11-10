@@ -2,7 +2,7 @@ name: Windows desktop build
 
 on:
   push:
-    branches: [fix/complete-v5.3.1-mainline]
+    branches: [main, 'fix/**']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -119,7 +119,8 @@ jobs:
           }
           node scripts/smoke-electron.cjs "$exe"
           if ($LASTEXITCODE -ne 0) { throw 'Upgraded application failed startup/API/DB smoke test.' }
-          Write-Host "PASS: published 5.3.9 upgraded in place to package version 5.4.0; $($snapshot.Count) persistent files including SQLite survived byte-for-byte."
+          $packageVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          Write-Host "PASS: published 5.3.9 upgraded in place to package version $packageVersion; $($snapshot.Count) persistent files including SQLite survived byte-for-byte."
 
       - name: Run packaged app smoke test
         run: npm run smoke:desktop
