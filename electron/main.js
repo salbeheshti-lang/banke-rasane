@@ -383,7 +383,9 @@ function createWindow() {
     mainWindow.show();
     mainWindow.maximize();
   });
-  mainWindow.loadURL(NEXT_URL);
+  // Signal a fresh desktop launch so the renderer invalidates any token left
+  // by a previous process and always presents the username/password screen.
+  mainWindow.loadURL(`${NEXT_URL}/?desktop=1`);
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     let target;
     try {
