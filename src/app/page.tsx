@@ -5725,6 +5725,28 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
         thumbVideo.onerror = () => { window.clearTimeout(timeout); reject(new Error('decode')); };
         thumbVideo.load();
       });
+      if (thumbVideo.readyState < 2) {
+        await new Promise<void>((resolve, reject) => {
+          let settled = false;
+          const cleanup = () => {
+            window.clearTimeout(timeout);
+            thumbVideo.removeEventListener('loadeddata', onLoaded);
+            thumbVideo.removeEventListener('error', onError);
+          };
+          const finish = (error?: Error) => {
+            if (settled) return;
+            settled = true;
+            cleanup();
+            if (error) reject(error); else resolve();
+          };
+          const onLoaded = () => finish();
+          const onError = () => finish(new Error('داده تصویری ویدیو آماده نشد.'));
+          const timeout = window.setTimeout(() => finish(new Error('آماده‌سازی تصویر ویدیو بیش از حد طول کشید.')), 10000);
+          thumbVideo.addEventListener('loadeddata', onLoaded, { once: true });
+          thumbVideo.addEventListener('error', onError, { once: true });
+          if (thumbVideo.readyState >= 2) finish();
+        });
+      }
       const count = Math.min(48, Math.max(12, Math.ceil(videoDuration / 1.25)));
       const frames: Array<{ time: number; src: string }> = [];
       let skippedFrames = 0;
