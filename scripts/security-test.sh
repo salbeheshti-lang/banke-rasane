@@ -554,6 +554,20 @@ api PUT "/shows/99001" "$EDITOR_TOKEN" '{"name":"Test Show Edited"}'
 echo "  editor edits show → $HTTP_STATUS (should be 200)"
 check "3.3 editor-can-edit-show" 200 "$HTTP_STATUS"
 
+# 3.3b Recover a legacy/local edit whose row is missing from the shared DB.
+# An explicit full-record PUT must restore it instead of returning "show not found".
+api DELETE "/shows?num=99002" "$SUPER_TOKEN"
+api PUT "/shows/99002" "$EDITOR_TOKEN" '{"name":"Missing Show Recovery Test","category":"آزمون"}'
+echo "  editor restores missing show during edit → $HTTP_STATUS (should be 200)"
+check "3.3b editor-can-restore-missing-show" 200 "$HTTP_STATUS"
+api GET "/shows/search?q=Missing%20Show%20Recovery%20Test" "$SUPER_TOKEN"
+if printf '%s' "$RESP_BODY" | grep -q '"name":"Missing Show Recovery Test"'; then
+  check "3.3c restored-show-is-searchable" "present" "present"
+else
+  check "3.3c restored-show-is-searchable" "present" "missing"
+fi
+api DELETE "/shows?num=99002" "$SUPER_TOKEN"
+
 # Server-side duplicate protection must reject both normalized-name and IMDb-ID duplicates.
 DUPLICATE_TEST_NAME="Duplicate Guard Test"
 DUPLICATE_TEST_IMDB="tt99912345678"
