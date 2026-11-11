@@ -1384,13 +1384,26 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lockoutSeconds, setLockoutSeconds] = useState(0);
 
-   
+  // Keep the server-enforced lockout visible as a live countdown.
+  useEffect(() => {
+    if (lockoutSeconds <= 0) return;
+    const timer = window.setInterval(() => {
+      setLockoutSeconds((remaining) => Math.max(0, remaining - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [lockoutSeconds > 0]);
 
+  const formatLockout = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainder = seconds % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading) return;
+    if (loading || lockoutSeconds > 0) return;
     setError(null);
     if (!username.trim() || !password) {
       setError(t('login.errorEmpty'));
@@ -1401,7 +1414,10 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
       const data = await api.login(username.trim(), password);
       onLogin(data.user);
     } catch (err: any) {
-      setError(err?.message || t('login.errorFailed'));
+      const message = err?.message || t('login.errorFailed');
+      const seconds = message.match(/(\\d+)\\s*ثانیه/);
+      if (seconds) setLockoutSeconds(Number(seconds[1]));
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -1530,14 +1546,16 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 color: '#fca5a5',
               }}
             >
-              ⚠ {error}
+              ⚠ {lockoutSeconds > 0
+                ? `به دلیل تلاش‌های ناموفق، ورود موقتاً قفل است. زمان باقی‌مانده: ${formatLockout(lockoutSeconds)}`
+                : error}
             </div>
           )}
 
           {/* Submit — premium dark-green gradient button */}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || lockoutSeconds > 0}
             className="btn-enter-premium group"
             style={{ marginTop: '8px' }}
           >
@@ -1549,7 +1567,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 </>
               ) : (
                 <>
-                  <span>{t('login.submit')}</span>
+                  <span>{lockoutSeconds > 0 ? `لطفاً ${formatLockout(lockoutSeconds)} صبر کنید` : t('login.submit')}</span>
                   <svg
                     className="w-5 h-5 rtl-flip group-hover:-translate-x-1.5 transition-transform"
                     fill="none"
