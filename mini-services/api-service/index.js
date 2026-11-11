@@ -706,11 +706,11 @@ function seedShows() {
   }
   if (!Array.isArray(shows)) { console.warn('[seed] expected array'); return; }
   const existing = db.prepare('SELECT COUNT(*) AS c FROM shows').get();
-  // A row count is not proof that the DB contains every source record: an
-  // older/partially migrated DB can have the same count while missing a
-  // particular show.num. Always reconcile by primary key; INSERT OR IGNORE
-  // preserves existing user edits and repairs only missing seed rows.
-  console.log(`[seed] reconciling ${shows.length} source shows against ${existing.c} DB rows`);
+  if (existing.c >= shows.length) {
+    console.log(`[seed] DB has ${existing.c} shows, JSON has ${shows.length} — up to date, skipping`);
+    return;
+  }
+  console.log(`[seed] DB has ${existing.c} shows, JSON has ${shows.length} — inserting new entries`);
   const stmt = db.prepare(`
     INSERT OR IGNORE INTO shows
       (num, name, category, source, size, viewers, style, effects, layout,
@@ -722,10 +722,7 @@ function seedShows() {
   const tx = db.transaction(() => {
     for (const s of shows) {
       if (typeof s.num !== 'number') continue;
-      try {
-        const result = stmt.run(...showToValues(s));
-        if (result.changes > 0) inserted++;
-      } catch (e) {
+      try { stmt.run(...showToValues(s)); inserted++; } catch (e) {
         console.warn(`[seed] failed to insert show num=${s.num}:`, e.message);
       }
     }
