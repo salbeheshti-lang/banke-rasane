@@ -559,12 +559,12 @@ check "3.3 editor-can-edit-show" 200 "$HTTP_STATUS"
 api DELETE "/shows?num=99002" "$SUPER_TOKEN"
 api PUT "/shows/99002" "$EDITOR_TOKEN" '{"name":"Missing Show Recovery Test","category":"آزمون"}'
 echo "  editor restores missing show during edit → $HTTP_STATUS (should be 200)"
-check "3.3b editor-can-restore-missing-show" 200 "$HTTP_STATUS"
+check "3.3r1 editor-can-restore-missing-show" 200 "$HTTP_STATUS"
 api GET "/shows/search?q=Missing%20Show%20Recovery%20Test" "$SUPER_TOKEN"
 if printf '%s' "$RESP_BODY" | grep -q '"name":"Missing Show Recovery Test"'; then
-  check "3.3c restored-show-is-searchable" "present" "present"
+  check "3.3r2 restored-show-is-searchable" "present" "present"
 else
-  check "3.3c restored-show-is-searchable" "present" "missing"
+  check "3.3r2 restored-show-is-searchable" "present" "missing"
 fi
 api DELETE "/shows?num=99002" "$SUPER_TOKEN"
 
