@@ -32,6 +32,9 @@ jobs:
       - name: Install dependencies
         run: bun install --no-save
 
+      - name: Verify show edit, duplicate protection, and decor persistence through the real API
+        run: bun run test:api-crud
+
       - name: Generate Prisma client
         run: bunx prisma generate
         env:
