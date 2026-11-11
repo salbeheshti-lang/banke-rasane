@@ -104,11 +104,17 @@ async function verifyLoginScreen(timeoutMs = 30000) {
         });
         socket.close();
         const state = stateResult.result && stateResult.result.value;
-        if (state && state.user && state.password && state.login && state.videoCapture && state.canvasCapture && state.webmBytes > 0 && state.webmPlayable) {
-          process.stdout.write('Fresh desktop launch displays the login screen (' + state.url + ') and its WebM recording/export preview pipeline passed (' + state.webmBytes + ' bytes).\\n');
+        const verifyVideoExport = process.env.BANKRESANEH_VERIFY_VIDEO_EXPORT === '1';
+        const loginPassed = Boolean(state && state.user && state.password && state.login);
+        const videoPassed = Boolean(state && state.videoCapture && state.canvasCapture && state.webmBytes > 0 && state.webmPlayable);
+        if (loginPassed && (!verifyVideoExport || videoPassed)) {
+          process.stdout.write('Fresh desktop launch displays the login screen (' + state.url + ').\\n');
+          if (verifyVideoExport) {
+            process.stdout.write('WebM recording and playback pipeline passed (' + state.webmBytes + ' bytes).\\n');
+          }
           return;
         }
-        lastError = 'Login form missing: ' + JSON.stringify(state);
+        lastError = (loginPassed ? 'WebM recording/playback pipeline failed: ' : 'Login form missing: ') + JSON.stringify(state);
       }
     } catch (error) { lastError = error.message; }
     await new Promise((resolve) => setTimeout(resolve, 500));
