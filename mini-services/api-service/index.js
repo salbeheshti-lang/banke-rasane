@@ -1453,8 +1453,8 @@ const server = Bun.serve({
     if (pathname.startsWith('/api/shows/') && method === 'PUT') {
       const user = requirePermission(req, 'edit_shows');
       if (!user) return permissionFailure(req, 'شما اجازه ویرایش برنامه را ندارید');
-      const numMatch = pathname.match(/^\\/api\\/shows\\/(\\d+)$/);
-      const num = numMatch ? Number(numMatch[1]) : NaN;
+      const numText = pathname.slice('/api/shows/'.length);
+      const num = /^\\d+$/.test(numText) ? Number(numText) : NaN;
       if (!Number.isSafeInteger(num) || num < 1) return json({ error: 'valid show number required' }, 400, req);
       let body;
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
