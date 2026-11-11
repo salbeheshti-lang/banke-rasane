@@ -4826,7 +4826,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       const res = await fetch('/api/fetch-show-info', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({ url: fetchUrl }),
+        body: JSON.stringify({ url: fetchUrl, category: form.category, showName: form.name }),
       });
       const data = await res.json();
       if (!res.ok || data.error) {
