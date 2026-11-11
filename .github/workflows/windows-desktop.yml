@@ -117,8 +117,10 @@ jobs:
             if (-not (Test-Path $file -PathType Leaf)) { throw "Upgrade deleted user data: $rel" }
             if ((Get-FileHash $file -Algorithm SHA256).Hash -ne $snapshot[$rel]) { throw "Upgrade changed user data: $rel" }
           }
+          $env:BANKRESANEH_VERIFY_VIDEO_EXPORT = '1'
           node scripts/smoke-electron.cjs "$exe"
-          if ($LASTEXITCODE -ne 0) { throw 'Upgraded application failed startup/API/DB smoke test.' }
+          if ($LASTEXITCODE -ne 0) { throw 'Upgraded application failed startup/API/DB/video smoke test.' }
+          Remove-Item Env:BANKRESANEH_VERIFY_VIDEO_EXPORT -ErrorAction SilentlyContinue
           $packageVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
           Write-Host "PASS: published 5.3.9 upgraded in place to package version $packageVersion; $($snapshot.Count) persistent files including SQLite survived byte-for-byte."
 
