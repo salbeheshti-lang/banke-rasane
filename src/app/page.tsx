@@ -1299,10 +1299,10 @@ function HomeInner() {
 
       <main key={currentView} className={`animate-view-enter ${isMobile ? 'p-4 pt-24 pb-28' : 'p-8 pt-28'}`}>
         {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} onEditGenre={handleEditGenre} onDeleteGenre={handleDeleteGenre} onShowClick={setSelectedShow} />}
-        {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
+        {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={(s) => { setEditingShow(s); setPresetGenre(null); setPresetCategory(undefined); navigate('add'); }} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} onExport={(shows, format, meta) => setExportPreview({ shows, format, ...meta })} />}
-        {currentView === 'add' && canEdit && <AddEditView talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setPresetCategory(undefined); setPresetGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} presetCategory={presetCategory} presetGenre={presetGenre} genres={genres} />}
+        {currentView === 'add' && canEdit && <AddEditView key={editingShow?.num ?? 'new'} talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setPresetCategory(undefined); setPresetGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} presetCategory={presetCategory} presetGenre={presetGenre} genres={genres} />}
         {currentView === 'add' && !canEdit && (
           <div className="premium-glass p-8 text-center">
             <h2 className="text-2xl font-bold mb-2" style={{ color: '#dc2626' }}>دسترسی غیرمجاز</h2>
@@ -4673,7 +4673,9 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
 }) {
   const { t } = useLang();
   const [form, setForm] = useState<Partial<TalkShow>>(
-    editingShow || {
+    editingShow
+      ? { ...editingShow, decorIncluded: typeof editingShow.decorIncluded === 'boolean' ? editingShow.decorIncluded : hasDecor(editingShow) }
+      : {
       num: Math.max(0, ...talkShows.map(s => s.num)) + 1,
       name: '',
       category: presetCategory || '',
@@ -4697,6 +4699,20 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       tags: [],
     }
   );
+
+  // Keep the form tied to the selected record even when the editor is reused
+  // without a full route remount. Legacy rows derive their initial decor state
+  // once; an explicit false/true value is always preserved.
+  useEffect(() => {
+    if (!editingShow) return;
+    setForm({
+      ...editingShow,
+      decorIncluded: typeof editingShow.decorIncluded === 'boolean'
+        ? editingShow.decorIncluded
+        : hasDecor(editingShow),
+    });
+  }, [editingShow?.num]);
+
   const [fetchUrl, setFetchUrl] = useState('');
   const [fetching, setFetching] = useState(false);
   const [translating, setTranslating] = useState(false);
@@ -4880,11 +4896,12 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
     const imdbId = (value?: string) => value?.match(/\btt\d+\b/i)?.[0]?.toLowerCase() || '';
     const candidateName = normalizeShowName(form.name);
     const candidateImdb = imdbId(form.imdb || '') || imdbId(fetchUrl);
-    // The client-side catalog can be stale or contain legacy duplicate rows.
-    // During edits, let the API perform the authoritative duplicate check using
-    // the record number from the PUT route; this avoids blocking an update of
-    // the currently edited record because of a stale client-side match.
-    const duplicate = editingShow ? undefined : talkShows.find(existing => {
+    // A record can reach this form from both the details modal and the list.
+    // Treat a form whose stable number already exists in the archive as an edit,
+    // even if a caller failed to pass editingShow; the API PUT route remains the
+    // authoritative duplicate check and excludes this same record number.
+    const isEditing = Boolean(editingShow) || talkShows.some(existing => Number(existing.num) === Number(form.num));
+    const duplicate = isEditing ? undefined : talkShows.find(existing => {
       const sameName = normalizeShowName(existing.name) === candidateName;
       const existingImdb = imdbId(existing.imdb);
       return sameName || (!!candidateImdb && !!existingImdb && candidateImdb === existingImdb);
@@ -4926,8 +4943,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
     setForm(finalForm);
 
     try {
-      if (editingShow) await onSave(finalForm as TalkShow, true);
-      else await onSave(finalForm as TalkShow, false);
+      await onSave(finalForm as TalkShow, isEditing);
       onDone();
     } catch {
       // The parent displays the server error; keep the form open for correction.
