@@ -4880,8 +4880,11 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
     const imdbId = (value?: string) => value?.match(/\btt\d+\b/i)?.[0]?.toLowerCase() || '';
     const candidateName = normalizeShowName(form.name);
     const candidateImdb = imdbId(form.imdb || '') || imdbId(fetchUrl);
-    const duplicate = talkShows.find(existing => {
-      if (editingShow && Number(existing.num) === Number(editingShow.num)) return false;
+    // The client-side catalog can be stale or contain legacy duplicate rows.
+    // During edits, let the API perform the authoritative duplicate check using
+    // the record number from the PUT route; this avoids blocking an update of
+    // the currently edited record because of a stale client-side match.
+    const duplicate = editingShow ? undefined : talkShows.find(existing => {
       const sameName = normalizeShowName(existing.name) === candidateName;
       const existingImdb = imdbId(existing.imdb);
       return sameName || (!!candidateImdb && !!existingImdb && candidateImdb === existingImdb);
