@@ -97,17 +97,24 @@ async function verifyLoginScreen(timeoutMs = 30000) {
           const id = ++commandId;
           pending.set(id, { resolve, reject });
           socket.send(JSON.stringify({ id, method: 'Runtime.evaluate', params: {
-            expression: "({ user: !!document.querySelector('#login-username'), password: !!document.querySelector('#login-password'), login: !!document.querySelector('.login-screen'), url: location.href })",
-            returnByValue: true
+            expression: "(async () => { const user = !!document.querySelector('#login-username'); const password = !!document.querySelector('#login-password'); const login = !!document.querySelector('.login-screen'); const videoCapture = typeof HTMLVideoElement.prototype.captureStream === 'function'; const canvasCapture = typeof HTMLCanvasElement.prototype.captureStream === 'function'; const mimeType = typeof MediaRecorder === 'undefined' ? '' : ['video/webm;codecs=vp8', 'video/webm;codecs=vp9', 'video/webm'].find(type => MediaRecorder.isTypeSupported(type)) || ''; let webmBytes = 0; let webmPlayable = false; if (videoCapture && canvasCapture && mimeType) { const canvas = document.createElement('canvas'); canvas.width = 32; canvas.height = 32; const context = canvas.getContext('2d'); const stream = canvas.captureStream(12); const recorder = new MediaRecorder(stream, { mimeType }); const chunks = []; const blobPromise = new Promise(resolve => { recorder.ondataavailable = event => { if (event.data.size) chunks.push(event.data); }; recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType })); }); recorder.start(100); const draw = () => { context.fillStyle = 'rgb(' + (Math.floor(Math.random() * 200) + 20) + ',80,120)'; context.fillRect(0, 0, 32, 32); }; const drawTimer = setInterval(draw, 40); await new Promise(resolve => setTimeout(resolve, 1800)); clearInterval(drawTimer); if (recorder.state !== 'inactive') recorder.stop(); const blob = await blobPromise; webmBytes = blob.size; stream.getTracks().forEach(track => track.stop()); if (webmBytes > 0) { const url = URL.createObjectURL(blob); const video = document.createElement('video'); video.muted = true; video.src = url; webmPlayable = await new Promise(resolve => { const timeout = setTimeout(() => resolve(false), 3000); video.onloadeddata = () => { clearTimeout(timeout); resolve(video.videoWidth === 32 && video.videoHeight === 32); }; video.onerror = () => { clearTimeout(timeout); resolve(false); }; video.load(); }); URL.revokeObjectURL(url); } } return { user, password, login, url: location.href, videoCapture, canvasCapture, mimeType, webmBytes, webmPlayable }; })()",
+            returnByValue: true,
+            awaitPromise: true
           }}));
         });
         socket.close();
         const state = stateResult.result && stateResult.result.value;
-        if (state && state.user && state.password && state.login) {
-          process.stdout.write('Fresh desktop launch displays username/password login screen (' + state.url + ').\\n');
+        const verifyVideoExport = process.env.BANKRESANEH_VERIFY_VIDEO_EXPORT === '1';
+        const loginPassed = Boolean(state && state.user && state.password && state.login);
+        const videoPassed = Boolean(state && state.videoCapture && state.canvasCapture && state.webmBytes > 0 && state.webmPlayable);
+        if (loginPassed && (!verifyVideoExport || videoPassed)) {
+          process.stdout.write('Fresh desktop launch displays the login screen (' + state.url + ').\\n');
+          if (verifyVideoExport) {
+            process.stdout.write('WebM recording and playback pipeline passed (' + state.webmBytes + ' bytes).\\n');
+          }
           return;
         }
-        lastError = 'Login form missing: ' + JSON.stringify(state);
+        lastError = (loginPassed ? 'WebM recording/playback pipeline failed: ' : 'Login form missing: ') + JSON.stringify(state);
       }
     } catch (error) { lastError = error.message; }
     await new Promise((resolve) => setTimeout(resolve, 500));

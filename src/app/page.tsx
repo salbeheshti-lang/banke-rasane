@@ -1299,10 +1299,10 @@ function HomeInner() {
 
       <main key={currentView} className={`animate-view-enter ${isMobile ? 'p-4 pt-24 pb-28' : 'p-8 pt-28'}`}>
         {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} onEditGenre={handleEditGenre} onDeleteGenre={handleDeleteGenre} onShowClick={setSelectedShow} />}
-        {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
-        {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
+        {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={(s) => { setEditingShow(s); setPresetGenre(null); setPresetCategory(undefined); navigate('add'); }} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
+        {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={(s) => { setEditingShow(s); setPresetGenre(null); setPresetCategory(undefined); navigate('add'); }} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} onExport={(shows, format, meta) => setExportPreview({ shows, format, ...meta })} />}
-        {currentView === 'add' && canEdit && <AddEditView talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setPresetCategory(undefined); setPresetGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} presetCategory={presetCategory} presetGenre={presetGenre} genres={genres} />}
+        {currentView === 'add' && canEdit && <AddEditView key={editingShow?.num ?? 'new'} talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setPresetCategory(undefined); setPresetGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} presetCategory={presetCategory} presetGenre={presetGenre} genres={genres} />}
         {currentView === 'add' && !canEdit && (
           <div className="premium-glass p-8 text-center">
             <h2 className="text-2xl font-bold mb-2" style={{ color: '#dc2626' }}>دسترسی غیرمجاز</h2>
@@ -1439,13 +1439,29 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lockoutSeconds, setLockoutSeconds] = useState(0);
+
+  // Keep the server-enforced lockout visible as a live countdown.
+  useEffect(() => {
+    if (lockoutSeconds <= 0) return;
+    const timer = window.setInterval(() => {
+      setLockoutSeconds((remaining) => Math.max(0, remaining - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [lockoutSeconds > 0]);
+
+  const formatLockout = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainder = seconds % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`;
+  };
 
    
 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading) return;
+    if (loading || lockoutSeconds > 0) return;
     setError(null);
     if (!username.trim() || !password) {
       setError(t('login.errorEmpty'));
@@ -1456,7 +1472,14 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
       const data = await api.login(username.trim(), password);
       onLogin(data.user);
     } catch (err: any) {
-      setError(err?.message || t('login.errorFailed'));
+      const message = err?.message || t('login.errorFailed');
+      const seconds = message.match(/(\d+)\s*ثانیه/);
+      if (seconds) {
+        setLockoutSeconds(Number(seconds[1]));
+        setError(null);
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -1505,7 +1528,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder={t('login.usernamePlaceholder') || 'نام کاربری خود را وارد کنید'}
-              disabled={loading}
+              disabled={loading || lockoutSeconds > 0}
               style={{
                 width: '100%',
                 background: 'rgba(255, 255, 255, 0.96)',
@@ -1536,7 +1559,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={t('login.passwordPlaceholder') || 'رمز عبور خود را وارد کنید'}
-                disabled={loading}
+                disabled={loading || lockoutSeconds > 0}
                 style={{
                   width: '100%',
                   background: 'rgba(255, 255, 255, 0.96)',
@@ -1555,7 +1578,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
-                disabled={loading}
+                disabled={loading || lockoutSeconds > 0}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-colors"
                 style={{ color: '#0d7c4a', background: 'transparent' }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(13, 124, 74, 0.1)'; }}
@@ -1576,7 +1599,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
           </div>
 
           {/* Error message */}
-          {error && (
+          {(error || lockoutSeconds > 0) && (
             <div
               className="p-3 rounded-xl text-sm font-medium animate-fade-in"
               style={{
@@ -1585,14 +1608,14 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 color: '#fca5a5',
               }}
             >
-              ⚠ {error}
+              ⚠ {lockoutSeconds > 0 ? `به دلیل تلاش‌های ناموفق، ورود موقتاً قفل است. زمان باقی‌مانده: ${formatLockout(lockoutSeconds)}` : error}
             </div>
           )}
 
           {/* Submit — premium dark-green gradient button */}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || lockoutSeconds > 0}
             className="btn-enter-premium group"
             style={{ marginTop: '8px' }}
           >
@@ -1604,7 +1627,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 </>
               ) : (
                 <>
-                  <span>{t('login.submit')}</span>
+                  <span>{lockoutSeconds > 0 ? `لطفاً ${formatLockout(lockoutSeconds)} صبر کنید` : t('login.submit')}</span>
                   <svg
                     className="w-5 h-5 rtl-flip group-hover:-translate-x-1.5 transition-transform"
                     fill="none"
@@ -4673,7 +4696,9 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
 }) {
   const { t } = useLang();
   const [form, setForm] = useState<Partial<TalkShow>>(
-    editingShow || {
+    editingShow
+      ? { ...editingShow, decorIncluded: typeof editingShow.decorIncluded === 'boolean' ? editingShow.decorIncluded : hasDecor(editingShow) }
+      : {
       num: Math.max(0, ...talkShows.map(s => s.num)) + 1,
       name: '',
       category: presetCategory || '',
@@ -4697,6 +4722,21 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       tags: [],
     }
   );
+
+  // Keep the form tied to the selected record even when the editor is reused
+  // without a full route remount. Legacy rows derive their initial decor state
+  // once; an explicit false/true value is always preserved.
+  useEffect(() => {
+    if (!editingShow) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronize the form when the selected edit record changes.
+    setForm({
+      ...editingShow,
+      decorIncluded: typeof editingShow.decorIncluded === 'boolean'
+        ? editingShow.decorIncluded
+        : hasDecor(editingShow),
+    });
+  }, [editingShow]);
+
   const [fetchUrl, setFetchUrl] = useState('');
   const [fetching, setFetching] = useState(false);
   const [translating, setTranslating] = useState(false);
@@ -4880,14 +4920,19 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
     const imdbId = (value?: string) => value?.match(/\btt\d+\b/i)?.[0]?.toLowerCase() || '';
     const candidateName = normalizeShowName(form.name);
     const candidateImdb = imdbId(form.imdb || '') || imdbId(fetchUrl);
-    const duplicate = talkShows.find(existing => {
-      if (editingShow && Number(existing.num) === Number(editingShow.num)) return false;
+    // A record can reach this form from both the details modal and the list.
+    // Treat a form whose stable number already exists in the archive as an edit,
+    // even if a caller failed to pass editingShow; the API PUT route remains the
+    // authoritative duplicate check and excludes this same record number.
+    const isEditing = Boolean(editingShow) || talkShows.some(existing => Number(existing.num) === Number(form.num));
+    const duplicate = isEditing ? undefined : talkShows.find(existing => {
       const sameName = normalizeShowName(existing.name) === candidateName;
       const existingImdb = imdbId(existing.imdb);
       return sameName || (!!candidateImdb && !!existingImdb && candidateImdb === existingImdb);
     });
     if (duplicate) {
-      const mainGenre = duplicate.category?.split('|').map(value => value.trim()).filter(Boolean)[0] || 'نامشخص';
+      const rawMainGenre = duplicate.category?.split('|').map(value => value.trim()).filter(Boolean)[0] || 'نامشخص';
+      const mainGenre = rawMainGenre === 'سفر جاده‌ای' ? 'سفرنامه و ماجراجویی' : rawMainGenre;
       showToast(`این برنامه قبلاً در آرشیو ثبت شده است؛ ژانر اصلی: «${mainGenre}». ثبت مجدد امکان‌پذیر نیست.`);
       return;
     }
@@ -4923,8 +4968,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
     setForm(finalForm);
 
     try {
-      if (editingShow) await onSave(finalForm as TalkShow, true);
-      else await onSave(finalForm as TalkShow, false);
+      await onSave(finalForm as TalkShow, isEditing);
       onDone();
     } catch {
       // The parent displays the server error; keep the form open for correction.
@@ -5657,8 +5701,12 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [exportedUrl, setExportedUrl] = useState('');
+  const [filmstrip, setFilmstrip] = useState<Array<{ time: number; src: string }>>([]);
+  const [filmstripLoading, setFilmstripLoading] = useState(false);
+  const [activeFilmstripHandle, setActiveFilmstripHandle] = useState<'start' | 'end' | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const filmstripTrackRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!previewUrl) return;
@@ -5668,6 +5716,8 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
   const chooseFile = (next: File | null) => {
     setError('');
     setExportedUrl('');
+    setFilmstrip([]);
+    setFilmstripLoading(false);
     if (!next) return;
     // Some Windows formats (notably MKV/AVI) are reported with an empty MIME type.
     // Accept the known video extensions here and let the browser's decoder validate playback.
@@ -5692,7 +5742,107 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
     setEnd(0);
     setError('');
     setExportedUrl('');
+    setFilmstrip([]);
+    setFilmstripLoading(false);
     if (inputRef.current) inputRef.current.value = '';
+  };
+
+  // Build a visual filmstrip from real decoded frames. A separate muted video keeps
+  // thumbnail seeking independent from the user's playback position.
+  const buildFilmstrip = async (url: string, videoDuration: number) => {
+    setFilmstripLoading(true);
+    setFilmstrip([]);
+    const thumbVideo = document.createElement('video');
+    thumbVideo.src = url;
+    thumbVideo.muted = true;
+    thumbVideo.preload = 'auto';
+    thumbVideo.playsInline = true;
+    const canvas = document.createElement('canvas');
+    canvas.width = 120;
+    canvas.height = 68;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) { setFilmstripLoading(false); return; }
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const timeout = window.setTimeout(() => reject(new Error('timeout')), 15000);
+        thumbVideo.onloadedmetadata = () => { window.clearTimeout(timeout); resolve(); };
+        thumbVideo.onerror = () => { window.clearTimeout(timeout); reject(new Error('decode')); };
+        thumbVideo.load();
+      });
+      if (thumbVideo.readyState < 2) {
+        await new Promise<void>((resolve, reject) => {
+          let settled = false;
+          const cleanup = () => {
+            window.clearTimeout(timeout);
+            thumbVideo.removeEventListener('loadeddata', onLoaded);
+            thumbVideo.removeEventListener('error', onError);
+          };
+          const finish = (error?: Error) => {
+            if (settled) return;
+            settled = true;
+            cleanup();
+            if (error) reject(error); else resolve();
+          };
+          const onLoaded = () => finish();
+          const onError = () => finish(new Error('داده تصویری ویدیو آماده نشد.'));
+          const timeout = window.setTimeout(() => finish(new Error('آماده‌سازی تصویر ویدیو بیش از حد طول کشید.')), 10000);
+          thumbVideo.addEventListener('loadeddata', onLoaded, { once: true });
+          thumbVideo.addEventListener('error', onError, { once: true });
+          if (thumbVideo.readyState >= 2) finish();
+        });
+      }
+      const count = Math.min(48, Math.max(12, Math.ceil(videoDuration / 1.25)));
+      const frames: Array<{ time: number; src: string }> = [];
+      let skippedFrames = 0;
+      for (let index = 0; index < count; index++) {
+        const time = count === 1 ? 0 : (videoDuration * index) / (count - 1);
+        const seekTime = Math.min(time, Math.max(0, videoDuration - 0.05));
+        try {
+          await new Promise<void>((resolve, reject) => {
+            let settled = false;
+            const cleanup = () => {
+              window.clearTimeout(timeout);
+              thumbVideo.removeEventListener('seeked', onSeeked);
+            };
+            const finish = (error?: Error) => {
+              if (settled) return;
+              settled = true;
+              cleanup();
+              if (error) reject(error); else resolve();
+            };
+            const onSeeked = () => {
+              if (thumbVideo.readyState < 2 || Math.abs(thumbVideo.currentTime - seekTime) > 0.25) {
+                finish(new Error('فریم موردنظر decode نشد.'));
+              } else {
+                finish();
+              }
+            };
+            const timeout = window.setTimeout(() => finish(new Error('مهلت استخراج این فریم تمام شد.')), 5000);
+            thumbVideo.addEventListener('seeked', onSeeked);
+            try {
+              thumbVideo.currentTime = seekTime;
+              if (Math.abs(thumbVideo.currentTime - seekTime) < 0.02 && thumbVideo.readyState >= 2) finish();
+            } catch {
+              finish(new Error('پرش به زمان فریم ممکن نشد.'));
+            }
+          });
+          if (thumbVideo.readyState < 2) throw new Error('داده تصویری فریم آماده نیست.');
+          ctx.drawImage(thumbVideo, 0, 0, canvas.width, canvas.height);
+          frames.push({ time, src: canvas.toDataURL('image/jpeg', 0.58) });
+        } catch {
+          skippedFrames++;
+        }
+      }
+      if (!frames.length) throw new Error('هیچ فریم قابل‌نمایشی از ویدیو استخراج نشد.');
+      setFilmstrip(frames);
+      if (skippedFrames) setError(`${skippedFrames} فریم به‌دلیل محدودیت رمزگشایی رد شد؛ فریم‌های قابل‌خواندن نمایش داده شده‌اند.`);
+    } catch {
+      setError('ساخت نوار فریم‌ها ممکن نشد؛ ممکن است کدک این ویدیو پشتیبانی نشود.');
+    } finally {
+      thumbVideo.removeAttribute('src');
+      thumbVideo.load();
+      setFilmstripLoading(false);
+    }
   };
 
   // Show tenths of a second: the sliders use 0.1s precision, so the UI
@@ -5704,6 +5854,23 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
     return String(minutes).padStart(2, '0') + ':' + seconds.toFixed(1).padStart(4, '0');
   };
 
+
+  const updateFilmstripHandle = (clientX: number, handle: 'start' | 'end') => {
+    const rect = filmstripTrackRef.current?.getBoundingClientRect();
+    if (!rect || rect.width <= 0 || duration <= 0 || busy) return;
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const targetTime = ratio * duration;
+    if (handle === 'start') {
+      const next = Math.min(targetTime, Math.max(0, end - 0.1));
+      setStart(next);
+      if (end - next > 30) setEnd(Math.min(duration, next + 30));
+      if (videoRef.current) videoRef.current.currentTime = next;
+    } else {
+      const next = Math.max(start + 0.1, Math.min(Math.min(duration, start + 30), targetTime));
+      setEnd(next);
+      if (videoRef.current) videoRef.current.currentTime = next;
+    }
+  };
 
   const exportClip = async () => {
     const video = videoRef.current;
@@ -5836,62 +6003,98 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
             setStart(0);
             setEnd(Math.min(30, d));
             if (!d) setError('مدت ویدیو قابل تشخیص نیست یا فرمت آن پشتیبانی نمی‌شود.');
+            else if (previewUrl) void buildFilmstrip(previewUrl, d);
           }} onError={() => setError('این فرمت یا کدک ویدیویی قابل خواندن نیست. فایل را به MP4 (H.264) یا WebM تبدیل کنید.')} style={{ width: '100%', maxHeight: 260, borderRadius: 10, background: '#000', objectFit: 'contain' }} />
           <div className="text-xs" style={{ color: '#d1fae5' }}>
             {file.name} · {(file.size / 1024 / 1024).toFixed(1)} MB · مدت اصلی {formatTime(duration)}
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="block min-w-0 text-xs" style={{ color: '#d1fae5' }}>
-              <span className="mb-2 flex items-center justify-between gap-2">
-                <span className="font-bold">نقطه شروع</span>
-                <span className="flex items-center gap-1.5">
-                  <span className="text-[11px]" style={{ color: '#9ccfc0' }}>ثانیه دقیق</span>
-                  <input type="number" aria-label="زمان شروع بر حسب ثانیه" min={0} max={Math.max(0, duration)} step={0.1} value={start.toFixed(1)} disabled={busy || duration <= 0}
-                    onChange={e => {
-                      const raw = Number(e.target.value);
-                      if (!Number.isFinite(raw)) return;
-                      const value = Math.max(0, Math.min(duration, raw));
-                      setStart(value);
-                      if (end - value > 30) setEnd(Math.min(duration, value + 30));
-                      if (value >= end) setEnd(Math.min(duration, value + 0.1));
-                      if (videoRef.current && !busy) videoRef.current.currentTime = value;
-                    }}
-                    className="w-20 rounded-lg px-2 py-1 text-center font-mono text-sm font-bold"
-                    style={{ color: '#ecfdf5', background: 'rgba(1,20,16,.55)', border: '1px solid rgba(110,231,183,.3)' }} />
-                  <span className="font-mono font-bold" style={{ color: '#6ee7b7' }}>{formatTime(start)}</span>
-                </span>
-              </span>
-              <input type="range" aria-label="انتخاب نقطه شروع" min={0} max={Math.max(0, duration)} step={0.1} value={Math.min(start, duration)} disabled={busy || duration <= 0} onChange={e => {
-                const value = Number(e.target.value);
-                setStart(value);
-                if (end - value > 30) setEnd(Math.min(duration, value + 30));
-                if (value >= end) setEnd(Math.min(duration, value + 0.1));
-                if (videoRef.current && !busy) videoRef.current.currentTime = value;
-              }} className="w-full" />
-            </label>
-            <label className="block min-w-0 text-xs" style={{ color: '#d1fae5' }}>
-              <span className="mb-2 flex items-center justify-between gap-2">
-                <span className="font-bold">نقطه پایان</span>
-                <span className="flex items-center gap-1.5">
-                  <span className="text-[11px]" style={{ color: '#9ccfc0' }}>ثانیه دقیق</span>
-                  <input type="number" aria-label="زمان پایان بر حسب ثانیه" min={Math.min(duration, start + 0.1)} max={Math.min(duration, start + 30)} step={0.1} value={end.toFixed(1)} disabled={busy || duration <= 0}
-                    onChange={e => {
-                      const raw = Number(e.target.value);
-                      if (!Number.isFinite(raw)) return;
-                      setEnd(Math.max(Math.min(duration, start + 0.1), Math.min(Math.min(duration, start + 30), raw)));
-                    }}
-                    className="w-20 rounded-lg px-2 py-1 text-center font-mono text-sm font-bold"
-                    style={{ color: '#ecfdf5', background: 'rgba(1,20,16,.55)', border: '1px solid rgba(110,231,183,.3)' }} />
-                  <span className="font-mono font-bold" style={{ color: '#6ee7b7' }}>{formatTime(end)}</span>
-                </span>
-              </span>
-              <input type="range" aria-label="انتخاب نقطه پایان" min={Math.min(duration, start + 0.1)} max={Math.min(duration, start + 30)} step={0.1} value={Math.min(end, duration)} disabled={busy || duration <= 0} onChange={e => setEnd(Number(e.target.value))} className="w-full" />
-            </label>
+          <div className="rounded-xl p-3 space-y-3" style={{ background: 'rgba(1,20,16,.58)', border: '1px solid rgba(110,231,183,.22)' }}>
+            <div className="flex items-center justify-between gap-2 text-xs" style={{ color: '#d1fae5' }}>
+              <strong>نوار فریم‌های ویدیو</strong>
+              <span style={{ color: '#9ccfc0' }}>{filmstripLoading ? 'در حال استخراج فریم‌ها…' : filmstrip.length ? `${filmstrip.length} فریم` : 'در انتظار فریم‌ها'}</span>
+            </div>
+            <div ref={filmstripTrackRef} className="relative overflow-hidden rounded-lg" style={{ height: 76, background: '#071510' }}
+              onPointerMove={e => { if (activeFilmstripHandle) updateFilmstripHandle(e.clientX, activeFilmstripHandle); }}
+              onPointerUp={() => setActiveFilmstripHandle(null)}
+              onPointerCancel={() => setActiveFilmstripHandle(null)}
+              onLostPointerCapture={() => setActiveFilmstripHandle(null)}
+            >
+              <div className="absolute inset-0 flex">
+                {filmstrip.map((frame, index) => (
+                  <div key={index} aria-hidden="true" className="h-full min-w-0 flex-1">
+                    <img src={frame.src} alt="" draggable={false} className="h-full w-full object-cover" />
+                  </div>
+                ))}
+              </div>
+              <div className="absolute inset-y-0 pointer-events-none" style={{ zIndex: 6, left: duration ? `${(start / duration) * 100}%` : '0%', right: duration ? `${100 - (end / duration) * 100}%` : '0%', borderLeft: '3px solid #34d399', borderRight: '3px solid #34d399', background: 'rgba(16,185,129,.16)', boxShadow: '0 0 0 999px rgba(0,0,0,.48)' }}>
+                <button type="button" aria-label="دستگیره شروع برش" title="کشیدن برای تغییر زمان شروع"
+                  className="absolute -left-3 top-0 h-full w-6 cursor-ew-resize touch-none"
+                  style={{ pointerEvents: 'auto', background: 'transparent' }}
+                  onPointerDown={e => { e.preventDefault(); e.stopPropagation(); setActiveFilmstripHandle('start'); e.currentTarget.setPointerCapture(e.pointerId); updateFilmstripHandle(e.clientX, 'start'); }}
+                >
+                  <span className="absolute left-2.5 top-1/2 h-10 w-1.5 -translate-y-1/2 rounded-full" style={{ background: '#34d399', boxShadow: '0 1px 8px rgba(0,0,0,.65)' }} />
+                </button>
+                <button type="button" aria-label="دستگیره پایان برش" title="کشیدن برای تغییر زمان پایان"
+                  className="absolute -right-3 top-0 h-full w-6 cursor-ew-resize touch-none"
+                  style={{ pointerEvents: 'auto', background: 'transparent' }}
+                  onPointerDown={e => { e.preventDefault(); e.stopPropagation(); setActiveFilmstripHandle('end'); e.currentTarget.setPointerCapture(e.pointerId); updateFilmstripHandle(e.clientX, 'end'); }}
+                >
+                  <span className="absolute right-2.5 top-1/2 h-10 w-1.5 -translate-y-1/2 rounded-full" style={{ background: '#34d399', boxShadow: '0 1px 8px rgba(0,0,0,.65)' }} />
+                </button>
+              </div>
+              <div role="group" aria-label="انتخاب محدوده برش روی فریم‌ها" className="absolute inset-0 cursor-crosshair touch-none" style={{ zIndex: 5 }}
+                onPointerDown={e => {
+                  if (busy || duration <= 0) return;
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                  const targetTime = ratio * duration;
+                  const handle = Math.abs(targetTime - start) <= Math.abs(targetTime - end) ? 'start' : 'end';
+                  setActiveFilmstripHandle(handle);
+                  e.currentTarget.setPointerCapture(e.pointerId);
+                  if (handle === 'start') {
+                    const next = Math.min(targetTime, Math.max(0, end - 0.1));
+                    setStart(next);
+                    if (end - next > 30) setEnd(Math.min(duration, next + 30));
+                    if (videoRef.current) videoRef.current.currentTime = next;
+                  } else {
+                    const next = Math.max(start + 0.1, Math.min(Math.min(duration, start + 30), targetTime));
+                    setEnd(next);
+                    if (videoRef.current) videoRef.current.currentTime = next;
+                  }
+                }}
+                onPointerUp={() => setActiveFilmstripHandle(null)}
+                onPointerCancel={() => setActiveFilmstripHandle(null)}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-2 text-[11px]" style={{ color: '#9ccfc0' }}>
+              <span>شروع: <b className="font-mono" style={{ color: '#6ee7b7' }}>{formatTime(start)}</b></span>
+              <span>پایان: <b className="font-mono" style={{ color: '#6ee7b7' }}>{formatTime(end)}</b></span>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="block min-w-0 text-xs" style={{ color: '#d1fae5' }}>
+                <span className="mb-1 flex items-center justify-between"><b>شروع دقیق</b><span className="font-mono">{formatTime(start)}</span></span>
+                <input type="number" aria-label="زمان شروع بر حسب ثانیه" min={0} max={Math.max(0, duration)} step={0.1} value={start.toFixed(1)} disabled={busy || duration <= 0} onChange={e => {
+                  const raw = Number(e.target.value); if (!Number.isFinite(raw)) return;
+                  const next = Math.max(0, Math.min(Math.min(duration, end - 0.1), raw));
+                  setStart(next); if (end - next > 30) setEnd(Math.min(duration, next + 30));
+                  if (videoRef.current) videoRef.current.currentTime = next;
+                }} className="w-full rounded-lg px-2 py-2 text-center font-mono" style={{ color: '#ecfdf5', background: 'rgba(1,20,16,.7)', border: '1px solid rgba(110,231,183,.3)' }} />
+              </label>
+              <label className="block min-w-0 text-xs" style={{ color: '#d1fae5' }}>
+                <span className="mb-1 flex items-center justify-between"><b>پایان دقیق</b><span className="font-mono">{formatTime(end)}</span></span>
+                <input type="number" aria-label="زمان پایان بر حسب ثانیه" min={Math.min(duration, start + 0.1)} max={Math.min(duration, start + 30)} step={0.1} value={end.toFixed(1)} disabled={busy || duration <= 0} onChange={e => {
+                  const raw = Number(e.target.value); if (!Number.isFinite(raw)) return;
+                  const next = Math.max(Math.min(duration, start + 0.1), Math.min(Math.min(duration, start + 30), raw));
+                  setEnd(next); if (videoRef.current) videoRef.current.currentTime = next;
+                }} className="w-full rounded-lg px-2 py-2 text-center font-mono" style={{ color: '#ecfdf5', background: 'rgba(1,20,16,.7)', border: '1px solid rgba(110,231,183,.3)' }} />
+              </label>
+            </div>
+            <p className="text-[11px]" style={{ color: 'rgba(209,250,229,.7)' }}>روی فریم‌ها بزن تا زمان نزدیک به آن انتخاب شود؛ محدوده سبز بخش انتخاب‌شده است. برای تنظیم دقیق‌تر، زمان شروع و پایان را وارد کن.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs" style={{ color: end > start && end - start <= 30 ? '#6ee7b7' : '#fca5a5' }}>مدت خروجی: {formatTime(end - start)} / ۰۰:۳۰</span>
             <button type="button" onClick={exportClip} disabled={busy || duration <= 0 || end <= start || end - start > 30} className="px-4 py-2 rounded-lg text-xs font-bold disabled:opacity-50" style={{ background: '#059669', color: 'white' }}>
-              {busy ? 'در حال پردازش ویدیو…' : 'پردازش و افزودن کلیپ'}
+              {busy ? 'در حال پردازش ویدیو…' : 'پردازش و پیش‌نمایش'}
             </button>
             <button type="button" onClick={resetEditor} disabled={busy} className="px-3 py-2 rounded-lg text-xs" style={{ background: 'rgba(255,255,255,.12)', color: '#d1fae5' }}>انصراف</button>
           </div>
