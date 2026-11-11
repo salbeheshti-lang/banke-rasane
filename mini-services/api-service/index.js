@@ -1453,21 +1453,37 @@ const server = Bun.serve({
     if (pathname.startsWith('/api/shows/') && method === 'PUT') {
       const user = requirePermission(req, 'edit_shows');
       if (!user) return permissionFailure(req, 'شما اجازه ویرایش برنامه را ندارید');
-      const num = parseInt(pathname.slice('/api/shows/'.length));
+      const numMatch = pathname.match(/^\\/api\\/shows\\/(\\d+)$/);
+      const num = numMatch ? Number(numMatch[1]) : NaN;
+      if (!Number.isSafeInteger(num) || num < 1) return json({ error: 'valid show number required' }, 400, req);
       let body;
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
       body.num = num;
       const existing = db.prepare('SELECT * FROM shows WHERE num = ?').get(num);
-      if (!existing) return json({ error: 'show not found' }, 404, req);
-      const merged = { ...rowToShow(existing), ...body, num };
-      const videoValidation = validateShowVideos(merged.videos, rowToShow(existing).videos);
+      // Older browser-local edits can survive a database migration even when
+      // their corresponding row is absent from the shared DB. An explicit
+      // PUT with a complete named record is a deliberate recovery operation,
+      // not a blind overwrite: validate videos and duplicates before insert.
+      const merged = existing ? { ...rowToShow(existing), ...body, num } : { ...body, num };
+      if (!existing && (typeof merged.name !== 'string' || !merged.name.trim())) {
+        return json({ error: 'show not found; a name is required to restore this record' }, 404, req);
+      }
+      const previousVideos = existing ? rowToShow(existing).videos : [];
+      const videoValidation = validateShowVideos(merged.videos, previousVideos);
       if (!videoValidation.valid) return json({ error: videoValidation.error }, 400, req);
       const duplicate = findDuplicateShow(merged, num);
       if (duplicate) {
         return json({ error: 'این برنامه با رکورد دیگری تکراری است: «' + duplicate.name + '» — ژانر اصلی: ' + getPrimaryGenre(duplicate.category), duplicate: { num: duplicate.num, name: duplicate.name, category: duplicate.category, primaryGenre: getPrimaryGenre(duplicate.category) } }, 409, req);
       }
-      db.prepare(`UPDATE shows SET ${SHOW_COLUMNS.filter(column => column !== 'num').map(column => column + ' = ?').join(', ')} WHERE num = ?`)
-        .run(...showToValues(merged).slice(1), num);
+      if (existing) {
+        db.prepare(`UPDATE shows SET ${SHOW_COLUMNS.filter(column => column !== 'num').map(column => column + ' = ?').join(', ')} WHERE num = ?`)
+          .run(...showToValues(merged).slice(1), num);
+      } else {
+        db.prepare(`INSERT INTO shows (${SHOW_COLUMNS.join(', ')}) VALUES (${SHOW_COLUMNS.map(() => '?').join(', ')})`)
+          .run(...showToValues(merged));
+        db.prepare('INSERT OR IGNORE INTO seeded_shows (num) VALUES (?)').run(num);
+        logActivity(user, 'restore_show', 'show', num, `Restored missing show "${merged.name}" during edit`);
+      }
       logActivity(user, 'update_show', 'show', num, `Updated show "${merged.name}"`);
       return json(rowToShow(db.prepare('SELECT * FROM shows WHERE num = ?').get(num)), req);
     }
