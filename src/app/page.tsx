@@ -4705,6 +4705,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
   // once; an explicit false/true value is always preserved.
   useEffect(() => {
     if (!editingShow) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronize the form when the selected edit record changes.
     setForm({
       ...editingShow,
       decorIncluded: typeof editingShow.decorIncluded === 'boolean'
