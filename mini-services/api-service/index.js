@@ -425,7 +425,9 @@ function findDuplicateShow(candidate, excludeNum = null) {
   return null;
 }
 function getPrimaryGenre(category) {
-  return String(category || '').split('|').map(value => value.trim()).filter(Boolean)[0] || 'تعیین نشده';
+  const primary = String(category || '').split('|').map(value => value.trim()).filter(Boolean)[0] || 'تعیین نشده';
+  // Display legacy category aliases with the current canonical genre name.
+  return primary === 'سفر جاده‌ای' ? 'سفرنامه و ماجراجویی' : primary;
 }
 function rewriteGenreCategory(category, oldName, newName) {
   const oldKey = normalizeCatalogValue(oldName);
