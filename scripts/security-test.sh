@@ -289,6 +289,8 @@ api_from_ip "198.51.100.78" POST "/auth/login" "" '{"username":"__rate_limit_pro
 check "0.rate-limit-isolated-client-ip" 401 "$HTTP_STATUS"
 api_from_ip "$RATE_LIMIT_TEST_IP" POST "/auth/login" "" '{"username":"admin","password":"admin"}'
 check "0.rate-limit-blocks-sixth-attempt" 429 "$HTTP_STATUS"
+LOCKOUT_SECONDS=$(printf '%s' "$RESP_BODY" | grep -oE '[0-9]+[[:space:]]*ثانیه' | grep -oE '[0-9]+' | head -1)
+check "0.rate-limit-lockout-is-three-minutes" 180 "${LOCKOUT_SECONDS:-0}"
 
 hdr "STEP 0 — Login as Super Admin + ensure password is known"
 
