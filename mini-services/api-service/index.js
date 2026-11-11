@@ -689,13 +689,13 @@ function getClientIP(req) {
 // FIRST check after any failure wiped the accumulated count. The counter
 // never passed 1, so the 5-attempt lockout NEVER fired (brute-force
 // protection was inert). New logic: failures accumulate inside a 15-minute
-// window; reaching 5 blocks the IP for 15 minutes; after the block (or the
+// window; reaching 5 blocks the IP for 3 minutes; after the block (or the
 // window) expires the entry is reset. A periodic sweep prunes stale entries
 // so spoofed X-Forwarded-For IPs cannot grow the Map without bound.
 // ---------------------------------------------------------------------------
 const LOGIN_MAX_FAILS = 5;
 const LOGIN_WINDOW_SEC = 900;   // 15 min failure-counting window
-const LOGIN_BLOCK_SEC = 900;    // 15 min lockout after 5 failures
+const LOGIN_BLOCK_SEC = 180;    // 3 min lockout after 5 failures
 const loginAttempts = new Map();
 function checkRateLimit(ip) {
   const entry = loginAttempts.get(ip);
