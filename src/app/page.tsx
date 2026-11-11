@@ -4908,7 +4908,8 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       return sameName || (!!candidateImdb && !!existingImdb && candidateImdb === existingImdb);
     });
     if (duplicate) {
-      const mainGenre = duplicate.category?.split('|').map(value => value.trim()).filter(Boolean)[0] || 'نامشخص';
+      const rawMainGenre = duplicate.category?.split('|').map(value => value.trim()).filter(Boolean)[0] || 'نامشخص';
+      const mainGenre = rawMainGenre === 'سفر جاده‌ای' ? 'سفرنامه و ماجراجویی' : rawMainGenre;
       showToast(`این برنامه قبلاً در آرشیو ثبت شده است؛ ژانر اصلی: «${mainGenre}». ثبت مجدد امکان‌پذیر نیست.`);
       return;
     }
