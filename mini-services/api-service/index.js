@@ -611,7 +611,7 @@ function getClientIP(req) {
 // ---------------------------------------------------------------------------
 const LOGIN_MAX_FAILS = 5;
 const LOGIN_WINDOW_SEC = 900;   // 15 min failure-counting window
-const LOGIN_BLOCK_SEC = 900;    // 15 min lockout after 5 failures
+const LOGIN_BLOCK_SEC = 180;    // 3 min lockout after 5 failures
 const loginAttempts = new Map();
 function checkRateLimit(ip) {
   const entry = loginAttempts.get(ip);
