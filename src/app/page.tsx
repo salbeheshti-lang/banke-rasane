@@ -1439,13 +1439,29 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lockoutSeconds, setLockoutSeconds] = useState(0);
+
+  // Keep the server-enforced lockout visible as a live countdown.
+  useEffect(() => {
+    if (lockoutSeconds <= 0) return;
+    const timer = window.setInterval(() => {
+      setLockoutSeconds((remaining) => Math.max(0, remaining - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [lockoutSeconds > 0]);
+
+  const formatLockout = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainder = seconds % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`;
+  };
 
    
 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading) return;
+    if (loading || lockoutSeconds > 0) return;
     setError(null);
     if (!username.trim() || !password) {
       setError(t('login.errorEmpty'));
@@ -1456,7 +1472,14 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
       const data = await api.login(username.trim(), password);
       onLogin(data.user);
     } catch (err: any) {
-      setError(err?.message || t('login.errorFailed'));
+      const message = err?.message || t('login.errorFailed');
+      const seconds = message.match(/(\d+)\s*ثانیه/);
+      if (seconds) {
+        setLockoutSeconds(Number(seconds[1]));
+        setError(null);
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -1505,7 +1528,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder={t('login.usernamePlaceholder') || 'نام کاربری خود را وارد کنید'}
-              disabled={loading}
+              disabled={loading || lockoutSeconds > 0}
               style={{
                 width: '100%',
                 background: 'rgba(255, 255, 255, 0.96)',
@@ -1536,7 +1559,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={t('login.passwordPlaceholder') || 'رمز عبور خود را وارد کنید'}
-                disabled={loading}
+                disabled={loading || lockoutSeconds > 0}
                 style={{
                   width: '100%',
                   background: 'rgba(255, 255, 255, 0.96)',
@@ -1555,7 +1578,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
-                disabled={loading}
+                disabled={loading || lockoutSeconds > 0}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-colors"
                 style={{ color: '#0d7c4a', background: 'transparent' }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(13, 124, 74, 0.1)'; }}
@@ -1576,7 +1599,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
           </div>
 
           {/* Error message */}
-          {error && (
+          {(error || lockoutSeconds > 0) && (
             <div
               className="p-3 rounded-xl text-sm font-medium animate-fade-in"
               style={{
@@ -1585,14 +1608,14 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 color: '#fca5a5',
               }}
             >
-              ⚠ {error}
+              ⚠ {lockoutSeconds > 0 ? `به دلیل تلاش‌های ناموفق، ورود موقتاً قفل است. زمان باقی‌مانده: ${formatLockout(lockoutSeconds)}` : error}
             </div>
           )}
 
           {/* Submit — premium dark-green gradient button */}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || lockoutSeconds > 0}
             className="btn-enter-premium group"
             style={{ marginTop: '8px' }}
           >
@@ -1604,7 +1627,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 </>
               ) : (
                 <>
-                  <span>{t('login.submit')}</span>
+                  <span>{lockoutSeconds > 0 ? `لطفاً ${formatLockout(lockoutSeconds)} صبر کنید` : t('login.submit')}</span>
                   <svg
                     className="w-5 h-5 rtl-flip group-hover:-translate-x-1.5 transition-transform"
                     fill="none"
