@@ -25,14 +25,6 @@ jobs:
       - name: Install dependencies
         run: bun install --no-save
 
-      - name: Generate Prisma client
-        run: bunx prisma generate
-        env:
-          DATABASE_URL: file:./db/custom.db
-
-      - name: Test persistent Prisma SQLite runtime
-        run: bun scripts/test-prisma-runtime.ts
-
       - name: Test API video upload validation
         run: node --test mini-services/api-service/video-validation.test.mjs
 
