@@ -7146,13 +7146,9 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
       // send the token in the POST body (encrypted in transit via HTTPS)
       // and use the {verify:true} flag to tell the backend to just validate
       // the token, not send a message.
-      const authToken = typeof window !== 'undefined' ? localStorage.getItem('bankresaneh_token') : '';
       const res = await fetch('/api/publish-social', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authToken ? { Authorization: 'Bearer ' + authToken } : {}),
-        },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ platform, token, verify: true }),
       });
       const data = await res.json();
@@ -7365,21 +7361,25 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
       if (format === 'pdf') {
         // Call API to generate professional PDF report — pass through any
         // caller-provided overrides so the rendered PDF matches the preview.
-        const res = await fetch('/api/export-pdf', {
+        const res = await fetch('/api/export-pdf-file', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({ shows, title, subtitle, organization }),
         });
-        if (res.ok) {
-          const html = await res.text();
-          // Open in new window for print-to-PDF
-          const w = window.open('', '_blank');
-          if (w) {
-            w.document.write(html);
-            w.document.close();
-            setTimeout(() => { w.print(); }, 1000);
-          }
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({}));
+          throw new Error(error.error || 'ساخت فایل PDF ناموفق بود');
         }
+        const blob = await res.blob();
+        if (blob.type !== 'application/pdf' || blob.size < 8) {
+          throw new Error('فایل PDF معتبر از سرور دریافت نشد');
+        }
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `bankresaneh-report-${Date.now()}.pdf`;
+        anchor.click();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       } else {
         // Excel: generate proper XLSX using SheetJS-style XML
         const headers = ['شماره', 'نام برنامه', 'دسته‌بندی', 'منبع', 'اندازه', 'تماشاگر', 'سبک', 'جلوه‌ها', 'چیدمان', 'عناصر', 'متریال', 'رنگ‌آمیزی', 'نورپردازی', 'توضیحات'];
@@ -7399,15 +7399,48 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
           s.lighting || '',
           (s.descriptionFa || s.summary || '').substring(0, 500),
         ]);
-        // Generate HTML table that Excel can open as .xls
-        const htmlTable = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th style="background:#10b981;color:white;font-weight:bold;padding:8px;">${h}</th>`).join('')}</tr>${rows.map(r => `<tr>${r.map(c => `<td style="padding:6px;border:1px solid #ddd;">${String(c).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
-        const blob = new Blob(['\ufeff' + htmlTable], { type: 'application/vnd.ms-excel;charset=utf-8' });
+        // Build a standards-compliant OOXML workbook (not HTML disguised as .xls).
+        const ExcelJS = await import('exceljs');
+        const workbook = new ExcelJS.Workbook();
+        workbook.creator = 'بانک رسانه';
+        workbook.subject = 'آرشیو تخصصی برنامه‌های تلویزیونی';
+        workbook.title = 'گزارش آرشیو بانک رسانه';
+        workbook.created = new Date();
+        const sheet = workbook.addWorksheet('آرشیو برنامه‌ها', {
+          views: [{ state: 'frozen', ySplit: 1, rightToLeft: true }],
+        });
+        sheet.columns = headers.map((header, index) => ({
+          header,
+          key: 'column' + index,
+          width: Math.min(54, Math.max(14, header.length + 4)),
+        }));
+        sheet.addRows(rows);
+        sheet.autoFilter = { from: 'A1', to: String.fromCharCode(64 + headers.length) + Math.max(1, rows.length + 1) };
+        const headerRow = sheet.getRow(1);
+        headerRow.height = 30;
+        headerRow.eachCell((cell) => {
+          cell.font = { name: 'Vazirmatn', bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF075B3B' } };
+          cell.alignment = { horizontal: 'right', vertical: 'middle', wrapText: true };
+          cell.border = { bottom: { style: 'medium', color: { argb: 'FF10B981' } } };
+        });
+        sheet.eachRow((row, rowNumber) => {
+          if (rowNumber === 1) return;
+          row.height = 34;
+          row.eachCell((cell) => {
+            cell.font = { name: 'Vazirmatn', size: 10, color: { argb: 'FF172B22' } };
+            cell.alignment = { horizontal: 'right', vertical: 'top', wrapText: true };
+            cell.border = { bottom: { style: 'hair', color: { argb: 'FFE2E8F0' } } };
+          });
+        });
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `bankresane-${Date.now()}.xls`;
+        a.download = `bankresaneh-${Date.now()}.xlsx`;
         a.click();
-        URL.revokeObjectURL(url);
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
       onDownload();
     } catch (e) {
@@ -7846,7 +7879,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                   {uploadingLogo ? t('reports.uploading') : t('reports.uploadLogo')}
                   <input
                     type="file"
-                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    accept="image/png,image/jpeg"
                     style={{ display: 'none' }}
                     disabled={uploadingLogo}
                     onChange={(e) => {
@@ -7857,7 +7890,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                   />
                 </label>
                 <p className="text-[10px] leading-relaxed text-center" style={{ color: 'rgba(244, 255, 255, 0.5)' }}>
-                  PNG/JPG/WebP — حداکثر ۵ مگابایت<br />
+                  PNG/JPG — حداکثر ۵ مگابایت<br />
                   {t('reports.logoHint')}
                 </p>
               </div>
@@ -8726,7 +8759,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
 
   const handleSave = () => {
     setApiBase(url);
-    showToast('آدرس سرور ذخیره شد. برای اعمال کامل، صفحه را بارگذاری مجدد کنید.');
+    showToast('آدرس سرور ذخیره شد. برای اعمال کامل، صفحه را بارگذاری مجدد کنید؛ مسیرهای Next.js نیز با همین سرور احراز هویت می‌شوند.');
     setTestResult({ ok: true, msg: 'ذخیره شد ✓ — آدرس جدید اعمال شد.' });
   };
 
@@ -8735,7 +8768,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
       <div>
         <h3 className="text-base font-bold mb-1" style={{ color: '#f0fdf4' }}>🖥 آدرس سرور API</h3>
         <p className="text-sm mb-3" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>
-          آدرس سرویس API که این برنامه به آن متصل می‌شود. پیش‌فرض: <code dir="ltr" style={{ background: 'rgba(13, 124, 74,0.1)', padding: '2px 6px', borderRadius: '6px', color: '#54D9C0' }}>http://localhost:3002</code>
+          آدرس سرویس API که این برنامه به آن متصل می‌شود. برای سرور سفارشی از HTTPS استفاده کنید؛ دامنهٔ سرور باید در BANKRESANEH_ALLOWED_API_ORIGINS سمت سرور وب مجاز شده باشد. پیش‌فرض: <code dir="ltr" style={{ background: 'rgba(13, 124, 74,0.1)', padding: '2px 6px', borderRadius: '6px', color: '#54D9C0' }}>http://localhost:3002</code>
         </p>
         <input
           type="text"

@@ -2,9 +2,9 @@ name: Windows desktop build
 
 on:
   push:
-    branches: [main, 'fix/**']
+    branches: [main, 'fix/**', 'feat/**']
   pull_request:
-    branches: [main]
+    branches: [main, 'fix/**']
   workflow_dispatch:
 
 permissions:
@@ -32,14 +32,6 @@ jobs:
 
       - name: Test real API CRUD, duplicate protection, and missing-show recovery
         run: bun run test:api-crud
-
-      - name: Generate Prisma client
-        run: bunx prisma generate
-        env:
-          DATABASE_URL: file:./db/custom.db
-
-      - name: Test persistent Prisma SQLite runtime
-        run: bun scripts/test-prisma-runtime.ts
 
       - name: Check Electron main-process syntax
         run: node --check electron/main.js

@@ -1,80 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-import { gatePermission } from '@/lib/server-auth';
-import { getDataFile } from '@/lib/data-dir';
+import { gatePermission, getApiBaseForRequest } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
-
-/**
- * Read a logo file from disk and return it as a data: URL (base64-inline).
- * This is critical because the PDF report is rendered inside an `about:blank`
- * window (window.open + document.write) where relative URLs like
- * `/banke-rasane-logo.png` resolve to `about:blank/...` and never load.
- * Inlining as base64 makes the logo self-contained and portable.
- *
- * Resolution order:
- *   1. Custom logo uploaded by admin → public/uploads/logo.png
- *   2. Default program logo            → public/banke-rasane-logo.png
- *
- * Returns an empty string (no <img> rendered) if neither file exists.
- */
-function getLogoDataUrl(): string {
-  // Candidate order:
-  //   1. Custom logo uploaded by admin → writable data dir (data/logo.png
-  //      in dev, %APPDATA%\banke-rasane\logo.png in Electron prod).
-  //   2. Legacy custom logo path (public/uploads/logo.png) — kept for
-  //      backwards compat with installs that wrote here before the fix.
-  //   3. Default program logo → public/banke-rasane-logo.png (read-only OK).
-  const candidates = [
-    getDataFile('logo.png'),
-    path.join(process.cwd(), 'public', 'uploads', 'logo.png'),
-    path.join(process.cwd(), 'public', 'banke-rasane-logo.png'),
-  ];
-  for (const p of candidates) {
-    try {
-      if (fs.existsSync(p)) {
-        const buf = fs.readFileSync(p);
-        const b64 = buf.toString('base64');
-        return `data:image/png;base64,${b64}`;
-      }
-    } catch {
-      /* ignore — try next candidate */
-    }
-  }
-  return '';
-}
-
-/**
- * Read persisted report settings (title / subtitle / organization) from disk.
- * Stored as JSON in the writable data directory (see @/lib/data-dir) so admins
- * can edit defaults without touching code. Returns sensible fallbacks if the
- * file is missing or unreadable.
- */
-function getReportSettings(): { title: string; subtitle: string; organization: string } {
-  try {
-    // Use the writable data dir — matches where /api/settings/report WRITES
-    // the file. The previous hardcoded process.cwd()/data path pointed at
-    // the read-only install directory in packaged Electron builds.
-    const f = getDataFile('report-settings.json');
-    if (fs.existsSync(f)) {
-      const raw = fs.readFileSync(f, 'utf-8');
-      const parsed = JSON.parse(raw);
-      return {
-        title: parsed.title || 'گزارش جامع آرشیو برنامه‌های تلویزیونی',
-        subtitle: parsed.subtitle || 'بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی',
-        organization: parsed.organization || 'بانک رسانه',
-      };
-    }
-  } catch {
-    /* ignore — use defaults */
-  }
-  return {
-    title: 'گزارش جامع آرشیو برنامه‌های تلویزیونی',
-    subtitle: 'بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی',
-    organization: 'بانک رسانه',
-  };
-}
 
 export async function POST(request: NextRequest) {
   // --- Auth: requires export_reports permission (admin/editor by default).
@@ -88,23 +15,31 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const shows = body.shows;
-    // Request body can override saved defaults (per-export customisation).
-    const saved = getReportSettings();
-    const title = body.title || saved.title;
-    const subtitle = body.subtitle || saved.subtitle;
-    const organization = body.organization || saved.organization;
-
     if (!shows || !Array.isArray(shows) || shows.length === 0) {
       return NextResponse.json({ error: 'No shows provided' }, { status: 400 });
     }
-
-    // Generate a professional multi-section HTML report
-    const html = generatePDFHtml(shows, {
-      title,
-      subtitle,
-      organization,
-      logoDataUrl: getLogoDataUrl(),
+    const apiBase = getApiBaseForRequest(request);
+    if (!apiBase) return NextResponse.json({ error: 'سرور انتخاب‌شده در فهرست سرورهای مجاز نیست' }, { status: 403 });
+    const authorization = request.headers.get('Authorization') || '';
+    const settingsResponse = await fetch(apiBase + '/api/settings/report', {
+      headers: { Authorization: authorization }, cache: 'no-store', signal: AbortSignal.timeout(10_000),
     });
+    if (!settingsResponse.ok) return NextResponse.json({ error: 'دریافت تنظیمات گزارش ناموفق بود' }, { status: settingsResponse.status });
+    const saved = await settingsResponse.json();
+    const title = body.title || saved.title;
+    const subtitle = body.subtitle || saved.subtitle;
+    const organization = body.organization || saved.organization;
+    let logoDataUrl = '';
+    const logoResponse = await fetch(apiBase + '/api/settings/logo', {
+      headers: { Authorization: authorization }, cache: 'no-store', signal: AbortSignal.timeout(10_000),
+    });
+    if (logoResponse.ok) {
+      const mime = logoResponse.headers.get('content-type') || 'image/png';
+      logoDataUrl = `data:${mime};base64,${Buffer.from(await logoResponse.arrayBuffer()).toString('base64')}`;
+    }
+
+    // Generate the legacy printable HTML format for integrations that still use it.
+    const html = generatePDFHtml(shows, { title, subtitle, organization, logoDataUrl });
 
     return new NextResponse(html, {
       status: 200,

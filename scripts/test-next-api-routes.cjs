@@ -12,6 +12,7 @@ const nextEntry = path.join(root, '.next', 'standalone', 'server.js');
 const tempDir = mkdtempSync(path.join(tmpdir(), 'bankresaneh-next-api-'));
 const dataDir = path.join(tempDir, 'data');
 const dbPath = path.join(tempDir, 'api.sqlite');
+const customDbPath = path.join(tempDir, 'custom-api.sqlite');
 const seedPath = path.join(tempDir, 'empty-seed.json');
 const startupToken = crypto.randomBytes(32).toString('hex');
 mkdirSync(dataDir, { recursive: true });
@@ -21,7 +22,7 @@ const children = [];
 let output = '';
 
 async function freePorts() {
-  const servers = [net.createServer(), net.createServer()];
+  const servers = [net.createServer(), net.createServer(), net.createServer()];
   try {
     const ports = await Promise.all(servers.map(server => new Promise((resolve, reject) => {
       server.once('error', reject);
@@ -68,7 +69,7 @@ async function waitFor(url, label, headers = {}, timeoutMs = 60000) {
 }
 
 async function request(base, route, options = {}) {
-  const headers = { ...(options.token ? { Authorization: 'Bearer ' + options.token } : {}), ...(options.headers || {}) };
+  const headers = { ...(options.token ? { Authorization: 'Bearer ' + options.token } : {}), ...(options.apiBase ? { 'X-BankResaneh-Api-Base': options.apiBase } : {}), ...(options.headers || {}) };
   let body = options.body;
   if (body && !(body instanceof FormData) && typeof body !== 'string' && !Buffer.isBuffer(body)) {
     headers['Content-Type'] = 'application/json';
@@ -83,7 +84,9 @@ async function request(base, route, options = {}) {
   const contentType = response.headers.get('content-type') || '';
   const data = contentType.includes('application/json')
     ? await response.json().catch(() => ({}))
-    : await response.text();
+    : contentType.includes('application/pdf')
+      ? Buffer.from(await response.arrayBuffer())
+      : await response.text();
   return { status: response.status, data, contentType, headers: response.headers };
 }
 
@@ -93,9 +96,10 @@ function assert(condition, message) {
 }
 
 async function main() {
-  const [apiPort, nextPort] = await freePorts();
+  const [apiPort, nextPort, customApiPort] = await freePorts();
   const apiBase = 'http://127.0.0.1:' + apiPort;
   const nextBase = 'http://127.0.0.1:' + nextPort;
+  const customApiBase = 'http://127.0.0.1:' + customApiPort;
   const bun = process.env.BUN_BINARY || 'bun';
 
   launch(bun, [apiEntry], {
@@ -112,6 +116,20 @@ async function main() {
   });
   await waitFor(apiBase + '/api/health', 'Bun API');
 
+  launch(bun, [apiEntry], {
+    cwd: path.dirname(apiEntry),
+    env: {
+      ...process.env,
+      NODE_ENV: 'test',
+      PORT: String(customApiPort),
+      BANKRESANEH_HOST: '127.0.0.1',
+      BANKRESANEH_SEED_PATH: seedPath,
+      BANKRESANEH_STARTUP_TOKEN: startupToken,
+      DB_PATH: customDbPath,
+    },
+  });
+  await waitFor(customApiBase + '/api/health', 'Custom Bun API');
+
   if (!require('node:fs').existsSync(nextEntry)) {
     throw new Error('Next.js standalone server is missing. Run the production build before this test.');
   }
@@ -124,6 +142,7 @@ async function main() {
       PORT: String(nextPort),
       HOSTNAME: '127.0.0.1',
       BANKRESANEH_API_BASE: apiBase,
+      BANKRESANEH_ALLOWED_API_ORIGINS: customApiBase,
       BANKRESANEH_STARTUP_TOKEN: startupToken,
       BANKRESANEH_DATA_DIR: dataDir,
       DATABASE_URL: 'file:' + path.join(tempDir, 'translation.sqlite').replace(/\\/g, '/'),
@@ -136,6 +155,17 @@ async function main() {
   // Public health and private startup handshakes for both server processes.
   const health = await request(apiBase, '/api/health');
   assert(health.status === 200 && health.data.status === 'ok', 'API health endpoint is public and healthy');
+  const preflight = await fetch(apiBase + '/api/auth/login', {
+    method: 'OPTIONS',
+    headers: {
+      Origin: nextBase,
+      'Access-Control-Request-Method': 'POST',
+      'Access-Control-Request-Headers': 'authorization,content-type,x-bankresaneh-api-base',
+    },
+  });
+  assert(preflight.status === 204 &&
+    (preflight.headers.get('Access-Control-Allow-Headers') || '').toLowerCase().includes('x-bankresaneh-api-base'),
+    'API CORS preflight permits the selected-backend header from the frontend');
   const apiReady = await request(apiBase, '/api/internal/ready', {
     headers: { 'x-bankresaneh-startup-token': startupToken },
   });
@@ -182,6 +212,23 @@ async function main() {
   assert(changed.status === 200 && !!changed.data.token, 'admin password change rotates the session token');
   const adminToken = changed.data.token;
 
+  // A second, independent API instance proves that Next.js authentication
+  // follows the selected backend rather than the frontend's default server.
+  const customFirstLogin = await request(customApiBase, '/api/auth/login', {
+    method: 'POST', body: { username: 'admin', password: 'admin' },
+  });
+  assert(customFirstLogin.status === 200 && customFirstLogin.data.user?.mustChangePassword, 'custom API starts with its own isolated admin account');
+  const customPasswordChanged = await request(customApiBase, '/api/auth/change-password', {
+    method: 'PUT', token: customFirstLogin.data.token,
+    body: { oldPassword: 'admin', newPassword: 'CustomBackend!2026' },
+  });
+  assert(customPasswordChanged.status === 200 && !!customPasswordChanged.data.token, 'custom API admin can establish an independent session');
+  const customBackendRead = await request(nextBase, '/api/settings/report', {
+    token: customPasswordChanged.data.token,
+    apiBase: customApiBase,
+  });
+  assert(customBackendRead.status === 200, 'Next.js routes authenticate against the selected custom API backend');
+
   // Create a viewer and verify the same permission boundaries in Next.js routes.
   const viewerCreated = await request(apiBase, '/api/users', {
     method: 'POST', token: adminToken,
@@ -218,6 +265,10 @@ async function main() {
   assert(reportSaved.status === 200 && reportSaved.data.ok, 'admin can save report settings');
   const reportRead = await request(nextBase, '/api/settings/report', { token: adminToken });
   assert(reportRead.status === 200 && reportRead.data.title === 'Integration report', 'report settings persist and can be read');
+  const selectedBackendAuth = await request(nextBase, '/api/settings/report', { token: adminToken, apiBase });
+  assert(selectedBackendAuth.status === 200, 'Next.js auth checks use the selected API backend header');
+  const rejectedBackendAuth = await request(nextBase, '/api/settings/report', { token: adminToken, apiBase: 'https://untrusted.invalid' });
+  assert(rejectedBackendAuth.status === 403, 'untrusted API origins are rejected before server-side fetch');
 
   // The editor role is the app's manager role for day-to-day report work.
   // It has export_reports by default and must be able to save shared PDF defaults.
@@ -246,12 +297,12 @@ async function main() {
   const managerLogoForm = new FormData();
   managerLogoForm.append('file', new Blob([png], { type: 'image/png' }), 'manager-logo.png');
   const managerLogoSaved = await request(nextBase, '/api/settings/logo', { method: 'POST', token: editorToken, body: managerLogoForm });
-  assert(managerLogoSaved.status === 200 && managerLogoSaved.data.ok, 'manager/editor can upload and normalize the shared report logo');
+  assert(managerLogoSaved.status === 200 && managerLogoSaved.data.ok, 'manager/editor can upload a validated shared report logo');
 
   const form = new FormData();
   form.append('file', new Blob([png], { type: 'image/png' }), 'test-logo.png');
   const logoSaved = await request(nextBase, '/api/settings/logo', { method: 'POST', token: adminToken, body: form });
-  assert(logoSaved.status === 200 && logoSaved.data.ok, 'admin can upload and normalize a custom logo');
+  assert(logoSaved.status === 200 && logoSaved.data.ok, 'admin can upload a validated custom logo');
   const logoRead = await request(nextBase, '/api/settings/logo', { token: adminToken });
   assert(logoRead.status === 200 && logoRead.contentType.includes('image/png'), 'uploaded custom logo can be read through the authenticated route');
 
@@ -261,6 +312,14 @@ async function main() {
   });
   assert(exportHtml.status === 200 && exportHtml.contentType.includes('text/html') && String(exportHtml.data).includes('Manager report'),
     'PDF export route generates printable report HTML using saved settings');
+
+  const binaryPdf = await request(nextBase, '/api/export-pdf-file', {
+    method: 'POST', token: adminToken,
+    body: { shows: [{ num: 1, name: 'برنامه آزمایشی', category: 'گفتگو', descriptionFa: 'متن فارسی برای آزمون PDF' }] },
+  });
+  assert(binaryPdf.status === 200 && binaryPdf.contentType.includes('application/pdf') &&
+    Buffer.isBuffer(binaryPdf.data) && binaryPdf.data.subarray(0, 4).toString() === '%PDF',
+    'PDF export returns a real binary PDF with a valid PDF signature');
 
   const importValidation = await request(nextBase, '/api/fetch-show-info', {
     method: 'POST', token: adminToken,
