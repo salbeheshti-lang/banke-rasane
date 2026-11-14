@@ -23,7 +23,10 @@ async function main() {
 
   const pdfModule = require('@digicole/pdfmake-rtl');
   const pdfMake = pdfModule.default || pdfModule;
-  pdfMake.addVirtualFileSystem(require('@digicole/pdfmake-rtl/build/vfs_fonts'));
+  const virtualFonts = require('@digicole/pdfmake-rtl/build/vfs_fonts');
+  for (const [filename, base64] of Object.entries(virtualFonts)) {
+    pdfMake.virtualfs.writeFileSync(filename, Buffer.from(base64, 'base64'));
+  }
   pdfMake.addFonts({
     Cairo: { normal: 'Cairo-Regular.ttf', bold: 'Cairo-Bold.ttf', italics: 'Cairo-Light.ttf', bolditalics: 'Cairo-SemiBold.ttf' },
     Roboto: { normal: 'Roboto-Regular.ttf', bold: 'Roboto-Medium.ttf', italics: 'Roboto-Italic.ttf', bolditalics: 'Roboto-MediumItalic.ttf' },
