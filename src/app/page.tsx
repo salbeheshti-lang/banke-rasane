@@ -7399,15 +7399,48 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
           s.lighting || '',
           (s.descriptionFa || s.summary || '').substring(0, 500),
         ]);
-        // Generate HTML table that Excel can open as .xls
-        const htmlTable = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th style="background:#10b981;color:white;font-weight:bold;padding:8px;">${h}</th>`).join('')}</tr>${rows.map(r => `<tr>${r.map(c => `<td style="padding:6px;border:1px solid #ddd;">${String(c).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
-        const blob = new Blob(['\ufeff' + htmlTable], { type: 'application/vnd.ms-excel;charset=utf-8' });
+        // Build a standards-compliant OOXML workbook (not HTML disguised as .xls).
+        const ExcelJS = await import('exceljs');
+        const workbook = new ExcelJS.Workbook();
+        workbook.creator = 'بانک رسانه';
+        workbook.subject = 'آرشیو تخصصی برنامه‌های تلویزیونی';
+        workbook.title = 'گزارش آرشیو بانک رسانه';
+        workbook.created = new Date();
+        const sheet = workbook.addWorksheet('آرشیو برنامه‌ها', {
+          views: [{ state: 'frozen', ySplit: 1, rightToLeft: true }],
+        });
+        sheet.columns = headers.map((header, index) => ({
+          header,
+          key: 'column' + index,
+          width: Math.min(54, Math.max(14, header.length + 4)),
+        }));
+        sheet.addRows(rows);
+        sheet.autoFilter = { from: 'A1', to: String.fromCharCode(64 + headers.length) + Math.max(1, rows.length + 1) };
+        const headerRow = sheet.getRow(1);
+        headerRow.height = 30;
+        headerRow.eachCell((cell) => {
+          cell.font = { name: 'Vazirmatn', bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF075B3B' } };
+          cell.alignment = { horizontal: 'right', vertical: 'middle', wrapText: true };
+          cell.border = { bottom: { style: 'medium', color: { argb: 'FF10B981' } } };
+        });
+        sheet.eachRow((row, rowNumber) => {
+          if (rowNumber === 1) return;
+          row.height = 34;
+          row.eachCell((cell) => {
+            cell.font = { name: 'Vazirmatn', size: 10, color: { argb: 'FF172B22' } };
+            cell.alignment = { horizontal: 'right', vertical: 'top', wrapText: true };
+            cell.border = { bottom: { style: 'hair', color: { argb: 'FFE2E8F0' } } };
+          });
+        });
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `bankresane-${Date.now()}.xls`;
+        a.download = `bankresaneh-${Date.now()}.xlsx`;
         a.click();
-        URL.revokeObjectURL(url);
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
       onDownload();
     } catch (e) {
