@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import sharp from 'sharp';
-import { gatePermission } from '@/lib/server-auth';
+import { gatePermissionAny } from '@/lib/server-auth';
 import { getDataFile } from '@/lib/data-dir';
 
 export const runtime = 'nodejs';
@@ -29,10 +29,10 @@ const MAX_IMAGE_DIMENSION = 4096;
  * The caller must be authenticated and have settings-management permission.
  */
 export async function GET(request: NextRequest) {
-  const gate = await gatePermission(request, 'manage_settings');
+  const gate = await gatePermissionAny(request, 'manage_settings', 'export_reports');
   if (!gate.ok) {
     return NextResponse.json(
-      { ok: false, error: gate.status === 401 ? 'احراز هویت لازم است' : 'دسترسی غیرمجاز — نیاز به دسترسی مدیر' },
+      { ok: false, error: gate.status === 401 ? 'احراز هویت لازم است' : 'دسترسی غیرمجاز — فقط مدیران و مدیران اجرایی می‌توانند لوگوی گزارش را تغییر دهند' },
       { status: gate.status }
     );
   }
