@@ -97,3 +97,6 @@ jobs:
         run: bun run cloudflare:build
         env:
           DATABASE_URL: file:./db/custom.db
+
+      - name: Smoke-test local Cloudflare Worker preview
+        run: bun run test:cloudflare-preview
