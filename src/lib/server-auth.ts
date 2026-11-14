@@ -58,7 +58,11 @@ export function getApiBaseForRequest(req: NextRequest): string | null {
       try { return [new URL(value).origin]; } catch { return []; }
     });
   if (!allowed.includes(candidate.origin)) return null;
-  if (process.env.NODE_ENV === 'production' && candidate.protocol !== 'https:') return null;
+  const loopbackHost = candidate.hostname === 'localhost' ||
+    candidate.hostname === '127.0.0.1' || candidate.hostname === '[::1]';
+  // Permit plain HTTP only for loopback development/Electron APIs. Any
+  // non-loopback custom backend must use HTTPS, even on self-hosted installs.
+  if (process.env.NODE_ENV === 'production' && candidate.protocol !== 'https:' && !loopbackHost) return null;
   return candidate.origin;
 }
 
