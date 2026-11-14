@@ -47,6 +47,7 @@ const DEFAULT_REPORT_SETTINGS = {
   title: 'گزارش جامع آرشیو برنامه‌های تلویزیونی',
   subtitle: 'بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی',
   organization: 'بانک رسانه',
+  reportText: 'این گزارش به‌صورت خودکار از داده‌های انتخاب‌شده در آرشیو بانک رسانه تهیه شده است. اطلاعات و دسته‌بندی‌ها مطابق داده‌های ثبت‌شده در زمان تهیه گزارش هستند.',
 };
 
 // Ensure parent dir exists
@@ -1064,8 +1065,8 @@ const server = Bun.serve({
     }
 
     if (pathname === '/api/settings/report' && method === 'POST') {
-      const user = requirePermission(req, 'export_reports') || requirePermission(req, 'manage_settings');
-      if (!user) return permissionFailure(req, 'فقط مدیران و مدیران اجرایی می‌توانند تنظیمات گزارش را تغییر دهند');
+      const user = requirePermission(req, 'manage_settings');
+      if (!user) return permissionFailure(req, 'فقط مدیر سیستم می‌تواند تنظیمات پیش‌فرض گزارش را تغییر دهد');
       let body;
       try { body = await req.json(); } catch { return json({ ok: false, error: 'بدنه درخواست معتبر نیست' }, 400, req); }
       let current = { ...DEFAULT_REPORT_SETTINGS };
@@ -1074,6 +1075,7 @@ const server = Bun.serve({
         title: typeof body.title === 'string' && body.title.trim() ? body.title.trim().slice(0, 180) : current.title,
         subtitle: typeof body.subtitle === 'string' && body.subtitle.trim() ? body.subtitle.trim().slice(0, 240) : current.subtitle,
         organization: typeof body.organization === 'string' && body.organization.trim() ? body.organization.trim().slice(0, 160) : current.organization,
+        reportText: typeof body.reportText === 'string' ? body.reportText.trim().slice(0, 4000) : current.reportText,
         updatedAt: new Date().toISOString(),
       };
       try {
@@ -1109,8 +1111,8 @@ const server = Bun.serve({
     }
 
     if (pathname === '/api/settings/logo' && method === 'POST') {
-      const user = requirePermission(req, 'export_reports') || requirePermission(req, 'manage_settings');
-      if (!user) return permissionFailure(req, 'فقط مدیران و مدیران اجرایی می‌توانند لوگوی گزارش را تغییر دهند');
+      const user = requirePermission(req, 'manage_settings');
+      if (!user) return permissionFailure(req, 'فقط مدیر سیستم می‌تواند لوگوی گزارش را تغییر دهد');
       try {
         const form = await req.formData();
         const file = form.get('file');
