@@ -94,7 +94,7 @@ const NO_DECOR_PREFIXES: string[] = [
   'خارج از ژانر تاک‌شو:',  // competition/reality/documentary — not analyzable as decor
 ];
 
-function hasDecor(show: TalkShow): boolean {
+function hasDecor(show: Partial<TalkShow>): boolean {
   // New/edited records honor the explicit checkbox. Legacy records retain their
   // previous classification until a user makes an explicit choice.
   if (typeof show.decorIncluded === 'boolean') return show.decorIncluded;
