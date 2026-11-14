@@ -5412,24 +5412,6 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
   imagesRef.current = images;
   const MAX_IMAGES = 8;
 
-  // Heuristic: detect whether a URL points to a direct image file (vs. an HTML
-  // page like a Wikipedia article URL). The user often pastes a Wikipedia/
-  // IMDb article URL expecting auto-extraction — warn them to use the
-  // "دریافت خودکار" box above for that, or to paste a direct image link here.
-  function looksLikeDirectImage(url: string): boolean {
-    const u = url.toLowerCase();
-    // data: URLs are always valid images (base64-encoded).
-    if (u.startsWith('data:image/')) return true;
-    // Direct image extensions in the path (before any query/hash).
-    try {
-      const path = new URL(url).pathname.toLowerCase();
-      if (/\.(jpe?g|png|gif|webp|bmp|svg|avif|ico)(\?|#|$)/.test(path)) return true;
-    } catch {}
-    // Known image hosts that serve images directly even without extension.
-    if (/upload\.wikimedia\.org|\.wikimedia\.org|\.wpimg\.cn|\.imdb-img|m\.media-amazon\.com/.test(u)) return true;
-    return false;
-  }
-
   const addUrl = async () => {
     const trimmed = urlInput.trim();
     if (!trimmed || importingUrl) return;
