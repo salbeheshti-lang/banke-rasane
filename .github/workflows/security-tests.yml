@@ -9,10 +9,14 @@ name: Security tests
 
 on:
   push:
-    branches: [main, fix/complete-v5.3.1-mainline]
+    branches: [main, 'fix/**']
     paths:
       - 'mini-services/api-service/**'
       - 'scripts/security-test.sh'
+      - 'src/app/api/**'
+      - 'src/lib/server-auth.ts'
+      - 'src/app/page.tsx'
+      - 'package.json'
       - '.github/workflows/security-tests.yml'
   pull_request:
     branches: [main]
