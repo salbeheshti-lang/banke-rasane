@@ -7320,7 +7320,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
               className="btn-enter-premium flex-1"
               style={{ opacity: token && chatId ? 1 : 0.5, cursor: token && chatId ? 'pointer' : 'not-allowed' }}
             >
-              ✓ ذخیره تنظیمات
+              {saving ? 'در حال ذخیره…' : '✓ ذخیره تنظیمات'}
             </button>
             {initial && (
               <button
@@ -8368,28 +8368,32 @@ function SettingsReportTab({ showToast }: { showToast: (msg: string) => void }) 
   const [title, setTitle] = useState('');
   const [subtitle, setSubtitle] = useState('');
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [report, setReport] = useState<any>(null);
   const [reportLoading, setReportLoading] = useState(true);
   const [days, setDays] = useState(30);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('bankresaneh_report_defaults');
-      if (saved) {
-        const obj = JSON.parse(saved);
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setTitle(obj.title || '');
-         
-        setSubtitle(obj.subtitle || '');
-      } else {
-         
-        setTitle('گزارش جامع برنامه‌های تلویزیونی');
-         
-        setSubtitle('مرجع جامع برنامه‌های تلویزیونی بین‌المللی');
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch('/api/settings/report', { headers: { ...authHeaders() } });
+        if (!response.ok) throw new Error('Unable to load report defaults');
+        const settings = await response.json();
+        if (!cancelled) {
+          setTitle(settings.title || 'گزارش جامع آرشیو برنامه‌های تلویزیونی');
+          setSubtitle(settings.subtitle || 'بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی');
+        }
+      } catch {
+        if (!cancelled) {
+          setTitle('گزارش جامع آرشیو برنامه‌های تلویزیونی');
+          setSubtitle('بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    } catch {}
-     
-    setLoading(false);
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -8403,12 +8407,20 @@ function SettingsReportTab({ showToast }: { showToast: (msg: string) => void }) 
     return () => { cancelled = true; };
   }, [days]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    setSaving(true);
     try {
-      localStorage.setItem('bankresaneh_report_defaults', JSON.stringify({ title, subtitle }));
+      const response = await fetch('/api/settings/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ title, subtitle }),
+      });
+      if (!response.ok) throw new Error('Unable to save report defaults');
       showToast(t('reports.settingsSaved'));
     } catch {
       showToast(t('reports.settingsError'));
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -8664,10 +8676,11 @@ function SettingsReportTab({ showToast }: { showToast: (msg: string) => void }) 
           />
         </div>
         <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '8px' }}>
-          این عنوان‌ها در گزارش‌های PDF و Excel به‌صورت پیش‌فرض استفاده می‌شوند.
+          این عنوان‌ها به‌صورت مشترک و پیش‌فرض در خروجی PDF استفاده می‌شوند.
         </p>
         <button
           onClick={handleSave}
+          disabled={saving}
           className="mt-3"
           style={{
             width: '100%', padding: '12px', borderRadius: '14px',
