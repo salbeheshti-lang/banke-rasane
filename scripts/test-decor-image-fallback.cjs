@@ -29,8 +29,9 @@ if (!baseUrl || !token) {
     },
     body: JSON.stringify({
       url: IMDbUrl,
-      category: 'دکور',
+      category: 'تاک‌شوی مصاحبه‌محور',
       showName,
+      isDecor: true,
     }),
   });
 
