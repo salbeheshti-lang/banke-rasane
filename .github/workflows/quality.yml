@@ -50,6 +50,9 @@ jobs:
       - name: Verify native XLSX and Persian PDF generation
         run: bun run test:export
 
+      - name: Verify backend translation rate-limit concurrency and persistence
+        run: bun run test:rate-limit
+
       - name: Lint
         run: bun run lint
 
