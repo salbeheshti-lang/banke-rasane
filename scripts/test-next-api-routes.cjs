@@ -109,6 +109,7 @@ async function main() {
       NODE_ENV: 'test',
       PORT: String(apiPort),
       BANKRESANEH_HOST: '127.0.0.1',
+      BANKRESANEH_TRUSTED_PROXIES: '',
       BANKRESANEH_SEED_PATH: seedPath,
       BANKRESANEH_STARTUP_TOKEN: startupToken,
       DB_PATH: dbPath,
@@ -123,6 +124,7 @@ async function main() {
       NODE_ENV: 'test',
       PORT: String(customApiPort),
       BANKRESANEH_HOST: '127.0.0.1',
+      BANKRESANEH_TRUSTED_PROXIES: '',
       BANKRESANEH_SEED_PATH: seedPath,
       BANKRESANEH_STARTUP_TOKEN: startupToken,
       DB_PATH: customDbPath,
@@ -354,7 +356,7 @@ async function main() {
     'fifth failed login activates a server-enforced 180-second lockout with Retry-After');
 
   // Restart the actual Bun API with the same SQLite database. The blocked
-  // address must remain blocked, while a separate address can still log in.
+  // peer must remain blocked even when the caller changes its spoofed header.
   const oldApi = children.shift();
   const apiStopped = new Promise(resolve => oldApi.once('exit', resolve));
   oldApi.kill('SIGTERM');
@@ -366,6 +368,7 @@ async function main() {
       NODE_ENV: 'test',
       PORT: String(apiPort),
       BANKRESANEH_HOST: '127.0.0.1',
+      BANKRESANEH_TRUSTED_PROXIES: '',
       BANKRESANEH_SEED_PATH: seedPath,
       BANKRESANEH_STARTUP_TOKEN: startupToken,
       DB_PATH: dbPath,
