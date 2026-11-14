@@ -7879,7 +7879,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                   {uploadingLogo ? t('reports.uploading') : t('reports.uploadLogo')}
                   <input
                     type="file"
-                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    accept="image/png,image/jpeg"
                     style={{ display: 'none' }}
                     disabled={uploadingLogo}
                     onChange={(e) => {
@@ -7890,7 +7890,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                   />
                 </label>
                 <p className="text-[10px] leading-relaxed text-center" style={{ color: 'rgba(244, 255, 255, 0.5)' }}>
-                  PNG/JPG/WebP — حداکثر ۵ مگابایت<br />
+                  PNG/JPG — حداکثر ۵ مگابایت<br />
                   {t('reports.logoHint')}
                 </p>
               </div>
