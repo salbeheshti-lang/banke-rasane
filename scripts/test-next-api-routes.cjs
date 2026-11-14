@@ -125,7 +125,7 @@ async function main() {
       BANKRESANEH_API_BASE: apiBase,
       BANKRESANEH_STARTUP_TOKEN: startupToken,
       BANKRESANEH_DATA_DIR: dataDir,
-      DATABASE_URL: 'file:' + path.join(tempDir, 'translation.sqlite').replace(/\\\\/g, '/'),
+      DATABASE_URL: 'file:' + path.join(tempDir, 'translation.sqlite').replace(/\\/g, '/'),
     },
   });
   await waitFor(nextBase + '/api/internal/ready', 'Next.js server', {
@@ -199,6 +199,11 @@ async function main() {
   assert(viewerReportSettings.status === 200, 'authenticated viewer can read non-sensitive report defaults');
 
   // Admin success paths for local Next.js features; external services are not contacted.
+  const translateValidation = await request(nextBase, '/api/translate', {
+    method: 'POST', token: adminToken, body: { fields: {} },
+  });
+  assert(translateValidation.status === 400, 'authorized translation route enforces input validation after its persistent rate-limit check');
+
   const reportSaved = await request(nextBase, '/api/settings/report', {
     method: 'POST', token: adminToken,
     body: { title: 'Integration report', subtitle: 'Route test', organization: 'BankResaneh CI' },
