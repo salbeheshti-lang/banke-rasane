@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { gatePermission } from '@/lib/server-auth';
-import { getLogoDataUrl, getReportSettings } from '../export-pdf/route';
+import { gatePermission, getApiBaseForRequest } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -45,10 +44,33 @@ export async function POST(request: NextRequest) {
     }
 
     const shows = body.shows as ShowRow[];
-    const saved = getReportSettings();
+    const apiBase = getApiBaseForRequest(request);
+    const authorization = request.headers.get('Authorization') || '';
+    if (!apiBase) return NextResponse.json({ error: 'سرور انتخاب‌شده در فهرست سرورهای مجاز نیست' }, { status: 403 });
+
+    const settingsResponse = await fetch(apiBase + '/api/settings/report', {
+      headers: { Authorization: authorization },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!settingsResponse.ok) {
+      return NextResponse.json({ error: 'دریافت تنظیمات گزارش از سرور انتخاب‌شده ناموفق بود' }, { status: settingsResponse.status });
+    }
+    const saved = await settingsResponse.json();
     const title = text(body.title, saved.title);
     const subtitle = text(body.subtitle, saved.subtitle);
     const organization = text(body.organization, saved.organization);
+    let logoDataUrl = '';
+    const logoResponse = await fetch(apiBase + '/api/settings/logo', {
+      headers: { Authorization: authorization },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (logoResponse.ok) {
+      const mime = logoResponse.headers.get('content-type') || 'image/png';
+      const encoded = Buffer.from(await logoResponse.arrayBuffer()).toString('base64');
+      logoDataUrl = `data:${mime};base64,${encoded}`;
+    }
     const categories = new Map<string, number>();
     for (const show of shows) {
       const category = text(show.category, 'سایر').replace(/^\d+\.\s*/, '');
@@ -94,7 +116,7 @@ export async function POST(request: NextRequest) {
         ],
       }),
       content: [
-        ...(logo ? [{ image: logo, width: 64, alignment: 'center', margin: [0, 0, 0, 4] }] : []),
+        ...(logoDataUrl ? [{ image: logoDataUrl, width: 64, alignment: 'center', margin: [0, 0, 0, 4] }] : []),
         { text: title, style: 'title' },
         { text: subtitle, style: 'subtitle' },
         {
