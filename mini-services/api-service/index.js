@@ -192,6 +192,19 @@ db.exec(`
 addColumnIfMissing('custom_genres', 'aliases', "TEXT NOT NULL DEFAULT '[]'");
 addColumnIfMissing('custom_genres', 'is_active', 'INTEGER NOT NULL DEFAULT 1');
 
+// Shared genre attachments — persisted in SQLite so every account/device sees the same file.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS genre_files (
+    genre_id TEXT PRIMARY KEY,
+    file_name TEXT NOT NULL,
+    mime_type TEXT NOT NULL,
+    data BLOB NOT NULL,
+    size INTEGER NOT NULL,
+    updated_by INTEGER NOT NULL DEFAULT 0,
+    updated_at INTEGER NOT NULL DEFAULT 0
+  );
+`);
+
 // Track one-time data migrations so intentionally cleared fields are never
 // repopulated from the bundled seed on every application launch.
 db.exec(`CREATE TABLE IF NOT EXISTS app_migrations (
@@ -1066,6 +1079,91 @@ const server = Bun.serve({
     }
 
     // ----- Image serving -----
+    // ----- Shared genre file attachments (admin/editor upload, all users download) -----
+    const genreFileMatch = pathname.match(/^\\/api\\/genres\\/([a-zA-Z0-9_-]{1,64})\\/file$/);
+    if (genreFileMatch && method === 'GET') {
+      const user = requireRole(req, ['admin', 'editor', 'viewer']);
+      if (!user) return permissionFailure(req, 'برای دریافت فایل وارد شوید');
+      const genreId = genreFileMatch[1];
+      const file = db.prepare('SELECT file_name, mime_type, data, size, updated_at FROM genre_files WHERE genre_id = ?').get(genreId);
+      if (!file) return json({ error: 'فایلی برای این ژانر ثبت نشده است' }, 404, req);
+
+      if (url.searchParams.get('download') !== '1') {
+        return json({
+          name: file.file_name,
+          type: file.mime_type,
+          size: file.size,
+          updatedAt: file.updated_at,
+        }, req);
+      }
+
+      const bytes = file.data instanceof Uint8Array ? file.data : new Uint8Array(file.data);
+      const origin = getCorsHeader(req);
+      return new Response(bytes, {
+        status: 200,
+        headers: {
+          'Content-Type': file.mime_type,
+          'Content-Length': String(file.size),
+          'Content-Disposition': "attachment; filename*=UTF-8''" + encodeURIComponent(file.file_name),
+          'Cache-Control': 'private, no-store',
+          'X-Content-Type-Options': 'nosniff',
+          'Access-Control-Allow-Origin': origin,
+          'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Access-Control-Allow-Credentials': 'true',
+        },
+      });
+    }
+
+    if (genreFileMatch && method === 'POST') {
+      const user = requireRole(req, ['admin', 'editor']);
+      if (!user) return permissionFailure(req, 'فقط مدیر یا ویراستار می‌تواند فایل ژانر بارگذاری کند');
+      let form;
+      try { form = await req.formData(); } catch { return json({ error: 'فرم بارگذاری نامعتبر است' }, 400, req); }
+      const file = form.get('file');
+      if (!file || typeof file.arrayBuffer !== 'function' || typeof file.size !== 'number') {
+        return json({ error: 'فایلی برای بارگذاری انتخاب نشده است' }, 400, req);
+      }
+      if (file.size < 1 || file.size > 5 * 1024 * 1024) {
+        return json({ error: 'حجم فایل باید حداکثر ۵ مگابایت باشد' }, 413, req);
+      }
+      const rawName = String(file.name || 'attachment');
+      const fileName = rawName.replace(/[\\/\\0\\r\\n"]/g, '_').slice(0, 180);
+      const extension = fileName.includes('.') ? fileName.slice(fileName.lastIndexOf('.')).toLowerCase() : '';
+      const mimeByExtension = {
+        '.pdf': 'application/pdf',
+        '.xls': 'application/vnd.ms-excel',
+        '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        '.csv': 'text/csv',
+      };
+      const mimeType = mimeByExtension[extension];
+      if (!mimeType) return json({ error: 'فقط فایل‌های PDF، Excel و CSV مجاز هستند' }, 415, req);
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const genreId = genreFileMatch[1];
+      db.prepare(`
+        INSERT INTO genre_files (genre_id, file_name, mime_type, data, size, updated_by, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(genre_id) DO UPDATE SET
+          file_name = excluded.file_name,
+          mime_type = excluded.mime_type,
+          data = excluded.data,
+          size = excluded.size,
+          updated_by = excluded.updated_by,
+          updated_at = excluded.updated_at
+      `).run(genreId, fileName, mimeType, bytes, bytes.byteLength, user.id, nowSec());
+      logActivity(user, 'upload_genre_file', 'genre', genreId, 'Uploaded ' + fileName);
+      return json({ success: true, name: fileName, type: mimeType, size: bytes.byteLength }, req);
+    }
+
+    if (genreFileMatch && method === 'DELETE') {
+      const user = requireRole(req, ['admin', 'editor']);
+      if (!user) return permissionFailure(req, 'فقط مدیر یا ویراستار می‌تواند فایل ژانر را حذف کند');
+      const result = db.prepare('DELETE FROM genre_files WHERE genre_id = ?').run(genreFileMatch[1]);
+      if (!result.changes) return json({ error: 'فایلی برای این ژانر ثبت نشده است' }, 404, req);
+      logActivity(user, 'delete_genre_file', 'genre', genreFileMatch[1], 'Deleted genre attachment');
+      return json({ success: true }, req);
+    }
+
     if (pathname.startsWith('/api/image/') && method === 'GET') {
       const numStr = pathname.slice('/api/image/'.length).split('/')[0];
       const num = parseInt(numStr, 10);
