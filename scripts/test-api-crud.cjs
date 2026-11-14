@@ -262,7 +262,7 @@ async function main() {
         aliases: ['ژانر آزمایشی یکپارچه'],
       }),
     });
-    assert(genreUpdated.status === 200 && genreUpdated.data.migratedShows === 1,
+    assert(genreUpdated.status === 200 && genreUpdated.data.migratedCount === 1,
       'renaming a custom genre migrates existing show categories');
     const migratedSearch = await request('/api/shows/search?q=' + encodeURIComponent('Genre Migration Fixture'), { token });
     const migratedShow = migratedSearch.data.shows?.find(show => Number(show.num) === 900002);
@@ -275,7 +275,7 @@ async function main() {
     const clearedShow = clearedSearch.data.shows?.find(show => Number(show.num) === 900002);
     assert(clearedShow?.category === '',
       'deactivated custom genre is removed from affected show records');
-    const fixtureDeleted = await request('/api/shows/900002', { method: 'DELETE', token });
+    const fixtureDeleted = await request('/api/shows?num=900002', { method: 'DELETE', token });
     assert(fixtureDeleted.status === 200, 'admin can delete the custom genre migration fixture');
 
     const tracked = await request('/api/analytics/track', {
