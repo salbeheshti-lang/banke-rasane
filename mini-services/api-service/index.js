@@ -967,6 +967,42 @@ const server = Bun.serve({
       return json({ status: 'ok', time: nowSec(), showsCount }, req);
     }
 
+    if (pathname === '/api/rate-limit/translate' && method === 'POST') {
+      const user = requirePermission(req, 'add_shows') || requirePermission(req, 'edit_shows');
+      if (!user) return permissionFailure(req, 'مجوز ترجمه ندارید');
+      const now = nowSec();
+      const resetAt = now + 60;
+      db.exec(`CREATE TABLE IF NOT EXISTS translation_rate_buckets (
+        user_id INTEGER PRIMARY KEY,
+        count INTEGER NOT NULL DEFAULT 0,
+        reset_at INTEGER NOT NULL
+      )`);
+      // A single SQLite upsert makes the per-user increment atomic across
+      // concurrent requests and survives API/Next process restarts.
+      db.prepare(`
+        INSERT INTO translation_rate_buckets (user_id, count, reset_at)
+        VALUES (?, 1, ?)
+        ON CONFLICT(user_id) DO UPDATE SET
+          count = CASE
+            WHEN translation_rate_buckets.reset_at <= ? THEN 1
+            WHEN translation_rate_buckets.count < 11 THEN translation_rate_buckets.count + 1
+            ELSE translation_rate_buckets.count
+          END,
+          reset_at = CASE
+            WHEN translation_rate_buckets.reset_at <= ? THEN excluded.reset_at
+            ELSE translation_rate_buckets.reset_at
+          END
+      `).run(user.id, resetAt, now, now);
+      const bucket = db.prepare('SELECT count, reset_at FROM translation_rate_buckets WHERE user_id = ?').get(user.id);
+      if (bucket && bucket.count > 10) {
+        const retryAfter = Math.max(1, bucket.reset_at - now);
+        const response = json({ error: `محدودیت ترجمه: ${retryAfter} ثانیه صبر کنید` }, 429, req);
+        response.headers.set('Retry-After', String(retryAfter));
+        return response;
+      }
+      return json({ ok: true, remaining: Math.max(0, 10 - (bucket?.count || 0)) }, req);
+    }
+
     // ----- Shared report defaults and logo (stored with the selected API backend) -----
     if (pathname === '/api/settings/report' && method === 'GET') {
       const user = requireUser(req);
