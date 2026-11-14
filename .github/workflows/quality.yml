@@ -36,6 +36,9 @@ jobs:
       - name: Test API video upload validation
         run: node --test mini-services/api-service/video-validation.test.mjs
 
+      - name: Audit bundled archive seed data
+        run: bun run test:seed-data
+
       - name: Test API CRUD, duplicate protection, and shared genre files
         run: bun run test:api-crud
         env:
