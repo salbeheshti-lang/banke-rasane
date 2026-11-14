@@ -97,6 +97,14 @@ db.exec(`
     expires  INTEGER NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
+  CREATE TABLE IF NOT EXISTS login_rate_limits (
+    ip_hash       TEXT PRIMARY KEY,
+    failure_count INTEGER NOT NULL DEFAULT 0,
+    first_attempt INTEGER NOT NULL,
+    blocked_until INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX IF NOT EXISTS idx_login_rate_limits_expiry
+    ON login_rate_limits(blocked_until, first_attempt);
   CREATE TABLE IF NOT EXISTS shows (
     num          INTEGER PRIMARY KEY,
     name         TEXT NOT NULL DEFAULT '',
@@ -724,45 +732,65 @@ function getClientIP(req) {
 const LOGIN_MAX_FAILS = 5;
 const LOGIN_WINDOW_SEC = 900;   // 15 min failure-counting window
 const LOGIN_BLOCK_SEC = 180;    // 3 min lockout after 5 failures
-const loginAttempts = new Map();
+const loginRateLimitKey = (ip) => createHash('sha256').update(String(ip)).digest('hex');
+
 function checkRateLimit(ip) {
-  const entry = loginAttempts.get(ip);
+  const key = loginRateLimitKey(ip);
+  const entry = db.prepare(
+    'SELECT failure_count, first_attempt, blocked_until FROM login_rate_limits WHERE ip_hash = ?'
+  ).get(key);
   if (!entry) return { ok: true };
+
   const now = nowSec();
-  if (entry.blockedUntil > 0) {
-    if (now < entry.blockedUntil) {
-      return { ok: false, retryAfter: entry.blockedUntil - now };
+  if (entry.blocked_until > 0) {
+    if (now < entry.blocked_until) {
+      return { ok: false, retryAfter: entry.blocked_until - now };
     }
-    loginAttempts.delete(ip); // block served in full — start clean
+    db.prepare('DELETE FROM login_rate_limits WHERE ip_hash = ?').run(key);
     return { ok: true };
   }
-  if (now - entry.firstAttempt > LOGIN_WINDOW_SEC) {
-    loginAttempts.delete(ip); // window expired without a block — start clean
+  if (now - entry.first_attempt > LOGIN_WINDOW_SEC) {
+    db.prepare('DELETE FROM login_rate_limits WHERE ip_hash = ?').run(key);
   }
   return { ok: true };
 }
+
+const persistFailedLogin = db.transaction((key, now) => {
+  const current = db.prepare(
+    'SELECT failure_count, first_attempt FROM login_rate_limits WHERE ip_hash = ?'
+  ).get(key);
+  const expired = !current || now - current.first_attempt > LOGIN_WINDOW_SEC;
+  const firstAttempt = expired ? now : current.first_attempt;
+  const failureCount = expired ? 1 : current.failure_count + 1;
+  const blockedUntil = failureCount >= LOGIN_MAX_FAILS ? now + LOGIN_BLOCK_SEC : 0;
+  db.prepare(`
+    INSERT INTO login_rate_limits (ip_hash, failure_count, first_attempt, blocked_until)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(ip_hash) DO UPDATE SET
+      failure_count = excluded.failure_count,
+      first_attempt = excluded.first_attempt,
+      blocked_until = excluded.blocked_until
+  `).run(key, failureCount, firstAttempt, blockedUntil);
+});
+
 function recordFailedAttempt(ip) {
-  const now = nowSec();
-  let entry = loginAttempts.get(ip);
-  if (!entry || now - entry.firstAttempt > LOGIN_WINDOW_SEC) {
-    entry = { count: 0, firstAttempt: now, blockedUntil: 0 };
-  }
-  entry.count++;
-  if (entry.count >= LOGIN_MAX_FAILS) entry.blockedUntil = now + LOGIN_BLOCK_SEC;
-  loginAttempts.set(ip, entry);
+  persistFailedLogin(loginRateLimitKey(ip), nowSec());
 }
-function clearRateLimit(ip) { loginAttempts.delete(ip); }
-// Sweep stale entries once a minute (bounded memory under IP spoofing).
+
+function clearRateLimit(ip) {
+  db.prepare('DELETE FROM login_rate_limits WHERE ip_hash = ?').run(loginRateLimitKey(ip));
+}
+
+// Prune expired rows periodically; active lockouts survive process restarts.
 setInterval(() => {
   try {
     const now = nowSec();
-    for (const [ip, e] of loginAttempts) {
-      if ((e.blockedUntil > 0 && now >= e.blockedUntil) ||
-          (e.blockedUntil === 0 && now - e.firstAttempt > LOGIN_WINDOW_SEC)) {
-        loginAttempts.delete(ip);
-      }
-    }
-  } catch { /* never let the sweep crash the server */ }
+    db.prepare(`
+      DELETE FROM login_rate_limits
+      WHERE (blocked_until > 0 AND blocked_until <= ?)
+         OR (blocked_until = 0 AND first_attempt < ?)
+    `).run(now, now - LOGIN_WINDOW_SEC);
+  } catch { /* never let cleanup crash the server */ }
 }, 60_000);
 
 // ---------------------------------------------------------------------------
@@ -1464,7 +1492,11 @@ const server = Bun.serve({
     if (pathname === '/api/auth/login' && method === 'POST') {
       const ip = getClientIP(req);
       const rl = checkRateLimit(ip);
-      if (!rl.ok) return json({ error: `تلاش‌های ناموفق زیاد. لطفاً ${rl.retryAfter} ثانیه صبر کنید.` }, 429, req);
+      if (!rl.ok) {
+        const response = json({ error: `تلاش‌های ناموفق زیاد. لطفاً ${rl.retryAfter} ثانیه صبر کنید.` }, 429, req);
+        response.headers.set('Retry-After', String(rl.retryAfter));
+        return response;
+      }
       let body;
       try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400, req); }
       const username = String(body?.username || '').trim();
