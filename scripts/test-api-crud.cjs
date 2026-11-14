@@ -164,6 +164,55 @@ async function main() {
     assert(search.status === 200 && !!found && found.decorIncluded === false,
       'persisted decor value is returned by a fresh authenticated search/read');
 
+    // Shared genre attachments must be visible to every authenticated account/device.
+    const genreForm = new FormData();
+    genreForm.append('file', new Blob(['shared genre attachment'], { type: 'application/pdf' }), 'decor-reference.pdf');
+    const genreUploadResponse = await fetch(base + '/api/genres/decor/file', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token },
+      body: genreForm,
+    });
+    const genreUpload = await genreUploadResponse.json().catch(() => ({}));
+    assert(genreUploadResponse.status === 200 && genreUpload.success,
+      'admin can upload a shared PDF attachment for a genre');
+
+    const viewerCreated = await request('/api/users', {
+      method: 'POST', token,
+      body: JSON.stringify({ username: 'genre_file_viewer', password: 'ViewerFile!2026', role: 'viewer', name: 'Genre File Viewer' }),
+    });
+    assert(viewerCreated.status === 200, 'admin can create a viewer for shared attachment access tests');
+    const viewerLogin = await request('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'genre_file_viewer', password: 'ViewerFile!2026' }),
+    });
+    assert(viewerLogin.status === 200 && !!viewerLogin.data.token, 'viewer can authenticate to read shared genre attachments');
+    const viewerToken = viewerLogin.data.token;
+
+    const genreInfo = await request('/api/genres/decor/file', { token: viewerToken });
+    assert(genreInfo.status === 200 && genreInfo.data.name === 'decor-reference.pdf',
+      'a different user can see the uploaded genre attachment metadata');
+    const genreDownload = await fetch(base + '/api/genres/decor/file?download=1', {
+      headers: { Authorization: 'Bearer ' + viewerToken },
+    });
+    assert(genreDownload.status === 200 && (await genreDownload.text()) === 'shared genre attachment',
+      'a different user can download the exact shared genre attachment bytes');
+
+    const viewerForm = new FormData();
+    viewerForm.append('file', new Blob(['forbidden'], { type: 'application/pdf' }), 'viewer.pdf');
+    const viewerUpload = await fetch(base + '/api/genres/decor/file', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + viewerToken },
+      body: viewerForm,
+    });
+    assert(viewerUpload.status === 403, 'viewer cannot replace a shared genre attachment');
+    const viewerDelete = await request('/api/genres/decor/file', { method: 'DELETE', token: viewerToken });
+    assert(viewerDelete.status === 403, 'viewer cannot delete a shared genre attachment');
+
+    const genreDelete = await request('/api/genres/decor/file', { method: 'DELETE', token });
+    assert(genreDelete.status === 200, 'admin can delete a shared genre attachment');
+    const genreMissing = await request('/api/genres/decor/file', { token: viewerToken });
+    assert(genreMissing.status === 404, 'deleted genre attachment is no longer available to other users');
+
     console.log('API CRUD integration suite completed successfully.');
   } catch (error) {
     console.error(error.stack || error);
