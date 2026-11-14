@@ -72,7 +72,7 @@ export async function requirePermission(
   permission: string
 ): Promise<AuthUser | null> {
   const user = await requireUser(req);
-  if (!user) return null;
+  if (!user || user.mustChangePassword) return null;
   // Super admin has all permissions.
   if (user.isSuperAdmin) return user;
   // Otherwise, check the permissions array.
@@ -95,7 +95,7 @@ export async function requirePermissionAny(
   ...permissions: string[]
 ): Promise<AuthUser | null> {
   const user = await requireUser(req);
-  if (!user) return null;
+  if (!user || user.mustChangePassword) return null;
   // Super admin has all permissions.
   if (user.isSuperAdmin) return user;
   // Otherwise, check if they have ANY of the listed permissions.
@@ -130,6 +130,7 @@ export async function gatePermission(
 ): Promise<AuthGate> {
   const user = await requireUser(req);
   if (!user) return { ok: false, status: 401 };
+  if (user.mustChangePassword) return { ok: false, status: 403 };
   if (user.isSuperAdmin) return { ok: true, user };
   if (Array.isArray(user.permissions) && user.permissions.includes(permission)) {
     return { ok: true, user };
@@ -147,6 +148,7 @@ export async function gatePermissionAny(
 ): Promise<AuthGate> {
   const user = await requireUser(req);
   if (!user) return { ok: false, status: 401 };
+  if (user.mustChangePassword) return { ok: false, status: 403 };
   if (user.isSuperAdmin) return { ok: true, user };
   if (Array.isArray(user.permissions)) {
     for (const p of permissions) {
