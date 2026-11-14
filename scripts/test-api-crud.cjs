@@ -214,6 +214,19 @@ async function main() {
     assert(genreMissing.status === 404, 'deleted genre attachment is no longer available to other users');
 
     // Profile, custom genres, activity, analytics, permissions, and session logout.
+    const viewerImageFetch = await request('/api/fetch-image', {
+      method: 'POST', token: viewerToken,
+      body: JSON.stringify({ num: 900001, name: 'Permission probe' }),
+    });
+    assert(viewerImageFetch.status === 403, 'viewer cannot invoke the privileged image-fetch endpoint');
+    const invalidImageFetch = await request('/api/fetch-image', {
+      method: 'POST', token,
+      body: JSON.stringify({ num: 0, name: 'Invalid fixture' }),
+    });
+    assert(invalidImageFetch.status === 400, 'image-fetch endpoint rejects invalid show identifiers before external lookup');
+    const missingStoredImage = await request('/api/image/900001');
+    assert(missingStoredImage.status === 404, 'stored-image endpoint returns not-found when no binary image is attached');
+
     const profileBefore = await request('/api/profile', { token });
     assert(profileBefore.status === 200, 'authenticated user can read their own profile');
     const profileUpdated = await request('/api/profile', {
