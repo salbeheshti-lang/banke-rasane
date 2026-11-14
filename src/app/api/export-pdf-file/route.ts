@@ -82,7 +82,10 @@ export async function POST(request: NextRequest) {
 
     const pdfModule: any = await import('@digicole/pdfmake-rtl');
     const pdfMake: any = pdfModule.default || pdfModule;
-    const logo = getLogoDataUrl();
+    const cairoFonts: any = await import('@digicole/pdfmake-rtl/fonts/Cairo');
+    const robotoFonts: any = await import('@digicole/pdfmake-rtl/fonts/Roboto');
+    pdfMake.addFonts(cairoFonts.default || cairoFonts);
+    pdfMake.addFonts(robotoFonts.default || robotoFonts);
     const docDefinition: any = {
       pageSize: 'A4',
       pageOrientation: 'landscape',
