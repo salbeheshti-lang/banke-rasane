@@ -286,12 +286,12 @@ async function main() {
   const managerLogoForm = new FormData();
   managerLogoForm.append('file', new Blob([png], { type: 'image/png' }), 'manager-logo.png');
   const managerLogoSaved = await request(nextBase, '/api/settings/logo', { method: 'POST', token: editorToken, body: managerLogoForm });
-  assert(managerLogoSaved.status === 200 && managerLogoSaved.data.ok, 'manager/editor can upload and normalize the shared report logo');
+  assert(managerLogoSaved.status === 200 && managerLogoSaved.data.ok, 'manager/editor can upload a validated shared report logo');
 
   const form = new FormData();
   form.append('file', new Blob([png], { type: 'image/png' }), 'test-logo.png');
   const logoSaved = await request(nextBase, '/api/settings/logo', { method: 'POST', token: adminToken, body: form });
-  assert(logoSaved.status === 200 && logoSaved.data.ok, 'admin can upload and normalize a custom logo');
+  assert(logoSaved.status === 200 && logoSaved.data.ok, 'admin can upload a validated custom logo');
   const logoRead = await request(nextBase, '/api/settings/logo', { token: adminToken });
   assert(logoRead.status === 200 && logoRead.contentType.includes('image/png'), 'uploaded custom logo can be read through the authenticated route');
 
