@@ -712,10 +712,32 @@ async function upgradePasswordHash(userId, password, stored) {
 }
 function genToken() { return randomBytes(32).toString('hex'); }
 function nowSec() { return Math.floor(Date.now() / 1000); }
-function getClientIP(req) {
-  const fwd = req.headers.get('x-forwarded-for');
-  if (fwd) return fwd.split(',')[0].trim();
-  return req.headers.get('x-real-ip') || 'unknown';
+function normalizeClientAddress(value) {
+  let address = String(value || '').trim();
+  if (!address) return '';
+  if (address.startsWith('[')) address = address.slice(1, address.indexOf(']') > 0 ? address.indexOf(']') : undefined);
+  if (/^::ffff:/i.test(address)) address = address.slice(7);
+  if (/^\d{1,3}(?:\.\d{1,3}){3}:\d+$/.test(address)) address = address.replace(/:\d+$/, '');
+  return address.toLowerCase();
+}
+
+// Forwarded client-IP headers are untrusted unless the direct TCP peer is
+// explicitly listed in BANKRESANEH_TRUSTED_PROXIES (comma-separated exact IPs).
+// This prevents a public caller from changing its lockout key with X-Forwarded-For.
+function getClientIP(req, server) {
+  const peer = normalizeClientAddress(server?.requestIP?.(req)?.address);
+  if (!peer) return 'unknown';
+  const trustedProxies = new Set(
+    String(process.env.BANKRESANEH_TRUSTED_PROXIES || '')
+      .split(',')
+      .map(normalizeClientAddress)
+      .filter(Boolean)
+  );
+  if (!trustedProxies.has(peer)) return peer;
+  const forwarded = req.headers.get('cf-connecting-ip') ||
+    req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip');
+  const candidate = normalizeClientAddress(forwarded?.split(',')[0]);
+  return candidate || peer;
 }
 
 // ---------------------------------------------------------------------------
@@ -974,7 +996,7 @@ const server = Bun.serve({
   // default. Public deployments must explicitly opt-in via BANKRESANEH_HOST=0.0.0.0
   // (plus HTTPS, CORS allow-list, and a changed admin password).
   hostname: HOST,
-  async fetch(req) {
+  async fetch(req, server) {
     const url = new URL(req.url);
     const pathname = url.pathname;
     const method = req.method;
@@ -1490,7 +1512,7 @@ const server = Bun.serve({
 
     // ----- Auth: login -----
     if (pathname === '/api/auth/login' && method === 'POST') {
-      const ip = getClientIP(req);
+      const ip = getClientIP(req, server);
       const rl = checkRateLimit(ip);
       if (!rl.ok) {
         const response = json({ error: `تلاش‌های ناموفق زیاد. لطفاً ${rl.retryAfter} ثانیه صبر کنید.` }, 429, req);
