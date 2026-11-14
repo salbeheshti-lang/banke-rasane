@@ -16,7 +16,8 @@
     "smoke:desktop": "node scripts/smoke-electron.cjs",
     "test:api-crud": "node scripts/test-api-crud.cjs",
     "test:decor-image": "node scripts/test-decor-image-fallback.cjs",
-    "test:next-api": "node scripts/test-next-api-routes.cjs"
+    "test:next-api": "node scripts/test-next-api-routes.cjs",
+    "test:seed-data": "node scripts/audit-seed-data.cjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
