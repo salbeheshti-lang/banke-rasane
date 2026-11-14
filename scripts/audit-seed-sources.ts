@@ -44,6 +44,8 @@ const report = {
     num: show.num,
     sourceName: show.name,
     archiveName: (archiveById.get(show.num) as any)?.name,
+    sourceCategory: show.category,
+    archiveCategory: (archiveById.get(show.num) as any)?.category,
   })),
   duplicateSourceIds,
 };
