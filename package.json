@@ -23,7 +23,8 @@
     "test:e2e": "playwright test",
     "cloudflare:build": "opennextjs-cloudflare build",
     "cloudflare:preview": "opennextjs-cloudflare build && wrangler dev",
-    "cloudflare:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
+    "cloudflare:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "test:export": "node scripts/test-export-formats.cjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
