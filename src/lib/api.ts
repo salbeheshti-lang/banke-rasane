@@ -195,7 +195,7 @@ export const api = {
       throw new Error(data.error || 'دریافت فایل ناموفق بود');
     }
     const disposition = response.headers.get('Content-Disposition') || '';
-    const encodedName = disposition.match(/filename\\*=UTF-8''([^;]+)/i)?.[1];
+    const encodedName = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
     let filename = 'genre-attachment';
     if (encodedName) {
       try { filename = decodeURIComponent(encodedName); } catch { filename = encodedName; }
