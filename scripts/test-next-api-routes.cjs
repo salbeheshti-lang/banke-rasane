@@ -20,15 +20,20 @@ writeFileSync(seedPath, '[]', 'utf8');
 const children = [];
 let output = '';
 
-function freePort() {
-  return new Promise((resolve, reject) => {
-    const server = net.createServer();
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', () => {
-      const port = server.address().port;
-      server.close(error => error ? reject(error) : resolve(port));
-    });
-  });
+async function freePorts() {
+  const servers = [net.createServer(), net.createServer()];
+  try {
+    const ports = await Promise.all(servers.map(server => new Promise((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(0, '127.0.0.1', () => resolve(server.address().port));
+    })));
+    return ports;
+  } finally {
+    await Promise.all(servers.map(server => new Promise(resolve => {
+      if (!server.listening) return resolve();
+      server.close(() => resolve());
+    })));
+  }
 }
 
 function launch(command, args, options) {
@@ -88,8 +93,7 @@ function assert(condition, message) {
 }
 
 async function main() {
-  const apiPort = await freePort();
-  const nextPort = await freePort();
+  const [apiPort, nextPort] = await freePorts();
   const apiBase = 'http://127.0.0.1:' + apiPort;
   const nextBase = 'http://127.0.0.1:' + nextPort;
   const bun = process.env.BUN_BINARY || 'bun';
