@@ -44,5 +44,10 @@ jobs:
         env:
           DATABASE_URL: file:./db/custom.db
 
+      - name: Test authenticated Next.js API routes against a real Bun API
+        run: bun run test:next-api
+        env:
+          BUN_BINARY: bun
+
       - name: Type check
         run: bun run typecheck
