@@ -1,6 +1,6 @@
 {
   "name": "banke-rasane",
-  "version": "5.4.4",
+  "version": "5.4.5",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
@@ -19,11 +19,12 @@
     "test:next-api": "node scripts/test-next-api-routes.cjs",
     "test:seed-data": "node scripts/audit-seed-data.cjs",
     "test:seed-sources": "bun run scripts/audit-seed-sources.ts",
+    "test:seed-runtime": "bun scripts/test-seed-runtime.mjs",
     "seed:new-shows": "bun run scripts/seed-new-shows.ts",
     "test:e2e": "node scripts/prepare-e2e.cjs && playwright test",
-    "cloudflare:build": "opennextjs-cloudflare build",
-    "cloudflare:preview": "opennextjs-cloudflare build && wrangler dev",
-    "cloudflare:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "cloudflare:build": "next build --webpack && node scripts/copy-standalone.cjs && opennextjs-cloudflare build --skipNextBuild",
+    "cloudflare:preview": "bun run cloudflare:build && opennextjs-cloudflare preview",
+    "cloudflare:deploy": "bun run cloudflare:build && opennextjs-cloudflare deploy",
     "test:export": "node scripts/test-export-formats.cjs",
     "test:rate-limit": "bun scripts/test-rate-limit-atomic.mjs",
     "test:cloudflare-preview": "node scripts/test-cloudflare-preview.cjs"
@@ -84,6 +85,7 @@
     "react-resizable-panels": "^3.0.3",
     "react-syntax-highlighter": "^15.6.1",
     "recharts": "^2.15.4",
+    "sharp": "^0.34.3",
     "sonner": "^2.0.6",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",

@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, 'fix/**', 'feat/**']
   pull_request:
-    branches: [main, 'fix/**']
+    branches: [main, 'fix/**', 'feat/**']
 
 permissions:
   contents: read
@@ -33,6 +33,9 @@ jobs:
 
       - name: Compare bundled archive with all checked-in seed sources
         run: bun run test:seed-sources
+
+      - name: Verify fresh SQLite and API archive exactly match bundled JSON IDs and fields
+        run: bun run test:seed-runtime
 
       - name: Test API CRUD, duplicate protection, and shared genre files
         run: bun run test:api-crud

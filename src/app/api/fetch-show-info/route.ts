@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
         if (record.Title) info.title = record.Title;
         if (record.Plot && record.Plot !== 'N/A') info.description = record.Plot;
         // Preserve IMDb/OMDb posters for other genres; decor needs real program/set imagery.
-        if (!isDecor && record.Poster && record.Poster !== 'N/A' && /^https:\/\//i.test(record.Poster)) info.image = record.Poster;
+        if (record.Poster && record.Poster !== 'N/A' && /^https:\/\//i.test(record.Poster)) info.image = record.Poster;
         if (record.imdbRating && record.imdbRating !== 'N/A') info.rating = record.imdbRating;
         if (record.Genre && record.Genre !== 'N/A') info.genres = record.Genre;
         if (record.Year && record.Year !== 'N/A') info.year = record.Year;
@@ -158,14 +158,17 @@ export async function POST(request: NextRequest) {
         if (record.Country && record.Country !== 'N/A') info.country = record.Country;
         info.imdbUrl = parsed.href;
       }
-      if (isDecor) {
-        // Keep the existing no-IMDb-poster rule for decor, and add a
-        // Wikipedia/Wikimedia image search using the resolved or entered show name.
-        const decorImage = await fetchWikipediaShowImage(info.title || String(showName || ''));
-        if (decorImage) info.image = decorImage;
-      } else if (!info.image && imdbMatch) {
+      // Prefer the poster belonging to the exact IMDb title ID. Do not
+      // replace it with a loosely matched Wikipedia search result (which can
+      // return an unrelated image for ambiguous titles such as "Top Gear").
+      if (!info.image && imdbMatch) {
         const fallbackPoster = await fetchImdbPoster(imdbMatch[1]);
         if (fallbackPoster) info.image = fallbackPoster;
+      }
+      // Only use Wikipedia/Wikimedia as a last resort when IMDb has no image.
+      if (!info.image && isDecor) {
+        const decorImage = await fetchWikipediaShowImage(info.title || String(showName || ''));
+        if (decorImage) info.image = decorImage;
       }
     }
 

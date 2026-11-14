@@ -47,6 +47,7 @@ const DEFAULT_REPORT_SETTINGS = {
   title: 'گزارش جامع آرشیو برنامه‌های تلویزیونی',
   subtitle: 'بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی',
   organization: 'بانک رسانه',
+  reportText: 'این گزارش به‌صورت خودکار از داده‌های انتخاب‌شده در آرشیو بانک رسانه تهیه شده است. اطلاعات و دسته‌بندی‌ها مطابق داده‌های ثبت‌شده در زمان تهیه گزارش هستند.',
 };
 
 // Ensure parent dir exists
@@ -381,6 +382,13 @@ function publicUser(u, viewer) {
   return base;
 }
 
+function normalizePersianPluralSpacing(value) {
+  if (typeof value !== 'string') return value;
+  // Restore the Persian ZWNJ before the plural suffix "ها" in legacy rows
+  // where import/normalization stripped it (e.g. "برنامهها" -> "برنامه‌ها").
+  return value.replace(/([\u0600-\u06FF]{2,})\s*ها(?=$|[\s،؛,.!?؟:)\]])/g, '$1\u200cها');
+}
+
 function rowToShow(r) {
   if (!r) return null;
   let images = [], videos = [];
@@ -388,13 +396,15 @@ function rowToShow(r) {
   try { videos = JSON.parse(r.videos || '[]'); } catch {}
   let tags = [];
   try { tags = JSON.parse(r.tags || '[]'); } catch {}
+  const fa = normalizePersianPluralSpacing;
+  tags = Array.isArray(tags) ? tags.map(fa) : [];
   return {
-    num: r.num, name: r.name, category: r.category, source: r.source,
-    size: r.size, viewers: r.viewers, style: r.style, effects: r.effects,
-    layout: r.layout, elements: r.elements, materials: r.materials,
-    colors: r.colors, lighting: r.lighting, summary: r.summary,
-    descriptionFa: r.descriptionFa, youtube: r.youtube, imdb: r.imdb,
-    wikipedia: r.wikipedia, socialPost: r.socialPost, country: r.country || '',
+    num: r.num, name: fa(r.name), category: fa(r.category), source: fa(r.source),
+    size: fa(r.size), viewers: fa(r.viewers), style: fa(r.style), effects: fa(r.effects),
+    layout: fa(r.layout), elements: fa(r.elements), materials: fa(r.materials),
+    colors: fa(r.colors), lighting: fa(r.lighting), summary: fa(r.summary),
+    descriptionFa: fa(r.descriptionFa), youtube: r.youtube, imdb: r.imdb,
+    wikipedia: r.wikipedia, socialPost: fa(r.socialPost), country: fa(r.country || ''),
     images, videos, tags, decorIncluded: r.decor_included == null ? undefined : !!r.decor_included,
     isFilm: !!(r.is_film),
     // Expose the image source so the frontend can:
@@ -712,10 +722,32 @@ async function upgradePasswordHash(userId, password, stored) {
 }
 function genToken() { return randomBytes(32).toString('hex'); }
 function nowSec() { return Math.floor(Date.now() / 1000); }
-function getClientIP(req) {
-  const fwd = req.headers.get('x-forwarded-for');
-  if (fwd) return fwd.split(',')[0].trim();
-  return req.headers.get('x-real-ip') || 'unknown';
+function normalizeClientAddress(value) {
+  let address = String(value || '').trim();
+  if (!address) return '';
+  if (address.startsWith('[')) address = address.slice(1, address.indexOf(']') > 0 ? address.indexOf(']') : undefined);
+  if (/^::ffff:/i.test(address)) address = address.slice(7);
+  if (/^\d{1,3}(?:\.\d{1,3}){3}:\d+$/.test(address)) address = address.replace(/:\d+$/, '');
+  return address.toLowerCase();
+}
+
+// Forwarded client-IP headers are untrusted unless the direct TCP peer is
+// explicitly listed in BANKRESANEH_TRUSTED_PROXIES (comma-separated exact IPs).
+// This prevents a public caller from changing its lockout key with X-Forwarded-For.
+function getClientIP(req, server) {
+  const peer = normalizeClientAddress(server?.requestIP?.(req)?.address);
+  if (!peer) return 'unknown';
+  const trustedProxies = new Set(
+    String(process.env.BANKRESANEH_TRUSTED_PROXIES || '')
+      .split(',')
+      .map(normalizeClientAddress)
+      .filter(Boolean)
+  );
+  if (!trustedProxies.has(peer)) return peer;
+  const forwarded = req.headers.get('cf-connecting-ip') ||
+    req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip');
+  const candidate = normalizeClientAddress(forwarded?.split(',')[0]);
+  return candidate || peer;
 }
 
 // ---------------------------------------------------------------------------
@@ -727,7 +759,7 @@ function getClientIP(req) {
 // protection was inert). New logic: failures accumulate inside a 15-minute
 // window; reaching 5 blocks the IP for 3 minutes; after the block (or the
 // window) expires the entry is reset. A periodic sweep prunes stale entries
-// so spoofed X-Forwarded-For IPs cannot grow the Map without bound.
+// so expired IP lockout records do not accumulate indefinitely.
 // ---------------------------------------------------------------------------
 const LOGIN_MAX_FAILS = 5;
 const LOGIN_WINDOW_SEC = 900;   // 15 min failure-counting window
@@ -974,7 +1006,7 @@ const server = Bun.serve({
   // default. Public deployments must explicitly opt-in via BANKRESANEH_HOST=0.0.0.0
   // (plus HTTPS, CORS allow-list, and a changed admin password).
   hostname: HOST,
-  async fetch(req) {
+  async fetch(req, server) {
     const url = new URL(req.url);
     const pathname = url.pathname;
     const method = req.method;
@@ -1042,8 +1074,8 @@ const server = Bun.serve({
     }
 
     if (pathname === '/api/settings/report' && method === 'POST') {
-      const user = requirePermission(req, 'export_reports') || requirePermission(req, 'manage_settings');
-      if (!user) return permissionFailure(req, 'فقط مدیران و مدیران اجرایی می‌توانند تنظیمات گزارش را تغییر دهند');
+      const user = requirePermission(req, 'manage_settings') || requirePermission(req, 'export_reports');
+      if (!user) return permissionFailure(req, 'فقط مدیر سیستم یا کاربران دارای مجوز خروجی گزارش می‌توانند تنظیمات پیش‌فرض گزارش را تغییر دهند');
       let body;
       try { body = await req.json(); } catch { return json({ ok: false, error: 'بدنه درخواست معتبر نیست' }, 400, req); }
       let current = { ...DEFAULT_REPORT_SETTINGS };
@@ -1052,6 +1084,7 @@ const server = Bun.serve({
         title: typeof body.title === 'string' && body.title.trim() ? body.title.trim().slice(0, 180) : current.title,
         subtitle: typeof body.subtitle === 'string' && body.subtitle.trim() ? body.subtitle.trim().slice(0, 240) : current.subtitle,
         organization: typeof body.organization === 'string' && body.organization.trim() ? body.organization.trim().slice(0, 160) : current.organization,
+        reportText: typeof body.reportText === 'string' ? body.reportText.trim().slice(0, 4000) : current.reportText,
         updatedAt: new Date().toISOString(),
       };
       try {
@@ -1087,8 +1120,8 @@ const server = Bun.serve({
     }
 
     if (pathname === '/api/settings/logo' && method === 'POST') {
-      const user = requirePermission(req, 'export_reports') || requirePermission(req, 'manage_settings');
-      if (!user) return permissionFailure(req, 'فقط مدیران و مدیران اجرایی می‌توانند لوگوی گزارش را تغییر دهند');
+      const user = requirePermission(req, 'manage_settings') || requirePermission(req, 'export_reports');
+      if (!user) return permissionFailure(req, 'فقط مدیر سیستم یا کاربران دارای مجوز خروجی گزارش می‌توانند لوگوی گزارش را تغییر دهند');
       try {
         const form = await req.formData();
         const file = form.get('file');
@@ -1490,7 +1523,7 @@ const server = Bun.serve({
 
     // ----- Auth: login -----
     if (pathname === '/api/auth/login' && method === 'POST') {
-      const ip = getClientIP(req);
+      const ip = getClientIP(req, server);
       const rl = checkRateLimit(ip);
       if (!rl.ok) {
         const response = json({ error: `تلاش‌های ناموفق زیاد. لطفاً ${rl.retryAfter} ثانیه صبر کنید.` }, 429, req);
@@ -1739,7 +1772,16 @@ const server = Bun.serve({
       const previousVideos = existing ? rowToShow(existing).videos : [];
       const videoValidation = validateShowVideos(merged.videos, previousVideos);
       if (!videoValidation.valid) return json({ error: videoValidation.error }, 400, req);
-      const duplicate = findDuplicateShow(merged, num);
+      // Existing records may already have a legacy duplicate in the archive.
+      // Allow metadata/category edits when the record identity is unchanged;
+      // only run the cross-record duplicate guard when name/IMDb/Wikipedia
+      // identity is actually being changed (or when restoring a missing row).
+      const previous = existing ? rowToShow(existing) : null;
+      const identityChanged = !previous ||
+        normalizeCatalogValue(merged.name) !== normalizeCatalogValue(previous.name) ||
+        extractIMDbId(merged.imdb) !== extractIMDbId(previous.imdb) ||
+        extractWikipediaTitle(merged.wikipedia) !== extractWikipediaTitle(previous.wikipedia);
+      const duplicate = identityChanged ? findDuplicateShow(merged, num) : null;
       if (duplicate) {
         return json({ error: 'این برنامه با رکورد دیگری تکراری است: «' + duplicate.name + '» — ژانر اصلی: ' + getPrimaryGenre(duplicate.category), duplicate: { num: duplicate.num, name: duplicate.name, category: duplicate.category, primaryGenre: getPrimaryGenre(duplicate.category) } }, 409, req);
       }

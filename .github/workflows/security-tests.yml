@@ -19,7 +19,7 @@ on:
       - 'package.json'
       - '.github/workflows/security-tests.yml'
   pull_request:
-    branches: [main, 'fix/**']
+    branches: [main, 'fix/**', 'feat/**']
     paths:
       - 'mini-services/api-service/**'
       - 'scripts/security-test.sh'
