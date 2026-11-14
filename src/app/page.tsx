@@ -96,16 +96,22 @@ const NO_DECOR_PREFIXES: string[] = [
   'خارج از ژانر تاک‌شو:',  // competition/reality/documentary — not analyzable as decor
 ];
 
+function canAnalyzeDecor(show: Partial<TalkShow>): boolean {
+  if (show.isFilm) return false;
+  const categories = String(show.category || '').split('|').map(value => value.trim()).filter(Boolean);
+  if (categories.some(category =>
+    NO_DECOR_CATEGORIES.includes(category) ||
+    NO_DECOR_PREFIXES.some(prefix => category.startsWith(prefix))
+  )) return false;
+  return true;
+}
+
 function hasDecor(show: Partial<TalkShow>): boolean {
-  // New/edited records honor the explicit checkbox. Legacy records retain their
-  // previous classification until a user makes an explicit choice.
+  // A genre that cannot have an analyzable studio set is never eligible,
+  // even if an old row or a stale form value has decorIncluded=true.
+  if (!canAnalyzeDecor(show)) return false;
   if (typeof show.decorIncluded === 'boolean') return show.decorIncluded;
-  if (show.isFilm) return false;            // films/series have no TV-studio decor
-  const cat = show.category || '';
-  if (NO_DECOR_CATEGORIES.includes(cat)) return false;
-  for (const p of NO_DECOR_PREFIXES) {
-    if (cat.startsWith(p)) return false;
-  }
+  // Preserve legacy inclusion only for categories that can genuinely have a set.
   return true;
 }
 
@@ -5186,8 +5192,8 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
           />
           <FormField label="کشور مبدا" value={form.country || ''} onChange={v => setForm({ ...form, country: v })} placeholder="مثلاً: ایران، ترکیه" />
           <label className="flex items-center gap-3 rounded-xl p-3 sm:col-span-2" style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(255,255,255,0.22)', color: '#f0fdf4', cursor: 'pointer' }}>
-            <input type="checkbox" checked={form.decorIncluded ?? (editingShow ? hasDecor(editingShow) : false)} onChange={e => setForm({ ...form, decorIncluded: e.target.checked })} />
-            <span><strong>قرار دادن در ژانر «دکور برنامه‌ها»</strong><span className="block text-xs opacity-75 mt-1">فقط با انتخاب این گزینه، برنامه در بخش دکور نمایش داده می‌شود.</span></span>
+            <input type="checkbox" checked={canAnalyzeDecor(form) && (form.decorIncluded ?? (editingShow ? hasDecor(editingShow) : false))} disabled={!canAnalyzeDecor(form)} onChange={e => setForm({ ...form, decorIncluded: e.target.checked })} />
+            <span><strong>قرار دادن در ژانر «دکور برنامه‌ها»</strong><span className="block text-xs opacity-75 mt-1">{canAnalyzeDecor(form) ? 'فقط با انتخاب این گزینه، برنامه در بخش دکور نمایش داده می‌شود.' : 'این ژانر یا نوع برنامه برای تحلیل دکور استودیویی مناسب نیست و در بخش دکور قرار نمی‌گیرد.'}</span></span>
           </label>
 
           <FormSelect
