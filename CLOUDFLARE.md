@@ -1,6 +1,6 @@
 # Cloudflare deployment
 
-The current Next.js application is deployed as a Node.js standalone server for Electron and conventional web hosting. Cloudflare support is an explicit, separate OpenNext build; the legacy `worker/` directory is not the production frontend or API for this application.
+The current Next.js application is built for Node.js standalone hosting and Electron by default. Cloudflare Workers uses a separate OpenNext build; the legacy `worker/` directory is not the current frontend or API.
 
 ## Local validation
 
@@ -10,23 +10,33 @@ bun run cloudflare:build
 bun run cloudflare:preview
 ```
 
-Deploy only after the Cloudflare preview passes and the required secrets/bindings have been configured:
+Deploy only after the local Worker preview and the Cloudflare CI build pass:
 
 ```sh
 bun run cloudflare:deploy
 ```
 
-Required environment configuration:
-- `BANKRESANEH_API_BASE`: HTTPS origin for the current Bun-compatible API service.
-- `BANKRESANEH_ALLOWED_API_ORIGINS`: comma-separated HTTPS origins permitted as per-user API backends.
-- `OMDB_API_KEY` and any translation-provider credentials used by the deployment.
+## Required production configuration
 
-## Production blockers that must be resolved before enabling public deployment
+The Worker hosts the Next.js frontend and route handlers. The data/auth service remains a separate Bun API deployment with persistent SQLite storage.
 
-The current application still has Node-specific persistence and runtime dependencies:
-- Prisma uses SQLite for translation rate limits and local application data. A Cloudflare Worker cannot mount the desktop SQLite file; this must be moved to D1 or a separately hosted API.
-- Report settings and custom logo currently use filesystem persistence. They need durable R2/KV storage (or the selected API backend) before deploying multiple Worker instances.
-- The logo route currently uses native `sharp`; image normalization must be moved to a Workers-compatible implementation or performed before upload.
-- The OpenNext build must pass against the actual application. Adding an adapter/config is not equivalent to a verified production deployment.
+Set these Worker environment values:
+- `BANKRESANEH_API_BASE`: HTTPS origin for the Bun API service.
+- `BANKRESANEH_ALLOWED_API_ORIGINS`: comma-separated HTTPS origins allowed for per-user API-server switching.
 
-No Cloudflare account resources are created or deployed by CI. The legacy D1 worker under `worker/` remains isolated and must not be pointed at production traffic.
+Set secrets and provider credentials with Wrangler/Cloudflare secrets; do not commit them.
+
+The following state is now stored by the selected Bun API backend, rather than the Next.js frontend filesystem:
+- report title, subtitle, and organization defaults;
+- report logo bytes and metadata;
+- per-user persistent translation rate-limit buckets.
+
+The API service must use a persistent writable disk/volume for its SQLite database and report assets. Configure HTTPS, a strict CORS allowlist, a changed initial admin password, and the API host allowlist before exposing it publicly.
+
+## Deployment verification still required
+
+- `cloudflare:build` and `cloudflare:preview` must pass against the actual app before deploying.
+- A live Cloudflare account, Worker name/domain, secrets, and API hostname are not configured in this repository. CI never deploys or creates Cloudflare resources.
+- Verify login, report settings/logo, translation throttling, social publishing, image import, and binary PDF generation against the deployed Worker plus the persistent Bun API. A successful adapter build alone is not proof of production readiness.
+
+Cloudflare recommends vinext for new Next.js projects and documents OpenNext as the maintenance path for existing OpenNext applications. This repository keeps Next.js and uses the explicit OpenNext adapter to avoid an unrequested framework migration.
