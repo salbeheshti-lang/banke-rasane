@@ -243,6 +243,11 @@ async function main() {
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p2sAAAAASUVORK5CYII=',
     'base64'
   );
+  const managerLogoForm = new FormData();
+  managerLogoForm.append('file', new Blob([png], { type: 'image/png' }), 'manager-logo.png');
+  const managerLogoSaved = await request(nextBase, '/api/settings/logo', { method: 'POST', token: editorToken, body: managerLogoForm });
+  assert(managerLogoSaved.status === 200 && managerLogoSaved.data.ok, 'manager/editor can upload and normalize the shared report logo');
+
   const form = new FormData();
   form.append('file', new Blob([png], { type: 'image/png' }), 'test-logo.png');
   const logoSaved = await request(nextBase, '/api/settings/logo', { method: 'POST', token: adminToken, body: form });
@@ -254,7 +259,7 @@ async function main() {
     method: 'POST', token: adminToken,
     body: { shows: [{ num: 1, name: 'Integration Show', category: 'مصاحبه', summary: 'Test', descriptionFa: 'تست', images: [] }] },
   });
-  assert(exportHtml.status === 200 && exportHtml.contentType.includes('text/html') && String(exportHtml.data).includes('Integration report'),
+  assert(exportHtml.status === 200 && exportHtml.contentType.includes('text/html') && String(exportHtml.data).includes('Manager report'),
     'PDF export route generates printable report HTML using saved settings');
 
   const importValidation = await request(nextBase, '/api/fetch-show-info', {
