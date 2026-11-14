@@ -25,7 +25,8 @@
     "cloudflare:preview": "opennextjs-cloudflare build && wrangler dev",
     "cloudflare:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "test:export": "node scripts/test-export-formats.cjs",
-    "test:rate-limit": "bun scripts/test-rate-limit-atomic.mjs"
+    "test:rate-limit": "bun scripts/test-rate-limit-atomic.mjs",
+    "test:cloudflare-preview": "node scripts/test-cloudflare-preview.cjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
