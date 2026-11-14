@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { requireUser, gatePermission } from '@/lib/server-auth';
+import { requireUser, gatePermissionAny } from '@/lib/server-auth';
 import { getDataFile } from '@/lib/data-dir';
 
 export const runtime = 'nodejs';
@@ -63,12 +63,12 @@ export async function GET(request: NextRequest) {
 }
 
 // POST → save updated settings. Body: { title?, subtitle?, organization? }
-// Auth: requires manage_settings permission (admin-only by default).
+// Auth: admins and managers/editors who can export reports may manage report defaults.
 export async function POST(request: NextRequest) {
   // --- Auth: only admins (manage_settings permission) can change report settings ---
-  const gate = await gatePermission(request, 'manage_settings');
+  const gate = await gatePermissionAny(request, 'manage_settings', 'export_reports');
   if (!gate.ok) {
-    return NextResponse.json({ ok: false, error: gate.status === 401 ? 'احراز هویت لازم است' : 'دسترسی غیرمجاز — نیاز به دسترسی مدیر' }, { status: gate.status });
+    return NextResponse.json({ ok: false, error: gate.status === 401 ? 'احراز هویت لازم است' : 'دسترسی غیرمجاز — فقط مدیران و مدیران اجرایی می‌توانند تنظیمات گزارش را تغییر دهند' }, { status: gate.status });
   }
   const admin = gate.user;
   try {

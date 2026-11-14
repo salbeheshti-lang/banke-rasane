@@ -94,7 +94,7 @@ const NO_DECOR_PREFIXES: string[] = [
   'خارج از ژانر تاک‌شو:',  // competition/reality/documentary — not analyzable as decor
 ];
 
-function hasDecor(show: TalkShow): boolean {
+function hasDecor(show: Partial<TalkShow>): boolean {
   // New/edited records honor the explicit checkbox. Legacy records retain their
   // previous classification until a user makes an explicit choice.
   if (typeof show.decorIncluded === 'boolean') return show.decorIncluded;
@@ -1162,7 +1162,8 @@ function HomeInner() {
   // User clicked "+ افزودن برنامه" from inside a genre view → preset the category
   // so AddEditView opens with this genre's Persian name already chosen.
   const handleAddFromGenre = (g: Genre) => {
-    setPresetCategory(g.nameFa);
+    // The Decor view is a cross-category analysis view, not a real show category.
+    setPresetCategory(g.id === 'decor' ? undefined : g.nameFa);
     setPresetGenre(g);
     setEditingShow(null);
     setViewStack(prev => [...prev, { view: currentView, genre: selectedGenre }]);
@@ -3296,52 +3297,105 @@ function GenreFileAttachment({ genreId, genreName, canEdit }: {
   canEdit: boolean;
 }) {
   const STORAGE_KEY = `bankresaneh_genre_file_${genreId}`;
-  const [fileData, setFileData] = useState<{ name: string; type: string; data: string } | null>(null);
+  const [fileData, setFileData] = useState<{ name: string; type: string; size: number; updatedAt: number } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setFileData(JSON.parse(raw));
+    let active = true;
+    const loadSharedFile = async () => {
+      setLoading(true);
+      try {
+        const remote = await api.getGenreFileInfo(genreId);
+        if (active) setFileData(remote);
+        return;
+      } catch {
+        // One-time migration: older releases stored this attachment only in
+        // the uploader's localStorage. Move it to the shared API when possible.
+        if (canEdit) {
+          try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) {
+              const legacy = JSON.parse(raw);
+              if (typeof legacy?.data === 'string' && typeof legacy?.name === 'string') {
+                const blobResponse = await fetch(legacy.data);
+                const blob = await blobResponse.blob();
+                const file = new File([blob], legacy.name, { type: legacy.type || blob.type });
+                await api.uploadGenreFile(genreId, file);
+                localStorage.removeItem(STORAGE_KEY);
+                const migrated = await api.getGenreFileInfo(genreId);
+                if (active) setFileData(migrated);
+                return;
+              }
+            }
+          } catch {
+            // Keep the local copy if the shared server is unavailable or rejects it.
+          }
+        }
+        if (active) setFileData(null);
+      } finally {
+        if (active) setLoading(false);
       }
-    } catch {}
-  }, [STORAGE_KEY]);
+    };
+    void loadSharedFile();
+    return () => { active = false; };
+  }, [genreId, canEdit]);
 
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
       alert('حداکثر حجم فایل ۵ مگابایت');
+      e.target.value = '';
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const data = { name: file.name, type: file.type, data: reader.result as string };
-      setFileData(data);
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {
-        alert('خطا در ذخیره — حجم فایل زیاد است');
-      }
-    };
-    reader.readAsDataURL(file);
+    setUploading(true);
+    try {
+      await api.uploadGenreFile(genreId, file);
+      localStorage.removeItem(STORAGE_KEY);
+      const saved = await api.getGenreFileInfo(genreId);
+      setFileData(saved);
+      alert('فایل برای همهٔ کاربران ثبت شد.');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'بارگذاری فایل ناموفق بود');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
   };
 
-  const handleDownload = () => {
-    if (!fileData) return;
-    const a = document.createElement('a');
-    a.href = fileData.data;
-    a.download = fileData.name;
-    a.click();
+  const handleDownload = async () => {
+    try {
+      const { blob, filename } = await api.downloadGenreFile(genreId);
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = filename || fileData?.name || 'genre-attachment';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'دریافت فایل ناموفق بود');
+    }
   };
 
-  const handleDelete = () => {
-    setFileData(null);
-    localStorage.removeItem(STORAGE_KEY);
+  const handleDelete = async () => {
+    if (!window.confirm(`فایل پیوست ژانر «${genreName}» حذف شود؟`)) return;
+    try {
+      await api.deleteGenreFile(genreId);
+      localStorage.removeItem(STORAGE_KEY);
+      setFileData(null);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'حذف فایل ناموفق بود');
+    }
   };
 
   return (
     <div className="flex items-center gap-2 mt-3 flex-wrap">
-      {fileData ? (
+      {loading ? (
+        <span className="text-xs" style={{ color: 'rgba(244,255,255,0.65)' }}>در حال بررسی پیوست...</span>
+      ) : fileData ? (
         <>
           <button
             onClick={handleDownload}
@@ -3375,10 +3429,12 @@ function GenreFileAttachment({ genreId, genreName, canEdit }: {
             background: 'rgba(255,255,255,0.1)',
             color: 'rgba(255,255,255,0.8)',
             border: '1px solid rgba(255,255,255,0.2)',
+            opacity: uploading ? 0.6 : 1,
+            cursor: uploading ? 'wait' : 'pointer',
           }}
         >
-          📎 آپلود PDF/Excel
-          <input type="file" accept=".pdf,.xls,.xlsx,.csv" onChange={handleUpload} style={{ display: 'none' }} />
+          {uploading ? '⏳ در حال بارگذاری...' : '📎 آپلود PDF/Excel'}
+          <input type="file" accept=".pdf,.xls,.xlsx,.csv" onChange={handleUpload} disabled={uploading} style={{ display: 'none' }} />
         </label>
       ) : null}
     </div>
@@ -4718,7 +4774,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       imdb: '',
       wikipedia: '',
       country: '',
-      decorIncluded: false,
+      decorIncluded: presetGenre?.id === 'decor',
       tags: [],
     }
   );
@@ -4826,7 +4882,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       const res = await fetch('/api/fetch-show-info', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({ url: fetchUrl }),
+        body: JSON.stringify({ url: fetchUrl, category: form.category, showName: form.name, isDecor: hasDecor(form) }),
       });
       const data = await res.json();
       if (!res.ok || data.error) {
@@ -7625,7 +7681,8 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
   const [rSubtitle, setRSubtitle] = useState('');
   const [rOrg, setROrg] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
-  const [logoVersion, setLogoVersion] = useState(0);          // cache-buster for the logo <img>
+  const [logoVersion, setLogoVersion] = useState(0);          // refreshes the authenticated logo preview after upload
+  const [logoSrc, setLogoSrc] = useState('');
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
   // Load persisted report defaults once on mount.
@@ -7644,6 +7701,29 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  // The uploaded logo lives in the writable app-data directory, not /public.
+  // Fetch it with the user's Bearer token and render it through a temporary blob URL.
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl = '';
+    (async () => {
+      try {
+        const res = await fetch('/api/settings/logo', { headers: { ...authHeaders() } });
+        if (!res.ok) throw new Error('Custom logo is unavailable');
+        const blob = await res.blob();
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setLogoSrc(objectUrl);
+      } catch {
+        if (!cancelled) setLogoSrc('');
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [logoVersion]);
 
   const handleSaveSettings = async () => {
     setSavingSettings(true);
@@ -7749,17 +7829,10 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                   className="w-24 h-24 rounded-xl flex items-center justify-center overflow-hidden"
                   style={{ background: 'rgba(255,255,255,0.05)', border: '2px dashed rgba(16, 185, 129, 0.35)' }}
                 >
-                  {/* logoVersion cache-busts so a freshly uploaded logo re-renders
-                      immediately instead of serving the browser-cached old file. */}
                   <img
-                    key={logoVersion}
-                    src={`/uploads/logo.png?v=${logoVersion}`}
+                    src={logoSrc || '/banke-rasane-logo.png'}
                     alt={t('reports.reportLogo')}
                     style={{ width: '72px', height: 'auto', objectFit: 'contain' }}
-                    onError={(e) => {
-                      // Fall back to the default program logo if no custom logo exists yet.
-                      (e.currentTarget as HTMLImageElement).src = '/banke-rasane-logo.png';
-                    }}
                   />
                 </div>
                 <label
@@ -8295,28 +8368,32 @@ function SettingsReportTab({ showToast }: { showToast: (msg: string) => void }) 
   const [title, setTitle] = useState('');
   const [subtitle, setSubtitle] = useState('');
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [report, setReport] = useState<any>(null);
   const [reportLoading, setReportLoading] = useState(true);
   const [days, setDays] = useState(30);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('bankresaneh_report_defaults');
-      if (saved) {
-        const obj = JSON.parse(saved);
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setTitle(obj.title || '');
-         
-        setSubtitle(obj.subtitle || '');
-      } else {
-         
-        setTitle('گزارش جامع برنامه‌های تلویزیونی');
-         
-        setSubtitle('مرجع جامع برنامه‌های تلویزیونی بین‌المللی');
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch('/api/settings/report', { headers: { ...authHeaders() } });
+        if (!response.ok) throw new Error('Unable to load report defaults');
+        const settings = await response.json();
+        if (!cancelled) {
+          setTitle(settings.title || 'گزارش جامع آرشیو برنامه‌های تلویزیونی');
+          setSubtitle(settings.subtitle || 'بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی');
+        }
+      } catch {
+        if (!cancelled) {
+          setTitle('گزارش جامع آرشیو برنامه‌های تلویزیونی');
+          setSubtitle('بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    } catch {}
-     
-    setLoading(false);
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -8330,12 +8407,20 @@ function SettingsReportTab({ showToast }: { showToast: (msg: string) => void }) 
     return () => { cancelled = true; };
   }, [days]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    setSaving(true);
     try {
-      localStorage.setItem('bankresaneh_report_defaults', JSON.stringify({ title, subtitle }));
+      const response = await fetch('/api/settings/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ title, subtitle }),
+      });
+      if (!response.ok) throw new Error('Unable to save report defaults');
       showToast(t('reports.settingsSaved'));
     } catch {
       showToast(t('reports.settingsError'));
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -8591,10 +8676,11 @@ function SettingsReportTab({ showToast }: { showToast: (msg: string) => void }) 
           />
         </div>
         <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '8px' }}>
-          این عنوان‌ها در گزارش‌های PDF و Excel به‌صورت پیش‌فرض استفاده می‌شوند.
+          این عنوان‌ها به‌صورت مشترک و پیش‌فرض در خروجی PDF استفاده می‌شوند.
         </p>
         <button
           onClick={handleSave}
+          disabled={saving}
           className="mt-3"
           style={{
             width: '100%', padding: '12px', borderRadius: '14px',
@@ -8603,7 +8689,7 @@ function SettingsReportTab({ showToast }: { showToast: (msg: string) => void }) 
             border: '1px solid rgba(255,255,255,0.3)', cursor: 'pointer',
           }}
         >
-          ✓ ذخیره تنظیمات
+          {saving ? 'در حال ذخیره…' : '✓ ذخیره تنظیمات'}
         </button>
       </div>
     </div>

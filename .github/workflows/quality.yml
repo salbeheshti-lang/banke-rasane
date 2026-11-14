@@ -36,6 +36,17 @@ jobs:
       - name: Test API video upload validation
         run: node --test mini-services/api-service/video-validation.test.mjs
 
+      - name: Audit bundled archive seed data
+        run: bun run test:seed-data
+
+      - name: Compare bundled archive with all checked-in seed sources
+        run: bun run test:seed-sources
+
+      - name: Test API CRUD, duplicate protection, and shared genre files
+        run: bun run test:api-crud
+        env:
+          BUN_BINARY: bun
+
       - name: Lint
         run: bun run lint
 
@@ -43,6 +54,11 @@ jobs:
         run: bun run build
         env:
           DATABASE_URL: file:./db/custom.db
+
+      - name: Test authenticated Next.js API routes against a real Bun API
+        run: bun run test:next-api
+        env:
+          BUN_BINARY: bun
 
       - name: Type check
         run: bun run typecheck

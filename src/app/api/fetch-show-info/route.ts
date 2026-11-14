@@ -46,9 +46,58 @@ async function fetchImdbPoster(imdbId: string): Promise<string | null> {
   return null;
 }
 
+async function fetchWikipediaShowImage(title: string): Promise<string | null> {
+  const query = cleanQuery(title);
+  if (!query) return null;
+
+  // Search the English and Persian encyclopedias before falling back to
+  // Wikimedia Commons. This matters for Iranian programmes whose articles
+  // or studio images are indexed only in Persian.
+  for (const lang of ['en', 'fa']) {
+    const search = await fetchRetry(
+      `https://${lang}.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrnamespace=0&gsrlimit=6&prop=pageimages&piprop=original|thumbnail&pithumbsize=1200&format=json`,
+      { headers: { 'User-Agent': UA, 'Accept': 'application/json' } },
+      1,
+    );
+    if (!search) continue;
+    const data = await search.json();
+    const pages = Object.values(data?.query?.pages || {}) as any[];
+    for (const page of pages) {
+      const candidate = page?.original?.source || page?.thumbnail?.source;
+      if (typeof candidate !== 'string') continue;
+      try {
+        const image = new URL(candidate);
+        if (image.protocol === 'https:' && image.hostname === 'upload.wikimedia.org') return image.href;
+      } catch {
+        // Ignore malformed image URLs and continue to the next result.
+      }
+    }
+  }
+
+  const commons = await fetchRetry(
+    `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrnamespace=6&gsrlimit=8&prop=imageinfo&iiprop=url&iiurlwidth=1200&format=json`,
+    { headers: { 'User-Agent': UA, 'Accept': 'application/json' } },
+    1,
+  );
+  if (!commons) return null;
+  const commonsData = await commons.json();
+  const files = Object.values(commonsData?.query?.pages || {}) as any[];
+  for (const file of files) {
+    const candidate = file?.imageinfo?.[0]?.thumburl || file?.imageinfo?.[0]?.url;
+    if (typeof candidate !== 'string') continue;
+    try {
+      const image = new URL(candidate);
+      if (image.protocol === 'https:' && image.hostname === 'upload.wikimedia.org') return image.href;
+    } catch {
+      // Ignore malformed Commons results.
+    }
+  }
+  return null;
+}
+
 async function fetchRetry(url: string, opts: any = {}, retries = 2) {
   for (let i=0; i<=retries; i++) {
-    try { const r = await fetch(url, opts); if (r.ok) return r; if (r.status===429) { await new Promise(x=>setTimeout(x,3000*(i+1))); continue; } }
+    try { const r = await fetch(url, { ...opts, signal: opts.signal || AbortSignal.timeout(12000) }); if (r.ok) return r; if (r.status===429) { await new Promise(x=>setTimeout(x,3000*(i+1))); continue; } }
     catch(e) { if (i===retries) throw e; await new Promise(x=>setTimeout(x,1500)); }
   }
   return null;
@@ -63,7 +112,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: gate.status === 401 ? 'احراز هویت لازم است' : 'دسترسی غیرمجاز — نیاز به دسترسی افزودن یا ویرایش برنامه' }, { status: gate.status });
   }
   try {
-    const { url } = await request.json();
+    const { url, category = '', showName = '', isDecor: explicitIsDecor } = await request.json();
     if (typeof url !== 'string' || !url.trim()) return NextResponse.json({ error: 'URL الزامی است' }, { status: 400 });
     let parsed: URL;
     try { parsed = new URL(url); } catch { return NextResponse.json({ error: 'لینک معتبر نیست' }, { status: 400 }); }
@@ -73,6 +122,9 @@ export async function POST(request: NextRequest) {
     const isWikipedia = host === 'wikipedia.org' || host.endsWith('.wikipedia.org');
     if (!isImdb && !isWikipedia) return NextResponse.json({ error: 'فعلاً فقط لینک IMDb و ویکی‌پدیا پشتیبانی می‌شود' }, { status: 400 });
     const info: Record<string,string> = {};
+    const isDecor = typeof explicitIsDecor === 'boolean'
+      ? explicitIsDecor
+      : /(?:^|[,،\s])(?:دکور|decor)(?:$|[,،\s])/i.test(String(category || ''));
 
     if (isImdb) {
       const imdbMatch = parsed.pathname.match(/(?:^|\/)title\/(tt\d+)/i) || parsed.href.match(/\b(tt\d+)\b/i);
@@ -95,7 +147,8 @@ export async function POST(request: NextRequest) {
       if (record?.Response === 'True') {
         if (record.Title) info.title = record.Title;
         if (record.Plot && record.Plot !== 'N/A') info.description = record.Plot;
-        if (record.Poster && record.Poster !== 'N/A' && /^https:\/\//i.test(record.Poster)) info.image = record.Poster;
+        // Preserve IMDb/OMDb posters for other genres; decor needs real program/set imagery.
+        if (!isDecor && record.Poster && record.Poster !== 'N/A' && /^https:\/\//i.test(record.Poster)) info.image = record.Poster;
         if (record.imdbRating && record.imdbRating !== 'N/A') info.rating = record.imdbRating;
         if (record.Genre && record.Genre !== 'N/A') info.genres = record.Genre;
         if (record.Year && record.Year !== 'N/A') info.year = record.Year;
@@ -105,7 +158,12 @@ export async function POST(request: NextRequest) {
         if (record.Country && record.Country !== 'N/A') info.country = record.Country;
         info.imdbUrl = parsed.href;
       }
-      if (!info.image && imdbMatch) {
+      if (isDecor) {
+        // Keep the existing no-IMDb-poster rule for decor, and add a
+        // Wikipedia/Wikimedia image search using the resolved or entered show name.
+        const decorImage = await fetchWikipediaShowImage(info.title || String(showName || ''));
+        if (decorImage) info.image = decorImage;
+      } else if (!info.image && imdbMatch) {
         const fallbackPoster = await fetchImdbPoster(imdbMatch[1]);
         if (fallbackPoster) info.image = fallbackPoster;
       }

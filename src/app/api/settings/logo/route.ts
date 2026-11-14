@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import sharp from 'sharp';
-import { gatePermission } from '@/lib/server-auth';
+import { gatePermissionAny } from '@/lib/server-auth';
 import { getDataFile } from '@/lib/data-dir';
 
 export const runtime = 'nodejs';
@@ -22,11 +22,46 @@ const MAX_IMAGE_DIMENSION = 4096;
  *
  * Auth: requires manage_settings permission (admin-only by default).
  */
+
+/**
+ * GET /api/settings/logo
+ * Serve the persisted custom logo from the writable app-data directory.
+ * The caller must be authenticated and have settings-management permission.
+ */
+export async function GET(request: NextRequest) {
+  const gate = await gatePermissionAny(request, 'manage_settings', 'export_reports');
+  if (!gate.ok) {
+    return NextResponse.json(
+      { ok: false, error: gate.status === 401 ? 'احراز هویت لازم است' : 'دسترسی غیرمجاز — فقط مدیران و مدیران اجرایی می‌توانند لوگوی گزارش را تغییر دهند' },
+      { status: gate.status }
+    );
+  }
+
+  try {
+    if (!fs.existsSync(LOGO_FILE)) {
+      return NextResponse.json({ ok: false, error: 'لوگوی سفارشی ثبت نشده است' }, { status: 404 });
+    }
+    const image = fs.readFileSync(LOGO_FILE);
+    return new NextResponse(new Uint8Array(image), {
+      status: 200,
+      headers: {
+        'Content-Type': 'image/png',
+        'Content-Length': String(image.length),
+        'Cache-Control': 'private, no-store, max-age=0',
+        'X-Content-Type-Options': 'nosniff',
+      },
+    });
+  } catch (error) {
+    console.error('logo read error:', error);
+    return NextResponse.json({ ok: false, error: 'خواندن لوگو ناموفق بود' }, { status: 500 });
+  }
+}
+
 export async function POST(request: NextRequest) {
   // --- Auth: only admins (manage_settings permission) can replace the logo ---
-  const gate = await gatePermission(request, 'manage_settings');
+  const gate = await gatePermissionAny(request, 'manage_settings', 'export_reports');
   if (!gate.ok) {
-    return NextResponse.json({ ok: false, error: gate.status === 401 ? 'احراز هویت لازم است' : 'دسترسی غیرمجاز — نیاز به دسترسی مدیر' }, { status: gate.status });
+    return NextResponse.json({ ok: false, error: gate.status === 401 ? 'احراز هویت لازم است' : 'دسترسی غیرمجاز — فقط مدیران و مدیران اجرایی می‌توانند لوگوی گزارش را تغییر دهند' }, { status: gate.status });
   }
   const admin = gate.user;
   try {
@@ -78,7 +113,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       path: LOGO_FILE,
-      url: '/uploads/logo.png',
+      url: '/api/settings/logo',
       size: png.length,
     });
   } catch (error) {

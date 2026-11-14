@@ -12,8 +12,9 @@ const nextConfig: NextConfig = {
     "*.space-z.ai",
     "https://*.space-z.ai",
   ],
-  // For Cloudflare Pages deployment, we'll keep standalone mode
-  // The API routes will be handled by the Worker
+  // This standalone output is intended for the Node.js/Electron runtime.
+  // Cloudflare Pages is not supported by this config alone: it needs an
+  // OpenNext-compatible adapter and a current Worker/API implementation.
 };
 
 export default nextConfig;

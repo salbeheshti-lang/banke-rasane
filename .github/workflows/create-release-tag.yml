@@ -1,9 +1,17 @@
-name: Create release tag from release branch
+name: Create release tag (manual approval only)
 
 on:
-  push:
-    branches:
-      - 'release/v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to create (must match package.json, e.g. v5.4.4)"
+        required: true
+        type: string
+      confirm:
+        description: "I explicitly approve creating this Git tag and dispatching the Windows release build"
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   actions: write
@@ -11,24 +19,26 @@ permissions:
 
 jobs:
   create-tag:
-    if: startsWith(github.ref, 'refs/heads/release/v')
+    if: inputs.confirm == true
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout release branch
+      - name: Checkout selected ref
         uses: actions/checkout@v4
 
-      - name: Validate release branch against package version
+      - name: Validate requested tag against package version
         id: validate
         shell: bash
+        env:
+          REQUESTED_TAG: ${{ inputs.tag }}
         run: |
           version="$(node -p "require('./package.json').version")"
-          branch_tag="${GITHUB_REF#refs/heads/release/}"
           expected="v${version}"
-          if [[ "$branch_tag" != "$expected" ]]; then
-            echo "Release branch $branch_tag does not match package version $expected"
+          tag="$(printf '%s' "$REQUESTED_TAG" | tr -d '[:space:]')"
+          if [[ "$tag" != "$expected" ]]; then
+            echo "Requested tag $tag does not match package version $expected"
             exit 1
           fi
-          echo "tag=$branch_tag" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
       - name: Create matching Git tag
         uses: actions/github-script@v7
@@ -55,8 +65,6 @@ jobs:
               });
               core.notice(`Created ${tag} at ${context.sha}`);
             }
-            // GITHUB_TOKEN-created tags do not trigger push workflows. Dispatch
-            // the existing build workflow explicitly against the tag ref.
             await github.rest.actions.createWorkflowDispatch({
               owner,
               repo,
@@ -64,3 +72,10 @@ jobs:
               ref: tag,
             });
             core.notice(`Dispatched Windows release build for ${tag}`);
+
+  approval-required:
+    if: inputs.confirm != true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Stop without explicit approval
+        run: echo "No tag created. Set confirm=true only after explicit release approval."
