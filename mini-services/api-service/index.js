@@ -1761,7 +1761,16 @@ const server = Bun.serve({
       const previousVideos = existing ? rowToShow(existing).videos : [];
       const videoValidation = validateShowVideos(merged.videos, previousVideos);
       if (!videoValidation.valid) return json({ error: videoValidation.error }, 400, req);
-      const duplicate = findDuplicateShow(merged, num);
+      // Existing records may already have a legacy duplicate in the archive.
+      // Allow metadata/category edits when the record identity is unchanged;
+      // only run the cross-record duplicate guard when name/IMDb/Wikipedia
+      // identity is actually being changed (or when restoring a missing row).
+      const previous = existing ? rowToShow(existing) : null;
+      const identityChanged = !previous ||
+        normalizeCatalogValue(merged.name) !== normalizeCatalogValue(previous.name) ||
+        extractIMDbId(merged.imdb) !== extractIMDbId(previous.imdb) ||
+        extractWikipediaTitle(merged.wikipedia) !== extractWikipediaTitle(previous.wikipedia);
+      const duplicate = identityChanged ? findDuplicateShow(merged, num) : null;
       if (duplicate) {
         return json({ error: 'این برنامه با رکورد دیگری تکراری است: «' + duplicate.name + '» — ژانر اصلی: ' + getPrimaryGenre(duplicate.category), duplicate: { num: duplicate.num, name: duplicate.name, category: duplicate.category, primaryGenre: getPrimaryGenre(duplicate.category) } }, 409, req);
       }
