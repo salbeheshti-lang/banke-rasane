@@ -82,10 +82,24 @@ export async function POST(request: NextRequest) {
 
     const pdfModule: any = await import('@digicole/pdfmake-rtl');
     const pdfMake: any = pdfModule.default || pdfModule;
-    const cairoFonts: any = await import('@digicole/pdfmake-rtl/fonts/Cairo');
-    const robotoFonts: any = await import('@digicole/pdfmake-rtl/fonts/Roboto');
-    pdfMake.addFonts(cairoFonts.default || cairoFonts);
-    pdfMake.addFonts(robotoFonts.default || robotoFonts);
+    // Embed the RTL and Latin font files into the bundle. Filesystem-based
+    // font paths break in standalone packaging and Cloudflare Workers.
+    const virtualFonts: any = await import('@digicole/pdfmake-rtl/build/vfs_fonts');
+    pdfMake.addVirtualFileSystem(virtualFonts.default || virtualFonts);
+    pdfMake.addFonts({
+      Cairo: {
+        normal: 'Cairo-Regular.ttf',
+        bold: 'Cairo-Bold.ttf',
+        italics: 'Cairo-Light.ttf',
+        bolditalics: 'Cairo-SemiBold.ttf',
+      },
+      Roboto: {
+        normal: 'Roboto-Regular.ttf',
+        bold: 'Roboto-Medium.ttf',
+        italics: 'Roboto-Italic.ttf',
+        bolditalics: 'Roboto-MediumItalic.ttf',
+      },
+    });
     const docDefinition: any = {
       pageSize: 'A4',
       pageOrientation: 'landscape',
