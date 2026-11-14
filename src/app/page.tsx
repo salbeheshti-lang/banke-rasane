@@ -7625,7 +7625,8 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
   const [rSubtitle, setRSubtitle] = useState('');
   const [rOrg, setROrg] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
-  const [logoVersion, setLogoVersion] = useState(0);          // cache-buster for the logo <img>
+  const [logoVersion, setLogoVersion] = useState(0);          // refreshes the authenticated logo preview after upload
+  const [logoSrc, setLogoSrc] = useState('');
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
   // Load persisted report defaults once on mount.
@@ -7644,6 +7645,29 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  // The uploaded logo lives in the writable app-data directory, not /public.
+  // Fetch it with the user's Bearer token and render it through a temporary blob URL.
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl = '';
+    (async () => {
+      try {
+        const res = await fetch('/api/settings/logo', { headers: { ...authHeaders() } });
+        if (!res.ok) throw new Error('Custom logo is unavailable');
+        const blob = await res.blob();
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setLogoSrc(objectUrl);
+      } catch {
+        if (!cancelled) setLogoSrc('');
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [logoVersion]);
 
   const handleSaveSettings = async () => {
     setSavingSettings(true);
@@ -7749,17 +7773,10 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                   className="w-24 h-24 rounded-xl flex items-center justify-center overflow-hidden"
                   style={{ background: 'rgba(255,255,255,0.05)', border: '2px dashed rgba(16, 185, 129, 0.35)' }}
                 >
-                  {/* logoVersion cache-busts so a freshly uploaded logo re-renders
-                      immediately instead of serving the browser-cached old file. */}
                   <img
-                    key={logoVersion}
-                    src={`/uploads/logo.png?v=${logoVersion}`}
+                    src={logoSrc || '/banke-rasane-logo.png'}
                     alt={t('reports.reportLogo')}
                     style={{ width: '72px', height: 'auto', objectFit: 'contain' }}
-                    onError={(e) => {
-                      // Fall back to the default program logo if no custom logo exists yet.
-                      (e.currentTarget as HTMLImageElement).src = '/banke-rasane-logo.png';
-                    }}
                   />
                 </div>
                 <label
