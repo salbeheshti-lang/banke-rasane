@@ -1129,7 +1129,10 @@ const server = Bun.serve({
         return json({ error: 'حجم فایل باید حداکثر ۵ مگابایت باشد' }, 413, req);
       }
       const rawName = String(file.name || 'attachment');
-      const fileName = rawName.replace(/[\\/\\0\\r\\n"]/g, '_').slice(0, 180);
+      const fileName = Array.from(rawName, char => {
+        const code = char.charCodeAt(0);
+        return char === '/' || char === String.fromCharCode(92) || char === '"' || code < 32 ? '_' : char;
+      }).join('').slice(0, 180);
       const extension = fileName.includes('.') ? fileName.slice(fileName.lastIndexOf('.')).toLowerCase() : '';
       const mimeByExtension = {
         '.pdf': 'application/pdf',
