@@ -23,8 +23,11 @@ async function main() {
 
   const pdfModule = require('@digicole/pdfmake-rtl');
   const pdfMake = pdfModule.default || pdfModule;
-  pdfMake.addFonts(require('@digicole/pdfmake-rtl/fonts/Cairo'));
-  pdfMake.addFonts(require('@digicole/pdfmake-rtl/fonts/Roboto'));
+  pdfMake.addVirtualFileSystem(require('@digicole/pdfmake-rtl/build/vfs_fonts'));
+  pdfMake.addFonts({
+    Cairo: { normal: 'Cairo-Regular.ttf', bold: 'Cairo-Bold.ttf', italics: 'Cairo-Light.ttf', bolditalics: 'Cairo-SemiBold.ttf' },
+    Roboto: { normal: 'Roboto-Regular.ttf', bold: 'Roboto-Medium.ttf', italics: 'Roboto-Italic.ttf', bolditalics: 'Roboto-MediumItalic.ttf' },
+  });
   const pdf = await pdfMake.createPdf({
     rtl: true,
     pageSize: 'A4',
