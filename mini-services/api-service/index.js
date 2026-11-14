@@ -12,7 +12,7 @@
 import { Database } from 'bun:sqlite';
 import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
-import { readFileSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, renameSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { validateShowVideos } from './video-validation.mjs';
 
@@ -33,6 +33,21 @@ const INITIAL_ADMIN_PASSWORD = process.env.BANKRESANEH_ADMIN_PASSWORD || '';
 const DB_PATH = process.env.DB_PATH
   ? resolve(process.env.DB_PATH)
   : resolve(import.meta.dir, 'bankresaneh.sqlite');
+
+// Shared report defaults and logo belong to the selected API backend, not to
+// the Next.js frontend host. Electron passes its userData directory here.
+const APP_DATA_DIR = process.env.BANKRESANEH_DATA_DIR
+  ? resolve(process.env.BANKRESANEH_DATA_DIR)
+  : resolve(DB_PATH, '..');
+const REPORT_SETTINGS_FILE = join(APP_DATA_DIR, 'report-settings.json');
+const REPORT_LOGO_FILE = join(APP_DATA_DIR, 'report-logo.bin');
+const REPORT_LOGO_META_FILE = join(APP_DATA_DIR, 'report-logo-meta.json');
+try { if (!existsSync(APP_DATA_DIR)) mkdirSync(APP_DATA_DIR, { recursive: true }); } catch {}
+const DEFAULT_REPORT_SETTINGS = {
+  title: 'گزارش جامع آرشیو برنامه‌های تلویزیونی',
+  subtitle: 'بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی',
+  organization: 'بانک رسانه',
+};
 
 // Ensure parent dir exists
 try {
@@ -950,6 +965,89 @@ const server = Bun.serve({
     if (pathname === '/api/health' && method === 'GET') {
       const showsCount = db.prepare('SELECT COUNT(*) AS count FROM shows').get()?.count || 0;
       return json({ status: 'ok', time: nowSec(), showsCount }, req);
+    }
+
+    // ----- Shared report defaults and logo (stored with the selected API backend) -----
+    if (pathname === '/api/settings/report' && method === 'GET') {
+      const user = requireUser(req);
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+      if (user.must_change_password) return json({ error: 'Password change required' }, 403, req);
+      let saved = {};
+      try { if (existsSync(REPORT_SETTINGS_FILE)) saved = JSON.parse(readFileSync(REPORT_SETTINGS_FILE, 'utf8')); } catch {}
+      return json({ ...DEFAULT_REPORT_SETTINGS, ...saved }, req);
+    }
+
+    if (pathname === '/api/settings/report' && method === 'POST') {
+      const user = requirePermission(req, 'export_reports') || requirePermission(req, 'manage_settings');
+      if (!user) return permissionFailure(req, 'فقط مدیران و مدیران اجرایی می‌توانند تنظیمات گزارش را تغییر دهند');
+      let body;
+      try { body = await req.json(); } catch { return json({ ok: false, error: 'بدنه درخواست معتبر نیست' }, 400, req); }
+      let current = { ...DEFAULT_REPORT_SETTINGS };
+      try { if (existsSync(REPORT_SETTINGS_FILE)) current = { ...current, ...JSON.parse(readFileSync(REPORT_SETTINGS_FILE, 'utf8')) }; } catch {}
+      const next = {
+        title: typeof body.title === 'string' && body.title.trim() ? body.title.trim().slice(0, 180) : current.title,
+        subtitle: typeof body.subtitle === 'string' && body.subtitle.trim() ? body.subtitle.trim().slice(0, 240) : current.subtitle,
+        organization: typeof body.organization === 'string' && body.organization.trim() ? body.organization.trim().slice(0, 160) : current.organization,
+        updatedAt: new Date().toISOString(),
+      };
+      try {
+        const temporary = REPORT_SETTINGS_FILE + '.tmp';
+        writeFileSync(temporary, JSON.stringify(next, null, 2), 'utf8');
+        renameSync(temporary, REPORT_SETTINGS_FILE);
+        return json({ ok: true, settings: next }, req);
+      } catch (error) {
+        return json({ ok: false, error: 'ذخیره تنظیمات گزارش ناموفق بود' }, 500, req);
+      }
+    }
+
+    if (pathname === '/api/settings/logo' && method === 'GET') {
+      const user = requirePermission(req, 'export_reports') || requirePermission(req, 'manage_settings');
+      if (!user) return permissionFailure(req, 'دسترسی به لوگوی گزارش مجاز نیست');
+      if (!existsSync(REPORT_LOGO_FILE) || !existsSync(REPORT_LOGO_META_FILE)) {
+        return json({ ok: false, error: 'لوگوی سفارشی ثبت نشده است' }, 404, req);
+      }
+      try {
+        const meta = JSON.parse(readFileSync(REPORT_LOGO_META_FILE, 'utf8'));
+        const bytes = readFileSync(REPORT_LOGO_FILE);
+        return new Response(bytes, { status: 200, headers: {
+          'Content-Type': meta.contentType || 'image/png',
+          'Content-Length': String(bytes.length),
+          'Cache-Control': 'private, no-store, max-age=0',
+          'Access-Control-Allow-Origin': getCorsHeader(req),
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-BankResaneh-Api-Base',
+          'X-Content-Type-Options': 'nosniff',
+        }});
+      } catch {
+        return json({ ok: false, error: 'خواندن لوگوی گزارش ناموفق بود' }, 500, req);
+      }
+    }
+
+    if (pathname === '/api/settings/logo' && method === 'POST') {
+      const user = requirePermission(req, 'export_reports') || requirePermission(req, 'manage_settings');
+      if (!user) return permissionFailure(req, 'فقط مدیران و مدیران اجرایی می‌توانند لوگوی گزارش را تغییر دهند');
+      try {
+        const form = await req.formData();
+        const file = form.get('file');
+        if (!(file instanceof File) || file.size <= 0) return json({ ok: false, error: 'فایل تصویری ارسال نشده است' }, 400, req);
+        if (file.size > 5 * 1024 * 1024) return json({ ok: false, error: 'حجم فایل بیش از ۵ مگابایت است' }, 413, req);
+        const bytes = Buffer.from(await file.arrayBuffer());
+        const png = bytes.length >= 8 && bytes.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
+        const jpeg = bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+        if (!png && !jpeg) return json({ ok: false, error: 'فقط تصویر PNG یا JPEG معتبر پذیرفته می‌شود' }, 415, req);
+        const contentType = png ? 'image/png' : 'image/jpeg';
+        const temporary = REPORT_LOGO_FILE + '.tmp';
+        writeFileSync(temporary, bytes);
+        renameSync(temporary, REPORT_LOGO_FILE);
+        writeFileSync(REPORT_LOGO_META_FILE, JSON.stringify({
+          contentType,
+          name: String(file.name || 'report-logo').replace(/[\\/\\0-\\x1f]/g, '_').slice(0, 120),
+          updatedAt: new Date().toISOString(),
+          size: bytes.length,
+        }), 'utf8');
+        return json({ ok: true, url: '/api/settings/logo', size: bytes.length }, req);
+      } catch (error) {
+        return json({ ok: false, error: 'ذخیره لوگوی گزارش ناموفق بود' }, 500, req);
+      }
     }
 
     // ----- Shared custom genres -----
