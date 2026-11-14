@@ -382,6 +382,13 @@ function publicUser(u, viewer) {
   return base;
 }
 
+function normalizePersianPluralSpacing(value) {
+  if (typeof value !== 'string') return value;
+  // Restore the Persian ZWNJ before the plural suffix "ها" in legacy rows
+  // where import/normalization stripped it (e.g. "برنامهها" -> "برنامه‌ها").
+  return value.replace(/([\u0600-\u06FF]{2,})\s*ها(?=$|[\s،؛,.!?؟:)\]])/g, '$1\u200cها');
+}
+
 function rowToShow(r) {
   if (!r) return null;
   let images = [], videos = [];
@@ -389,13 +396,15 @@ function rowToShow(r) {
   try { videos = JSON.parse(r.videos || '[]'); } catch {}
   let tags = [];
   try { tags = JSON.parse(r.tags || '[]'); } catch {}
+  const fa = normalizePersianPluralSpacing;
+  tags = Array.isArray(tags) ? tags.map(fa) : [];
   return {
-    num: r.num, name: r.name, category: r.category, source: r.source,
-    size: r.size, viewers: r.viewers, style: r.style, effects: r.effects,
-    layout: r.layout, elements: r.elements, materials: r.materials,
-    colors: r.colors, lighting: r.lighting, summary: r.summary,
-    descriptionFa: r.descriptionFa, youtube: r.youtube, imdb: r.imdb,
-    wikipedia: r.wikipedia, socialPost: r.socialPost, country: r.country || '',
+    num: r.num, name: fa(r.name), category: fa(r.category), source: fa(r.source),
+    size: fa(r.size), viewers: fa(r.viewers), style: fa(r.style), effects: fa(r.effects),
+    layout: fa(r.layout), elements: fa(r.elements), materials: fa(r.materials),
+    colors: fa(r.colors), lighting: fa(r.lighting), summary: fa(r.summary),
+    descriptionFa: fa(r.descriptionFa), youtube: r.youtube, imdb: r.imdb,
+    wikipedia: r.wikipedia, socialPost: fa(r.socialPost), country: fa(r.country || ''),
     images, videos, tags, decorIncluded: r.decor_included == null ? undefined : !!r.decor_included,
     isFilm: !!(r.is_film),
     // Expose the image source so the frontend can:
