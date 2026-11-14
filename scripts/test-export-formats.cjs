@@ -23,6 +23,8 @@ async function main() {
 
   const pdfModule = require('@digicole/pdfmake-rtl');
   const pdfMake = pdfModule.default || pdfModule;
+  pdfMake.addFonts(require('@digicole/pdfmake-rtl/fonts/Cairo'));
+  pdfMake.addFonts(require('@digicole/pdfmake-rtl/fonts/Roboto'));
   const pdf = await pdfMake.createPdf({
     rtl: true,
     pageSize: 'A4',
