@@ -99,6 +99,8 @@ jobs:
           }
           Write-Host "PASS: built the audited package-version 5.4.4 baseline from $baselineSha."
         env:
+          DATABASE_URL: file:./db/custom.db
+          DEBUG: electron-builder
           ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.ci-cache/electron-builder
           ELECTRON_CACHE: ${{ github.workspace }}/.ci-cache/electron
 
