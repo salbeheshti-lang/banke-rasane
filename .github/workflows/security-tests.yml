@@ -9,7 +9,7 @@ name: Security tests
 
 on:
   push:
-    branches: [main, 'fix/**']
+    branches: [main, 'fix/**', 'feat/**']
     paths:
       - 'mini-services/api-service/**'
       - 'scripts/security-test.sh'
