@@ -1162,7 +1162,8 @@ function HomeInner() {
   // User clicked "+ افزودن برنامه" from inside a genre view → preset the category
   // so AddEditView opens with this genre's Persian name already chosen.
   const handleAddFromGenre = (g: Genre) => {
-    setPresetCategory(g.nameFa);
+    // The Decor view is a cross-category analysis view, not a real show category.
+    setPresetCategory(g.id === 'decor' ? undefined : g.nameFa);
     setPresetGenre(g);
     setEditingShow(null);
     setViewStack(prev => [...prev, { view: currentView, genre: selectedGenre }]);
@@ -4718,7 +4719,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       imdb: '',
       wikipedia: '',
       country: '',
-      decorIncluded: false,
+      decorIncluded: presetGenre?.id === 'decor',
       tags: [],
     }
   );
