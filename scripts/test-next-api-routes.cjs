@@ -219,6 +219,26 @@ async function main() {
   const reportRead = await request(nextBase, '/api/settings/report', { token: adminToken });
   assert(reportRead.status === 200 && reportRead.data.title === 'Integration report', 'report settings persist and can be read');
 
+  // The editor role is the app's manager role for day-to-day report work.
+  // It has export_reports by default and must be able to save shared PDF defaults.
+  const editorCreated = await request(apiBase, '/api/users', {
+    method: 'POST', token: adminToken,
+    body: { username: 'route_manager', password: 'ManagerRoute!2026', role: 'editor', name: 'Route Manager' },
+  });
+  assert(editorCreated.status === 200, 'admin can create a manager/editor for report permission tests');
+  const editorLogin = await request(apiBase, '/api/auth/login', {
+    method: 'POST', body: { username: 'route_manager', password: 'ManagerRoute!2026' },
+  });
+  assert(editorLogin.status === 200, 'manager/editor can authenticate');
+  const editorToken = editorLogin.data.token;
+  const editorReportSaved = await request(nextBase, '/api/settings/report', {
+    method: 'POST', token: editorToken,
+    body: { title: 'Manager report', subtitle: 'Manager route test', organization: 'BankResaneh Manager' },
+  });
+  assert(editorReportSaved.status === 200 && editorReportSaved.data.ok, 'manager/editor can save shared PDF report defaults');
+  const editorReportRead = await request(nextBase, '/api/settings/report', { token: adminToken });
+  assert(editorReportRead.status === 200 && editorReportRead.data.title === 'Manager report', 'manager report defaults are shared with admins');
+
   const png = Buffer.from(
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p2sAAAAASUVORK5CYII=',
     'base64'
