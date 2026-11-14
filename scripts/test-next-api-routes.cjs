@@ -155,6 +155,17 @@ async function main() {
   // Public health and private startup handshakes for both server processes.
   const health = await request(apiBase, '/api/health');
   assert(health.status === 200 && health.data.status === 'ok', 'API health endpoint is public and healthy');
+  const preflight = await fetch(apiBase + '/api/auth/login', {
+    method: 'OPTIONS',
+    headers: {
+      Origin: nextBase,
+      'Access-Control-Request-Method': 'POST',
+      'Access-Control-Request-Headers': 'authorization,content-type,x-bankresaneh-api-base',
+    },
+  });
+  assert(preflight.status === 204 &&
+    (preflight.headers.get('Access-Control-Allow-Headers') || '').toLowerCase().includes('x-bankresaneh-api-base'),
+    'API CORS preflight permits the selected-backend header from the frontend');
   const apiReady = await request(apiBase, '/api/internal/ready', {
     headers: { 'x-bankresaneh-startup-token': startupToken },
   });
