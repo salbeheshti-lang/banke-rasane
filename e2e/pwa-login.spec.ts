@@ -72,3 +72,25 @@ test('login screen shows accessible fields and enforces the 3-minute lockout cou
   await expect(page.getByRole('button', { name: /ورود/ })).toBeEnabled();
   await expect(page.getByText(/زمان باقی‌مانده/)).toHaveCount(0);
 });
+
+
+test('real offline navigation uses the cached fallback and never serves private API data', async ({ page }) => {
+  await page.goto('/');
+  await expect.poll(async () => page.evaluate(() => Boolean(navigator.serviceWorker.controller)), {
+    timeout: 15_000,
+  }).toBeTruthy();
+
+  await page.context().setOffline(true);
+  await page.goto('/__bankresaneh_offline_probe__', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByText('اتصال به سرور برقرار نیست')).toBeVisible();
+
+  const apiWasAvailableOffline = await page.evaluate(async () => {
+    try {
+      const response = await fetch('/api/health', { cache: 'no-store' });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  });
+  expect(apiWasAvailableOffline).toBe(false);
+});
