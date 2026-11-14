@@ -36,6 +36,11 @@ jobs:
       - name: Test API video upload validation
         run: node --test mini-services/api-service/video-validation.test.mjs
 
+      - name: Test API CRUD, duplicate protection, and shared genre files
+        run: bun run test:api-crud
+        env:
+          BUN_BINARY: bun
+
       - name: Lint
         run: bun run lint
 
