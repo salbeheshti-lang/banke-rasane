@@ -7365,21 +7365,25 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
       if (format === 'pdf') {
         // Call API to generate professional PDF report — pass through any
         // caller-provided overrides so the rendered PDF matches the preview.
-        const res = await fetch('/api/export-pdf', {
+        const res = await fetch('/api/export-pdf-file', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({ shows, title, subtitle, organization }),
         });
-        if (res.ok) {
-          const html = await res.text();
-          // Open in new window for print-to-PDF
-          const w = window.open('', '_blank');
-          if (w) {
-            w.document.write(html);
-            w.document.close();
-            setTimeout(() => { w.print(); }, 1000);
-          }
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({}));
+          throw new Error(error.error || 'ساخت فایل PDF ناموفق بود');
         }
+        const blob = await res.blob();
+        if (blob.type !== 'application/pdf' || blob.size < 8) {
+          throw new Error('فایل PDF معتبر از سرور دریافت نشد');
+        }
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `bankresaneh-report-${Date.now()}.pdf`;
+        anchor.click();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       } else {
         // Excel: generate proper XLSX using SheetJS-style XML
         const headers = ['شماره', 'نام برنامه', 'دسته‌بندی', 'منبع', 'اندازه', 'تماشاگر', 'سبک', 'جلوه‌ها', 'چیدمان', 'عناصر', 'متریال', 'رنگ‌آمیزی', 'نورپردازی', 'توضیحات'];
