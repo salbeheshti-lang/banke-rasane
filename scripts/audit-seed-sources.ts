@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { allNewShows as part1 } from './seed-data-part1';
 import { polisiShows, ramazanShows } from './seed-data-part2';
 import { safarShows, madreseShows, naghdShows, ghanunShows, pakhshShows, jasoosiShows } from './seed-data-part3';
@@ -14,7 +15,8 @@ const sourceShows = [
   ...naghdShows, ...ghanunShows, ...pakhshShows, ...jasoosiShows, ...zandanShows,
   ...ehdaShows, ...tarikhiShows, ...radioShows, ...rustaShows, ...ketabShows, ...sarmayeShows,
 ];
-const jsonPath = resolve(import.meta.dir, '../public/talk-shows-data.json');
+const scriptDir = dirname(fileURLToPath(import.meta.url));
+const jsonPath = resolve(scriptDir, '../public/talk-shows-data.json');
 const archive = JSON.parse(readFileSync(jsonPath, 'utf8'));
 if (!Array.isArray(archive)) throw new Error('Archive seed JSON root must be an array.');
 
