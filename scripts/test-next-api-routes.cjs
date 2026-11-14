@@ -335,19 +335,18 @@ async function main() {
 
   // Real API login lockout: five consecutive failures from one client IP
   // must block that IP for 180 seconds, and the block must survive a restart.
-  const lockoutIp = '198.51.100.73';
   for (let attempt = 1; attempt <= 5; attempt++) {
     const failed = await request(apiBase, '/api/auth/login', {
       method: 'POST',
       body: { username: 'missing-lockout-user', password: 'incorrect-password' },
-      headers: { 'x-forwarded-for': lockoutIp },
+      headers: { 'x-forwarded-for': `198.51.100.${72 + attempt}` },
     });
-    assert(failed.status === 401, 'login failure ' + attempt + ' is counted before lockout');
+    assert(failed.status === 401, 'login failure ' + attempt + ' is counted before lockout despite changing spoofed X-Forwarded-For');
   }
   const locked = await request(apiBase, '/api/auth/login', {
     method: 'POST',
     body: { username: 'admin', password: 'NextRouteTest!2026' },
-    headers: { 'x-forwarded-for': lockoutIp },
+    headers: { 'x-forwarded-for': '203.0.113.99' },
   });
   const initialRetryAfter = Number(locked.headers.get('Retry-After'));
   assert(locked.status === 429 && initialRetryAfter >= 1 && initialRetryAfter <= 180 &&
@@ -377,23 +376,10 @@ async function main() {
   const afterRestart = await request(apiBase, '/api/auth/login', {
     method: 'POST',
     body: { username: 'admin', password: 'NextRouteTest!2026' },
-    headers: { 'x-forwarded-for': lockoutIp },
+    headers: { 'x-forwarded-for': '192.0.2.200' },
   });
   assert(afterRestart.status === 429 && Number(afterRestart.headers.get('Retry-After')) > 0,
-    'active login lockout persists across API process restart');
-
-  const otherIpLogin = await request(apiBase, '/api/auth/login', {
-    method: 'POST',
-    body: { username: 'admin', password: 'NextRouteTest!2026' },
-    headers: { 'x-forwarded-for': '198.51.100.74' },
-  });
-  assert(otherIpLogin.status === 200, 'login lockout is isolated per client IP');
-  const stillLocked = await request(apiBase, '/api/auth/login', {
-    method: 'POST',
-    body: { username: 'admin', password: 'NextRouteTest!2026' },
-    headers: { 'x-forwarded-for': lockoutIp },
-  });
-  assert(stillLocked.status === 429, 'successful login from another IP does not clear the blocked IP');
+    'active login lockout persists across API restart and cannot be bypassed with a spoofed forwarding header');
 
   console.log('Next.js API route integration suite completed successfully.');
 }
