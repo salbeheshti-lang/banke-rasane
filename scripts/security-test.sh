@@ -204,7 +204,7 @@ if [ "$SCENARIO" = "upgrade" ]; then
   rm -f $SCRIPT_DIR/mini-services/api-service/bankresaneh.sqlite
   echo "  deleted DB file — API will seed fresh, then legacy users will be added"
   # Start API once to create the schema + default admin + shows
-  cd $SCRIPT_DIR/mini-services/api-service && (setsid bun --hot index.js > /tmp/api-upgrade-seed.log 2>&1 < /dev/null &)
+  cd $SCRIPT_DIR/mini-services/api-service && (setsid env BANKRESANEH_TRUSTED_PROXIES=127.0.0.1,::1 bun --hot index.js > /tmp/api-upgrade-seed.log 2>&1 < /dev/null &)
   cd $SCRIPT_DIR
   sleep 4
   # Wait for API to be ready
@@ -236,7 +236,7 @@ if [ "$SCENARIO" = "upgrade" ]; then
   ' 2>&1
   cd $SCRIPT_DIR
 fi
-cd $SCRIPT_DIR/mini-services/api-service && (setsid bun --hot index.js > /tmp/api.log 2>&1 < /dev/null &)
+cd $SCRIPT_DIR/mini-services/api-service && (setsid env BANKRESANEH_TRUSTED_PROXIES=127.0.0.1,::1 bun --hot index.js > /tmp/api.log 2>&1 < /dev/null &)
 sleep 4
 # Wait up to 15s for API to come up
 for i in 1 2 3 4 5 6 7 8 9 10; do
@@ -795,7 +795,7 @@ echo "  BEFORE restart: limited_admin role=$LIMITED_ROLE_BEFORE active=$LIMITED_
 echo "  restarting API..."
 pkill -f "bun --hot index.js" 2>/dev/null
 sleep 2
-cd $SCRIPT_DIR/mini-services/api-service && (setsid bun --hot index.js > /tmp/api-restart.log 2>&1 < /dev/null &)
+cd $SCRIPT_DIR/mini-services/api-service && (setsid env BANKRESANEH_TRUSTED_PROXIES=127.0.0.1,::1 bun --hot index.js > /tmp/api-restart.log 2>&1 < /dev/null &)
 cd $SCRIPT_DIR
 sleep 3
 for i in 1 2 3 4 5; do
