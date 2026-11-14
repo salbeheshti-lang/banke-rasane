@@ -85,7 +85,10 @@ export async function POST(request: NextRequest) {
     // Embed the RTL and Latin font files into the bundle. Filesystem-based
     // font paths break in standalone packaging and Cloudflare Workers.
     const virtualFonts: any = await import('@digicole/pdfmake-rtl/build/vfs_fonts');
-    pdfMake.addVirtualFileSystem(virtualFonts.default || virtualFonts);
+    const fontFiles = virtualFonts.default || virtualFonts;
+    for (const [filename, base64] of Object.entries(fontFiles)) {
+      pdfMake.virtualfs.writeFileSync(filename, Buffer.from(String(base64), 'base64'));
+    }
     pdfMake.addFonts({
       Cairo: {
         normal: 'Cairo-Regular.ttf',
