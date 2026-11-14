@@ -257,7 +257,7 @@ async function main() {
   const selectedBackendAuth = await request(nextBase, '/api/settings/report', { token: adminToken, apiBase });
   assert(selectedBackendAuth.status === 200, 'Next.js auth checks use the selected API backend header');
   const rejectedBackendAuth = await request(nextBase, '/api/settings/report', { token: adminToken, apiBase: 'https://untrusted.invalid' });
-  assert(rejectedBackendAuth.status === 401, 'untrusted API origins are rejected before server-side fetch');
+  assert(rejectedBackendAuth.status === 403, 'untrusted API origins are rejected before server-side fetch');
 
   // The editor role is the app's manager role for day-to-day report work.
   // It has export_reports by default and must be able to save shared PDF defaults.
