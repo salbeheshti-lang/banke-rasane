@@ -3304,7 +3304,6 @@ function GenreFileAttachment({ genreId, genreName, canEdit }: {
   useEffect(() => {
     let active = true;
     const loadSharedFile = async () => {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- refresh attachment loading state when the selected genre changes.
       setLoading(true);
       try {
         const remote = await api.getGenreFileInfo(genreId);
