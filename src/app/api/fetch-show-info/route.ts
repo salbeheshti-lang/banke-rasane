@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: gate.status === 401 ? 'احراز هویت لازم است' : 'دسترسی غیرمجاز — نیاز به دسترسی افزودن یا ویرایش برنامه' }, { status: gate.status });
   }
   try {
-    const { url, category = '', showName = '' } = await request.json();
+    const { url, category = '', showName = '', isDecor: explicitIsDecor } = await request.json();
     if (typeof url !== 'string' || !url.trim()) return NextResponse.json({ error: 'URL الزامی است' }, { status: 400 });
     let parsed: URL;
     try { parsed = new URL(url); } catch { return NextResponse.json({ error: 'لینک معتبر نیست' }, { status: 400 }); }
@@ -99,7 +99,9 @@ export async function POST(request: NextRequest) {
     const isWikipedia = host === 'wikipedia.org' || host.endsWith('.wikipedia.org');
     if (!isImdb && !isWikipedia) return NextResponse.json({ error: 'فعلاً فقط لینک IMDb و ویکی‌پدیا پشتیبانی می‌شود' }, { status: 400 });
     const info: Record<string,string> = {};
-    const isDecor = /(?:^|[,،\s])(?:دکور|decor)(?:$|[,،\s])/i.test(String(category || ''));
+    const isDecor = typeof explicitIsDecor === 'boolean'
+      ? explicitIsDecor
+      : /(?:^|[,،\s])(?:دکور|decor)(?:$|[,،\s])/i.test(String(category || ''));
 
     if (isImdb) {
       const imdbMatch = parsed.pathname.match(/(?:^|\/)title\/(tt\d+)/i) || parsed.href.match(/\b(tt\d+)\b/i);
