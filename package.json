@@ -19,6 +19,7 @@
     "test:next-api": "node scripts/test-next-api-routes.cjs",
     "test:seed-data": "node scripts/audit-seed-data.cjs",
     "test:seed-sources": "bun run scripts/audit-seed-sources.ts",
+    "test:seed-runtime": "bun scripts/test-seed-runtime.mjs",
     "seed:new-shows": "bun run scripts/seed-new-shows.ts",
     "test:e2e": "node scripts/prepare-e2e.cjs && playwright test",
     "cloudflare:build": "opennextjs-cloudflare build",
