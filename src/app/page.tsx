@@ -7146,13 +7146,9 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
       // send the token in the POST body (encrypted in transit via HTTPS)
       // and use the {verify:true} flag to tell the backend to just validate
       // the token, not send a message.
-      const authToken = typeof window !== 'undefined' ? localStorage.getItem('bankresaneh_token') : '';
       const res = await fetch('/api/publish-social', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authToken ? { Authorization: 'Bearer ' + authToken } : {}),
-        },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ platform, token, verify: true }),
       });
       const data = await res.json();
@@ -8763,7 +8759,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
 
   const handleSave = () => {
     setApiBase(url);
-    showToast('آدرس سرور ذخیره شد. برای اعمال کامل، صفحه را بارگذاری مجدد کنید.');
+    showToast('آدرس سرور ذخیره شد. برای اعمال کامل، صفحه را بارگذاری مجدد کنید؛ مسیرهای Next.js نیز با همین سرور احراز هویت می‌شوند.');
     setTestResult({ ok: true, msg: 'ذخیره شد ✓ — آدرس جدید اعمال شد.' });
   };
 
@@ -8772,7 +8768,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
       <div>
         <h3 className="text-base font-bold mb-1" style={{ color: '#f0fdf4' }}>🖥 آدرس سرور API</h3>
         <p className="text-sm mb-3" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>
-          آدرس سرویس API که این برنامه به آن متصل می‌شود. پیش‌فرض: <code dir="ltr" style={{ background: 'rgba(13, 124, 74,0.1)', padding: '2px 6px', borderRadius: '6px', color: '#54D9C0' }}>http://localhost:3002</code>
+          آدرس سرویس API که این برنامه به آن متصل می‌شود. برای سرور سفارشی از HTTPS استفاده کنید؛ دامنهٔ سرور باید در BANKRESANEH_ALLOWED_API_ORIGINS سمت سرور وب مجاز شده باشد. پیش‌فرض: <code dir="ltr" style={{ background: 'rgba(13, 124, 74,0.1)', padding: '2px 6px', borderRadius: '6px', color: '#54D9C0' }}>http://localhost:3002</code>
         </p>
         <input
           type="text"
