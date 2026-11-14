@@ -19,7 +19,7 @@ export const runtime = 'nodejs';
  *
  * Returns an empty string (no <img> rendered) if neither file exists.
  */
-function getLogoDataUrl(): string {
+export function getLogoDataUrl(): string {
   // Candidate order:
   //   1. Custom logo uploaded by admin → writable data dir (data/logo.png
   //      in dev, %APPDATA%\banke-rasane\logo.png in Electron prod).
@@ -51,7 +51,7 @@ function getLogoDataUrl(): string {
  * can edit defaults without touching code. Returns sensible fallbacks if the
  * file is missing or unreadable.
  */
-function getReportSettings(): { title: string; subtitle: string; organization: string } {
+export function getReportSettings(): { title: string; subtitle: string; organization: string } {
   try {
     // Use the writable data dir — matches where /api/settings/report WRITES
     // the file. The previous hardcoded process.cwd()/data path pointed at
