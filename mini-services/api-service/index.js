@@ -323,7 +323,7 @@ function json(body, statusOrReq, maybeReq) {
       'Content-Type': 'application/json; charset=utf-8',
       'Access-Control-Allow-Origin': corsOrigin,
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-BankResaneh-Api-Base',
       'Access-Control-Allow-Credentials': 'true',
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'DENY',
@@ -335,7 +335,7 @@ function corsOptions(req) {
   return new Response(null, { status: 204, headers: {
     'Access-Control-Allow-Origin': corsOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-BankResaneh-Api-Base',
     'Access-Control-Allow-Credentials': 'true',
   }});
 }
@@ -1109,7 +1109,7 @@ const server = Bun.serve({
           'X-Content-Type-Options': 'nosniff',
           'Access-Control-Allow-Origin': origin,
           'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-BankResaneh-Api-Base',
           'Access-Control-Expose-Headers': 'Content-Disposition',
           'Access-Control-Allow-Credentials': 'true',
         },
