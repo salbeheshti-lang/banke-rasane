@@ -12,9 +12,8 @@ const nextConfig: NextConfig = {
     "*.space-z.ai",
     "https://*.space-z.ai",
   ],
-  // This standalone output is intended for the Node.js/Electron runtime.
-  // Cloudflare Pages is not supported by this config alone: it needs an
-  // OpenNext-compatible adapter and a current Worker/API implementation.
+  // Default output remains Node.js/Electron standalone. Cloudflare Workers
+  // uses the explicit `cloudflare:*` scripts and open-next.config.ts adapter.
 };
 
 export default nextConfig;
