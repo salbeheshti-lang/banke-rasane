@@ -749,7 +749,7 @@ function getClientIP(req, server) {
 // protection was inert). New logic: failures accumulate inside a 15-minute
 // window; reaching 5 blocks the IP for 3 minutes; after the block (or the
 // window) expires the entry is reset. A periodic sweep prunes stale entries
-// so spoofed X-Forwarded-For IPs cannot grow the Map without bound.
+// so expired IP lockout records do not accumulate indefinitely.
 // ---------------------------------------------------------------------------
 const LOGIN_MAX_FAILS = 5;
 const LOGIN_WINDOW_SEC = 900;   // 15 min failure-counting window
