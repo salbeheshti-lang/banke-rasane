@@ -65,4 +65,10 @@ test('login screen shows accessible fields and enforces the 3-minute lockout cou
 
   await page.clock.fastForward(1_000);
   await expect(page.getByText(/زمان باقی‌مانده: 02:59/)).toBeVisible();
+
+  await page.clock.runFor(179_000);
+  await expect(username).toBeEnabled();
+  await expect(password).toBeEnabled();
+  await expect(page.getByRole('button', { name: /ورود/ })).toBeEnabled();
+  await expect(page.getByText(/زمان باقی‌مانده/)).toHaveCount(0);
 });
