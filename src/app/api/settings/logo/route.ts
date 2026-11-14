@@ -59,9 +59,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   // --- Auth: only admins (manage_settings permission) can replace the logo ---
-  const gate = await gatePermission(request, 'manage_settings');
+  const gate = await gatePermissionAny(request, 'manage_settings', 'export_reports');
   if (!gate.ok) {
-    return NextResponse.json({ ok: false, error: gate.status === 401 ? 'احراز هویت لازم است' : 'دسترسی غیرمجاز — نیاز به دسترسی مدیر' }, { status: gate.status });
+    return NextResponse.json({ ok: false, error: gate.status === 401 ? 'احراز هویت لازم است' : 'دسترسی غیرمجاز — فقط مدیران و مدیران اجرایی می‌توانند لوگوی گزارش را تغییر دهند' }, { status: gate.status });
   }
   const admin = gate.user;
   try {
