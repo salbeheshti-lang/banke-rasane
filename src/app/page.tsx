@@ -3296,19 +3296,50 @@ function GenreFileAttachment({ genreId, genreName, canEdit }: {
   genreName: string;
   canEdit: boolean;
 }) {
+  const STORAGE_KEY = `bankresaneh_genre_file_${genreId}`;
   const [fileData, setFileData] = useState<{ name: string; type: string; size: number; updatedAt: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    api.getGenreFileInfo(genreId)
-      .then((data) => { if (active) setFileData(data); })
-      .catch(() => { if (active) setFileData(null); })
-      .finally(() => { if (active) setLoading(false); });
+    const loadSharedFile = async () => {
+      setLoading(true);
+      try {
+        const remote = await api.getGenreFileInfo(genreId);
+        if (active) setFileData(remote);
+        return;
+      } catch {
+        // One-time migration: older releases stored this attachment only in
+        // the uploader's localStorage. Move it to the shared API when possible.
+        if (canEdit) {
+          try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) {
+              const legacy = JSON.parse(raw);
+              if (typeof legacy?.data === 'string' && typeof legacy?.name === 'string') {
+                const blobResponse = await fetch(legacy.data);
+                const blob = await blobResponse.blob();
+                const file = new File([blob], legacy.name, { type: legacy.type || blob.type });
+                await api.uploadGenreFile(genreId, file);
+                localStorage.removeItem(STORAGE_KEY);
+                const migrated = await api.getGenreFileInfo(genreId);
+                if (active) setFileData(migrated);
+                return;
+              }
+            }
+          } catch {
+            // Keep the local copy if the shared server is unavailable or rejects it.
+          }
+        }
+        if (active) setFileData(null);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    void loadSharedFile();
     return () => { active = false; };
-  }, [genreId]);
+  }, [genreId, canEdit]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -3321,6 +3352,7 @@ function GenreFileAttachment({ genreId, genreName, canEdit }: {
     setUploading(true);
     try {
       await api.uploadGenreFile(genreId, file);
+      localStorage.removeItem(STORAGE_KEY);
       const saved = await api.getGenreFileInfo(genreId);
       setFileData(saved);
       alert('فایل برای همهٔ کاربران ثبت شد.');
@@ -3352,6 +3384,7 @@ function GenreFileAttachment({ genreId, genreName, canEdit }: {
     if (!window.confirm(`فایل پیوست ژانر «${genreName}» حذف شود؟`)) return;
     try {
       await api.deleteGenreFile(genreId);
+      localStorage.removeItem(STORAGE_KEY);
       setFileData(null);
     } catch (error) {
       alert(error instanceof Error ? error.message : 'حذف فایل ناموفق بود');
