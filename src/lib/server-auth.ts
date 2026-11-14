@@ -22,7 +22,45 @@
 
 import type { NextRequest } from 'next/server';
 
-const API_BASE = process.env.BANKRESANEH_API_BASE || 'http://127.0.0.1:3002';
+const DEFAULT_API_BASE = process.env.BANKRESANEH_API_BASE || 'http://127.0.0.1:3002';
+
+/**
+ * Resolve the API origin selected by the client without turning this route
+ * into an unrestricted server-side request proxy. The configured backend is
+ * always allowed; additional production backends must be explicitly listed
+ * in BANKRESANEH_ALLOWED_API_ORIGINS (comma-separated HTTPS origins).
+ */
+export function getApiBaseForRequest(req: NextRequest): string | null {
+  const configured = new URL(DEFAULT_API_BASE);
+  const requested = req.headers.get('x-bankresaneh-api-base');
+  if (!requested) return configured.origin;
+
+  let candidate: URL;
+  try {
+    candidate = new URL(requested);
+  } catch {
+    return null;
+  }
+  if (!['https:', 'http:'].includes(candidate.protocol) ||
+      candidate.username || candidate.password || candidate.search || candidate.hash ||
+      (candidate.pathname !== '/' && candidate.pathname !== '')) return null;
+
+  // A same-origin value means the client is using the site's reverse proxy.
+  // Use the server's configured API target to avoid recursively calling Next.
+  if (candidate.origin === req.nextUrl.origin) return configured.origin;
+  if (candidate.origin === configured.origin) return configured.origin;
+
+  const allowed = (process.env.BANKRESANEH_ALLOWED_API_ORIGINS || '')
+    .split(',')
+    .map(value => value.trim())
+    .filter(Boolean)
+    .flatMap(value => {
+      try { return [new URL(value).origin]; } catch { return []; }
+    });
+  if (!allowed.includes(candidate.origin)) return null;
+  if (process.env.NODE_ENV === 'production' && candidate.protocol !== 'https:') return null;
+  return candidate.origin;
+}
 
 export interface AuthUser {
   id: number;
@@ -44,8 +82,10 @@ export interface AuthUser {
 export async function requireUser(req: NextRequest): Promise<AuthUser | null> {
   const auth = req.headers.get('Authorization') || '';
   if (!auth.startsWith('Bearer ')) return null;
+  const apiBase = getApiBaseForRequest(req);
+  if (!apiBase) return null;
   try {
-    const r = await fetch(`${API_BASE}/api/auth/me`, {
+    const r = await fetch(`${apiBase}/api/auth/me`, {
       headers: { Authorization: auth },
       // Short timeout so a down API service doesn't hang the request.
       signal: AbortSignal.timeout(5000),
