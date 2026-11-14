@@ -247,6 +247,9 @@ async function main() {
     });
     assert(genreCreated.status === 200 && genreCreated.data.genre?.id === genreId,
       'admin can create a custom genre');
+    const visibleGenres = await request('/api/genres', { token: viewerToken });
+    assert(visibleGenres.status === 200 && visibleGenres.data.genres.some(genre => genre.id === genreId),
+      'viewer accounts can read the shared custom genre catalogue');
     const genreFixture = await request('/api/shows', {
       method: 'POST', token,
       body: JSON.stringify({ num: 900002, name: 'Genre Migration Fixture', category: 'ژانر آزمایشی یکپارچه' }),
