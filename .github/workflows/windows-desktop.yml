@@ -98,6 +98,9 @@ jobs:
             git worktree remove --force $baselineDir
           }
           Write-Host "PASS: built the audited package-version 5.4.4 baseline from $baselineSha."
+        env:
+          ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.ci-cache/electron-builder
+          ELECTRON_CACHE: ${{ github.workspace }}/.ci-cache/electron
 
       - name: Verify published 5.3.9 to current-version in-place upgrade
         shell: pwsh
