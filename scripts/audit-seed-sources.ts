@@ -28,9 +28,21 @@ for (const show of sourceShows) {
 }
 const archiveById = new Map(archive.map((show: any) => [Number(show.num), show]));
 const missingFromArchive = sourceShows.filter(show => !archiveById.has(show.num));
-const mismatchedRecords = sourceShows.filter(show => {
+// These 13 records are intentionally reclassified in the archive as PSA/ad-like
+// programmes (the source file itself labels this group "NO DECOR (PSA/ad-like)").
+const intentionalCategoryOverrides = new Map<number, string>(
+  Array.from({ length: 13 }, (_, index) => [561 + index, 'آگهی‌های تبلیغاتی'])
+);
+const intentionalOverrides = sourceShows.filter(show => {
   const current = archiveById.get(show.num) as any;
-  return current && (current.name !== show.name || current.category !== show.category);
+  return current && current.name === show.name && current.category === intentionalCategoryOverrides.get(show.num);
+});
+const unexplainedDrift = sourceShows.filter(show => {
+  const current = archiveById.get(show.num) as any;
+  if (!current) return false;
+  if (current.name !== show.name) return true;
+  if (current.category === show.category) return false;
+  return current.category !== intentionalCategoryOverrides.get(show.num);
 });
 
 const report = {
@@ -39,8 +51,10 @@ const report = {
   uniqueSourceIds: sourceIds.size,
   sourceIdsMissingFromArchive: missingFromArchive.length,
   missingIds: missingFromArchive.slice(0, 30).map(show => show.num),
-  sourceRecordsWithNameOrCategoryDrift: mismatchedRecords.length,
-  driftExamples: mismatchedRecords.slice(0, 10).map(show => ({
+  intentionalPsaCategoryOverrides: intentionalOverrides.length,
+  intentionalOverrideIds: intentionalOverrides.map(show => show.num),
+  unexplainedNameOrCategoryDrift: unexplainedDrift.length,
+  driftExamples: unexplainedDrift.slice(0, 10).map(show => ({
     num: show.num,
     sourceName: show.name,
     archiveName: (archiveById.get(show.num) as any)?.name,
@@ -51,6 +65,6 @@ const report = {
 };
 console.log(JSON.stringify(report, null, 2));
 
-if (duplicateSourceIds.length || missingFromArchive.length) {
-  throw new Error('The bundled archive does not contain every program from the checked-in seed source files.');
+if (duplicateSourceIds.length || missingFromArchive.length || unexplainedDrift.length) {
+  throw new Error('The bundled archive differs from checked-in seed sources outside the documented PSA category overrides.');
 }
