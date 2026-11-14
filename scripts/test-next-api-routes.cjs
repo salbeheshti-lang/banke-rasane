@@ -12,6 +12,7 @@ const nextEntry = path.join(root, '.next', 'standalone', 'server.js');
 const tempDir = mkdtempSync(path.join(tmpdir(), 'bankresaneh-next-api-'));
 const dataDir = path.join(tempDir, 'data');
 const dbPath = path.join(tempDir, 'api.sqlite');
+const customDbPath = path.join(tempDir, 'custom-api.sqlite');
 const seedPath = path.join(tempDir, 'empty-seed.json');
 const startupToken = crypto.randomBytes(32).toString('hex');
 mkdirSync(dataDir, { recursive: true });
@@ -21,7 +22,7 @@ const children = [];
 let output = '';
 
 async function freePorts() {
-  const servers = [net.createServer(), net.createServer()];
+  const servers = [net.createServer(), net.createServer(), net.createServer()];
   try {
     const ports = await Promise.all(servers.map(server => new Promise((resolve, reject) => {
       server.once('error', reject);
@@ -95,9 +96,10 @@ function assert(condition, message) {
 }
 
 async function main() {
-  const [apiPort, nextPort] = await freePorts();
+  const [apiPort, nextPort, customApiPort] = await freePorts();
   const apiBase = 'http://127.0.0.1:' + apiPort;
   const nextBase = 'http://127.0.0.1:' + nextPort;
+  const customApiBase = 'http://127.0.0.1:' + customApiPort;
   const bun = process.env.BUN_BINARY || 'bun';
 
   launch(bun, [apiEntry], {
@@ -114,6 +116,20 @@ async function main() {
   });
   await waitFor(apiBase + '/api/health', 'Bun API');
 
+  launch(bun, [apiEntry], {
+    cwd: path.dirname(apiEntry),
+    env: {
+      ...process.env,
+      NODE_ENV: 'test',
+      PORT: String(customApiPort),
+      BANKRESANEH_HOST: '127.0.0.1',
+      BANKRESANEH_SEED_PATH: seedPath,
+      BANKRESANEH_STARTUP_TOKEN: startupToken,
+      DB_PATH: customDbPath,
+    },
+  });
+  await waitFor(customApiBase + '/api/health', 'Custom Bun API');
+
   if (!require('node:fs').existsSync(nextEntry)) {
     throw new Error('Next.js standalone server is missing. Run the production build before this test.');
   }
@@ -126,6 +142,7 @@ async function main() {
       PORT: String(nextPort),
       HOSTNAME: '127.0.0.1',
       BANKRESANEH_API_BASE: apiBase,
+      BANKRESANEH_ALLOWED_API_ORIGINS: customApiBase,
       BANKRESANEH_STARTUP_TOKEN: startupToken,
       BANKRESANEH_DATA_DIR: dataDir,
       DATABASE_URL: 'file:' + path.join(tempDir, 'translation.sqlite').replace(/\\/g, '/'),
@@ -183,6 +200,23 @@ async function main() {
   });
   assert(changed.status === 200 && !!changed.data.token, 'admin password change rotates the session token');
   const adminToken = changed.data.token;
+
+  // A second, independent API instance proves that Next.js authentication
+  // follows the selected backend rather than the frontend's default server.
+  const customFirstLogin = await request(customApiBase, '/api/auth/login', {
+    method: 'POST', body: { username: 'admin', password: 'admin' },
+  });
+  assert(customFirstLogin.status === 200 && customFirstLogin.data.user?.mustChangePassword, 'custom API starts with its own isolated admin account');
+  const customPasswordChanged = await request(customApiBase, '/api/auth/change-password', {
+    method: 'PUT', token: customFirstLogin.data.token,
+    body: { oldPassword: 'admin', newPassword: 'CustomBackend!2026' },
+  });
+  assert(customPasswordChanged.status === 200 && !!customPasswordChanged.data.token, 'custom API admin can establish an independent session');
+  const customBackendRead = await request(nextBase, '/api/settings/report', {
+    token: customPasswordChanged.data.token,
+    apiBase: customApiBase,
+  });
+  assert(customBackendRead.status === 200, 'Next.js routes authenticate against the selected custom API backend');
 
   // Create a viewer and verify the same permission boundaries in Next.js routes.
   const viewerCreated = await request(apiBase, '/api/users', {
