@@ -3296,53 +3296,73 @@ function GenreFileAttachment({ genreId, genreName, canEdit }: {
   genreName: string;
   canEdit: boolean;
 }) {
-  const STORAGE_KEY = `bankresaneh_genre_file_${genreId}`;
-  const [fileData, setFileData] = useState<{ name: string; type: string; data: string } | null>(null);
+  const [fileData, setFileData] = useState<{ name: string; type: string; size: number; updatedAt: number } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setFileData(JSON.parse(raw));
-      }
-    } catch {}
-  }, [STORAGE_KEY]);
+    let active = true;
+    setLoading(true);
+    api.getGenreFileInfo(genreId)
+      .then((data) => { if (active) setFileData(data); })
+      .catch(() => { if (active) setFileData(null); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [genreId]);
 
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
       alert('حداکثر حجم فایل ۵ مگابایت');
+      e.target.value = '';
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const data = { name: file.name, type: file.type, data: reader.result as string };
-      setFileData(data);
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {
-        alert('خطا در ذخیره — حجم فایل زیاد است');
-      }
-    };
-    reader.readAsDataURL(file);
+    setUploading(true);
+    try {
+      await api.uploadGenreFile(genreId, file);
+      const saved = await api.getGenreFileInfo(genreId);
+      setFileData(saved);
+      alert('فایل برای همهٔ کاربران ثبت شد.');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'بارگذاری فایل ناموفق بود');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
   };
 
-  const handleDownload = () => {
-    if (!fileData) return;
-    const a = document.createElement('a');
-    a.href = fileData.data;
-    a.download = fileData.name;
-    a.click();
+  const handleDownload = async () => {
+    try {
+      const { blob, filename } = await api.downloadGenreFile(genreId);
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = filename || fileData?.name || 'genre-attachment';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'دریافت فایل ناموفق بود');
+    }
   };
 
-  const handleDelete = () => {
-    setFileData(null);
-    localStorage.removeItem(STORAGE_KEY);
+  const handleDelete = async () => {
+    if (!window.confirm(`فایل پیوست ژانر «${genreName}» حذف شود؟`)) return;
+    try {
+      await api.deleteGenreFile(genreId);
+      setFileData(null);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'حذف فایل ناموفق بود');
+    }
   };
 
   return (
     <div className="flex items-center gap-2 mt-3 flex-wrap">
-      {fileData ? (
+      {loading ? (
+        <span className="text-xs" style={{ color: 'rgba(244,255,255,0.65)' }}>در حال بررسی پیوست...</span>
+      ) : fileData ? (
         <>
           <button
             onClick={handleDownload}
@@ -3376,10 +3396,12 @@ function GenreFileAttachment({ genreId, genreName, canEdit }: {
             background: 'rgba(255,255,255,0.1)',
             color: 'rgba(255,255,255,0.8)',
             border: '1px solid rgba(255,255,255,0.2)',
+            opacity: uploading ? 0.6 : 1,
+            cursor: uploading ? 'wait' : 'pointer',
           }}
         >
-          📎 آپلود PDF/Excel
-          <input type="file" accept=".pdf,.xls,.xlsx,.csv" onChange={handleUpload} style={{ display: 'none' }} />
+          {uploading ? '⏳ در حال بارگذاری...' : '📎 آپلود PDF/Excel'}
+          <input type="file" accept=".pdf,.xls,.xlsx,.csv" onChange={handleUpload} disabled={uploading} style={{ display: 'none' }} />
         </label>
       ) : null}
     </div>
