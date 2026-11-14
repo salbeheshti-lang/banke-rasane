@@ -5383,6 +5383,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
   showToast: (msg: string) => void;
 }) {
   const [urlInput, setUrlInput] = useState('');
+  const [importingUrl, setImportingUrl] = useState(false);
   const [failedUrls, setFailedUrls] = useState<Set<number>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Keep a ref to the latest images array so async FileReader callbacks always see current state
@@ -5409,9 +5410,9 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
     return false;
   }
 
-  const addUrl = () => {
+  const addUrl = async () => {
     const trimmed = urlInput.trim();
-    if (!trimmed) return;
+    if (!trimmed || importingUrl) return;
     if (images.length >= MAX_IMAGES) {
       showToast(`حداکثر ${MAX_IMAGES.toLocaleString('fa-IR')} تصویر مجاز است`);
       return;
@@ -5420,16 +5421,37 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
       showToast('این تصویر قبلاً اضافه شده');
       return;
     }
-    // Warn (but still allow) if the URL doesn't look like a direct image.
-    // Many users paste a Wikipedia article URL here expecting the system to
-    // extract the cover image (which is what the auto-fetch box above does).
-    if (!looksLikeDirectImage(trimmed)) {
-      showToast('⚠ این لینک مستقیم تصویر نیست — برای استخراج از صفحهٔ ویکی‌پدیا/IMDb از کادر «دریافت خودکار اطلاعات» بالاتر استفاده کنید. با این حال لینک اضافه شد؛ در صورت نمایش‌نشدن، آدرس تصویر مستقیم را بچسبانید.');
-    } else {
+    if (trimmed.startsWith('data:image/')) {
+      onChange([...images, trimmed]);
+      setUrlInput('');
       showToast(`✓ تصویر اضافه شد (${(images.length + 1).toLocaleString('fa-IR')} از ${MAX_IMAGES.toLocaleString('fa-IR')})`);
+      return;
     }
-    onChange([...images, trimmed]);
-    setUrlInput('');
+
+    setImportingUrl(true);
+    try {
+      const response = await fetch('/api/import-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ url: trimmed }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || typeof result.dataUrl !== 'string') {
+        showToast(result.error || 'دریافت تصویر از لینک ناموفق بود');
+        return;
+      }
+      if (images.length >= MAX_IMAGES) {
+        showToast(`حداکثر ${MAX_IMAGES.toLocaleString('fa-IR')} تصویر مجاز است`);
+        return;
+      }
+      onChange([...images, result.dataUrl]);
+      setUrlInput('');
+      showToast(`✓ تصویر دریافت و بهینه شد (${(images.length + 1).toLocaleString('fa-IR')} از ${MAX_IMAGES.toLocaleString('fa-IR')})`);
+    } catch {
+      showToast('خطا در دریافت تصویر؛ لینک مستقیم و اتصال اینترنت را بررسی کنید.');
+    } finally {
+      setImportingUrl(false);
+    }
   };
 
   const compressImageFile = async (file: File): Promise<string> => {
@@ -5564,7 +5586,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
         />
         <button
           onClick={addUrl}
-          disabled={images.length >= MAX_IMAGES || !urlInput.trim()}
+          disabled={images.length >= MAX_IMAGES || !urlInput.trim() || importingUrl}
           className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
           style={{
             background: images.length >= MAX_IMAGES || !urlInput.trim() ? 'rgba(255, 255, 255, 0.6)' : 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)',
@@ -5573,7 +5595,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
             whiteSpace: 'nowrap',
           }}
         >
-          + افزودن لینک
+          {importingUrl ? '⏳ دریافت تصویر...' : '+ افزودن لینک'}
         </button>
         <button
           onClick={() => fileInputRef.current?.click()}
