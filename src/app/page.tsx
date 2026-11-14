@@ -7320,7 +7320,7 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
               className="btn-enter-premium flex-1"
               style={{ opacity: token && chatId ? 1 : 0.5, cursor: token && chatId ? 'pointer' : 'not-allowed' }}
             >
-              {saving ? 'در حال ذخیره…' : '✓ ذخیره تنظیمات'}
+              ✓ ذخیره تنظیمات
             </button>
             {initial && (
               <button
@@ -8689,7 +8689,7 @@ function SettingsReportTab({ showToast }: { showToast: (msg: string) => void }) 
             border: '1px solid rgba(255,255,255,0.3)', cursor: 'pointer',
           }}
         >
-          ✓ ذخیره تنظیمات
+          {saving ? 'در حال ذخیره…' : '✓ ذخیره تنظیمات'}
         </button>
       </div>
     </div>
