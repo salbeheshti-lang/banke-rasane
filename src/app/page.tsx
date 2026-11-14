@@ -4893,15 +4893,29 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       }
 
       const info = data.info || {};
+      let importedImage = info.image;
+      if (typeof importedImage === 'string' && /^https:\/\//i.test(importedImage)) {
+        const imageResponse = await fetch('/api/import-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({ url: importedImage }),
+        });
+        const imageResult = await imageResponse.json().catch(() => ({}));
+        if (!imageResponse.ok || typeof imageResult.dataUrl !== 'string') {
+          showToast(imageResult.error || 'تصویر دریافت شد اما ذخیره‌سازی آن ناموفق بود؛ لینک مستقیم تصویر را بررسی کنید.');
+          return;
+        }
+        importedImage = imageResult.dataUrl;
+      }
       if (editingShow) {
         // Editing an existing program from an external page is image-only.
         // Existing curated metadata must never be replaced by imported text.
-        if (!info.image || typeof info.image !== 'string') {
+        if (!importedImage || typeof importedImage !== 'string') {
           showToast('از این لینک تصویر قابل دریافت نبود؛ اطلاعات فعلی برنامه بدون تغییر ماند.');
           return;
         }
         const existingImages = Array.isArray(form.images) ? form.images : [];
-        if (existingImages.includes(info.image)) {
+        if (existingImages.includes(importedImage)) {
           showToast('این تصویر قبلاً به برنامه اضافه شده است.');
           return;
         }
@@ -4909,7 +4923,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
           showToast('حداکثر ۸ تصویر برای هر برنامه قابل ثبت است.');
           return;
         }
-        setForm({ ...form, images: [...existingImages, info.image] });
+        setForm({ ...form, images: [...existingImages, importedImage] });
         showToast('تصویر اضافه شد؛ سایر اطلاعات برنامه بدون تغییر ماند.');
         return;
       }
@@ -4921,10 +4935,10 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
         updated.descriptionFa = info.description;
         if (!updated.summary) updated.summary = info.description.substring(0, 200);
       }
-      if (info.image) {
+      if (importedImage) {
         const existingImages = updated.images || [];
-        if (!existingImages.includes(info.image) && existingImages.length < 8) {
-          updated.images = [...existingImages, info.image];
+        if (!existingImages.includes(importedImage) && existingImages.length < 8) {
+          updated.images = [...existingImages, importedImage];
         }
       }
       if (info.country && !updated.country) updated.country = info.country;
