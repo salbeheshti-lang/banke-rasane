@@ -4,7 +4,7 @@
  *
  * Run with an authenticated local app:
  *   BANKRESANE_TEST_URL=http://localhost:3000
- *   BANKRESANE_TEST_COOKIE='your-session-cookie'
+ *   BANKRESANE_TEST_TOKEN='your-bearer-token'
  *   node scripts/test-decor-image-fallback.cjs
  *
  * Optional:
@@ -12,11 +12,11 @@
  */
 const IMDbUrl = 'https://www.imdb.com/title/tt1121180/?ref_=ttep_ep_1';
 const baseUrl = (process.env.BANKRESANE_TEST_URL || '').replace(/\/$/, '');
-const cookie = process.env.BANKRESANE_TEST_COOKIE;
+const token = process.env.BANKRESANE_TEST_TOKEN;
 const showName = process.env.BANKRESANE_TEST_SHOW_NAME || '';
 
-if (!baseUrl || !cookie) {
-  console.error('Set BANKRESANE_TEST_URL and BANKRESANE_TEST_COOKIE to run this authenticated end-to-end test.');
+if (!baseUrl || !token) {
+  console.error('Set BANKRESANE_TEST_URL and BANKRESANE_TEST_TOKEN to run this authenticated end-to-end test.');
   process.exit(2);
 }
 
@@ -25,7 +25,7 @@ if (!baseUrl || !cookie) {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      cookie,
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({
       url: IMDbUrl,
