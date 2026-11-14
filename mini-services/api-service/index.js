@@ -1080,7 +1080,7 @@ const server = Bun.serve({
 
     // ----- Image serving -----
     // ----- Shared genre file attachments (admin/editor upload, all users download) -----
-    const genreFileMatch = pathname.match(/^\\/api\\/genres\\/([a-zA-Z0-9_-]{1,64})\\/file$/);
+    const genreFileMatch = pathname.match(/^\/api\/genres\/([a-zA-Z0-9_-]{1,64})\/file$/);
     if (genreFileMatch && method === 'GET') {
       const user = requireRole(req, ['admin', 'editor', 'viewer']);
       if (!user) return permissionFailure(req, 'برای دریافت فایل وارد شوید');
