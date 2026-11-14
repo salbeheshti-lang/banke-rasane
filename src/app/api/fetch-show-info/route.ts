@@ -49,24 +49,47 @@ async function fetchImdbPoster(imdbId: string): Promise<string | null> {
 async function fetchWikipediaShowImage(title: string): Promise<string | null> {
   const query = cleanQuery(title);
   if (!query) return null;
-  const search = await fetchRetry(
-    `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrnamespace=0&gsrlimit=5&prop=pageimages&piprop=original|thumbnail&pithumbsize=1200&format=json`,
+
+  // Search the English and Persian encyclopedias before falling back to
+  // Wikimedia Commons. This matters for Iranian programmes whose articles
+  // or studio images are indexed only in Persian.
+  for (const lang of ['en', 'fa']) {
+    const search = await fetchRetry(
+      `https://${lang}.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrnamespace=0&gsrlimit=6&prop=pageimages&piprop=original|thumbnail&pithumbsize=1200&format=json`,
+      { headers: { 'User-Agent': UA, 'Accept': 'application/json' } },
+      1,
+    );
+    if (!search) continue;
+    const data = await search.json();
+    const pages = Object.values(data?.query?.pages || {}) as any[];
+    for (const page of pages) {
+      const candidate = page?.original?.source || page?.thumbnail?.source;
+      if (typeof candidate !== 'string') continue;
+      try {
+        const image = new URL(candidate);
+        if (image.protocol === 'https:' && image.hostname === 'upload.wikimedia.org') return image.href;
+      } catch {
+        // Ignore malformed image URLs and continue to the next result.
+      }
+    }
+  }
+
+  const commons = await fetchRetry(
+    `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrnamespace=6&gsrlimit=8&prop=imageinfo&iiprop=url&iiurlwidth=1200&format=json`,
     { headers: { 'User-Agent': UA, 'Accept': 'application/json' } },
     1,
   );
-  if (!search) return null;
-  const data = await search.json();
-  const pages = Object.values(data?.query?.pages || {}) as any[];
-  for (const page of pages) {
-    const candidate = page?.original?.source || page?.thumbnail?.source;
+  if (!commons) return null;
+  const commonsData = await commons.json();
+  const files = Object.values(commonsData?.query?.pages || {}) as any[];
+  for (const file of files) {
+    const candidate = file?.imageinfo?.[0]?.thumburl || file?.imageinfo?.[0]?.url;
     if (typeof candidate !== 'string') continue;
     try {
       const image = new URL(candidate);
-      if (image.protocol === 'https:' && (image.hostname === 'upload.wikimedia.org' || image.hostname.endsWith('.wikimedia.org'))) {
-        return image.href;
-      }
+      if (image.protocol === 'https:' && image.hostname === 'upload.wikimedia.org') return image.href;
     } catch {
-      // Ignore malformed image URLs and continue to the next result.
+      // Ignore malformed Commons results.
     }
   }
   return null;
@@ -74,7 +97,7 @@ async function fetchWikipediaShowImage(title: string): Promise<string | null> {
 
 async function fetchRetry(url: string, opts: any = {}, retries = 2) {
   for (let i=0; i<=retries; i++) {
-    try { const r = await fetch(url, opts); if (r.ok) return r; if (r.status===429) { await new Promise(x=>setTimeout(x,3000*(i+1))); continue; } }
+    try { const r = await fetch(url, { ...opts, signal: opts.signal || AbortSignal.timeout(12000) }); if (r.ok) return r; if (r.status===429) { await new Promise(x=>setTimeout(x,3000*(i+1))); continue; } }
     catch(e) { if (i===retries) throw e; await new Promise(x=>setTimeout(x,1500)); }
   }
   return null;
