@@ -68,7 +68,7 @@ async function waitFor(url, label, headers = {}, timeoutMs = 60000) {
 }
 
 async function request(base, route, options = {}) {
-  const headers = { ...(options.token ? { Authorization: 'Bearer ' + options.token } : {}), ...(options.headers || {}) };
+  const headers = { ...(options.token ? { Authorization: 'Bearer ' + options.token } : {}), ...(options.apiBase ? { 'X-BankResaneh-Api-Base': options.apiBase } : {}), ...(options.headers || {}) };
   let body = options.body;
   if (body && !(body instanceof FormData) && typeof body !== 'string' && !Buffer.isBuffer(body)) {
     headers['Content-Type'] = 'application/json';
@@ -83,7 +83,9 @@ async function request(base, route, options = {}) {
   const contentType = response.headers.get('content-type') || '';
   const data = contentType.includes('application/json')
     ? await response.json().catch(() => ({}))
-    : await response.text();
+    : contentType.includes('application/pdf')
+      ? Buffer.from(await response.arrayBuffer())
+      : await response.text();
   return { status: response.status, data, contentType, headers: response.headers };
 }
 
@@ -218,6 +220,10 @@ async function main() {
   assert(reportSaved.status === 200 && reportSaved.data.ok, 'admin can save report settings');
   const reportRead = await request(nextBase, '/api/settings/report', { token: adminToken });
   assert(reportRead.status === 200 && reportRead.data.title === 'Integration report', 'report settings persist and can be read');
+  const selectedBackendAuth = await request(nextBase, '/api/settings/report', { token: adminToken, apiBase });
+  assert(selectedBackendAuth.status === 200, 'Next.js auth checks use the selected API backend header');
+  const rejectedBackendAuth = await request(nextBase, '/api/settings/report', { token: adminToken, apiBase: 'https://untrusted.invalid' });
+  assert(rejectedBackendAuth.status === 401, 'untrusted API origins are rejected before server-side fetch');
 
   // The editor role is the app's manager role for day-to-day report work.
   // It has export_reports by default and must be able to save shared PDF defaults.
@@ -261,6 +267,14 @@ async function main() {
   });
   assert(exportHtml.status === 200 && exportHtml.contentType.includes('text/html') && String(exportHtml.data).includes('Manager report'),
     'PDF export route generates printable report HTML using saved settings');
+
+  const binaryPdf = await request(nextBase, '/api/export-pdf-file', {
+    method: 'POST', token: adminToken,
+    body: { shows: [{ num: 1, name: 'برنامه آزمایشی', category: 'گفتگو', descriptionFa: 'متن فارسی برای آزمون PDF' }] },
+  });
+  assert(binaryPdf.status === 200 && binaryPdf.contentType.includes('application/pdf') &&
+    Buffer.isBuffer(binaryPdf.data) && binaryPdf.data.subarray(0, 4).toString() === '%PDF',
+    'PDF export returns a real binary PDF with a valid PDF signature');
 
   const importValidation = await request(nextBase, '/api/fetch-show-info', {
     method: 'POST', token: adminToken,
