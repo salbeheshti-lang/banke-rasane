@@ -88,6 +88,8 @@ const NO_DECOR_CATEGORIES: string[] = [
   'آگهی‌های تبلیغاتی',     // includes PSA + energy-saving ads
   'مدرسه',              // back-to-school ads/teasers
   'پخش زنده',           // live webcams (no studio decor)
+  'سفرنامه و ماجراجویی', // travel/adventure formats do not imply a studio set
+  'سفر جاده‌ای',          // legacy alias for travel/adventure
 ];
 // Shows whose category starts with one of these prefixes are also excluded from Decor
 const NO_DECOR_PREFIXES: string[] = [
@@ -1302,7 +1304,7 @@ function HomeInner() {
         {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} onEditGenre={handleEditGenre} onDeleteGenre={handleDeleteGenre} onShowClick={setSelectedShow} />}
         {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={(s) => { setEditingShow(s); setPresetGenre(null); setPresetCategory(undefined); navigate('add'); }} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={(s) => { setEditingShow(s); setPresetGenre(null); setPresetCategory(undefined); navigate('add'); }} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
-        {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} onExport={(shows, format, meta) => setExportPreview({ shows, format, ...meta })} />}
+        {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} canManageSettings={isAdmin} onExport={(shows, format, meta) => setExportPreview({ shows, format, ...meta })} />}
         {currentView === 'add' && canEdit && <AddEditView key={editingShow?.num ?? 'new'} talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setPresetCategory(undefined); setPresetGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} presetCategory={presetCategory} presetGenre={presetGenre} genres={genres} />}
         {currentView === 'add' && !canEdit && (
           <div className="premium-glass p-8 text-center">
@@ -7691,10 +7693,11 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
 // ============================================
 // REPORTS VIEW
 // ============================================
-function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
+function ReportsView({ talkShows, uploadedShows, showToast, onExport, canManageSettings }: {
   talkShows: TalkShow[];
   uploadedShows: number[];
   showToast: (msg: string) => void;
+  canManageSettings: boolean;
   onExport: (shows: TalkShow[], format: 'pdf' | 'excel', meta?: { title?: string; subtitle?: string; organization?: string }) => void;
 }) {
   const { t, lang } = useLang();
@@ -7713,6 +7716,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
   const [rTitle, setRTitle] = useState('');
   const [rSubtitle, setRSubtitle] = useState('');
   const [rOrg, setROrg] = useState('');
+  const [rText, setRText] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
   const [logoVersion, setLogoVersion] = useState(0);          // refreshes the authenticated logo preview after upload
   const [logoSrc, setLogoSrc] = useState('');
@@ -7730,6 +7734,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
         setRTitle(data.title || '');
         setRSubtitle(data.subtitle || '');
         setROrg(data.organization || '');
+        setRText(data.reportText || '');
       } catch { /* ignore — fields stay empty and the API falls back to its own defaults */ }
     })();
     return () => { cancelled = true; };
@@ -7764,7 +7769,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
       const res = await fetch('/api/settings/report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({ title: rTitle, subtitle: rSubtitle, organization: rOrg }),
+        body: JSON.stringify({ title: rTitle, subtitle: rSubtitle, organization: rOrg, reportText: rText }),
       });
       if (res.ok) {
         showToast(t('reports.settingsSaved'));
@@ -7834,7 +7839,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
       <div className="premium-glass overflow-hidden">
         <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(13, 124, 74, 0.1)' }}>
           <h3 className="font-bold" style={{ color: '#f0fdf4' }}>{t('reports.available')}</h3>
-          <button
+          {canManageSettings && <button
             onClick={() => setSettingsOpen(o => !o)}
             className="text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"
             style={{
@@ -7848,7 +7853,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
             {t('reports.reportSettings')}
-          </button>
+          </button>}
         </div>
 
         {/* ---------- Report settings panel (collapsible) ---------- */}
@@ -7941,6 +7946,19 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                       border: '1px solid rgba(13, 124, 74, 0.3)',
                     }}
                   />
+                </div>
+                <div>
+                  <label className="text-xs font-bold mb-1.5 block" style={{ color: '#54D9C0' }}>متن پیش‌فرض گزارش هر برنامه</label>
+                  <textarea
+                    value={rText}
+                    onChange={(e) => setRText(e.target.value)}
+                    rows={5}
+                    maxLength={4000}
+                    placeholder="متن توضیحی انتهای گزارش PDF..."
+                    className="w-full px-3 py-2 rounded-lg text-sm"
+                    style={{ background: 'rgba(0,0,0,0.25)', color: '#f0fdf4', border: '1px solid rgba(13, 124, 74, 0.3)', resize: 'vertical' }}
+                  />
+                  <p className="text-[10px] mt-1" style={{ color: 'rgba(244,255,255,0.5)' }}>این متن در انتهای گزارش PDF برنامه‌ها درج می‌شود.</p>
                 </div>
                 <div className="flex items-center justify-end gap-2 pt-1">
                   <button
