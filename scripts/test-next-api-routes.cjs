@@ -106,6 +106,7 @@ async function main() {
       PORT: String(apiPort),
       BANKRESANEH_HOST: '127.0.0.1',
       BANKRESANEH_SEED_PATH: seedPath,
+      BANKRESANEH_STARTUP_TOKEN: startupToken,
       DB_PATH: dbPath,
     },
   });
@@ -132,9 +133,15 @@ async function main() {
     'x-bankresaneh-startup-token': startupToken,
   });
 
-  // Public health and private startup handshake.
+  // Public health and private startup handshakes for both server processes.
   const health = await request(apiBase, '/api/health');
   assert(health.status === 200 && health.data.status === 'ok', 'API health endpoint is public and healthy');
+  const apiReady = await request(apiBase, '/api/internal/ready', {
+    headers: { 'x-bankresaneh-startup-token': startupToken },
+  });
+  assert(apiReady.status === 200, 'Bun API private readiness endpoint accepts the startup token');
+  const apiReadyDenied = await request(apiBase, '/api/internal/ready');
+  assert(apiReadyDenied.status === 404, 'Bun API private readiness endpoint hides itself without the startup token');
   const privateReady = await request(nextBase, '/api/internal/ready', {
     headers: { 'x-bankresaneh-startup-token': startupToken },
   });
