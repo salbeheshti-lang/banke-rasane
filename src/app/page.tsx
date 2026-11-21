@@ -1633,8 +1633,10 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
         </div>
       </div>
 
-      {/* Co-branded footer on the login screen too */}
-      <BrandFooter />
+      {/* Co-branded footer on the login screen — minimal: only the client
+          logo + org name, centered. No BankResaneh mark, no 'تهیه‌شده برای'
+          label. Tuned for both mobile and desktop. */}
+      <BrandFooter variant="login" />
     </div>
   );
 }

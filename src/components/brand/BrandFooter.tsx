@@ -6,22 +6,94 @@ import { useLang } from '@/lib/i18n-context';
 /**
  * BrandFooter — sticky footer shown on every page.
  *
- * Layout: a single row with the BankResaneh mark on the right (RTL start)
- * and the client logo (مؤسسه فرهنگی هنری مرکز عروج منیر) on the left (RTL end),
- * separated by a thin vertical divider. Designed to fit the app's emerald
- * dark theme and to stick to the bottom of the viewport on short pages
- * while being pushed down naturally on long pages.
+ * Variants:
+ *  - 'dark'    (default): full co-branded footer — BankResaneh mark +
+ *               divider + client logo with org-name label.
+ *  - 'light':  same as 'dark' but on a light background.
+ *  - 'compact': condensed single-row footer for narrow chrome (drawer,
+ *               modals). Hides the org-name label.
+ *  - 'login':  login-screen footer — ONLY the client logo + org name
+ *               centered, no BankResaneh mark, no "تهیه‌شده برای" label.
+ *               Designed to be elegant and minimal on both mobile and
+ *               desktop login screens.
  *
  * The parent page should wrap content in `min-h-screen flex flex-col`
  * and render <BrandFooter /> as the last child (it applies `mt-auto` itself
  * so it sticks to the bottom).
  */
-export function BrandFooter({ variant = 'dark' }: { variant?: 'dark' | 'light' | 'compact' }) {
+export function BrandFooter({ variant = 'dark' }: { variant?: 'dark' | 'light' | 'compact' | 'login' }) {
   const { t } = useLang();
 
   const isLight = variant === 'light';
   const isCompact = variant === 'compact';
+  const isLogin = variant === 'login';
 
+  // ─────────────────────────────────────────────────────────────────────
+  // LOGIN VARIANT — minimal, centered, elegant.
+  // Shows ONLY the client logo with the org name centered beneath it.
+  // No BankResaneh mark, no "تهیه‌شده برای" label, no divider.
+  // Logo size (56×56 CSS px) tuned to be readable on both mobile (375px)
+  // and desktop (1440px) — large enough to read, small enough not to
+  // dominate the login screen.
+  // ─────────────────────────────────────────────────────────────────────
+  if (isLogin) {
+    return (
+      <footer
+        dir="rtl"
+        style={{
+          marginTop: 'auto',
+          background: 'transparent',
+          borderTop: 'none',
+          padding: '1.5rem 1rem 1.25rem',
+          zIndex: 30,
+          paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.6rem',
+            margin: '0 auto',
+          }}
+        >
+          <Image
+            src="/client-logo-white.png"
+            alt="مانیتورینگ مرکز طرح و برنامه سیما"
+            width={56}
+            height={56}
+            priority
+            style={{
+              objectFit: 'contain',
+              opacity: 1,
+              // Subtle glow so the white knockout mark reads cleanly on
+              // the dark login backdrop without a backing box.
+              filter: 'drop-shadow(0 2px 10px rgba(0,0,0,0.3)) brightness(1.05)',
+            }}
+          />
+          <span
+            style={{
+              color: 'rgba(220, 252, 231, 0.95)',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              letterSpacing: '0.01em',
+              lineHeight: 1.4,
+              textAlign: 'center',
+              maxWidth: '20rem',
+            }}
+          >
+            {t('footer.clientOrg')}
+          </span>
+        </div>
+      </footer>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────
+  // DEFAULT / DARK / LIGHT / COMPACT VARIANT — full co-branded footer.
+  // ─────────────────────────────────────────────────────────────────────
   const bg = isLight
     ? 'rgba(248, 250, 252, 0.92)'
     : 'linear-gradient(180deg, rgba(6,41,32,0.85) 0%, rgba(4,28,22,0.95) 100%)';
@@ -81,11 +153,7 @@ export function BrandFooter({ variant = 'dark' }: { variant?: 'dark' | 'light' |
           }}
         />
 
-        {/* Left side (RTL end): Client logo + label + organization name.
-            The "تهیه‌شده برای" label sits on top of the org name
-            (مانیتورینگ مرکز طرح و برنامه سیما), and the client logo mark
-            sits beside them. On compact screens the org name is hidden
-            to keep the footer readable. */}
+        {/* Left side (RTL end): Client logo + label + organization name */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           {!isCompact && (
             <div
@@ -113,11 +181,6 @@ export function BrandFooter({ variant = 'dark' }: { variant?: 'dark' | 'light' |
               </span>
             </div>
           )}
-          {/* Client logo — true transparency, no backing box. On the dark
-              theme we use the white knockout variant (client-logo-white.png)
-              so the mark stays readable directly on the dark footer; on the
-              light theme the original navy transparent PNG is used. Dimensions
-              follow the logo's native ~square aspect ratio. */}
           <div
             style={{
               display: 'flex',
