@@ -1655,13 +1655,8 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
           </button>
         </form>
 
-        <div className="mt-10 text-center">
-          <p style={{ color: 'rgba(134, 239, 172, 0.6)' }} className="text-xs tracking-wider">
-            نسخه ۲.۰.۰ • مرجع جامع برنامه‌های تلویزیونی بین‌المللی
-          </p>
-        </div>
       </div>
-      <BrandFooter />
+      <BrandFooter variant="login" />
     </div>
   );
 }

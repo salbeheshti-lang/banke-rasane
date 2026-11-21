@@ -17,12 +17,13 @@ import { CLIENT_BRANDING } from '@/lib/branding';
  * and render <BrandFooter /> as the last child (it applies `mt-auto` itself
  * so it sticks to the bottom).
  */
-export function BrandFooter({ variant = 'dark', withBottomNav = false }: { variant?: 'dark' | 'light' | 'compact'; withBottomNav?: boolean }) {
+export function BrandFooter({ variant = 'dark', withBottomNav = false }: { variant?: 'dark' | 'light' | 'compact' | 'login'; withBottomNav?: boolean }) {
   const { t } = useLang();
   const currentYear = new Intl.DateTimeFormat('fa-IR', { year: 'numeric' }).format(new Date());
 
   const isLight = variant === 'light';
   const isCompact = variant === 'compact';
+  const isLogin = variant === 'login';
 
   const bg = isLight
     ? 'rgba(248, 250, 252, 0.92)'
@@ -38,15 +39,56 @@ export function BrandFooter({ variant = 'dark', withBottomNav = false }: { varia
       style={{
         marginTop: 'auto',
         width: '100%',
-        background: bg,
-        borderTop: `1px solid ${borderColor}`,
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-        padding: isCompact ? '0.6rem 1rem' : '0.9rem 1.25rem',
+        background: isLogin ? 'transparent' : bg,
+        borderTop: isLogin ? 'none' : `1px solid ${borderColor}`,
+        backdropFilter: isLogin ? 'none' : 'blur(8px)',
+        WebkitBackdropFilter: isLogin ? 'none' : 'blur(8px)',
+        padding: isLogin ? '1rem 1rem calc(1rem + env(safe-area-inset-bottom))' : isCompact ? '0.6rem 1rem' : '0.9rem 1.25rem',
         zIndex: 30,
         paddingBottom: withBottomNav ? 'calc(84px + env(safe-area-inset-bottom))' : 'max(0.6rem, env(safe-area-inset-bottom))',
       }}
     >
+      {isLogin ? (
+        <div
+          style={{
+            maxWidth: '100%',
+            margin: '0 auto',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.55rem',
+            textAlign: 'center',
+          }}
+        >
+          <Image
+            src={CLIENT_BRANDING.logoWhitePath}
+            alt={CLIENT_BRANDING.organizationFa}
+            width={60}
+            height={60}
+            priority
+            style={{
+              width: 'clamp(42px, 5vw, 58px)',
+              height: 'clamp(42px, 5vw, 58px)',
+              objectFit: 'contain',
+              opacity: 0.96,
+            }}
+          />
+          <span
+            style={{
+              color: 'rgba(226, 255, 244, 0.9)',
+              fontSize: 'clamp(0.72rem, 1.05vw, 0.875rem)',
+              fontWeight: 600,
+              lineHeight: 1.6,
+              letterSpacing: '0',
+              whiteSpace: 'normal',
+              textWrap: 'balance',
+            }}
+          >
+            {CLIENT_BRANDING.organizationFa}
+          </span>
+        </div>
+      ) : (
       <div
         style={{
           maxWidth: '1400px',
@@ -142,6 +184,7 @@ export function BrandFooter({ variant = 'dark', withBottomNav = false }: { varia
           </div>
         </div>
       </div>
+      )}
     </footer>
   );
 }
