@@ -1504,7 +1504,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
       <div className="login-ambient-light green-3"></div>
 
       <div
-        className={`relative z-20 flex flex-col items-center px-8 transition-all duration-1000 ${isReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+        className={`relative z-20 flex flex-1 flex-col justify-center items-center px-8 transition-all duration-1000 ${isReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
         style={{ maxWidth: '440px', width: '100%' }}
       >
         {/* Logo — gradient light beam sweeps ONLY across the logo pixels.
