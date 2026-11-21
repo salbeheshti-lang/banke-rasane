@@ -14,11 +14,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy-preview:
+  validate-and-deploy-preview:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 50
     steps:
-      - name: Check preview configuration
+      - name: Check deployment configuration
         id: config
         shell: bash
         env:
@@ -27,33 +27,47 @@ jobs:
           API_BASE: ${{ vars.BANKRESANEH_API_BASE }}
           API_ALLOWLIST: ${{ vars.BANKRESANEH_ALLOWED_API_ORIGINS }}
         run: |
-          if [[ -n "$CF_TOKEN" && -n "$CF_ACCOUNT" && -n "$API_BASE" && -n "$API_ALLOWLIST" ]]; then
+          missing=()
+          [[ -n "$CF_TOKEN" ]] || missing+=("CLOUDFLARE_API_TOKEN (GitHub Secret)")
+          [[ -n "$CF_ACCOUNT" ]] || missing+=("CLOUDFLARE_ACCOUNT_ID (GitHub Variable)")
+          [[ -n "$API_BASE" ]] || missing+=("BANKRESANEH_API_BASE (GitHub Variable)")
+          [[ -n "$API_ALLOWLIST" ]] || missing+=("BANKRESANEH_ALLOWED_API_ORIGINS (GitHub Variable)")
+          if [[ ${#missing[@]} -eq 0 ]]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "Cloudflare deployment credentials and API endpoint variables are present." >> "$GITHUB_STEP_SUMMARY"
           else
             echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Preview deployment skipped. Configure CLOUDFLARE_API_TOKEN and the three repository variables documented in CLOUDFLARE.md."
-            echo "Preview deployment is not configured yet. Add CLOUDFLARE_API_TOKEN secret and CLOUDFLARE_ACCOUNT_ID, BANKRESANEH_API_BASE, BANKRESANEH_ALLOWED_API_ORIGINS variables." >> "$GITHUB_STEP_SUMMARY"
+            {
+              echo "## Preview deployment is not ready"
+              echo "The build and local Worker smoke test will still run. Live deployment is withheld because these settings are missing:"
+              for item in "${missing[@]}"; do echo "- $item"; done
+              echo ""
+              echo "No secret values are printed."
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Checkout
-        if: steps.config.outputs.ready == 'true'
         uses: actions/checkout@v4
 
       - name: Set up Bun
-        if: steps.config.outputs.ready == 'true'
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
 
       - name: Install dependencies
-        if: steps.config.outputs.ready == 'true'
-        run: bun install --no-save
+        run: bun install --frozen-lockfile
 
       - name: Build Cloudflare Worker
-        if: steps.config.outputs.ready == 'true'
         run: bun run cloudflare:build
         env:
           DATABASE_URL: file:./db/custom.db
+
+      - name: Test local Cloudflare Worker preview
+        run: bun run test:cloudflare-preview
+        env:
+          DATABASE_URL: file:./db/custom.db
+          BANKRESANEH_API_BASE: http://127.0.0.1:3002
+          BANKRESANEH_ALLOWED_API_ORIGINS: http://127.0.0.1:3002
 
       - name: Deploy isolated preview Worker
         if: steps.config.outputs.ready == 'true'
@@ -66,3 +80,8 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           BANKRESANEH_API_BASE: ${{ vars.BANKRESANEH_API_BASE }}
           BANKRESANEH_ALLOWED_API_ORIGINS: ${{ vars.BANKRESANEH_ALLOWED_API_ORIGINS }}
+
+      - name: Record live deployment status
+        if: always() && steps.config.outputs.ready != 'true'
+        run: |
+          echo "Local Cloudflare build and smoke test completed. No public preview URL was created because the persistent API service has not yet been configured." >> "$GITHUB_STEP_SUMMARY"
