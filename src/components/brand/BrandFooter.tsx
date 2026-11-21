@@ -36,6 +36,7 @@ export function BrandFooter({ variant = 'dark' }: { variant?: 'dark' | 'light' |
       dir="rtl"
       style={{
         marginTop: 'auto',
+        width: '100%',
         background: bg,
         borderTop: `1px solid ${borderColor}`,
         backdropFilter: 'blur(8px)',

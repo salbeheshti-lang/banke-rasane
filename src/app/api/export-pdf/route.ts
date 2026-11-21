@@ -8,16 +8,10 @@ export const runtime = 'nodejs';
 
 function getClientLogoDataUrl(variant: 'white' | 'color'): string {
   const fileName = variant === 'white' ? 'client-logo-white.png' : 'client-logo.png';
-  const resourcesPath = (process as NodeJS.Process & { resourcesPath?: string }).resourcesPath;
-  const candidates = [
-    path.join(process.cwd(), 'public', fileName),
-    ...(resourcesPath ? [path.join(resourcesPath, 'app', 'public', fileName), path.join(resourcesPath, 'public', fileName)] : []),
-  ];
-  for (const candidate of candidates) {
-    try {
-      if (fs.existsSync(candidate)) return `data:image/png;base64,${fs.readFileSync(candidate).toString('base64')}`;
-    } catch { /* Try the next known packaged location. */ }
-  }
+  const candidate = path.join(process.cwd(), 'public', fileName);
+  try {
+    if (fs.existsSync(candidate)) return `data:image/png;base64,${fs.readFileSync(candidate).toString('base64')}`;
+  } catch { /* The report can still be generated without optional client branding. */ }
   console.warn(`[PDF] Client logo not found: ${fileName}`);
   return '';
 }
