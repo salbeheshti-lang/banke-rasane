@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useLang } from '@/lib/i18n-context';
+import { CLIENT_BRANDING } from '@/lib/branding';
 
 /**
  * BrandFooter — sticky footer shown on every page.
@@ -129,8 +130,8 @@ export function BrandFooter({ variant = 'dark' }: { variant?: 'dark' | 'light' |
             }}
           >
             <Image
-              src={isLight ? '/client-logo.png' : '/client-logo-white.png'}
-              alt="مؤسسه فرهنگی هنری مرکز عروج منیر"
+              src={isLight ? CLIENT_BRANDING.logoColorPath : CLIENT_BRANDING.logoWhitePath}
+              alt={CLIENT_BRANDING.organizationFa}
               width={isCompact ? 27 : 39}
               height={isCompact ? 28 : 40}
               style={{

@@ -12,6 +12,8 @@
  * new key automatically makes it available via t('newKey').
  */
 
+import { CLIENT_BRANDING } from './branding';
+
 export type Lang = 'fa' | 'en';
 
 /** Dictionary shape — both languages must define the same keys. */
@@ -287,8 +289,8 @@ export const dict: Dict = {
   'program.noSimilar': { fa: 'برنامهٔ مشابهی یافت نشد', en: 'No similar programs found' },
 
   // ===== Footer / commissioning organization =====
-  'footer.poweredBy': { fa: 'تهیه‌شده برای', en: 'Made for' },
-  'footer.clientOrg': { fa: 'مانیتورینگ مرکز طرح و برنامه سیما', en: 'Sima Plan & Program Monitoring Center' },
+  'footer.poweredBy': { fa: CLIENT_BRANDING.commissionedLabelFa, en: CLIENT_BRANDING.commissionedLabelEn },
+  'footer.clientOrg': { fa: CLIENT_BRANDING.organizationFa, en: CLIENT_BRANDING.organizationEn },
   'footer.copyright': { fa: '© {year} بانک رسانه', en: '© {year} BankResaneh' },
 
   // ===== Settings: Profile tab =====

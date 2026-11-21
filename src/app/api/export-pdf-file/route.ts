@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 function getClientLogoDataUrl(): string {
-  const fileName = 'client-logo.png';
+  const fileName = path.basename(CLIENT_BRANDING.logoColorPath);
   const candidate = path.join(process.cwd(), 'public', fileName);
   try {
     if (fs.existsSync(candidate)) return `data:image/png;base64,${fs.readFileSync(candidate).toString('base64')}`;

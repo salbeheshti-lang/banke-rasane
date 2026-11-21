@@ -7,6 +7,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useEscapeKey } from '@/hooks/use-escape-key';
 import { LangProvider, useLang } from '@/lib/i18n-context';
 import { BrandFooter } from '@/components/brand/BrandFooter';
+import { CLIENT_BRANDING } from '@/lib/branding';
 
 // ============================================
 // TYPES
@@ -1776,7 +1777,7 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
                   <span style={{ color: 'rgba(167, 243, 208, 0.5)', fontSize: '9px', fontWeight: 500 }}>{t('footer.poweredBy')}</span>
                   <span style={{ color: 'rgba(167, 243, 208, 0.85)', fontSize: '10px', fontWeight: 700, marginTop: '1px' }}>{t('footer.clientOrg')}</span>
                 </span>
-                <Image src="/client-logo-white.png" alt={t('footer.clientOrg')} width={24} height={25} style={{ opacity: 0.9, objectFit: 'contain' }} />
+                <Image src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={24} height={25} style={{ opacity: 0.9, objectFit: 'contain' }} />
               </span>
             </div>
           )}

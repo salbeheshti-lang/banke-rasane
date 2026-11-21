@@ -7,7 +7,7 @@ import { gatePermission, getApiBaseForRequest } from '@/lib/server-auth';
 export const runtime = 'nodejs';
 
 function getClientLogoDataUrl(variant: 'white' | 'color'): string {
-  const fileName = variant === 'white' ? 'client-logo-white.png' : 'client-logo.png';
+  const fileName = path.basename(variant === 'white' ? CLIENT_BRANDING.logoWhitePath : CLIENT_BRANDING.logoColorPath);
   const candidate = path.join(process.cwd(), 'public', fileName);
   try {
     if (fs.existsSync(candidate)) return `data:image/png;base64,${fs.readFileSync(candidate).toString('base64')}`;
