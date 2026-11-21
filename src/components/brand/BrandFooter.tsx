@@ -17,7 +17,7 @@ import { CLIENT_BRANDING } from '@/lib/branding';
  * and render <BrandFooter /> as the last child (it applies `mt-auto` itself
  * so it sticks to the bottom).
  */
-export function BrandFooter({ variant = 'dark' }: { variant?: 'dark' | 'light' | 'compact' }) {
+export function BrandFooter({ variant = 'dark', withBottomNav = false }: { variant?: 'dark' | 'light' | 'compact'; withBottomNav?: boolean }) {
   const { t } = useLang();
   const currentYear = new Intl.DateTimeFormat('fa-IR', { year: 'numeric' }).format(new Date());
 
@@ -44,7 +44,7 @@ export function BrandFooter({ variant = 'dark' }: { variant?: 'dark' | 'light' |
         WebkitBackdropFilter: 'blur(8px)',
         padding: isCompact ? '0.6rem 1rem' : '0.9rem 1.25rem',
         zIndex: 30,
-        paddingBottom: 'max(0.6rem, env(safe-area-inset-bottom))',
+        paddingBottom: withBottomNav ? 'calc(84px + env(safe-area-inset-bottom))' : 'max(0.6rem, env(safe-area-inset-bottom))',
       }}
     >
       <div

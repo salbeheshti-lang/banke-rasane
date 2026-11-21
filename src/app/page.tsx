@@ -1435,7 +1435,7 @@ function HomeInner() {
           {toast}
         </div>
       )}
-      <BrandFooter />
+      <BrandFooter withBottomNav={isMobile} />
     </div>
   );
 }
