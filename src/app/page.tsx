@@ -6,6 +6,8 @@ import { api, setApiBase, getApiBase, getApiUrl, User, authHeaders } from '@/lib
 import { useTheme } from '@/hooks/use-theme';
 import { useEscapeKey } from '@/hooks/use-escape-key';
 import { LangProvider, useLang } from '@/lib/i18n-context';
+import { BrandFooter } from '@/components/brand/BrandFooter';
+import { CLIENT_BRANDING } from '@/lib/branding';
 
 // ============================================
 // TYPES
@@ -1276,7 +1278,7 @@ function HomeInner() {
   }
 
   return (
-    <div className="app-content min-h-screen">
+    <div className="app-content min-h-screen flex flex-col">
       <TopAppBar
         onMenuClick={() => setDrawerOpen(true)}
         isMobile={isMobile}
@@ -1433,6 +1435,7 @@ function HomeInner() {
           {toast}
         </div>
       )}
+      <BrandFooter withBottomNav={isMobile} />
     </div>
   );
 }
@@ -1501,7 +1504,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
       <div className="login-ambient-light green-3"></div>
 
       <div
-        className={`relative z-20 flex flex-col items-center px-8 transition-all duration-1000 ${isReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+        className={`relative z-20 flex flex-1 flex-col justify-center items-center px-8 transition-all duration-1000 ${isReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
         style={{ maxWidth: '440px', width: '100%' }}
       >
         {/* Logo — gradient light beam sweeps ONLY across the logo pixels.
@@ -1658,6 +1661,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
           </p>
         </div>
       </div>
+      <BrandFooter />
     </div>
   );
 }
@@ -1767,6 +1771,13 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               </span>
               <span style={{ color: '#54D9C0', fontSize: '11px', marginTop: '2px' }}>
                 {t('app.title')} — {totalShows?.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US') || '0'} {t('dashboard.programs')} {t('dashboard.stripTitle').includes('ژانر') ? 'در' : 'in'} {totalGenres?.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US') || '0'} {t('drawer.genres')}
+              </span>
+              <span className="flex items-center gap-1.5" style={{ marginTop: '4px', opacity: 0.9 }} title={t('footer.clientOrg')}>
+                <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2, alignItems: 'flex-start' }}>
+                  <span style={{ color: 'rgba(167, 243, 208, 0.5)', fontSize: '9px', fontWeight: 500 }}>{t('footer.poweredBy')}</span>
+                  <span style={{ color: 'rgba(167, 243, 208, 0.85)', fontSize: '10px', fontWeight: 700, marginTop: '1px' }}>{t('footer.clientOrg')}</span>
+                </span>
+                <Image src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={24} height={25} style={{ opacity: 0.9, objectFit: 'contain' }} />
               </span>
             </div>
           )}
