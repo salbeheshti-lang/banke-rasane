@@ -6,6 +6,7 @@ import { api, setApiBase, getApiBase, getApiUrl, User, authHeaders } from '@/lib
 import { useTheme } from '@/hooks/use-theme';
 import { useEscapeKey } from '@/hooks/use-escape-key';
 import { LangProvider, useLang } from '@/lib/i18n-context';
+import { BrandFooter } from '@/components/brand/BrandFooter';
 
 // ============================================
 // TYPES
@@ -1267,7 +1268,7 @@ function HomeInner() {
   }
 
   return (
-    <div className="app-content min-h-screen">
+    <div className="app-content min-h-screen flex flex-col">
       <TopAppBar
         onMenuClick={() => setDrawerOpen(true)}
         isMobile={isMobile}
@@ -1424,6 +1425,11 @@ function HomeInner() {
           {toast}
         </div>
       )}
+
+      {/* Sticky co-branded footer — BankResaneh mark + commissioning org
+          (مانیتورینگ مرکز طرح و برنامه سیما) + client logo. Sticks to the
+          bottom on short pages, pushed down naturally on long pages. */}
+      <BrandFooter />
     </div>
   );
 }
@@ -1626,6 +1632,9 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
           </p>
         </div>
       </div>
+
+      {/* Co-branded footer on the login screen too */}
+      <BrandFooter />
     </div>
   );
 }
@@ -1735,6 +1744,48 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               </span>
               <span style={{ color: '#54D9C0', fontSize: '11px', marginTop: '2px' }}>
                 {t('app.title')} — {totalShows?.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US') || '0'} {t('dashboard.programs')} {t('dashboard.stripTitle').includes('ژانر') ? 'در' : 'in'} {totalGenres?.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US') || '0'} {t('drawer.genres')}
+              </span>
+              {/* Client logo — subtle "powered by" badge below the BankResaneh tagline.
+                  Shows the commissioning org name (مانیتورینگ مرکز طرح و برنامه سیما)
+                  alongside the "تهیه‌شده برای" label and the client logo mark. */}
+              <span
+                className="flex items-center gap-1.5"
+                style={{ marginTop: '4px', opacity: 0.9 }}
+                title="مانیتورینگ مرکز طرح و برنامه سیما — مؤسسه فرهنگی هنری مرکز عروج منیر"
+              >
+                <span
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    lineHeight: 1.2,
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <span style={{ color: 'rgba(167, 243, 208, 0.5)', fontSize: '9px', fontWeight: 500 }}>
+                    {t('footer.poweredBy')}
+                  </span>
+                  <span style={{ color: 'rgba(167, 243, 208, 0.85)', fontSize: '10px', fontWeight: 700, marginTop: '1px' }}>
+                    {t('footer.clientOrg')}
+                  </span>
+                </span>
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  {/* White knockout variant — no backing box, true transparency */}
+                  <Image
+                    src="/client-logo-white.png"
+                    alt="مؤسسه فرهنگی هنری مرکز عروج منیر"
+                    width={24}
+                    height={25}
+                    style={{
+                      opacity: 0.9,
+                      objectFit: 'contain',
+                    }}
+                  />
+                </span>
               </span>
             </div>
           )}
