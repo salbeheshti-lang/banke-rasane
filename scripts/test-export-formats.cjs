@@ -26,10 +26,12 @@ async function main() {
   const clientLogoPath = path.join(__dirname, '..', 'public', 'client-logo.png');
   const clientLogo = fs.readFileSync(clientLogoPath);
   assert.equal(clientLogo.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', 'Commissioning logo is a valid PNG asset');
+  const whiteClientLogo = fs.readFileSync(path.join(__dirname, '..', 'public', 'client-logo-white.png'));
+  assert.equal(whiteClientLogo.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', 'White commissioning logo is a valid PNG asset');
   const clientLogoDataUrl = `data:image/png;base64,${clientLogo.toString('base64')}`;
   const htmlPdfRoute = fs.readFileSync(path.join(__dirname, '..', 'src', 'app', 'api', 'export-pdf', 'route.ts'), 'utf8');
   assert.match(htmlPdfRoute, /\.print-footer\s*\{\s*display:\s*none;\s*\}/, 'HTML report footer is hidden on screen');
-  assert.match(htmlPdfRoute, /@media print[\\s\\S]*?\.print-footer\s*\{\s*display:\s*flex/, 'HTML report footer is visible only when printing');
+  assert.match(htmlPdfRoute, /@media print[\s\S]*?\.print-footer\s*\{\s*display:\s*flex/, 'HTML report footer is visible only when printing');
   console.log('PASS co-branding PNG asset and print-only HTML footer guards');
 
   const pdfModule = require('@digicole/pdfmake-rtl');
