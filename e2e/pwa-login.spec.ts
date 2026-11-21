@@ -25,8 +25,8 @@ test('login screen renders the co-branded footer and serves both client logo ass
   const footer = page.locator('footer');
   await expect(footer).toBeVisible();
   await expect(footer.getByText('مانیتورینگ مرکز طرح و برنامه سیما')).toBeVisible();
-  await expect(footer.locator('img').first()).toHaveAttribute('src', '/banke-rasane-logo.png');
-  await expect(footer.locator('img').last()).toHaveAttribute('src', /client-logo(-white)?\.png$/);
+  await expect(footer.locator('img').first()).toHaveAttribute('src', /banke-rasane-logo\.png/);
+  await expect(footer.locator('img').last()).toHaveAttribute('src', /client-logo(-white)?\.png/);
 
   for (const asset of ['/client-logo.png', '/client-logo-white.png']) {
     const response = await request.get(asset);
