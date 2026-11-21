@@ -286,6 +286,11 @@ export const dict: Dict = {
   'program.similar': { fa: 'برنامه‌های مشابه', en: 'Similar programs' },
   'program.noSimilar': { fa: 'برنامهٔ مشابهی یافت نشد', en: 'No similar programs found' },
 
+  // ===== Footer / commissioning organization =====
+  'footer.poweredBy': { fa: 'تهیه‌شده برای', en: 'Made for' },
+  'footer.clientOrg': { fa: 'مانیتورینگ مرکز طرح و برنامه سیما', en: 'Sima Plan & Program Monitoring Center' },
+  'footer.copyright': { fa: '© {year} بانک رسانه', en: '© {year} BankResaneh' },
+
   // ===== Settings: Profile tab =====
   'settings.profile.edit': { fa: 'ویرایش پروفایل', en: 'Edit profile' },
   'settings.profile.name': { fa: 'نام نمایشی', en: 'Display name' },
