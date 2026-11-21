@@ -285,6 +285,12 @@ export const dict: Dict = {
   'program.youtube': { fa: 'تماشا در یوتیوب', en: 'Watch on YouTube' },
   'program.similar': { fa: 'برنامه‌های مشابه', en: 'Similar programs' },
   'program.noSimilar': { fa: 'برنامهٔ مشابهی یافت نشد', en: 'No similar programs found' },
+  'program.capacity': { fa: 'ظرفیت بهره‌برداری', en: 'Utilization capacity' },
+
+  // ===== Footer =====
+  'footer.poweredBy': { fa: 'تهیه‌شده برای', en: 'Made for' },
+  'footer.clientOrg': { fa: 'مانیتورینگ مرکز طرح و برنامه سیما', en: 'Sima Plan & Program Monitoring Center' },
+  'footer.copyright': { fa: '© ۱۴۰۴ بانک رسانه', en: '© 1404 BankResaneh' },
 
   // ===== Settings: Profile tab =====
   'settings.profile.edit': { fa: 'ویرایش پروفایل', en: 'Edit profile' },
@@ -394,6 +400,8 @@ export const dict: Dict = {
   'add.field.materials': { fa: 'متریال', en: 'Materials' },
   'add.field.colors': { fa: 'رنگ‌آمیزی', en: 'Color scheme' },
   'add.field.lighting': { fa: 'نورپردازی', en: 'Lighting' },
+  'add.field.capacity': { fa: 'ظرفیت بهره‌برداری', en: 'Utilization capacity' },
+  'add.field.capacityHint': { fa: 'متن ظرفیت بهره‌برداری (بعداً تکمیل می‌شود)', en: 'Utilization capacity text (to be filled later)' },
 
   // ===== ShowDetailsModal =====
   'details.edit': { fa: '✏ ویرایش', en: '✏ Edit' },
