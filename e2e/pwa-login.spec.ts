@@ -20,6 +20,21 @@ test('PWA manifest exposes Persian install metadata and existing app icons', asy
   }
 });
 
+test('login screen renders the co-branded footer and serves both client logo assets', async ({ page, request }) => {
+  await page.goto('/');
+  const footer = page.locator('footer');
+  await expect(footer).toBeVisible();
+  await expect(footer.getByText('مانیتورینگ مرکز طرح و برنامه سیما')).toBeVisible();
+  await expect(footer.locator('img').first()).toHaveAttribute('src', '/banke-rasane-logo.png');
+  await expect(footer.locator('img').last()).toHaveAttribute('src', /client-logo(-white)?\\.png$/);
+
+  for (const asset of ['/client-logo.png', '/client-logo-white.png']) {
+    const response = await request.get(asset);
+    expect(response.ok()).toBeTruthy();
+    expect(response.headers()['content-type']).toContain('image/png');
+  }
+});
+
 test('service worker and offline fallback are served, and private APIs are excluded from cache logic', async ({ page, request }) => {
   await page.goto('/');
   const swResponse = await request.get('/sw.js');
