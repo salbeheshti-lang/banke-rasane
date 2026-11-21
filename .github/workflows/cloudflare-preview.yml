@@ -15,29 +15,48 @@ concurrency:
 
 jobs:
   deploy-preview:
-    # Preview deployment is intentionally skipped until the Cloudflare account
-    # and a separately hosted persistent API are configured in repository settings.
-    if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && vars.CLOUDFLARE_ACCOUNT_ID != '' && vars.BANKRESANEH_API_BASE != '' && vars.BANKRESANEH_ALLOWED_API_ORIGINS != '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
+      - name: Check preview configuration
+        id: config
+        shell: bash
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          API_BASE: ${{ vars.BANKRESANEH_API_BASE }}
+          API_ALLOWLIST: ${{ vars.BANKRESANEH_ALLOWED_API_ORIGINS }}
+        run: |
+          if [[ -n "$CF_TOKEN" && -n "$CF_ACCOUNT" && -n "$API_BASE" && -n "$API_ALLOWLIST" ]]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Preview deployment skipped. Configure CLOUDFLARE_API_TOKEN and the three repository variables documented in CLOUDFLARE.md."
+            echo "Preview deployment is not configured yet. Add CLOUDFLARE_API_TOKEN secret and CLOUDFLARE_ACCOUNT_ID, BANKRESANEH_API_BASE, BANKRESANEH_ALLOWED_API_ORIGINS variables." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Checkout
+        if: steps.config.outputs.ready == 'true'
         uses: actions/checkout@v4
 
       - name: Set up Bun
+        if: steps.config.outputs.ready == 'true'
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
 
       - name: Install dependencies
+        if: steps.config.outputs.ready == 'true'
         run: bun install --no-save
 
       - name: Build Cloudflare Worker
+        if: steps.config.outputs.ready == 'true'
         run: bun run cloudflare:build
         env:
           DATABASE_URL: file:./db/custom.db
 
       - name: Deploy isolated preview Worker
+        if: steps.config.outputs.ready == 'true'
         run: |
           bunx wrangler deploy --name bankresaneh-preview \
             --var "BANKRESANEH_API_BASE:${BANKRESANEH_API_BASE}" \
@@ -47,8 +66,3 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           BANKRESANEH_API_BASE: ${{ vars.BANKRESANEH_API_BASE }}
           BANKRESANEH_ALLOWED_API_ORIGINS: ${{ vars.BANKRESANEH_ALLOWED_API_ORIGINS }}
-
-      - name: Explain missing preview configuration
-        if: ${{ always() && (secrets.CLOUDFLARE_API_TOKEN == '' || vars.CLOUDFLARE_ACCOUNT_ID == '' || vars.BANKRESANEH_API_BASE == '' || vars.BANKRESANEH_ALLOWED_API_ORIGINS == '') }}
-        run: |
-          echo "Preview deployment skipped: configure CLOUDFLARE_API_TOKEN secret and CLOUDFLARE_ACCOUNT_ID, BANKRESANEH_API_BASE, BANKRESANEH_ALLOWED_API_ORIGINS repository variables." >> "$GITHUB_STEP_SUMMARY"
