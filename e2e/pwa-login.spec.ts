@@ -29,6 +29,15 @@ test('login screen renders the co-branded footer and serves both client logo ass
   await expect(footer.locator('img')).toHaveCount(1);
   await expect(footer.locator('img').first()).toHaveAttribute('src', /client-logo-white\.png/);
 
+  for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) {
+    await page.setViewportSize(viewport);
+    const logoSize = await footer.locator('img').boundingBox();
+    expect(logoSize).not.toBeNull();
+    expect(logoSize!.width).toBeGreaterThanOrEqual(42);
+    expect(logoSize!.width).toBeLessThanOrEqual(58);
+    await expect(footer.getByText('مانیتورینگ مرکز طرح و برنامه سیما')).toBeVisible();
+  }
+
   for (const asset of ['/client-logo.png', '/client-logo-white.png']) {
     const response = await request.get(asset);
     expect(response.ok()).toBeTruthy();
