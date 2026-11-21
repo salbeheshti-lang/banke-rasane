@@ -46,6 +46,27 @@ function getLogoDataUrl(): string {
 }
 
 /**
+ * Read the commissioning client's logo as a base64 data URL.
+ * Uses the white knockout variant (client-logo-white.png) for dark cover
+ * backgrounds and the original navy mark (client-logo.png) for light/print
+ * contexts. Returns '' if the file is missing so callers can conditionally
+ * render the co-branding block.
+ */
+function getClientLogoDataUrl(variant: 'white' | 'color'): string {
+  const file = variant === 'white' ? 'client-logo-white.png' : 'client-logo.png';
+  const p = path.join(process.cwd(), 'public', file);
+  try {
+    if (fs.existsSync(p)) {
+      const buf = fs.readFileSync(p);
+      return `data:image/png;base64,${buf.toString('base64')}`;
+    }
+  } catch {
+    /* ignore */
+  }
+  return '';
+}
+
+/**
  * Read persisted report settings (title / subtitle / organization) from disk.
  * Stored as JSON in the writable data directory (see @/lib/data-dir) so admins
  * can edit defaults without touching code. Returns sensible fallbacks if the
@@ -104,6 +125,8 @@ export async function POST(request: NextRequest) {
       subtitle,
       organization,
       logoDataUrl: getLogoDataUrl(),
+      clientLogoWhiteDataUrl: getClientLogoDataUrl('white'),
+      clientLogoDataUrl: getClientLogoDataUrl('color'),
     });
 
     return new NextResponse(html, {
@@ -127,6 +150,8 @@ interface PDFOptions {
   subtitle: string;
   organization: string;
   logoDataUrl: string;
+  clientLogoWhiteDataUrl: string;
+  clientLogoDataUrl: string;
 }
 
 function generatePDFHtml(shows: any[], opts: PDFOptions): string {
@@ -219,6 +244,13 @@ function generatePDFHtml(shows: any[], opts: PDFOptions): string {
   const logoHtml = opts.logoDataUrl
     ? `<img src="${opts.logoDataUrl}" alt="بانک رسانه" style="width: 140px; height: auto; display: block; margin: 0 auto; filter: brightness(1.2) drop-shadow(0 4px 20px rgba(16, 185, 129, 0.4));" />`
     : '';
+  // Client logo (مؤسسه فرهنگی هنری مرکز عروج منیر) shown under the cover meta
+  // so the report identifies its commissioner. The "تهیه‌شده برای" label sits
+  // above the commissioning org name (مانیتورینگ مرکز طرح و برنامه سیما),
+  // with the logo mark beside them.
+  const clientLogoHtml = opts.clientLogoWhiteDataUrl
+    ? `<div class="cover-client-logo-wrap"><div class="cover-client-text"><span class="cover-client-label">تهیه‌شده برای</span><span class="cover-client-org">مانیتورینگ مرکز طرح و برنامه سیما</span></div><img src="${opts.clientLogoWhiteDataUrl}" alt="مؤسسه فرهنگی هنری مرکز عروج منیر" class="cover-client-logo" /></div>`
+    : '';
   const cover = `
     <section class="cover">
       <div class="cover-bg-deco"></div>
@@ -229,6 +261,7 @@ function generatePDFHtml(shows: any[], opts: PDFOptions): string {
         </div>
         <h1 class="cover-title">${escapeHtml(opts.title)}</h1>
         <p class="cover-subtitle">${escapeHtml(opts.subtitle)}</p>
+        ${clientLogoHtml}
 
         <div class="cover-stats">
           <div class="cover-stat">
@@ -1281,6 +1314,44 @@ body {
 }
 
 /* ============ PRINT ============ */
+/* Client logo on the cover page — white knockout variant sits directly on
+   the dark cover gradient, no backing box. The label "تهیه‌شده برای" sits
+   above the org name "مانیتورینگ مرکز طرح و برنامه سیما" with the logo
+   mark beside them. */
+.cover-client-logo-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 18px auto 0;
+  width: fit-content;
+}
+.cover-client-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.3;
+}
+.cover-client-label {
+  font-size: 11px;
+  color: #a7f3d0;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0.8;
+}
+.cover-client-org {
+  font-size: 13px;
+  color: #d1fae5;
+  font-weight: 700;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+.cover-client-logo {
+  height: 40px;
+  width: auto;
+  display: block;
+}
+
 @media print {
   body { background: white; }
   .cover, .content-section, .toc-section {
@@ -1288,6 +1359,61 @@ body {
     box-shadow: none;
   }
   @page { size: A4; margin: 0; }
+
+  /* Print-only co-branded footer — repeats on every printed page.
+     BankResaneh mark on the right, commissioning org + client logo on the left. */
+  .print-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 6px 16px;
+    border-top: 1px solid #e2e8f0;
+    background: white;
+    z-index: 100;
+  }
+  .print-footer-brand {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 9px;
+    color: #475569;
+  }
+  .print-footer-brand img {
+    height: 24px;
+    width: auto;
+  }
+  .print-footer-page {
+    font-size: 9px;
+    color: #94a3b8;
+  }
+  .print-footer-client {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 9px;
+    color: #475569;
+  }
+  .print-footer-client-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    line-height: 1.2;
+  }
+  .print-footer-client-org {
+    font-size: 9px;
+    color: #334155;
+    font-weight: 600;
+    margin-top: 1px;
+    white-space: nowrap;
+  }
+  .print-footer-client img {
+    height: 22px;
+    width: auto;
+  }
 }
 @media screen {
   body { padding: 20px 0; }
@@ -1305,6 +1431,25 @@ ${decorAnalysis}
 ${detailedListings}
 ${conclusion}
 ${appendix}
+<!-- Print-only co-branded footer — repeats on every printed page.
+     BankResaneh mark on the right (RTL start), commissioning org name +
+     client logo on the left (RTL end). Hidden on screen, visible only in print. -->
+<div class="print-footer">
+  <div class="print-footer-brand">
+    ${opts.logoDataUrl ? `<img src="${opts.logoDataUrl}" alt="بانک رسانه" />` : ''}
+    <span>بانک رسانه — آرشیو تخصصی</span>
+  </div>
+  <div class="print-footer-page">
+    ${escapeHtml(opts.organization)} • ${faDateShort}
+  </div>
+  <div class="print-footer-client">
+    <span class="print-footer-client-text">
+      <span>تهیه‌شده برای</span>
+      <span class="print-footer-client-org">مانیتورینگ مرکز طرح و برنامه سیما</span>
+    </span>
+    ${opts.clientLogoDataUrl ? `<img src="${opts.clientLogoDataUrl}" alt="مؤسسه فرهنگی هنری مرکز عروج منیر" />` : ''}
+  </div>
+</div>
 </body>
 </html>`;
 }
