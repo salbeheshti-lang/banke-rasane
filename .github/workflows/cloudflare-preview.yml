@@ -56,5 +56,8 @@ jobs:
           echo "::error::Preview API did not pass /api/health. Frontend deployment was stopped to avoid publishing a broken preview."
           exit 1
 
-      - name: Build and deploy Next.js application to Cloudflare Workers
+      - name: Build Next.js for Cloudflare Workers
+        run: bunx opennextjs-cloudflare build
+
+      - name: Deploy preview Worker
         run: bunx opennextjs-cloudflare deploy
