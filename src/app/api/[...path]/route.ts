@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -31,8 +32,24 @@ const HOP_BY_HOP_RESPONSE_HEADERS = new Set([
 ]);
 
 async function proxy(request: NextRequest, context: RouteContext): Promise<Response> {
-  const apiBase = process.env.BANKRESANEH_API_BASE?.trim();
+  // Wrangler vars are runtime Worker bindings. Read them from the active
+  // Cloudflare request context instead of relying on build-time process.env.
+  let apiBase: string | undefined;
+  try {
+    const cloudflareEnv = getCloudflareContext().env as {
+      BANKRESANEH_API_BASE?: string;
+    };
+    apiBase = cloudflareEnv.BANKRESANEH_API_BASE?.trim();
+  } catch (error) {
+    // Keep local Node.js development working outside the Workers runtime.
+    apiBase = process.env.BANKRESANEH_API_BASE?.trim();
+    if (!apiBase) {
+      console.error('[preview-api-proxy] Cloudflare runtime context unavailable', error);
+    }
+  }
+
   if (!apiBase) {
+    console.error('[preview-api-proxy] BANKRESANEH_API_BASE is missing at runtime');
     return NextResponse.json(
       { error: 'Preview API is not configured on the server' },
       { status: 503 },
@@ -43,7 +60,7 @@ async function proxy(request: NextRequest, context: RouteContext): Promise<Respo
   const incomingUrl = new URL(request.url);
   const upstreamUrl = new URL(
     'api/' + path.map((segment) => encodeURIComponent(segment)).join('/') + incomingUrl.search,
-    apiBase.replace(/\/+$/, '') + '/',
+    apiBase.replace(/\\/+$/, '') + '/',
   );
 
   const headers = new Headers();
@@ -78,7 +95,14 @@ async function proxy(request: NextRequest, context: RouteContext): Promise<Respo
       headers: responseHeaders,
     });
   } catch (error) {
-    console.error('[preview-api-proxy] upstream request failed', error);
+    const detail = error instanceof Error
+      ? { name: error.name, message: error.message, cause: String(error.cause ?? '') }
+      : { error: String(error) };
+    console.error('[preview-api-proxy] upstream fetch failed', {
+      origin: upstreamUrl.origin,
+      path: upstreamUrl.pathname,
+      ...detail,
+    });
     return NextResponse.json(
       { error: 'Preview API is temporarily unavailable' },
       { status: 502 },
