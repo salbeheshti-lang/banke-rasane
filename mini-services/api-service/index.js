@@ -16,7 +16,6 @@ import { readFileSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { validateShowVideos } from './video-validation.mjs';
 import sharp from 'sharp';
-import sharp from 'sharp';
 
 const PORT = parseInt(process.env.PORT || '3002', 10);
 // Bind to loopback by default. Public/server deployments must opt in explicitly.
