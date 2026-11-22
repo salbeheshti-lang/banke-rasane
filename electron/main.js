@@ -8,6 +8,7 @@ const { spawn } = require('child_process');
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
+const { classifyNavigation } = require('./navigation-policy.cjs');
 const { randomBytes } = require('crypto');
 
 function toPrismaSqliteUrl(filePath) {
@@ -387,6 +388,28 @@ function createWindow() {
   // Signal a fresh desktop launch so the renderer invalidates any token left
   // by a previous process and always presents the username/password screen.
   mainWindow.loadURL(`${NEXT_URL}/?desktop=1`);
+
+  // Keep the Electron main frame on the trusted local application origin.
+  // External links open in the system browser; non-web protocols are blocked.
+  const handleMainFrameNavigation = (event, navigationUrl, reason) => {
+    const decision = classifyNavigation(navigationUrl, NEXT_PORT);
+    if (decision.action === 'allow') return;
+
+    event.preventDefault();
+    if (decision.action === 'external') {
+      shell.openExternal(decision.url).catch((error) => {
+        log('Could not open external navigation URL: ' + error.message);
+      });
+    } else {
+      log('Blocked main-frame navigation (' + reason + '): ' + decision.reason);
+    }
+  };
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    handleMainFrameNavigation(event, url, 'will-navigate');
+  });
+  mainWindow.webContents.on('will-redirect', (event, url) => {
+    handleMainFrameNavigation(event, url, 'will-redirect');
+  });
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     let target;
     try {
