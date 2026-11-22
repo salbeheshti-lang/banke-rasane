@@ -3,6 +3,8 @@
 const TOKEN_KEY = 'bankresaneh_token';
 
 function defaultApiBase(): string {
+  const configured = process.env.NEXT_PUBLIC_BANKRESANEH_API_BASE?.trim();
+  if (configured) return configured.replace(/\\/+$/, '');
   if (typeof window !== 'undefined') {
     const currentPort = window.location.port;
     const currentHost = window.location.hostname;
