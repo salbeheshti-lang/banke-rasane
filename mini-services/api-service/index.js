@@ -937,6 +937,55 @@ const server = Bun.serve({
       return json({ status: 'ok', time: nowSec(), showsCount }, req);
     }
 
+    // ----- Persistent per-user translation rate limit -----
+    // The Next.js translation handler delegates this atomic counter to the
+    // API-owned SQLite database so the same policy works on desktop and
+    // Cloudflare without bundling a local SQLite/Prisma engine into Workers.
+    if (pathname === '/api/translation/rate-limit' && method === 'POST') {
+      const user = requireUser(req);
+      if (!user || user.must_change_password) {
+        return json({ error: 'Unauthorized' }, 401, req);
+      }
+      if (!hasPermission(user, 'add_shows') && !hasPermission(user, 'edit_shows')) {
+        return json({ error: 'Forbidden' }, 403, req);
+      }
+
+      const userId = String(user.id);
+      const now = Date.now();
+      const resetAt = now + 60_000;
+      const maxRequests = 10;
+
+      db.exec(`CREATE TABLE IF NOT EXISTS translation_rate_buckets (
+        user_id TEXT PRIMARY KEY,
+        request_count INTEGER NOT NULL DEFAULT 0,
+        reset_at INTEGER NOT NULL
+      )`);
+
+      db.prepare('INSERT OR IGNORE INTO translation_rate_buckets (user_id, request_count, reset_at) VALUES (?, 0, ?)')
+        .run(userId, resetAt);
+
+      // Single-statement increments are atomic in SQLite. The conditional
+      // reset also has a compare-and-set predicate, so concurrent requests
+      // cannot each reset an expired bucket and bypass the limit.
+      let result = db.prepare('UPDATE translation_rate_buckets SET request_count = request_count + 1 WHERE user_id = ? AND request_count < ? AND reset_at > ?')
+        .run(userId, maxRequests, now);
+      if (result.changes === 1) return json({ ok: true }, req);
+
+      result = db.prepare('UPDATE translation_rate_buckets SET request_count = 1, reset_at = ? WHERE user_id = ? AND reset_at <= ?')
+        .run(resetAt, userId, now);
+      if (result.changes === 1) return json({ ok: true }, req);
+
+      // Another request may have performed the expired-window reset between
+      // the first increment and the compare-and-set reset above.
+      result = db.prepare('UPDATE translation_rate_buckets SET request_count = request_count + 1 WHERE user_id = ? AND request_count < ? AND reset_at > ?')
+        .run(userId, maxRequests, now);
+      if (result.changes === 1) return json({ ok: true }, req);
+
+      const bucket = db.prepare('SELECT reset_at FROM translation_rate_buckets WHERE user_id = ?').get(userId);
+      const retryAfter = Math.max(1, Math.ceil(((bucket?.reset_at || resetAt) - now) / 1000));
+      return json({ ok: false, retryAfter }, req);
+    }
+
     // ----- Shared custom genres -----
     if (pathname === '/api/genres' && method === 'GET') {
       const user = requireRole(req, ['admin', 'editor', 'viewer']);
