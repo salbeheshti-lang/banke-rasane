@@ -70,17 +70,19 @@ const RATE_LIMIT_MAX = 10;
 
 let rateLimitSchemaPromise: Promise<number> | undefined;
 function ensureRateLimitSchema(): Promise<number> {
-  if (!rateLimitSchemaPromise) {
-    rateLimitSchemaPromise = db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "TranslationRateBucket" (
-      "key" TEXT NOT NULL PRIMARY KEY,
-      "count" INTEGER NOT NULL DEFAULT 0,
-      "resetAt" BIGINT NOT NULL
-    )`).catch((error: unknown) => {
-      rateLimitSchemaPromise = undefined;
-      throw error;
-    });
-  }
-  return rateLimitSchemaPromise;
+  if (rateLimitSchemaPromise) return rateLimitSchemaPromise;
+
+  const schemaPromise = db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "TranslationRateBucket" (
+    "key" TEXT NOT NULL PRIMARY KEY,
+    "count" INTEGER NOT NULL DEFAULT 0,
+    "resetAt" BIGINT NOT NULL
+  )`).catch((error: unknown) => {
+    rateLimitSchemaPromise = undefined;
+    throw error;
+  });
+
+  rateLimitSchemaPromise = schemaPromise;
+  return schemaPromise;
 }
 
 async function checkRateLimit(
