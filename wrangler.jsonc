@@ -1,0 +1,20 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "bankresaneh-preview",
+  "main": ".open-next/worker.js",
+  "account_id": "34fe29bd9259dcb2c47fd320f40b2eac",
+  "compatibility_date": "2026-11-22",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": true,
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "BANKRESANEH_API_BASE": "https://bankresaneh-preview-api.onrender.com"
+  }
+}
