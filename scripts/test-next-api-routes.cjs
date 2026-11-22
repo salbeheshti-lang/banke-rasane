@@ -206,6 +206,7 @@ async function main() {
     method: 'POST', token: firstToken, body: { url: 'not-a-url', isDecor: true },
   });
   assert(blockedFirstLogin.status === 403, 'Next.js permission routes block first-login sessions until password change');
+  assert(blockedFirstLogin.data.error === 'برای افزودن یا ویرایش برنامه، ابتدا رمز عبور اولیه خود را تغییر دهید', 'metadata import explains the first-login password gate instead of misreporting missing permissions');
 
   const changed = await request(apiBase, '/api/auth/change-password', {
     method: 'PUT', token: firstToken,
