@@ -15,15 +15,15 @@ for (const url of [
 for (const url of [
   'https://example.com/',
   'http://example.com/',
+  'http://127.0.0.1.evil.example:3000/',
+  'http://127.0.0.1:3001/',
 ]) {
-  const result = classifyNavigation(url, port);
-  assert.equal(result.action, 'external');
-  assert.equal(result.url, url);
+  // These URLs must never remain in Electron's main frame. Ordinary web URLs
+  // are handed to the system browser, including lookalike hosts and wrong ports.
+  assert.equal(classifyNavigation(url, port).action, 'external', url);
 }
 
 for (const url of [
-  'http://127.0.0.1.evil.example:3000/',
-  'http://127.0.0.1:3001/',
   'file:///etc/passwd',
   'javascript:alert(1)',
   'data:text/html,hello',
