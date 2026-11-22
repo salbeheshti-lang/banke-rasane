@@ -33,6 +33,11 @@ jobs:
       - name: Install locked application dependencies
         run: bun install --frozen-lockfile
 
+      - name: Generate Prisma client for type-checking
+        run: bunx prisma generate
+        env:
+          DATABASE_URL: file:./db/custom.db
+
       - name: Install Cloudflare adapter and Wrangler for this CI run
         run: bun add --dev @opennextjs/cloudflare@1.20.18 wrangler@4.68.0
 
@@ -55,6 +60,18 @@ jobs:
           done
           echo "::error::Preview API did not pass /api/health. Frontend deployment was stopped to avoid publishing a broken preview."
           exit 1
+
+      - name: Verify the updated API includes the persistent translation limiter
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --output /tmp/rate-limit-health.json --write-out '%{http_code}' --max-time 15 -X POST "${BANKRESANEH_API_BASE}/api/translation/rate-limit" || true)"
+          if [ "$status" != "401" ]; then
+            cat /tmp/rate-limit-health.json || true
+            echo "::error::Preview API has not deployed the new translation rate-limit route (expected HTTP 401 without auth, got ${status:-no-response})."
+            exit 1
+          fi
+          echo "Preview API translation rate-limit route is deployed and rejects unauthenticated requests."
 
       - name: Build Next.js for Cloudflare Workers
         run: bunx opennextjs-cloudflare build
