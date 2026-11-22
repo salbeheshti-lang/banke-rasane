@@ -42,7 +42,7 @@ async function proxy(request: NextRequest, context: RouteContext): Promise<Respo
   const { path } = await context.params;
   const incomingUrl = new URL(request.url);
   const upstreamUrl = new URL(
-    path.map((segment) => encodeURIComponent(segment)).join('/') + incomingUrl.search,
+    'api/' + path.map((segment) => encodeURIComponent(segment)).join('/') + incomingUrl.search,
     apiBase.replace(/\/+$/, '') + '/',
   );
 
