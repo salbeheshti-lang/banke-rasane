@@ -6,7 +6,9 @@ function defaultApiBase(): string {
   if (typeof window !== 'undefined') {
     const currentPort = window.location.port;
     const currentHost = window.location.hostname;
-    if (currentPort === '81' || currentPort === '' || currentPort === '443' || currentHost.includes('space-z.ai')) return window.location.origin;
+    const isLocalHost = currentHost === 'localhost' || currentHost === '127.0.0.1' || currentHost === '::1';
+    if (currentPort === '81' || currentHost.includes('space-z.ai')) return window.location.origin;
+    if (!isLocalHost) return window.location.origin;
   }
   return 'http://127.0.0.1:3002';
 }
@@ -25,7 +27,7 @@ export function getApiUrl(path: string, baseOverride?: string): string {
   const selected = (baseOverride ?? stored ?? '').trim();
   const base = (selected || getApiBase()).replace(/\/+$/, '');
   const isGatewayHost = typeof window !== 'undefined'
-    && (window.location.port === '81' || window.location.port === '' || window.location.port === '443' || window.location.hostname.includes('space-z.ai'));
+    && (window.location.port === '81' || window.location.hostname.includes('space-z.ai'));
   const isCurrentGateway = typeof window !== 'undefined' && isGatewayHost && base === window.location.origin;
   if (isCurrentGateway) {
     const separator = cleanPath.includes('?') ? '&' : '?';
@@ -65,10 +67,8 @@ export interface User {
   permissions?: string[];
 }
 
-// Exported so SPA code that calls Next.js API routes directly (e.g.
-// /api/fetch-show-info, /api/translate) can attach the Bearer token too —
-// those routes are permission-guarded server-side and returned 403 when the
-// header was missing ("لینک عکس رو اضافه نمیکنه" bug).
+// Next.js-owned API routes use authHeaders too, so they can validate the
+// current session through the same isolated preview API as the archive routes.
 export function authHeaders(): Record<string, string> {
   const token = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;
   return token ? { Authorization: 'Bearer ' + token } : {};
@@ -147,10 +147,6 @@ export const api = {
       getApiUrl('api/auth/change-password'),
       { method: 'PUT', body: JSON.stringify({ oldPassword, newPassword }) }
     );
-    // The API now rotates the session and returns a fresh token. Persist it
-    // immediately so subsequent requests use the new token instead of the
-    // now-invalidated old one (which was the root cause of the 401
-    // "Unauthorized" errors the user saw after changing password).
     if (data?.token && typeof window !== 'undefined') {
       localStorage.setItem(TOKEN_KEY, data.token);
     }
