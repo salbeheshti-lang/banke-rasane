@@ -1,28 +1,16 @@
 // Shared auth helper for Next.js API routes.
 //
-// The BankResaneh session store lives in the Bun API service (port 3002)
-// — it owns the `sessions` table. Rather than duplicate that logic in
-// Next.js, we proxy the auth check through the Bun service's
-// /api/auth/me endpoint, which reads the same `Authorization: Bearer
-// <token>` header the SPA already sends.
-//
-// Usage:
-//   import { requireUser, requirePermission, requirePermissionAny } from '@/lib/server-auth';
-//   export async function POST(req: NextRequest) {
-//     const user = await requireUser(req);
-//     if (!user) return NextResponse.json({error:'Unauthorized'}, {status:401});
-//     // OR, for permission-gated routes:
-//     const admin = await requirePermission(req, 'manage_settings');
-//     if (!admin) return NextResponse.json({error:'Forbidden'}, {status:403});
-//     // OR, for routes accessible by EITHER of two permissions:
-//     const editor = await requirePermissionAny(req, 'add_shows', 'edit_shows');
-//     if (!editor) return NextResponse.json({error:'Forbidden'}, {status:403});
-//     ...
-//   }
+// The BankResaneh session store lives in the API service. The web preview
+// validates sessions against the isolated preview API instead of assuming
+// that the API is running on the same machine as the Next.js process.
 
 import type { NextRequest } from 'next/server';
 
-const API_BASE = process.env.BANKRESANEH_API_BASE || 'http://127.0.0.1:3002';
+const API_BASE = (
+  process.env.BANKRESANEH_API_BASE ||
+  process.env.NEXT_PUBLIC_BANKRESANEH_API_BASE ||
+  'http://127.0.0.1:3002'
+).replace(/\/+$/, '');
 
 export interface AuthUser {
   id: number;
@@ -35,20 +23,14 @@ export interface AuthUser {
   permissions?: string[];
 }
 
-/**
- * Validate the caller's session by proxying to the Bun API service.
- * Returns the user object on success, or null on any failure
- * (missing token, invalid token, expired session, suspended user,
- * API service down, etc.).
- */
 export async function requireUser(req: NextRequest): Promise<AuthUser | null> {
   const auth = req.headers.get('Authorization') || '';
   if (!auth.startsWith('Bearer ')) return null;
   try {
     const r = await fetch(`${API_BASE}/api/auth/me`, {
       headers: { Authorization: auth },
-      // Short timeout so a down API service doesn't hang the request.
       signal: AbortSignal.timeout(5000),
+      cache: 'no-store',
     });
     if (!r.ok) return null;
     const u = (await r.json()) as AuthUser;
@@ -59,71 +41,38 @@ export async function requireUser(req: NextRequest): Promise<AuthUser | null> {
   }
 }
 
-/**
- * Validate the caller's session AND require a specific permission.
- * Returns the user object if they have the permission, or null otherwise.
- *
- * Permissions are checked via the Bun API service's /api/permissions endpoint
- * shape — we rely on the `permissions` array already present in the /api/auth/me
- * response (the Bun service populates it via getUserPermissions()).
- */
 export async function requirePermission(
   req: NextRequest,
   permission: string
 ): Promise<AuthUser | null> {
   const user = await requireUser(req);
   if (!user) return null;
-  // Super admin has all permissions.
   if (user.isSuperAdmin) return user;
-  // Otherwise, check the permissions array.
   if (Array.isArray(user.permissions) && user.permissions.includes(permission)) {
     return user;
   }
   return null;
 }
 
-/**
- * Validate the caller's session AND require AT LEAST ONE of the listed
- * permissions. Useful for endpoints that can be reached by either of two
- * roles (e.g. translate is allowed for both add_shows and edit_shows).
- *
- * Returns the user object if they have ANY of the listed permissions, or
- * null otherwise.
- */
 export async function requirePermissionAny(
   req: NextRequest,
   ...permissions: string[]
 ): Promise<AuthUser | null> {
   const user = await requireUser(req);
   if (!user) return null;
-  // Super admin has all permissions.
   if (user.isSuperAdmin) return user;
-  // Otherwise, check if they have ANY of the listed permissions.
   if (Array.isArray(user.permissions)) {
-    for (const p of permissions) {
-      if (user.permissions.includes(p)) return user;
+    for (const permission of permissions) {
+      if (user.permissions.includes(permission)) return user;
     }
   }
   return null;
 }
 
-// ---------------------------------------------------------------------------
-// Gate helpers — return a discriminated result that lets the caller
-// distinguish "unauthenticated" (401) from "authenticated but forbidden" (403).
-// This fixes the issue where requirePermission returns null for BOTH cases,
-// causing some routes to respond 403 to unauthenticated callers.
-//
-// Each gate makes exactly ONE call to the Bun API service (no double-fetch).
-// ---------------------------------------------------------------------------
-
 export type AuthGate =
   | { ok: true; user: AuthUser }
   | { ok: false; status: 401 | 403 };
 
-/**
- * Check authentication + a single permission, returning a gate result that
- * distinguishes 401 (unauthenticated) from 403 (forbidden).
- */
 export async function gatePermission(
   req: NextRequest,
   permission: string
@@ -137,10 +86,6 @@ export async function gatePermission(
   return { ok: false, status: 403 };
 }
 
-/**
- * Check authentication + at-least-one of several permissions, returning a
- * gate result that distinguishes 401 (unauthenticated) from 403 (forbidden).
- */
 export async function gatePermissionAny(
   req: NextRequest,
   ...permissions: string[]
@@ -149,8 +94,8 @@ export async function gatePermissionAny(
   if (!user) return { ok: false, status: 401 };
   if (user.isSuperAdmin) return { ok: true, user };
   if (Array.isArray(user.permissions)) {
-    for (const p of permissions) {
-      if (user.permissions.includes(p)) return { ok: true, user };
+    for (const permission of permissions) {
+      if (user.permissions.includes(permission)) return { ok: true, user };
     }
   }
   return { ok: false, status: 403 };
