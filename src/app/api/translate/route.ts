@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { gatePermissionAny } from '@/lib/server-auth';
-import { db } from '@/lib/db';
+import { gatePermissionAny, getApiBaseForRequest } from '@/lib/server-auth';
 export const runtime = 'nodejs';
 
 // Translation endpoint for the BankResaneh show editor.
@@ -40,124 +39,6 @@ const PRESERVED_FIELDS = new Set([
 // "عنوان اصلی تغییر نکند" (the original title must not change).
 const PRESERVE_ORIGINAL_TITLE = true;
 
-// === Rate limiter (ATOMIC, persistent, per user) ===
-// Limits: 10 requests per 60 seconds per user. Bursts up to 10 are allowed.
-//
-// WHY updateMany (not $transaction)?
-//   The previous implementation did read-modify-write on a JSON file with
-//   fs.readFileSync/fs.writeFileSync. While synchronous (single-process
-//   safe), it was NOT atomic across:
-//     1. Multi-process deployments (cluster/PM2) — lost increments.
-//     2. Crash-during-write — fs.writeFileSync is not atomic; a crash
-//        mid-write truncates the file and loses ALL users' state.
-//
-//   We first tried Prisma's interactive db.$transaction, but Prisma + SQLite
-//   interactive transactions suffer from P1008 socket timeouts under
-//   concurrent load (the BEGIN IMMEDIATE lock acquisition exceeds Prisma's
-//   internal query timeout). So we switched to a single-statement approach:
-//
-//   `updateMany` with a WHERE clause compiles to a single atomic SQL UPDATE:
-//     UPDATE ... SET count = count + 1
-//     WHERE key = ? AND count < 10 AND resetAt > now
-//   SQLite serializes writes at the file level, so this UPDATE is atomic: two
-//   concurrent requests cannot both see count=9 and both increment to 10.
-//   Exactly one will affect 1 row (allowed), the other will affect 0 rows
-//   (then falls through to the limit-reached path). This is correct.
-//
-//   The bucket persists in the app DB (survives restarts and crashes).
-const RATE_LIMIT_WINDOW_MS = 60 * 1000;
-const RATE_LIMIT_MAX = 10;
-
-let rateLimitSchemaPromise: Promise<number> | undefined;
-function ensureRateLimitSchema(): Promise<number> {
-  if (!rateLimitSchemaPromise) {
-    rateLimitSchemaPromise = db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "TranslationRateBucket" (
-      "key" TEXT NOT NULL PRIMARY KEY,
-      "count" INTEGER NOT NULL DEFAULT 0,
-      "resetAt" BIGINT NOT NULL
-    )`).catch((error: unknown) => {
-      rateLimitSchemaPromise = undefined;
-      throw error;
-    });
-  }
-  return rateLimitSchemaPromise;
-}
-
-async function checkRateLimit(
-  userId: string,
-): Promise<{ ok: true } | { ok: false; retryAfter: number }> {
-  const now = Date.now();
-  const nowBig = BigInt(now);
-  const windowReset = BigInt(now + RATE_LIMIT_WINDOW_MS);
-
-  try {
-    // Ensure the table once per process; retry automatically if initialization fails.
-    await ensureRateLimitSchema();
-
-    // Step 1: ensure the bucket exists (idempotent). If it doesn't, this
-    // creates it with count=0. If it does, this is a no-op (empty update).
-    await db.translationRateBucket.upsert({
-      where: { key: userId },
-      create: { key: userId, count: 0, resetAt: windowReset },
-      update: {},
-    });
-
-    // Step 2: atomic increment — only succeeds if under limit AND window
-    // not expired. This is a single SQL UPDATE, atomic at the SQLite level.
-    const updated = await db.translationRateBucket.updateMany({
-      where: {
-        key: userId,
-        count: { lt: RATE_LIMIT_MAX },
-        resetAt: { gt: nowBig },
-      },
-      data: { count: { increment: 1 } },
-    });
-
-    if (updated.count === 1) {
-      return { ok: true }; // incremented successfully
-    }
-
-    // Step 3: updateMany affected 0 rows → either limit reached or window
-    // expired. Read the current state to decide.
-    const bucket = await db.translationRateBucket.findUnique({
-      where: { key: userId },
-    });
-
-    if (!bucket) {
-      // Should not happen (we just upserted), but handle defensively:
-      // create a fresh bucket and allow.
-      await db.translationRateBucket.upsert({
-        where: { key: userId },
-        create: { key: userId, count: 1, resetAt: windowReset },
-        update: { count: 1, resetAt: windowReset },
-      });
-      return { ok: true };
-    }
-
-    // Window expired → reset and allow this request.
-    if (bucket.resetAt <= nowBig) {
-      await db.translationRateBucket.update({
-        where: { key: userId },
-        data: { count: 1, resetAt: windowReset },
-      });
-      return { ok: true };
-    }
-
-    // Limit reached → reject.
-    return {
-      ok: false,
-      retryAfter: Math.ceil((Number(bucket.resetAt) - now) / 1000),
-    };
-  } catch (e) {
-    // If the DB is unavailable (disk full, locked beyond retries), fail
-    // OPEN for availability — the translation still requires a valid
-    // permission check above, so this is not an auth bypass. Same fail-open
-    // behavior as the previous JSON implementation.
-    console.error('[translate] rate-limit DB error, failing open:', e);
-    return { ok: true };
-  }
-}
-
 // === Input validation caps ===
 const MAX_FIELDS = 25;
 const MAX_FIELD_CHARS = 5000;
@@ -180,14 +61,29 @@ export async function POST(request: NextRequest) {
   if (!gate.ok) {
     return NextResponse.json({ error: gate.status === 401 ? 'احراز هویت لازم است' : 'دسترسی غیرمجاز — نیاز به مجوز ویرایش برنامه' }, { status: gate.status });
   }
-  const user = gate.user;
+  const apiBase = getApiBaseForRequest(request);
+  if (!apiBase) return NextResponse.json({ error: 'سرور انتخاب‌شده در فهرست سرورهای مجاز نیست' }, { status: 403 });
 
-  // --- 2. Rate limit (persistent, survives restart) ---
-  const rl = await checkRateLimit(String(user.id));
-  if (!rl.ok) {
+  // The selected API service owns the durable SQLite bucket. This avoids
+  // a second, frontend-host-local database and keeps rate limits consistent
+  // when users switch between their own API servers.
+  const authorization = request.headers.get('Authorization') || '';
+  let rateResponse: Response;
+  try {
+    rateResponse = await fetch(apiBase + '/api/rate-limit/translate', {
+      method: 'POST',
+      headers: { Authorization: authorization },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(5_000),
+    });
+  } catch {
+    return NextResponse.json({ error: 'سرویس محدودیت ترجمه در سرور انتخاب‌شده در دسترس نیست' }, { status: 503 });
+  }
+  if (!rateResponse.ok) {
+    const payload = await rateResponse.json().catch(() => ({}));
     return NextResponse.json(
-      { error: `محدودیت ترجمه: ${rl.retryAfter} ثانیه صبر کنید` },
-      { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
+      { error: payload.error || 'محدودیت ترجمه اعمال شد' },
+      { status: rateResponse.status, headers: rateResponse.headers.get('Retry-After') ? { 'Retry-After': rateResponse.headers.get('Retry-After')! } : undefined }
     );
   }
 

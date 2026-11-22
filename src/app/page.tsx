@@ -6,6 +6,8 @@ import { api, setApiBase, getApiBase, getApiUrl, User, authHeaders } from '@/lib
 import { useTheme } from '@/hooks/use-theme';
 import { useEscapeKey } from '@/hooks/use-escape-key';
 import { LangProvider, useLang } from '@/lib/i18n-context';
+import { BrandFooter } from '@/components/brand/BrandFooter';
+import { CLIENT_BRANDING } from '@/lib/branding';
 
 // ============================================
 // TYPES
@@ -88,22 +90,30 @@ const NO_DECOR_CATEGORIES: string[] = [
   'آگهی‌های تبلیغاتی',     // includes PSA + energy-saving ads
   'مدرسه',              // back-to-school ads/teasers
   'پخش زنده',           // live webcams (no studio decor)
+  'سفرنامه و ماجراجویی', // travel/adventure formats do not imply a studio set
+  'سفر جاده‌ای',          // legacy alias for travel/adventure
 ];
 // Shows whose category starts with one of these prefixes are also excluded from Decor
 const NO_DECOR_PREFIXES: string[] = [
   'خارج از ژانر تاک‌شو:',  // competition/reality/documentary — not analyzable as decor
 ];
 
+function canAnalyzeDecor(show: Partial<TalkShow>): boolean {
+  if (show.isFilm) return false;
+  const categories = String(show.category || '').split('|').map(value => value.trim()).filter(Boolean);
+  if (categories.some(category =>
+    NO_DECOR_CATEGORIES.includes(category) ||
+    NO_DECOR_PREFIXES.some(prefix => category.startsWith(prefix))
+  )) return false;
+  return true;
+}
+
 function hasDecor(show: Partial<TalkShow>): boolean {
-  // New/edited records honor the explicit checkbox. Legacy records retain their
-  // previous classification until a user makes an explicit choice.
+  // A genre that cannot have an analyzable studio set is never eligible,
+  // even if an old row or a stale form value has decorIncluded=true.
+  if (!canAnalyzeDecor(show)) return false;
   if (typeof show.decorIncluded === 'boolean') return show.decorIncluded;
-  if (show.isFilm) return false;            // films/series have no TV-studio decor
-  const cat = show.category || '';
-  if (NO_DECOR_CATEGORIES.includes(cat)) return false;
-  for (const p of NO_DECOR_PREFIXES) {
-    if (cat.startsWith(p)) return false;
-  }
+  // Preserve legacy inclusion only for categories that can genuinely have a set.
   return true;
 }
 
@@ -1268,7 +1278,7 @@ function HomeInner() {
   }
 
   return (
-    <div className="app-content min-h-screen">
+    <div className="app-content min-h-screen flex flex-col">
       <TopAppBar
         onMenuClick={() => setDrawerOpen(true)}
         isMobile={isMobile}
@@ -1302,7 +1312,7 @@ function HomeInner() {
         {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} onEditGenre={handleEditGenre} onDeleteGenre={handleDeleteGenre} onShowClick={setSelectedShow} />}
         {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={(s) => { setEditingShow(s); setPresetGenre(null); setPresetCategory(undefined); navigate('add'); }} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={(s) => { setEditingShow(s); setPresetGenre(null); setPresetCategory(undefined); navigate('add'); }} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
-        {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} onExport={(shows, format, meta) => setExportPreview({ shows, format, ...meta })} />}
+        {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} canManageSettings={isAdmin} onExport={(shows, format, meta) => setExportPreview({ shows, format, ...meta })} />}
         {currentView === 'add' && canEdit && <AddEditView key={editingShow?.num ?? 'new'} talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setPresetCategory(undefined); setPresetGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} presetCategory={presetCategory} presetGenre={presetGenre} genres={genres} />}
         {currentView === 'add' && !canEdit && (
           <div className="premium-glass p-8 text-center">
@@ -1425,6 +1435,7 @@ function HomeInner() {
           {toast}
         </div>
       )}
+      <BrandFooter withBottomNav={isMobile} />
     </div>
   );
 }
@@ -1493,7 +1504,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
       <div className="login-ambient-light green-3"></div>
 
       <div
-        className={`relative z-20 flex flex-col items-center px-8 transition-all duration-1000 ${isReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+        className={`relative z-20 flex flex-1 flex-col justify-center items-center px-8 transition-all duration-1000 ${isReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
         style={{ maxWidth: '440px', width: '100%' }}
       >
         {/* Logo — gradient light beam sweeps ONLY across the logo pixels.
@@ -1644,12 +1655,8 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
           </button>
         </form>
 
-        <div className="mt-10 text-center">
-          <p style={{ color: 'rgba(134, 239, 172, 0.6)' }} className="text-xs tracking-wider">
-            نسخه ۲.۰.۰ • مرجع جامع برنامه‌های تلویزیونی بین‌المللی
-          </p>
-        </div>
       </div>
+      <BrandFooter variant="login" />
     </div>
   );
 }
@@ -1759,6 +1766,13 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               </span>
               <span style={{ color: '#54D9C0', fontSize: '11px', marginTop: '2px' }}>
                 {t('app.title')} — {totalShows?.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US') || '0'} {t('dashboard.programs')} {t('dashboard.stripTitle').includes('ژانر') ? 'در' : 'in'} {totalGenres?.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US') || '0'} {t('drawer.genres')}
+              </span>
+              <span className="flex items-center gap-1.5" style={{ marginTop: '4px', opacity: 0.9 }} title={t('footer.clientOrg')}>
+                <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2, alignItems: 'flex-start' }}>
+                  <span style={{ color: 'rgba(167, 243, 208, 0.5)', fontSize: '9px', fontWeight: 500 }}>{t('footer.poweredBy')}</span>
+                  <span style={{ color: 'rgba(167, 243, 208, 0.85)', fontSize: '10px', fontWeight: 700, marginTop: '1px' }}>{t('footer.clientOrg')}</span>
+                </span>
+                <Image src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={24} height={25} style={{ opacity: 0.9, objectFit: 'contain' }} />
               </span>
             </div>
           )}
@@ -4891,15 +4905,29 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       }
 
       const info = data.info || {};
+      let importedImage = info.image;
+      if (typeof importedImage === 'string' && /^https:\/\//i.test(importedImage)) {
+        const imageResponse = await fetch('/api/import-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({ url: importedImage }),
+        });
+        const imageResult = await imageResponse.json().catch(() => ({}));
+        if (!imageResponse.ok || typeof imageResult.dataUrl !== 'string') {
+          showToast(imageResult.error || 'تصویر دریافت شد اما ذخیره‌سازی آن ناموفق بود؛ لینک مستقیم تصویر را بررسی کنید.');
+          return;
+        }
+        importedImage = imageResult.dataUrl;
+      }
       if (editingShow) {
         // Editing an existing program from an external page is image-only.
         // Existing curated metadata must never be replaced by imported text.
-        if (!info.image || typeof info.image !== 'string') {
+        if (!importedImage || typeof importedImage !== 'string') {
           showToast('از این لینک تصویر قابل دریافت نبود؛ اطلاعات فعلی برنامه بدون تغییر ماند.');
           return;
         }
         const existingImages = Array.isArray(form.images) ? form.images : [];
-        if (existingImages.includes(info.image)) {
+        if (existingImages.includes(importedImage)) {
           showToast('این تصویر قبلاً به برنامه اضافه شده است.');
           return;
         }
@@ -4907,7 +4935,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
           showToast('حداکثر ۸ تصویر برای هر برنامه قابل ثبت است.');
           return;
         }
-        setForm({ ...form, images: [...existingImages, info.image] });
+        setForm({ ...form, images: [...existingImages, importedImage] });
         showToast('تصویر اضافه شد؛ سایر اطلاعات برنامه بدون تغییر ماند.');
         return;
       }
@@ -4919,10 +4947,10 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
         updated.descriptionFa = info.description;
         if (!updated.summary) updated.summary = info.description.substring(0, 200);
       }
-      if (info.image) {
+      if (importedImage) {
         const existingImages = updated.images || [];
-        if (!existingImages.includes(info.image) && existingImages.length < 8) {
-          updated.images = [...existingImages, info.image];
+        if (!existingImages.includes(importedImage) && existingImages.length < 8) {
+          updated.images = [...existingImages, importedImage];
         }
       }
       if (info.country && !updated.country) updated.country = info.country;
@@ -5170,8 +5198,8 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
           />
           <FormField label="کشور مبدا" value={form.country || ''} onChange={v => setForm({ ...form, country: v })} placeholder="مثلاً: ایران، ترکیه" />
           <label className="flex items-center gap-3 rounded-xl p-3 sm:col-span-2" style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(255,255,255,0.22)', color: '#f0fdf4', cursor: 'pointer' }}>
-            <input type="checkbox" checked={form.decorIncluded ?? (editingShow ? hasDecor(editingShow) : false)} onChange={e => setForm({ ...form, decorIncluded: e.target.checked })} />
-            <span><strong>قرار دادن در ژانر «دکور برنامه‌ها»</strong><span className="block text-xs opacity-75 mt-1">فقط با انتخاب این گزینه، برنامه در بخش دکور نمایش داده می‌شود.</span></span>
+            <input type="checkbox" checked={canAnalyzeDecor(form) && (form.decorIncluded ?? (editingShow ? hasDecor(editingShow) : false))} disabled={!canAnalyzeDecor(form)} onChange={e => setForm({ ...form, decorIncluded: e.target.checked })} />
+            <span><strong>قرار دادن در ژانر «دکور برنامه‌ها»</strong><span className="block text-xs opacity-75 mt-1">{canAnalyzeDecor(form) ? 'فقط با انتخاب این گزینه، برنامه در بخش دکور نمایش داده می‌شود.' : 'این ژانر یا نوع برنامه برای تحلیل دکور استودیویی مناسب نیست و در بخش دکور قرار نمی‌گیرد.'}</span></span>
           </label>
 
           <FormSelect
@@ -5381,6 +5409,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
   showToast: (msg: string) => void;
 }) {
   const [urlInput, setUrlInput] = useState('');
+  const [importingUrl, setImportingUrl] = useState(false);
   const [failedUrls, setFailedUrls] = useState<Set<number>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Keep a ref to the latest images array so async FileReader callbacks always see current state
@@ -5389,27 +5418,9 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
   imagesRef.current = images;
   const MAX_IMAGES = 8;
 
-  // Heuristic: detect whether a URL points to a direct image file (vs. an HTML
-  // page like a Wikipedia article URL). The user often pastes a Wikipedia/
-  // IMDb article URL expecting auto-extraction — warn them to use the
-  // "دریافت خودکار" box above for that, or to paste a direct image link here.
-  function looksLikeDirectImage(url: string): boolean {
-    const u = url.toLowerCase();
-    // data: URLs are always valid images (base64-encoded).
-    if (u.startsWith('data:image/')) return true;
-    // Direct image extensions in the path (before any query/hash).
-    try {
-      const path = new URL(url).pathname.toLowerCase();
-      if (/\.(jpe?g|png|gif|webp|bmp|svg|avif|ico)(\?|#|$)/.test(path)) return true;
-    } catch {}
-    // Known image hosts that serve images directly even without extension.
-    if (/upload\.wikimedia\.org|\.wikimedia\.org|\.wpimg\.cn|\.imdb-img|m\.media-amazon\.com/.test(u)) return true;
-    return false;
-  }
-
-  const addUrl = () => {
+  const addUrl = async () => {
     const trimmed = urlInput.trim();
-    if (!trimmed) return;
+    if (!trimmed || importingUrl) return;
     if (images.length >= MAX_IMAGES) {
       showToast(`حداکثر ${MAX_IMAGES.toLocaleString('fa-IR')} تصویر مجاز است`);
       return;
@@ -5418,16 +5429,37 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
       showToast('این تصویر قبلاً اضافه شده');
       return;
     }
-    // Warn (but still allow) if the URL doesn't look like a direct image.
-    // Many users paste a Wikipedia article URL here expecting the system to
-    // extract the cover image (which is what the auto-fetch box above does).
-    if (!looksLikeDirectImage(trimmed)) {
-      showToast('⚠ این لینک مستقیم تصویر نیست — برای استخراج از صفحهٔ ویکی‌پدیا/IMDb از کادر «دریافت خودکار اطلاعات» بالاتر استفاده کنید. با این حال لینک اضافه شد؛ در صورت نمایش‌نشدن، آدرس تصویر مستقیم را بچسبانید.');
-    } else {
+    if (trimmed.startsWith('data:image/')) {
+      onChange([...images, trimmed]);
+      setUrlInput('');
       showToast(`✓ تصویر اضافه شد (${(images.length + 1).toLocaleString('fa-IR')} از ${MAX_IMAGES.toLocaleString('fa-IR')})`);
+      return;
     }
-    onChange([...images, trimmed]);
-    setUrlInput('');
+
+    setImportingUrl(true);
+    try {
+      const response = await fetch('/api/import-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ url: trimmed }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || typeof result.dataUrl !== 'string') {
+        showToast(result.error || 'دریافت تصویر از لینک ناموفق بود');
+        return;
+      }
+      if (images.length >= MAX_IMAGES) {
+        showToast(`حداکثر ${MAX_IMAGES.toLocaleString('fa-IR')} تصویر مجاز است`);
+        return;
+      }
+      onChange([...images, result.dataUrl]);
+      setUrlInput('');
+      showToast(`✓ تصویر دریافت و بهینه شد (${(images.length + 1).toLocaleString('fa-IR')} از ${MAX_IMAGES.toLocaleString('fa-IR')})`);
+    } catch {
+      showToast('خطا در دریافت تصویر؛ لینک مستقیم و اتصال اینترنت را بررسی کنید.');
+    } finally {
+      setImportingUrl(false);
+    }
   };
 
   const compressImageFile = async (file: File): Promise<string> => {
@@ -5562,7 +5594,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
         />
         <button
           onClick={addUrl}
-          disabled={images.length >= MAX_IMAGES || !urlInput.trim()}
+          disabled={images.length >= MAX_IMAGES || !urlInput.trim() || importingUrl}
           className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
           style={{
             background: images.length >= MAX_IMAGES || !urlInput.trim() ? 'rgba(255, 255, 255, 0.6)' : 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)',
@@ -5571,7 +5603,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
             whiteSpace: 'nowrap',
           }}
         >
-          + افزودن لینک
+          {importingUrl ? '⏳ دریافت تصویر...' : '+ افزودن لینک'}
         </button>
         <button
           onClick={() => fileInputRef.current?.click()}
@@ -7146,13 +7178,9 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
       // send the token in the POST body (encrypted in transit via HTTPS)
       // and use the {verify:true} flag to tell the backend to just validate
       // the token, not send a message.
-      const authToken = typeof window !== 'undefined' ? localStorage.getItem('bankresaneh_token') : '';
       const res = await fetch('/api/publish-social', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authToken ? { Authorization: 'Bearer ' + authToken } : {}),
-        },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ platform, token, verify: true }),
       });
       const data = await res.json();
@@ -7365,21 +7393,25 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
       if (format === 'pdf') {
         // Call API to generate professional PDF report — pass through any
         // caller-provided overrides so the rendered PDF matches the preview.
-        const res = await fetch('/api/export-pdf', {
+        const res = await fetch('/api/export-pdf-file', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({ shows, title, subtitle, organization }),
         });
-        if (res.ok) {
-          const html = await res.text();
-          // Open in new window for print-to-PDF
-          const w = window.open('', '_blank');
-          if (w) {
-            w.document.write(html);
-            w.document.close();
-            setTimeout(() => { w.print(); }, 1000);
-          }
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({}));
+          throw new Error(error.error || 'ساخت فایل PDF ناموفق بود');
         }
+        const blob = await res.blob();
+        if (blob.type !== 'application/pdf' || blob.size < 8) {
+          throw new Error('فایل PDF معتبر از سرور دریافت نشد');
+        }
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `bankresaneh-report-${Date.now()}.pdf`;
+        anchor.click();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       } else {
         // Excel: generate proper XLSX using SheetJS-style XML
         const headers = ['شماره', 'نام برنامه', 'دسته‌بندی', 'منبع', 'اندازه', 'تماشاگر', 'سبک', 'جلوه‌ها', 'چیدمان', 'عناصر', 'متریال', 'رنگ‌آمیزی', 'نورپردازی', 'توضیحات'];
@@ -7399,15 +7431,48 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
           s.lighting || '',
           (s.descriptionFa || s.summary || '').substring(0, 500),
         ]);
-        // Generate HTML table that Excel can open as .xls
-        const htmlTable = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th style="background:#10b981;color:white;font-weight:bold;padding:8px;">${h}</th>`).join('')}</tr>${rows.map(r => `<tr>${r.map(c => `<td style="padding:6px;border:1px solid #ddd;">${String(c).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
-        const blob = new Blob(['\ufeff' + htmlTable], { type: 'application/vnd.ms-excel;charset=utf-8' });
+        // Build a standards-compliant OOXML workbook (not HTML disguised as .xls).
+        const ExcelJS = await import('exceljs');
+        const workbook = new ExcelJS.Workbook();
+        workbook.creator = 'بانک رسانه';
+        workbook.subject = 'آرشیو تخصصی برنامه‌های تلویزیونی';
+        workbook.title = 'گزارش آرشیو بانک رسانه';
+        workbook.created = new Date();
+        const sheet = workbook.addWorksheet('آرشیو برنامه‌ها', {
+          views: [{ state: 'frozen', ySplit: 1, rightToLeft: true }],
+        });
+        sheet.columns = headers.map((header, index) => ({
+          header,
+          key: 'column' + index,
+          width: Math.min(54, Math.max(14, header.length + 4)),
+        }));
+        sheet.addRows(rows);
+        sheet.autoFilter = { from: 'A1', to: String.fromCharCode(64 + headers.length) + Math.max(1, rows.length + 1) };
+        const headerRow = sheet.getRow(1);
+        headerRow.height = 30;
+        headerRow.eachCell((cell) => {
+          cell.font = { name: 'Vazirmatn', bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF075B3B' } };
+          cell.alignment = { horizontal: 'right', vertical: 'middle', wrapText: true };
+          cell.border = { bottom: { style: 'medium', color: { argb: 'FF10B981' } } };
+        });
+        sheet.eachRow((row, rowNumber) => {
+          if (rowNumber === 1) return;
+          row.height = 34;
+          row.eachCell((cell) => {
+            cell.font = { name: 'Vazirmatn', size: 10, color: { argb: 'FF172B22' } };
+            cell.alignment = { horizontal: 'right', vertical: 'top', wrapText: true };
+            cell.border = { bottom: { style: 'hair', color: { argb: 'FFE2E8F0' } } };
+          });
+        });
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `bankresane-${Date.now()}.xls`;
+        a.download = `bankresaneh-${Date.now()}.xlsx`;
         a.click();
-        URL.revokeObjectURL(url);
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
       onDownload();
     } catch (e) {
@@ -7658,10 +7723,11 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
 // ============================================
 // REPORTS VIEW
 // ============================================
-function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
+function ReportsView({ talkShows, uploadedShows, showToast, onExport, canManageSettings }: {
   talkShows: TalkShow[];
   uploadedShows: number[];
   showToast: (msg: string) => void;
+  canManageSettings: boolean;
   onExport: (shows: TalkShow[], format: 'pdf' | 'excel', meta?: { title?: string; subtitle?: string; organization?: string }) => void;
 }) {
   const { t, lang } = useLang();
@@ -7680,6 +7746,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
   const [rTitle, setRTitle] = useState('');
   const [rSubtitle, setRSubtitle] = useState('');
   const [rOrg, setROrg] = useState('');
+  const [rText, setRText] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
   const [logoVersion, setLogoVersion] = useState(0);          // refreshes the authenticated logo preview after upload
   const [logoSrc, setLogoSrc] = useState('');
@@ -7697,6 +7764,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
         setRTitle(data.title || '');
         setRSubtitle(data.subtitle || '');
         setROrg(data.organization || '');
+        setRText(data.reportText || '');
       } catch { /* ignore — fields stay empty and the API falls back to its own defaults */ }
     })();
     return () => { cancelled = true; };
@@ -7731,7 +7799,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
       const res = await fetch('/api/settings/report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({ title: rTitle, subtitle: rSubtitle, organization: rOrg }),
+        body: JSON.stringify({ title: rTitle, subtitle: rSubtitle, organization: rOrg, reportText: rText }),
       });
       if (res.ok) {
         showToast(t('reports.settingsSaved'));
@@ -7801,7 +7869,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
       <div className="premium-glass overflow-hidden">
         <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(13, 124, 74, 0.1)' }}>
           <h3 className="font-bold" style={{ color: '#f0fdf4' }}>{t('reports.available')}</h3>
-          <button
+          {canManageSettings && <button
             onClick={() => setSettingsOpen(o => !o)}
             className="text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"
             style={{
@@ -7815,7 +7883,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
             {t('reports.reportSettings')}
-          </button>
+          </button>}
         </div>
 
         {/* ---------- Report settings panel (collapsible) ---------- */}
@@ -7846,7 +7914,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                   {uploadingLogo ? t('reports.uploading') : t('reports.uploadLogo')}
                   <input
                     type="file"
-                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    accept="image/png,image/jpeg"
                     style={{ display: 'none' }}
                     disabled={uploadingLogo}
                     onChange={(e) => {
@@ -7857,7 +7925,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                   />
                 </label>
                 <p className="text-[10px] leading-relaxed text-center" style={{ color: 'rgba(244, 255, 255, 0.5)' }}>
-                  PNG/JPG/WebP — حداکثر ۵ مگابایت<br />
+                  PNG/JPG — حداکثر ۵ مگابایت<br />
                   {t('reports.logoHint')}
                 </p>
               </div>
@@ -7908,6 +7976,19 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                       border: '1px solid rgba(13, 124, 74, 0.3)',
                     }}
                   />
+                </div>
+                <div>
+                  <label className="text-xs font-bold mb-1.5 block" style={{ color: '#54D9C0' }}>متن پیش‌فرض گزارش هر برنامه</label>
+                  <textarea
+                    value={rText}
+                    onChange={(e) => setRText(e.target.value)}
+                    rows={5}
+                    maxLength={4000}
+                    placeholder="متن توضیحی انتهای گزارش PDF..."
+                    className="w-full px-3 py-2 rounded-lg text-sm"
+                    style={{ background: 'rgba(0,0,0,0.25)', color: '#f0fdf4', border: '1px solid rgba(13, 124, 74, 0.3)', resize: 'vertical' }}
+                  />
+                  <p className="text-[10px] mt-1" style={{ color: 'rgba(244,255,255,0.5)' }}>این متن در انتهای گزارش PDF برنامه‌ها درج می‌شود.</p>
                 </div>
                 <div className="flex items-center justify-end gap-2 pt-1">
                   <button
@@ -8726,7 +8807,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
 
   const handleSave = () => {
     setApiBase(url);
-    showToast('آدرس سرور ذخیره شد. برای اعمال کامل، صفحه را بارگذاری مجدد کنید.');
+    showToast('آدرس سرور ذخیره شد. برای اعمال کامل، صفحه را بارگذاری مجدد کنید؛ مسیرهای Next.js نیز با همین سرور احراز هویت می‌شوند.');
     setTestResult({ ok: true, msg: 'ذخیره شد ✓ — آدرس جدید اعمال شد.' });
   };
 
@@ -8735,7 +8816,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
       <div>
         <h3 className="text-base font-bold mb-1" style={{ color: '#f0fdf4' }}>🖥 آدرس سرور API</h3>
         <p className="text-sm mb-3" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>
-          آدرس سرویس API که این برنامه به آن متصل می‌شود. پیش‌فرض: <code dir="ltr" style={{ background: 'rgba(13, 124, 74,0.1)', padding: '2px 6px', borderRadius: '6px', color: '#54D9C0' }}>http://localhost:3002</code>
+          آدرس سرویس API که این برنامه به آن متصل می‌شود. برای سرور سفارشی از HTTPS استفاده کنید؛ دامنهٔ سرور باید در BANKRESANEH_ALLOWED_API_ORIGINS سمت سرور وب مجاز شده باشد. پیش‌فرض: <code dir="ltr" style={{ background: 'rgba(13, 124, 74,0.1)', padding: '2px 6px', borderRadius: '6px', color: '#54D9C0' }}>http://localhost:3002</code>
         </p>
         <input
           type="text"

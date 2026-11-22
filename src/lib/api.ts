@@ -70,8 +70,18 @@ export interface User {
 // those routes are permission-guarded server-side and returned 403 when the
 // header was missing ("لینک عکس رو اضافه نمیکنه" bug).
 export function authHeaders(): Record<string, string> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;
-  return token ? { Authorization: 'Bearer ' + token } : {};
+  if (typeof window === 'undefined') return {};
+  const token = localStorage.getItem(TOKEN_KEY);
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = 'Bearer ' + token;
+  // Next.js route handlers need the same selected API backend as direct API
+  // calls so authentication does not silently fall back to the desktop host.
+  try {
+    headers['X-BankResaneh-Api-Base'] = new URL(getApiBase()).origin;
+  } catch {
+    // Invalid server URLs are rejected by getApiUrl before the request.
+  }
+  return headers;
 }
 
 async function request<T = any>(url: string, options: RequestInit = {}): Promise<T> {

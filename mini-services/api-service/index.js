@@ -12,7 +12,7 @@
 import { Database } from 'bun:sqlite';
 import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
-import { readFileSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, renameSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { validateShowVideos } from './video-validation.mjs';
 
@@ -33,6 +33,22 @@ const INITIAL_ADMIN_PASSWORD = process.env.BANKRESANEH_ADMIN_PASSWORD || '';
 const DB_PATH = process.env.DB_PATH
   ? resolve(process.env.DB_PATH)
   : resolve(import.meta.dir, 'bankresaneh.sqlite');
+
+// Shared report defaults and logo belong to the selected API backend, not to
+// the Next.js frontend host. Electron passes its userData directory here.
+const APP_DATA_DIR = process.env.BANKRESANEH_DATA_DIR
+  ? resolve(process.env.BANKRESANEH_DATA_DIR)
+  : resolve(DB_PATH, '..');
+const REPORT_SETTINGS_FILE = join(APP_DATA_DIR, 'report-settings.json');
+const REPORT_LOGO_FILE = join(APP_DATA_DIR, 'report-logo.bin');
+const REPORT_LOGO_META_FILE = join(APP_DATA_DIR, 'report-logo-meta.json');
+try { if (!existsSync(APP_DATA_DIR)) mkdirSync(APP_DATA_DIR, { recursive: true }); } catch {}
+const DEFAULT_REPORT_SETTINGS = {
+  title: 'گزارش جامع آرشیو برنامه‌های تلویزیونی',
+  subtitle: 'بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی',
+  organization: 'بانک رسانه',
+  reportText: 'این گزارش به‌صورت خودکار از داده‌های انتخاب‌شده در آرشیو بانک رسانه تهیه شده است. اطلاعات و دسته‌بندی‌ها مطابق داده‌های ثبت‌شده در زمان تهیه گزارش هستند.',
+};
 
 // Ensure parent dir exists
 try {
@@ -82,6 +98,14 @@ db.exec(`
     expires  INTEGER NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
+  CREATE TABLE IF NOT EXISTS login_rate_limits (
+    ip_hash       TEXT PRIMARY KEY,
+    failure_count INTEGER NOT NULL DEFAULT 0,
+    first_attempt INTEGER NOT NULL,
+    blocked_until INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX IF NOT EXISTS idx_login_rate_limits_expiry
+    ON login_rate_limits(blocked_until, first_attempt);
   CREATE TABLE IF NOT EXISTS shows (
     num          INTEGER PRIMARY KEY,
     name         TEXT NOT NULL DEFAULT '',
@@ -323,7 +347,7 @@ function json(body, statusOrReq, maybeReq) {
       'Content-Type': 'application/json; charset=utf-8',
       'Access-Control-Allow-Origin': corsOrigin,
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-BankResaneh-Api-Base',
       'Access-Control-Allow-Credentials': 'true',
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'DENY',
@@ -335,7 +359,7 @@ function corsOptions(req) {
   return new Response(null, { status: 204, headers: {
     'Access-Control-Allow-Origin': corsOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-BankResaneh-Api-Base',
     'Access-Control-Allow-Credentials': 'true',
   }});
 }
@@ -358,6 +382,13 @@ function publicUser(u, viewer) {
   return base;
 }
 
+function normalizePersianPluralSpacing(value) {
+  if (typeof value !== 'string') return value;
+  // Restore the Persian ZWNJ before the plural suffix "ها" in legacy rows
+  // where import/normalization stripped it (e.g. "برنامهها" -> "برنامه‌ها").
+  return value.replace(/([\u0600-\u06FF]{2,})\s*ها(?=$|[\s،؛,.!?؟:)\]])/g, '$1\u200cها');
+}
+
 function rowToShow(r) {
   if (!r) return null;
   let images = [], videos = [];
@@ -365,13 +396,15 @@ function rowToShow(r) {
   try { videos = JSON.parse(r.videos || '[]'); } catch {}
   let tags = [];
   try { tags = JSON.parse(r.tags || '[]'); } catch {}
+  const fa = normalizePersianPluralSpacing;
+  tags = Array.isArray(tags) ? tags.map(fa) : [];
   return {
-    num: r.num, name: r.name, category: r.category, source: r.source,
-    size: r.size, viewers: r.viewers, style: r.style, effects: r.effects,
-    layout: r.layout, elements: r.elements, materials: r.materials,
-    colors: r.colors, lighting: r.lighting, summary: r.summary,
-    descriptionFa: r.descriptionFa, youtube: r.youtube, imdb: r.imdb,
-    wikipedia: r.wikipedia, socialPost: r.socialPost, country: r.country || '',
+    num: r.num, name: fa(r.name), category: fa(r.category), source: fa(r.source),
+    size: fa(r.size), viewers: fa(r.viewers), style: fa(r.style), effects: fa(r.effects),
+    layout: fa(r.layout), elements: fa(r.elements), materials: fa(r.materials),
+    colors: fa(r.colors), lighting: fa(r.lighting), summary: fa(r.summary),
+    descriptionFa: fa(r.descriptionFa), youtube: r.youtube, imdb: r.imdb,
+    wikipedia: r.wikipedia, socialPost: fa(r.socialPost), country: fa(r.country || ''),
     images, videos, tags, decorIncluded: r.decor_included == null ? undefined : !!r.decor_included,
     isFilm: !!(r.is_film),
     // Expose the image source so the frontend can:
@@ -689,10 +722,32 @@ async function upgradePasswordHash(userId, password, stored) {
 }
 function genToken() { return randomBytes(32).toString('hex'); }
 function nowSec() { return Math.floor(Date.now() / 1000); }
-function getClientIP(req) {
-  const fwd = req.headers.get('x-forwarded-for');
-  if (fwd) return fwd.split(',')[0].trim();
-  return req.headers.get('x-real-ip') || 'unknown';
+function normalizeClientAddress(value) {
+  let address = String(value || '').trim();
+  if (!address) return '';
+  if (address.startsWith('[')) address = address.slice(1, address.indexOf(']') > 0 ? address.indexOf(']') : undefined);
+  if (/^::ffff:/i.test(address)) address = address.slice(7);
+  if (/^\d{1,3}(?:\.\d{1,3}){3}:\d+$/.test(address)) address = address.replace(/:\d+$/, '');
+  return address.toLowerCase();
+}
+
+// Forwarded client-IP headers are untrusted unless the direct TCP peer is
+// explicitly listed in BANKRESANEH_TRUSTED_PROXIES (comma-separated exact IPs).
+// This prevents a public caller from changing its lockout key with X-Forwarded-For.
+function getClientIP(req, server) {
+  const peer = normalizeClientAddress(server?.requestIP?.(req)?.address);
+  if (!peer) return 'unknown';
+  const trustedProxies = new Set(
+    String(process.env.BANKRESANEH_TRUSTED_PROXIES || '')
+      .split(',')
+      .map(normalizeClientAddress)
+      .filter(Boolean)
+  );
+  if (!trustedProxies.has(peer)) return peer;
+  const forwarded = req.headers.get('cf-connecting-ip') ||
+    req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip');
+  const candidate = normalizeClientAddress(forwarded?.split(',')[0]);
+  return candidate || peer;
 }
 
 // ---------------------------------------------------------------------------
@@ -704,50 +759,70 @@ function getClientIP(req) {
 // protection was inert). New logic: failures accumulate inside a 15-minute
 // window; reaching 5 blocks the IP for 3 minutes; after the block (or the
 // window) expires the entry is reset. A periodic sweep prunes stale entries
-// so spoofed X-Forwarded-For IPs cannot grow the Map without bound.
+// so expired IP lockout records do not accumulate indefinitely.
 // ---------------------------------------------------------------------------
 const LOGIN_MAX_FAILS = 5;
 const LOGIN_WINDOW_SEC = 900;   // 15 min failure-counting window
 const LOGIN_BLOCK_SEC = 180;    // 3 min lockout after 5 failures
-const loginAttempts = new Map();
+const loginRateLimitKey = (ip) => createHash('sha256').update(String(ip)).digest('hex');
+
 function checkRateLimit(ip) {
-  const entry = loginAttempts.get(ip);
+  const key = loginRateLimitKey(ip);
+  const entry = db.prepare(
+    'SELECT failure_count, first_attempt, blocked_until FROM login_rate_limits WHERE ip_hash = ?'
+  ).get(key);
   if (!entry) return { ok: true };
+
   const now = nowSec();
-  if (entry.blockedUntil > 0) {
-    if (now < entry.blockedUntil) {
-      return { ok: false, retryAfter: entry.blockedUntil - now };
+  if (entry.blocked_until > 0) {
+    if (now < entry.blocked_until) {
+      return { ok: false, retryAfter: entry.blocked_until - now };
     }
-    loginAttempts.delete(ip); // block served in full — start clean
+    db.prepare('DELETE FROM login_rate_limits WHERE ip_hash = ?').run(key);
     return { ok: true };
   }
-  if (now - entry.firstAttempt > LOGIN_WINDOW_SEC) {
-    loginAttempts.delete(ip); // window expired without a block — start clean
+  if (now - entry.first_attempt > LOGIN_WINDOW_SEC) {
+    db.prepare('DELETE FROM login_rate_limits WHERE ip_hash = ?').run(key);
   }
   return { ok: true };
 }
+
+const persistFailedLogin = db.transaction((key, now) => {
+  const current = db.prepare(
+    'SELECT failure_count, first_attempt FROM login_rate_limits WHERE ip_hash = ?'
+  ).get(key);
+  const expired = !current || now - current.first_attempt > LOGIN_WINDOW_SEC;
+  const firstAttempt = expired ? now : current.first_attempt;
+  const failureCount = expired ? 1 : current.failure_count + 1;
+  const blockedUntil = failureCount >= LOGIN_MAX_FAILS ? now + LOGIN_BLOCK_SEC : 0;
+  db.prepare(`
+    INSERT INTO login_rate_limits (ip_hash, failure_count, first_attempt, blocked_until)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(ip_hash) DO UPDATE SET
+      failure_count = excluded.failure_count,
+      first_attempt = excluded.first_attempt,
+      blocked_until = excluded.blocked_until
+  `).run(key, failureCount, firstAttempt, blockedUntil);
+});
+
 function recordFailedAttempt(ip) {
-  const now = nowSec();
-  let entry = loginAttempts.get(ip);
-  if (!entry || now - entry.firstAttempt > LOGIN_WINDOW_SEC) {
-    entry = { count: 0, firstAttempt: now, blockedUntil: 0 };
-  }
-  entry.count++;
-  if (entry.count >= LOGIN_MAX_FAILS) entry.blockedUntil = now + LOGIN_BLOCK_SEC;
-  loginAttempts.set(ip, entry);
+  persistFailedLogin(loginRateLimitKey(ip), nowSec());
 }
-function clearRateLimit(ip) { loginAttempts.delete(ip); }
-// Sweep stale entries once a minute (bounded memory under IP spoofing).
+
+function clearRateLimit(ip) {
+  db.prepare('DELETE FROM login_rate_limits WHERE ip_hash = ?').run(loginRateLimitKey(ip));
+}
+
+// Prune expired rows periodically; active lockouts survive process restarts.
 setInterval(() => {
   try {
     const now = nowSec();
-    for (const [ip, e] of loginAttempts) {
-      if ((e.blockedUntil > 0 && now >= e.blockedUntil) ||
-          (e.blockedUntil === 0 && now - e.firstAttempt > LOGIN_WINDOW_SEC)) {
-        loginAttempts.delete(ip);
-      }
-    }
-  } catch { /* never let the sweep crash the server */ }
+    db.prepare(`
+      DELETE FROM login_rate_limits
+      WHERE (blocked_until > 0 AND blocked_until <= ?)
+         OR (blocked_until = 0 AND first_attempt < ?)
+    `).run(now, now - LOGIN_WINDOW_SEC);
+  } catch { /* never let cleanup crash the server */ }
 }, 60_000);
 
 // ---------------------------------------------------------------------------
@@ -931,7 +1006,7 @@ const server = Bun.serve({
   // default. Public deployments must explicitly opt-in via BANKRESANEH_HOST=0.0.0.0
   // (plus HTTPS, CORS allow-list, and a changed admin password).
   hostname: HOST,
-  async fetch(req) {
+  async fetch(req, server) {
     const url = new URL(req.url);
     const pathname = url.pathname;
     const method = req.method;
@@ -950,6 +1025,126 @@ const server = Bun.serve({
     if (pathname === '/api/health' && method === 'GET') {
       const showsCount = db.prepare('SELECT COUNT(*) AS count FROM shows').get()?.count || 0;
       return json({ status: 'ok', time: nowSec(), showsCount }, req);
+    }
+
+    if (pathname === '/api/rate-limit/translate' && method === 'POST') {
+      const user = requirePermission(req, 'add_shows') || requirePermission(req, 'edit_shows');
+      if (!user) return permissionFailure(req, 'مجوز ترجمه ندارید');
+      const now = nowSec();
+      const resetAt = now + 60;
+      db.exec(`CREATE TABLE IF NOT EXISTS translation_rate_buckets (
+        user_id INTEGER PRIMARY KEY,
+        count INTEGER NOT NULL DEFAULT 0,
+        reset_at INTEGER NOT NULL
+      )`);
+      // A single SQLite upsert makes the per-user increment atomic across
+      // concurrent requests and survives API/Next process restarts.
+      db.prepare(`
+        INSERT INTO translation_rate_buckets (user_id, count, reset_at)
+        VALUES (?, 1, ?)
+        ON CONFLICT(user_id) DO UPDATE SET
+          count = CASE
+            WHEN translation_rate_buckets.reset_at <= ? THEN 1
+            WHEN translation_rate_buckets.count < 11 THEN translation_rate_buckets.count + 1
+            ELSE translation_rate_buckets.count
+          END,
+          reset_at = CASE
+            WHEN translation_rate_buckets.reset_at <= ? THEN excluded.reset_at
+            ELSE translation_rate_buckets.reset_at
+          END
+      `).run(user.id, resetAt, now, now);
+      const bucket = db.prepare('SELECT count, reset_at FROM translation_rate_buckets WHERE user_id = ?').get(user.id);
+      if (bucket && bucket.count > 10) {
+        const retryAfter = Math.max(1, bucket.reset_at - now);
+        const response = json({ error: `محدودیت ترجمه: ${retryAfter} ثانیه صبر کنید` }, 429, req);
+        response.headers.set('Retry-After', String(retryAfter));
+        return response;
+      }
+      return json({ ok: true, remaining: Math.max(0, 10 - (bucket?.count || 0)) }, req);
+    }
+
+    // ----- Shared report defaults and logo (stored with the selected API backend) -----
+    if (pathname === '/api/settings/report' && method === 'GET') {
+      const user = requireUser(req);
+      if (!user) return json({ error: 'Unauthorized' }, 401, req);
+      if (user.must_change_password) return json({ error: 'Password change required' }, 403, req);
+      let saved = {};
+      try { if (existsSync(REPORT_SETTINGS_FILE)) saved = JSON.parse(readFileSync(REPORT_SETTINGS_FILE, 'utf8')); } catch {}
+      return json({ ...DEFAULT_REPORT_SETTINGS, ...saved }, req);
+    }
+
+    if (pathname === '/api/settings/report' && method === 'POST') {
+      const user = requirePermission(req, 'manage_settings') || requirePermission(req, 'export_reports');
+      if (!user) return permissionFailure(req, 'فقط مدیر سیستم یا کاربران دارای مجوز خروجی گزارش می‌توانند تنظیمات پیش‌فرض گزارش را تغییر دهند');
+      let body;
+      try { body = await req.json(); } catch { return json({ ok: false, error: 'بدنه درخواست معتبر نیست' }, 400, req); }
+      let current = { ...DEFAULT_REPORT_SETTINGS };
+      try { if (existsSync(REPORT_SETTINGS_FILE)) current = { ...current, ...JSON.parse(readFileSync(REPORT_SETTINGS_FILE, 'utf8')) }; } catch {}
+      const next = {
+        title: typeof body.title === 'string' && body.title.trim() ? body.title.trim().slice(0, 180) : current.title,
+        subtitle: typeof body.subtitle === 'string' && body.subtitle.trim() ? body.subtitle.trim().slice(0, 240) : current.subtitle,
+        organization: typeof body.organization === 'string' && body.organization.trim() ? body.organization.trim().slice(0, 160) : current.organization,
+        reportText: typeof body.reportText === 'string' ? body.reportText.trim().slice(0, 4000) : current.reportText,
+        updatedAt: new Date().toISOString(),
+      };
+      try {
+        const temporary = REPORT_SETTINGS_FILE + '.tmp';
+        writeFileSync(temporary, JSON.stringify(next, null, 2), 'utf8');
+        renameSync(temporary, REPORT_SETTINGS_FILE);
+        return json({ ok: true, settings: next }, req);
+      } catch (error) {
+        return json({ ok: false, error: 'ذخیره تنظیمات گزارش ناموفق بود' }, 500, req);
+      }
+    }
+
+    if (pathname === '/api/settings/logo' && method === 'GET') {
+      const user = requirePermission(req, 'export_reports') || requirePermission(req, 'manage_settings');
+      if (!user) return permissionFailure(req, 'دسترسی به لوگوی گزارش مجاز نیست');
+      if (!existsSync(REPORT_LOGO_FILE) || !existsSync(REPORT_LOGO_META_FILE)) {
+        return json({ ok: false, error: 'لوگوی سفارشی ثبت نشده است' }, 404, req);
+      }
+      try {
+        const meta = JSON.parse(readFileSync(REPORT_LOGO_META_FILE, 'utf8'));
+        const bytes = readFileSync(REPORT_LOGO_FILE);
+        return new Response(bytes, { status: 200, headers: {
+          'Content-Type': meta.contentType || 'image/png',
+          'Content-Length': String(bytes.length),
+          'Cache-Control': 'private, no-store, max-age=0',
+          'Access-Control-Allow-Origin': getCorsHeader(req),
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-BankResaneh-Api-Base',
+          'X-Content-Type-Options': 'nosniff',
+        }});
+      } catch {
+        return json({ ok: false, error: 'خواندن لوگوی گزارش ناموفق بود' }, 500, req);
+      }
+    }
+
+    if (pathname === '/api/settings/logo' && method === 'POST') {
+      const user = requirePermission(req, 'manage_settings') || requirePermission(req, 'export_reports');
+      if (!user) return permissionFailure(req, 'فقط مدیر سیستم یا کاربران دارای مجوز خروجی گزارش می‌توانند لوگوی گزارش را تغییر دهند');
+      try {
+        const form = await req.formData();
+        const file = form.get('file');
+        if (!(file instanceof File) || file.size <= 0) return json({ ok: false, error: 'فایل تصویری ارسال نشده است' }, 400, req);
+        if (file.size > 5 * 1024 * 1024) return json({ ok: false, error: 'حجم فایل بیش از ۵ مگابایت است' }, 413, req);
+        const bytes = Buffer.from(await file.arrayBuffer());
+        const png = bytes.length >= 8 && bytes.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
+        const jpeg = bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+        if (!png && !jpeg) return json({ ok: false, error: 'فقط تصویر PNG یا JPEG معتبر پذیرفته می‌شود' }, 415, req);
+        const contentType = png ? 'image/png' : 'image/jpeg';
+        const temporary = REPORT_LOGO_FILE + '.tmp';
+        writeFileSync(temporary, bytes);
+        renameSync(temporary, REPORT_LOGO_FILE);
+        writeFileSync(REPORT_LOGO_META_FILE, JSON.stringify({
+          contentType,
+          name: String(file.name || 'report-logo').replace(/[\\/\\0-\\x1f]/g, '_').slice(0, 120),
+          updatedAt: new Date().toISOString(),
+          size: bytes.length,
+        }), 'utf8');
+        return json({ ok: true, url: '/api/settings/logo', size: bytes.length }, req);
+      } catch (error) {
+        return json({ ok: false, error: 'ذخیره لوگوی گزارش ناموفق بود' }, 500, req);
+      }
     }
 
     // ----- Shared custom genres -----
@@ -1109,7 +1304,7 @@ const server = Bun.serve({
           'X-Content-Type-Options': 'nosniff',
           'Access-Control-Allow-Origin': origin,
           'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-BankResaneh-Api-Base',
           'Access-Control-Expose-Headers': 'Content-Disposition',
           'Access-Control-Allow-Credentials': 'true',
         },
@@ -1328,9 +1523,13 @@ const server = Bun.serve({
 
     // ----- Auth: login -----
     if (pathname === '/api/auth/login' && method === 'POST') {
-      const ip = getClientIP(req);
+      const ip = getClientIP(req, server);
       const rl = checkRateLimit(ip);
-      if (!rl.ok) return json({ error: `تلاش‌های ناموفق زیاد. لطفاً ${rl.retryAfter} ثانیه صبر کنید.` }, 429, req);
+      if (!rl.ok) {
+        const response = json({ error: `تلاش‌های ناموفق زیاد. لطفاً ${rl.retryAfter} ثانیه صبر کنید.` }, 429, req);
+        response.headers.set('Retry-After', String(rl.retryAfter));
+        return response;
+      }
       let body;
       try { body = await req.json(); } catch { return json({ error: 'پاسخ نامعتبر است' }, 400, req); }
       const username = String(body?.username || '').trim();
@@ -1573,7 +1772,16 @@ const server = Bun.serve({
       const previousVideos = existing ? rowToShow(existing).videos : [];
       const videoValidation = validateShowVideos(merged.videos, previousVideos);
       if (!videoValidation.valid) return json({ error: videoValidation.error }, 400, req);
-      const duplicate = findDuplicateShow(merged, num);
+      // Existing records may already have a legacy duplicate in the archive.
+      // Allow metadata/category edits when the record identity is unchanged;
+      // only run the cross-record duplicate guard when name/IMDb/Wikipedia
+      // identity is actually being changed (or when restoring a missing row).
+      const previous = existing ? rowToShow(existing) : null;
+      const identityChanged = !previous ||
+        normalizeCatalogValue(merged.name) !== normalizeCatalogValue(previous.name) ||
+        extractIMDbId(merged.imdb) !== extractIMDbId(previous.imdb) ||
+        extractWikipediaTitle(merged.wikipedia) !== extractWikipediaTitle(previous.wikipedia);
+      const duplicate = identityChanged ? findDuplicateShow(merged, num) : null;
       if (duplicate) {
         return json({ error: 'این برنامه با رکورد دیگری تکراری است: «' + duplicate.name + '» — ژانر اصلی: ' + getPrimaryGenre(duplicate.category), duplicate: { num: duplicate.num, name: duplicate.name, category: duplicate.category, primaryGenre: getPrimaryGenre(duplicate.category) } }, 409, req);
       }
