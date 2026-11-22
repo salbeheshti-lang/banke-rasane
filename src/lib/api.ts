@@ -2,6 +2,14 @@
 
 const TOKEN_KEY = 'bankresaneh_token';
 
+// The Cloudflare preview routes /api/* through its server-side proxy to the
+// isolated Render preview API. Ignore any server_url left in localStorage by
+// an earlier local/custom-server test, otherwise login can be sent to a stale
+// host and return 404 even though the preview API is healthy.
+function isCloudflarePreview(): boolean {
+  return typeof window !== 'undefined' && window.location.hostname.endsWith('.workers.dev');
+}
+
 function defaultApiBase(): string {
   if (typeof window !== 'undefined') {
     const currentPort = window.location.port;
@@ -14,6 +22,7 @@ function defaultApiBase(): string {
 }
 
 export function getApiBase(): string {
+  if (isCloudflarePreview()) return window.location.origin;
   if (typeof window !== 'undefined') {
     const custom = localStorage.getItem('server_url');
     if (custom) return custom;
@@ -23,8 +32,8 @@ export function getApiBase(): string {
 
 export function getApiUrl(path: string, baseOverride?: string): string {
   const cleanPath = path.replace(/^\/+/, '');
-  const stored = typeof window !== 'undefined' ? localStorage.getItem('server_url') : null;
-  const selected = (baseOverride ?? stored ?? '').trim();
+  const stored = typeof window !== 'undefined' && !isCloudflarePreview() ? localStorage.getItem('server_url') : null;
+  const selected = (isCloudflarePreview() ? '' : (baseOverride ?? stored ?? '')).trim();
   const base = (selected || getApiBase()).replace(/\/+$/, '');
   const isGatewayHost = typeof window !== 'undefined'
     && (window.location.port === '81' || window.location.hostname.includes('space-z.ai'));
