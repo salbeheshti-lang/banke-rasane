@@ -99,8 +99,8 @@ jobs:
             status="$(curl --silent --show-error --output /tmp/api-health.json --write-out '%{http_code}' --max-time 25 "${BANKRESANEH_API_BASE}/api/health" || true)"
             if [ "$status" = "200" ]; then
               cat /tmp/api-health.json
-              if grep -q '"status":"ok"' /tmp/api-health.json; then
-                echo "Preview API health check passed."
+              if grep -q '"status":"ok"' /tmp/api-health.json && grep -q '"showsCount":1302' /tmp/api-health.json; then
+                echo "Preview API health and 1302-show archive check passed."
                 exit 0
               fi
             fi
