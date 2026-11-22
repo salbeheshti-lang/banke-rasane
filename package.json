@@ -27,7 +27,8 @@
     "cloudflare:deploy": "bun run cloudflare:build && opennextjs-cloudflare deploy",
     "test:export": "node scripts/test-export-formats.cjs",
     "test:rate-limit": "bun scripts/test-rate-limit-atomic.mjs",
-    "test:cloudflare-preview": "node scripts/test-cloudflare-preview.cjs"
+    "test:cloudflare-preview": "node scripts/test-cloudflare-preview.cjs",
+    "test:electron-navigation": "node scripts/test-electron-navigation.cjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
