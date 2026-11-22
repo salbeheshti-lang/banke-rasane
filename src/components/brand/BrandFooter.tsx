@@ -126,11 +126,8 @@ export function BrandFooter({ variant = 'dark', withBottomNav = false }: { varia
           }}
         />
 
-        {/* Left side (RTL end): Client logo + label + organization name.
-            The "تهیه‌شده برای" label sits on top of the org name
-            (مانیتورینگ مرکز طرح و برنامه سیما), and the client logo mark
-            sits beside them. On compact screens the org name is hidden
-            to keep the footer readable. */}
+        {/* Organization identity: show only the official organization name
+            beside its logo. Never prepend a commissioning/attribution label. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           {!isCompact && (
             <div
@@ -143,15 +140,12 @@ export function BrandFooter({ variant = 'dark', withBottomNav = false }: { varia
                 textAlign: 'left',
               }}
             >
-              <span style={{ color: textColor, fontSize: '0.62rem', fontWeight: 500, letterSpacing: '0.02em' }}>
-                {t('footer.poweredBy')}
-              </span>
               <span
                 style={{
                   color: subTextColor,
                   fontSize: '0.74rem',
                   fontWeight: 700,
-                  marginTop: '1px',
+                  marginTop: 0,
                 }}
               >
                 {t('footer.clientOrg')}
