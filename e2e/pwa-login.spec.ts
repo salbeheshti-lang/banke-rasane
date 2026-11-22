@@ -20,6 +20,31 @@ test('PWA manifest exposes Persian install metadata and existing app icons', asy
   }
 });
 
+test('login screen renders the co-branded footer and serves both client logo assets', async ({ page, request }) => {
+  await page.goto('/');
+  const footer = page.locator('footer');
+  await expect(footer).toBeVisible();
+  await expect(footer.getByText('مانیتورینگ مرکز طرح و برنامه سیما')).toBeVisible();
+  await expect(footer.getByText('تهیه‌شده برای')).toHaveCount(0);
+  await expect(footer.locator('img')).toHaveCount(1);
+  await expect(footer.locator('img').first()).toHaveAttribute('src', /client-logo-white\.png/);
+
+  for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) {
+    await page.setViewportSize(viewport);
+    const logoSize = await footer.locator('img').boundingBox();
+    expect(logoSize).not.toBeNull();
+    expect(logoSize!.width).toBeGreaterThanOrEqual(42);
+    expect(logoSize!.width).toBeLessThanOrEqual(58);
+    await expect(footer.getByText('مانیتورینگ مرکز طرح و برنامه سیما')).toBeVisible();
+  }
+
+  for (const asset of ['/client-logo.png', '/client-logo-white.png']) {
+    const response = await request.get(asset);
+    expect(response.ok()).toBeTruthy();
+    expect(response.headers()['content-type']).toContain('image/png');
+  }
+});
+
 test('service worker and offline fallback are served, and private APIs are excluded from cache logic', async ({ page, request }) => {
   await page.goto('/');
   const swResponse = await request.get('/sw.js');
@@ -71,4 +96,26 @@ test('login screen shows accessible fields and enforces the 3-minute lockout cou
   await expect(password).toBeEnabled();
   await expect(page.getByRole('button', { name: /ورود/ })).toBeEnabled();
   await expect(page.getByText(/زمان باقی‌مانده/)).toHaveCount(0);
+});
+
+
+test('real offline navigation uses the cached fallback and never serves private API data', async ({ page }) => {
+  await page.goto('/');
+  await expect.poll(async () => page.evaluate(() => Boolean(navigator.serviceWorker.controller)), {
+    timeout: 15_000,
+  }).toBeTruthy();
+
+  await page.context().setOffline(true);
+  await page.goto('/__bankresaneh_offline_probe__', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByText('اتصال به سرور برقرار نیست')).toBeVisible();
+
+  const apiWasAvailableOffline = await page.evaluate(async () => {
+    try {
+      const response = await fetch('/api/health', { cache: 'no-store' });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  });
+  expect(apiWasAvailableOffline).toBe(false);
 });

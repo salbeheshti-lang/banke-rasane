@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, 'fix/**', 'feat/**']
   pull_request:
-    branches: [main, 'fix/**']
+    branches: [main, 'fix/**', 'feat/**']
   workflow_dispatch:
 
 permissions:
@@ -17,7 +17,7 @@ concurrency:
 jobs:
   build-windows:
     runs-on: windows-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -71,6 +71,39 @@ jobs:
           ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.ci-cache/electron-builder
           ELECTRON_CACHE: ${{ github.workspace }}/.ci-cache/electron
 
+      - name: Build audited 5.4.4 baseline installer for exact in-place upgrade test
+        shell: pwsh
+        timeout-minutes: 25
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $baselineSha = '7a34151e4a9e18fe8988c91f86b0462d5d7e2b20'
+          $baselineDir = Join-Path $env:RUNNER_TEMP 'BankResaneh-5.4.4-source'
+          $baselineSetup = Join-Path $env:RUNNER_TEMP 'BankResaneh-5.4.4-Setup.exe'
+          git fetch --no-tags --depth=1 origin $baselineSha
+          if ($LASTEXITCODE -ne 0) { throw 'Could not fetch audited 5.4.4 baseline commit.' }
+          git worktree add --detach $baselineDir $baselineSha
+          if ($LASTEXITCODE -ne 0) { throw 'Could not create 5.4.4 baseline worktree.' }
+          try {
+            Push-Location $baselineDir
+            bun install --no-save
+            if ($LASTEXITCODE -ne 0) { throw '5.4.4 baseline dependency installation failed.' }
+            npm run electron:build
+            if ($LASTEXITCODE -ne 0) { throw '5.4.4 baseline installer build failed.' }
+            $setup = Get-ChildItem (Join-Path $baselineDir 'release') -Filter '*Setup*.exe' | Select-Object -First 1
+            if (-not $setup) { throw '5.4.4 baseline installer was not produced.' }
+            Copy-Item $setup.FullName $baselineSetup -Force
+            if ((Get-Item $baselineSetup).Length -lt 100MB) { throw '5.4.4 baseline installer is incomplete.' }
+          } finally {
+            Pop-Location
+            git worktree remove --force $baselineDir
+          }
+          Write-Host "PASS: built the audited package-version 5.4.4 baseline from $baselineSha."
+        env:
+          DATABASE_URL: file:./db/custom.db
+          DEBUG: electron-builder
+          ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.ci-cache/electron-builder
+          ELECTRON_CACHE: ${{ github.workspace }}/.ci-cache/electron
+
       - name: Verify published 5.3.9 to current-version in-place upgrade
         shell: pwsh
         timeout-minutes: 30
@@ -95,18 +128,25 @@ jobs:
           node scripts/smoke-electron.cjs "$exe"
           if ($LASTEXITCODE -ne 0) { throw '5.3.9 baseline startup/API/DB smoke test failed.' }
 
+          # Reproduce the exact package version already installed by the user.
+          $baselineSetup = Join-Path $env:RUNNER_TEMP 'BankResaneh-5.4.4-Setup.exe'
+          if (-not (Test-Path $baselineSetup)) { throw 'Audited 5.4.4 baseline installer is missing.' }
+          Install-App $baselineSetup (Join-Path $env:RUNNER_TEMP 'upgrade-539-to-544.log')
+          node scripts/smoke-electron.cjs "$exe"
+          if ($LASTEXITCODE -ne 0) { throw '5.4.4 baseline startup/API/DB smoke test failed.' }
+
           $userData = Join-Path $env:APPDATA 'banke-rasane'
           $db = Join-Path $userData 'db\\bankresaneh.sqlite'
-          if (-not (Test-Path $db)) { throw '5.3.9 baseline did not create the real persistent SQLite database.' }
+          if (-not (Test-Path $db)) { throw '5.4.4 baseline did not create the real persistent SQLite database.' }
           $snapshot = @{}
           Get-ChildItem $userData -File -Recurse | ForEach-Object {
             $rel = $_.FullName.Substring($userData.Length).TrimStart('\\')
             $snapshot[$rel] = (Get-FileHash $_.FullName -Algorithm SHA256).Hash
           }
-          Set-Content (Join-Path $userData 'upgrade-sentinel.txt') 'created-under-5.3.9' -NoNewline
+          Set-Content (Join-Path $userData 'upgrade-sentinel.txt') 'created-under-5.4.4' -NoNewline
           $snapshot['upgrade-sentinel.txt'] = (Get-FileHash (Join-Path $userData 'upgrade-sentinel.txt') -Algorithm SHA256).Hash
 
-          Install-App $newSetup.FullName (Join-Path $env:RUNNER_TEMP 'upgrade-to-current.log')
+          Install-App $newSetup.FullName (Join-Path $env:RUNNER_TEMP 'upgrade-544-to-545.log')
           foreach ($rel in $snapshot.Keys) {
             $file = Join-Path $userData $rel
             if (-not (Test-Path $file -PathType Leaf)) { throw "Upgrade deleted user data: $rel" }
@@ -117,7 +157,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Upgraded application failed startup/API/DB/video smoke test.' }
           Remove-Item Env:BANKRESANEH_VERIFY_VIDEO_EXPORT -ErrorAction SilentlyContinue
           $packageVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
-          Write-Host "PASS: published 5.3.9 upgraded in place to package version $packageVersion; $($snapshot.Count) persistent files including SQLite survived byte-for-byte."
+          Write-Host "PASS: 5.3.9 -> audited 5.4.4 -> candidate $packageVersion in-place upgrade; $($snapshot.Count) persistent files including SQLite survived the 5.4.4 -> candidate step byte-for-byte."
 
       - name: Run packaged app smoke test
         run: npm run smoke:desktop

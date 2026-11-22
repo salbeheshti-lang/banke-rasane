@@ -1,8 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
+import fs from 'node:fs';
+import path from 'node:path';
+import { CLIENT_BRANDING } from '@/lib/branding';
 import { gatePermission, getApiBaseForRequest } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
+
+function getClientLogoDataUrl(): string {
+  const fileName = path.basename(CLIENT_BRANDING.logoColorPath);
+  const candidate = path.join(process.cwd(), 'public', fileName);
+  try {
+    if (fs.existsSync(candidate)) return `data:image/png;base64,${fs.readFileSync(candidate).toString('base64')}`;
+  } catch { /* The report can still be generated without optional client branding. */ }
+  console.warn('[PDF] Client logo not found in packaged public paths');
+  return '';
+}
 
 type ShowRow = {
   num?: number;
@@ -71,6 +84,7 @@ export async function POST(request: NextRequest) {
       const encoded = Buffer.from(await logoResponse.arrayBuffer()).toString('base64');
       logoDataUrl = `data:${mime};base64,${encoded}`;
     }
+    const clientLogoDataUrl = getClientLogoDataUrl();
     const categories = new Map<string, number>();
     for (const show of shows) {
       const category = text(show.category, 'سایر').replace(/^\d+\.\s*/, '');
@@ -132,6 +146,8 @@ export async function POST(request: NextRequest) {
         margin: [32, 0, 32, 16],
         columns: [
           { text: organization, fontSize: 8, color: '#64748B', alignment: 'right' },
+          { text: CLIENT_BRANDING.organizationFa, fontSize: 8, color: '#64748B', alignment: 'center' },
+          ...(clientLogoDataUrl ? [{ image: clientLogoDataUrl, width: 18, alignment: 'center', margin: [0, -3, 0, 0] }] : []),
           { text: `صفحه ${page.toLocaleString('fa-IR')} از ${pages.toLocaleString('fa-IR')}`, fontSize: 8, color: '#64748B', alignment: 'left' },
         ],
       }),
@@ -143,6 +159,13 @@ export async function POST(request: NextRequest) {
           columns: [
             { text: [{ text: 'تهیه‌کننده: ', bold: true }, organization], alignment: 'right' },
             { text: [{ text: 'تاریخ تهیه: ', bold: true }, new Date().toLocaleDateString('fa-IR')], alignment: 'left' },
+          ],
+          margin: [0, 0, 0, 10],
+        },
+        {
+          columns: [
+            { text: [{ text: CLIENT_BRANDING.commissionedLabelFa + ': ', bold: true }, CLIENT_BRANDING.organizationFa], alignment: 'right', fontSize: 9, color: '#334155' },
+            ...(clientLogoDataUrl ? [{ image: clientLogoDataUrl, width: 30, alignment: 'left' }] : []),
           ],
           margin: [0, 0, 0, 18],
         },
@@ -217,7 +240,7 @@ export async function POST(request: NextRequest) {
           },
         },
         { text: 'یادداشت', style: 'section' },
-        { text: 'این گزارش به‌صورت خودکار از داده‌های انتخاب‌شده در آرشیو بانک رسانه تهیه شده است. اطلاعات و دسته‌بندی‌ها مطابق داده‌های ثبت‌شده در زمان تهیه گزارش هستند.', fontSize: 8, color: '#475569' },
+        { text: text(saved.reportText, 'این گزارش به‌صورت خودکار از داده‌های انتخاب‌شده در آرشیو بانک رسانه تهیه شده است. اطلاعات و دسته‌بندی‌ها مطابق داده‌های ثبت‌شده در زمان تهیه گزارش هستند.'), fontSize: 8, color: '#475569' },
       ],
     };
 

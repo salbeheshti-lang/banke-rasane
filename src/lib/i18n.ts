@@ -12,6 +12,8 @@
  * new key automatically makes it available via t('newKey').
  */
 
+import { CLIENT_BRANDING } from './branding';
+
 export type Lang = 'fa' | 'en';
 
 /** Dictionary shape — both languages must define the same keys. */
@@ -285,6 +287,11 @@ export const dict: Dict = {
   'program.youtube': { fa: 'تماشا در یوتیوب', en: 'Watch on YouTube' },
   'program.similar': { fa: 'برنامه‌های مشابه', en: 'Similar programs' },
   'program.noSimilar': { fa: 'برنامهٔ مشابهی یافت نشد', en: 'No similar programs found' },
+
+  // ===== Footer / commissioning organization =====
+  'footer.poweredBy': { fa: CLIENT_BRANDING.commissionedLabelFa, en: CLIENT_BRANDING.commissionedLabelEn },
+  'footer.clientOrg': { fa: CLIENT_BRANDING.organizationFa, en: CLIENT_BRANDING.organizationEn },
+  'footer.copyright': { fa: '© {year} بانک رسانه', en: '© {year} BankResaneh' },
 
   // ===== Settings: Profile tab =====
   'settings.profile.edit': { fa: 'ویرایش پروفایل', en: 'Edit profile' },
