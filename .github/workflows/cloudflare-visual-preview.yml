@@ -51,3 +51,27 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           BANKRESANEH_API_BASE: ${{ vars.BANKRESANEH_API_BASE || 'https://bankresaneh-preview-api.onrender.com' }}
+
+      - name: Verify the deployed Worker, organization footer, and live archive API
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in {1..12}; do
+            if curl --fail --silent --show-error "$WORKER_URL/" -o /tmp/bankresaneh-worker.html; then
+              break
+            fi
+            if [ "$attempt" -eq 12 ]; then
+              echo "Deployed Worker did not become reachable."
+              exit 1
+            fi
+            sleep 5
+          done
+          grep -q 'مانیتورینگ مرکز طرح و برنامه سیما' /tmp/bankresaneh-worker.html
+          curl --fail --silent --show-error "$WORKER_URL/client-logo-white.png" -o /tmp/client-logo-white.png
+          test -s /tmp/client-logo-white.png
+          curl --fail --silent --show-error "$WORKER_URL/manifest.webmanifest" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const m=JSON.parse(s);if(m.name!=='بانک رسانه'||m.display!=='standalone')process.exit(1);});"
+          curl --fail --silent --show-error "$BANKRESANEH_API_BASE/api/health" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const h=JSON.parse(s);if(h.status!=='ok'||!Number.isFinite(h.showsCount)||h.showsCount<1)process.exit(1);console.log('Live archive API ready: '+h.showsCount+' shows');});"
+          echo "PASS deployed Worker serves the organization-branded login, logo asset, PWA manifest, and non-empty archive API."
+        env:
+          WORKER_URL: https://bankresaneh-visual-preview.ginx11x5frrby9mvb.workers.dev
+          BANKRESANEH_API_BASE: ${{ vars.BANKRESANEH_API_BASE || 'https://bankresaneh-preview-api.onrender.com' }}
