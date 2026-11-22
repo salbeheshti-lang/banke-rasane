@@ -44,6 +44,9 @@ jobs:
       - name: Build Next.js for Cloudflare Workers
         run: bunx opennextjs-cloudflare build
 
+      - name: Validate Worker bundle without publishing
+        run: bunx wrangler deploy --dry-run
+
       - name: Verify preview API before publishing the frontend
         shell: bash
         run: |
