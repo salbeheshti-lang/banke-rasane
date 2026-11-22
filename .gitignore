@@ -3,6 +3,7 @@ node_modules/
 
 # Next.js build cache and output — don't commit
 .next/
+.open-next/
 out/
 
 # Dev logs and runtime
@@ -55,6 +56,7 @@ tool-results/
 *.sqlite-shm
 .env
 !.env.example
+!.dev.vars.example
 
 # Runtime user-uploaded content (report logo) and persisted settings
 # These are created at runtime and should not be committed.
