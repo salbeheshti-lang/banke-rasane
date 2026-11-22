@@ -2,7 +2,7 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "bankresaneh-preview",
   "main": ".open-next/worker.js",
-  "account_id": "34fe29bd9259dcb2c47fd320f40b2eac",
+  "account_id": "128caa74c4d03e4cf84cd0d2b3f07bbf",
   "compatibility_date": "2026-11-22",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
