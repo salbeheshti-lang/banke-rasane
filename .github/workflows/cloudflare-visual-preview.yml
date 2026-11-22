@@ -42,17 +42,16 @@ jobs:
           BANKRESANEH_ALLOWED_API_ORIGINS: http://127.0.0.1:3002
 
       - name: Deploy isolated visual-only Worker
-        if: ${{ vars.BANKRESANEH_API_BASE != '' && vars.BANKRESANEH_ALLOWED_API_ORIGINS != '' }}
+        if: ${{ vars.BANKRESANEH_API_BASE != '' }}
         run: >-
           bunx wrangler deploy --name bankresaneh-visual-preview
           --var "BANKRESANEH_API_BASE:${BANKRESANEH_API_BASE}"
-          --var "BANKRESANEH_ALLOWED_API_ORIGINS:${BANKRESANEH_ALLOWED_API_ORIGINS}"
+          --var "BANKRESANEH_ALLOWED_API_ORIGINS:https://bankresaneh-visual-preview.ginx11x5frrby9mvb.workers.dev"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           BANKRESANEH_API_BASE: ${{ vars.BANKRESANEH_API_BASE }}
-          BANKRESANEH_ALLOWED_API_ORIGINS: ${{ vars.BANKRESANEH_ALLOWED_API_ORIGINS }}
 
       - name: Explain skipped deployment until the real API URL is configured
-        if: ${{ vars.BANKRESANEH_API_BASE == '' || vars.BANKRESANEH_ALLOWED_API_ORIGINS == '' }}
-        run: echo "Worker deployment skipped; configure BANKRESANEH_API_BASE and BANKRESANEH_ALLOWED_API_ORIGINS after creating the Render API service."
+        if: ${{ vars.BANKRESANEH_API_BASE == '' }}
+        run: echo "Worker deployment skipped; configure BANKRESANEH_API_BASE after creating the Render API service."
