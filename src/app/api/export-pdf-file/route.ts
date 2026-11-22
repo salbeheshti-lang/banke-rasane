@@ -164,7 +164,7 @@ export async function POST(request: NextRequest) {
         },
         {
           columns: [
-            { text: [{ text: CLIENT_BRANDING.commissionedLabelFa + ': ', bold: true }, CLIENT_BRANDING.organizationFa], alignment: 'right', fontSize: 9, color: '#334155' },
+            { text: CLIENT_BRANDING.organizationFa, alignment: 'right', fontSize: 9, color: '#334155' },
             ...(clientLogoDataUrl ? [{ image: clientLogoDataUrl, width: 30, alignment: 'left' }] : []),
           ],
           margin: [0, 0, 0, 18],
