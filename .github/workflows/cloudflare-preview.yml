@@ -47,6 +47,49 @@ jobs:
       - name: Validate Worker bundle without publishing
         run: bunx wrangler deploy --dry-run
 
+      - name: Install API service dependencies
+        working-directory: mini-services/api-service
+        run: bun install
+
+      - name: Smoke-test the updated Bun API locally
+        shell: bash
+        run: |
+          set -euo pipefail
+          PORT=3456 BANKRESANEH_HOST=127.0.0.1 DB_PATH=/tmp/bankresaneh-preview-smoke.sqlite BANKRESANEH_SEED_PATH="$GITHUB_WORKSPACE/public/talk-shows-data.json" bun mini-services/api-service/index.js > /tmp/bankresaneh-api-smoke.log 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 30); do
+            status="$(curl --silent --output /tmp/api-smoke-health.json --write-out '%{http_code}' --max-time 3 http://127.0.0.1:3456/api/health || true)"
+            if [ "$status" = "200" ] && grep -q '"status":"ok"' /tmp/api-smoke-health.json; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" != "1" ]; then
+            cat /tmp/bankresaneh-api-smoke.log
+            echo "::error::Local Bun API did not become healthy."
+            exit 1
+          fi
+          cat /tmp/api-smoke-health.json
+          grep -q '"showsCount":1302' /tmp/api-smoke-health.json
+          for endpoint in translation/rate-limit settings/report; do
+            status="$(curl --silent --output /tmp/api-smoke-auth.json --write-out '%{http_code}' --max-time 5 -X POST "http://127.0.0.1:3456/api/$endpoint" || true)"
+            if [ "$status" != "401" ]; then
+              cat /tmp/api-smoke-auth.json || true
+              echo "::error::Expected unauthenticated POST /api/$endpoint to return 401; got ${status:-no-response}."
+              exit 1
+            fi
+          done
+          logo_status="$(curl --silent --output /tmp/api-smoke-logo.json --write-out '%{http_code}' --max-time 5 http://127.0.0.1:3456/api/settings/logo || true)"
+          if [ "$logo_status" != "404" ]; then
+            cat /tmp/api-smoke-logo.json || true
+            echo "::error::Expected no stored logo to return 404; got ${logo_status:-no-response}."
+            exit 1
+          fi
+          echo "Bun API health, 1302-show seed, auth gates, and settings routes passed."
+
       - name: Verify preview API before publishing the frontend
         shell: bash
         run: |
