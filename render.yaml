@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: bankresaneh-preview-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./mini-services/api-service/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: BANKRESANEH_HOST
+        value: "0.0.0.0"
+      - key: DB_PATH
+        value: /tmp/bankresaneh.sqlite
+      - key: BANKRESANEH_DATA_DIR
+        value: /tmp
+      - key: BANKRESANEH_SEED_PATH
+        value: /app/talk-shows-data.json
+      - key: CORS_ORIGINS
+        value: https://bankresaneh-visual-preview.ginx11x5frrby9mvb.workers.dev
+      - key: BANKRESANEH_ADMIN_PASSWORD
+        sync: false
