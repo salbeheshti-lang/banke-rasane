@@ -68,3 +68,9 @@ security-test-report.txt
 
 # local Prisma dev DB (regenerated locally, never needed in repo)
 db/*.db
+
+# Cloudflare OpenNext and browser-test artifacts
+.open-next/
+.wrangler/
+playwright-report/
+test-results/

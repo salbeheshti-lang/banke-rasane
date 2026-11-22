@@ -1,9 +1,10 @@
 // ============================================================================
-// SEED SCRIPT — Adds 449 new programs to DB + JSON file
+// SEED SCRIPT — Reconciles checked-in source programmes with the archive JSON and SQLite database
 // ============================================================================
 import { Database } from 'bun:sqlite';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { allNewShows as part1 } from './seed-data-part1';
 import { polisiShows, ramazanShows } from './seed-data-part2';
 import { safarShows, madreseShows, naghdShows, ghanunShows, pakhshShows, jasoosiShows } from './seed-data-part3';
@@ -14,8 +15,20 @@ import { ketabShows } from './seed-data-part7';
 import { sarmayeShows } from './seed-data-part8';
 import type { NewShow } from './seed-data-part1';
 
-const DB_PATH = '/home/z/my-project/mini-services/api-service/bankresaneh.sqlite';
-const JSON_PATH = '/home/z/my-project/public/talk-shows-data.json';
+const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const DB_PATH = process.env.DB_PATH || process.env.BANKRESANEH_DB_PATH
+  || resolve(PROJECT_ROOT, 'mini-services/api-service/bankresaneh.sqlite');
+const JSON_PATH = process.env.SEED_JSON_PATH || process.env.BANKRESANEH_SEED_PATH
+  || resolve(PROJECT_ROOT, 'public/talk-shows-data.json');
+
+if (!existsSync(DB_PATH)) {
+  throw new Error(`SQLite database not found at ${DB_PATH}. Set DB_PATH to the active BankResaneh database.`);
+}
+if (!existsSync(JSON_PATH)) {
+  throw new Error(`Archive JSON not found at ${JSON_PATH}. Set SEED_JSON_PATH to the archive seed file.`);
+}
+console.log(`📂 Database: ${DB_PATH}`);
+console.log(`📂 Archive JSON: ${JSON_PATH}`);
 
 const allNewShows: NewShow[] = [
   ...part1,

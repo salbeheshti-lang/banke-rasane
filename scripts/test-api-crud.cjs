@@ -164,6 +164,153 @@ async function main() {
     assert(search.status === 200 && !!found && found.decorIncluded === false,
       'persisted decor value is returned by a fresh authenticated search/read');
 
+    // Shared genre attachments must be visible to every authenticated account/device.
+    const genreForm = new FormData();
+    genreForm.append('file', new Blob(['shared genre attachment'], { type: 'application/pdf' }), 'decor-reference.pdf');
+    const genreUploadResponse = await fetch(base + '/api/genres/decor/file', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token },
+      body: genreForm,
+    });
+    const genreUpload = await genreUploadResponse.json().catch(() => ({}));
+    assert(genreUploadResponse.status === 200 && genreUpload.success,
+      'admin can upload a shared PDF attachment for a genre');
+
+    const viewerCreated = await request('/api/users', {
+      method: 'POST', token,
+      body: JSON.stringify({ username: 'genre_file_viewer', password: 'ViewerFile!2026', role: 'viewer', name: 'Genre File Viewer' }),
+    });
+    assert(viewerCreated.status === 200, 'admin can create a viewer for shared attachment access tests');
+    const viewerLogin = await request('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'genre_file_viewer', password: 'ViewerFile!2026' }),
+    });
+    assert(viewerLogin.status === 200 && !!viewerLogin.data.token, 'viewer can authenticate to read shared genre attachments');
+    const viewerToken = viewerLogin.data.token;
+
+    const genreInfo = await request('/api/genres/decor/file', { token: viewerToken });
+    assert(genreInfo.status === 200 && genreInfo.data.name === 'decor-reference.pdf',
+      'a different user can see the uploaded genre attachment metadata');
+    const genreDownload = await fetch(base + '/api/genres/decor/file?download=1', {
+      headers: { Authorization: 'Bearer ' + viewerToken },
+    });
+    assert(genreDownload.status === 200 && (await genreDownload.text()) === 'shared genre attachment',
+      'a different user can download the exact shared genre attachment bytes');
+
+    const viewerForm = new FormData();
+    viewerForm.append('file', new Blob(['forbidden'], { type: 'application/pdf' }), 'viewer.pdf');
+    const viewerUpload = await fetch(base + '/api/genres/decor/file', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + viewerToken },
+      body: viewerForm,
+    });
+    assert(viewerUpload.status === 403, 'viewer cannot replace a shared genre attachment');
+    const viewerDelete = await request('/api/genres/decor/file', { method: 'DELETE', token: viewerToken });
+    assert(viewerDelete.status === 403, 'viewer cannot delete a shared genre attachment');
+
+    const genreDelete = await request('/api/genres/decor/file', { method: 'DELETE', token });
+    assert(genreDelete.status === 200, 'admin can delete a shared genre attachment');
+    const genreMissing = await request('/api/genres/decor/file', { token: viewerToken });
+    assert(genreMissing.status === 404, 'deleted genre attachment is no longer available to other users');
+
+    // Profile, custom genres, activity, analytics, permissions, and session logout.
+    const viewerImageFetch = await request('/api/fetch-image', {
+      method: 'POST', token: viewerToken,
+      body: JSON.stringify({ num: 900001, name: 'Permission probe' }),
+    });
+    assert(viewerImageFetch.status === 403, 'viewer cannot invoke the privileged image-fetch endpoint');
+    const invalidImageFetch = await request('/api/fetch-image', {
+      method: 'POST', token,
+      body: JSON.stringify({ num: 0, name: 'Invalid fixture' }),
+    });
+    assert(invalidImageFetch.status === 400, 'image-fetch endpoint rejects invalid show identifiers before external lookup');
+    const missingStoredImage = await request('/api/image/900001');
+    assert(missingStoredImage.status === 404, 'stored-image endpoint returns not-found when no binary image is attached');
+
+    const profileBefore = await request('/api/profile', { token });
+    assert(profileBefore.status === 200, 'authenticated user can read their own profile');
+    const profileUpdated = await request('/api/profile', {
+      method: 'PUT', token,
+      body: JSON.stringify({ name: 'CRUD Integration Admin', jobTitle: 'QA', deputy: 'Test Unit', phone: '000-TEST' }),
+    });
+    assert(profileUpdated.status === 200 && profileUpdated.data.name === 'CRUD Integration Admin',
+      'user can update their own profile fields');
+    const profileReadBack = await request('/api/profile', { token });
+    assert(profileReadBack.data.jobTitle === 'QA' && profileReadBack.data.phone === '000-TEST',
+      'profile changes persist across authenticated reads');
+
+    const permissions = await request('/api/permissions', { token });
+    assert(permissions.status === 200 && permissions.data.permissions.includes('manage_users'),
+      'admin can retrieve the permission catalogue');
+    const users = await request('/api/users', { token });
+    assert(users.status === 200 && users.data.users.some(user => user.username === 'genre_file_viewer'),
+      'admin can list managed user accounts');
+
+    const genreId = 'integration-test-genre';
+    const genreCreated = await request('/api/genres', {
+      method: 'POST', token,
+      body: JSON.stringify({
+        id: genreId,
+        nameFa: 'ژانر آزمایشی یکپارچه',
+        name: 'Integration Test Genre',
+        color: '#126B50',
+        description: 'Genre API integration test',
+        aliases: ['ژانر قدیمی آزمایشی'],
+      }),
+    });
+    assert(genreCreated.status === 200 && genreCreated.data.genre?.id === genreId,
+      'admin can create a custom genre');
+    const visibleGenres = await request('/api/genres', { token: viewerToken });
+    assert(visibleGenres.status === 200 && visibleGenres.data.genres.some(genre => genre.id === genreId),
+      'viewer accounts can read the shared custom genre catalogue');
+    const genreFixture = await request('/api/shows', {
+      method: 'POST', token,
+      body: JSON.stringify({ num: 900002, name: 'Genre Migration Fixture', category: 'ژانر آزمایشی یکپارچه' }),
+    });
+    assert(genreFixture.status === 200, 'show can be assigned to the custom genre');
+    const genreUpdated = await request('/api/genres?id=' + genreId, {
+      method: 'PUT', token,
+      body: JSON.stringify({
+        nameFa: 'ژانر آزمایشی به‌روزشده',
+        name: 'Updated Integration Test Genre',
+        color: '#227755',
+        description: 'Updated genre test',
+        aliases: ['ژانر آزمایشی یکپارچه'],
+      }),
+    });
+    assert(genreUpdated.status === 200 && genreUpdated.data.migratedCount === 1,
+      'renaming a custom genre migrates existing show categories');
+    const migratedSearch = await request('/api/shows/search?q=' + encodeURIComponent('Genre Migration Fixture'), { token });
+    const migratedShow = migratedSearch.data.shows?.find(show => Number(show.num) === 900002);
+    assert(migratedShow?.category === 'ژانر آزمایشی به‌روزشده',
+      'renamed custom genre is reflected in the searchable show record');
+    const genreDeleted = await request('/api/genres?id=' + genreId, { method: 'DELETE', token });
+    assert(genreDeleted.status === 200 && genreDeleted.data.affectedShows === 1,
+      'deleting a custom genre deactivates it and clears its assigned show category');
+    const clearedSearch = await request('/api/shows/search?q=' + encodeURIComponent('Genre Migration Fixture'), { token });
+    const clearedShow = clearedSearch.data.shows?.find(show => Number(show.num) === 900002);
+    assert(clearedShow?.category === '',
+      'deactivated custom genre is removed from affected show records');
+    const fixtureDeleted = await request('/api/shows?num=900002', { method: 'DELETE', token });
+    assert(fixtureDeleted.status === 200, 'admin can delete the custom genre migration fixture');
+
+    const tracked = await request('/api/analytics/track', {
+      method: 'POST', token,
+      body: JSON.stringify({ action: 'view_show', targetType: 'show', targetId: '900001', details: 'integration test' }),
+    });
+    assert(tracked.status === 200 && tracked.data.success, 'authenticated user actions can be recorded for analytics');
+    const analytics = await request('/api/analytics/report?days=7', { token });
+    assert(analytics.status === 200 && analytics.data.totals.views >= 1,
+      'admin analytics report aggregates recorded activity');
+    const activity = await request('/api/activity?limit=50', { token });
+    assert(activity.status === 200 && activity.data.logs.some(log => log.action === 'view_show'),
+      'activity log exposes the recorded audit event to an authorized admin');
+
+    const logout = await request('/api/auth/logout', { method: 'POST', token, body: '{}' });
+    assert(logout.status === 200 && logout.data.success, 'authenticated user can log out');
+    const loggedOutMe = await request('/api/auth/me', { token });
+    assert(loggedOutMe.status === 401, 'logged-out session token is rejected');
+
     console.log('API CRUD integration suite completed successfully.');
   } catch (error) {
     console.error(error.stack || error);

@@ -70,8 +70,18 @@ export interface User {
 // those routes are permission-guarded server-side and returned 403 when the
 // header was missing ("لینک عکس رو اضافه نمیکنه" bug).
 export function authHeaders(): Record<string, string> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;
-  return token ? { Authorization: 'Bearer ' + token } : {};
+  if (typeof window === 'undefined') return {};
+  const token = localStorage.getItem(TOKEN_KEY);
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = 'Bearer ' + token;
+  // Next.js route handlers need the same selected API backend as direct API
+  // calls so authentication does not silently fall back to the desktop host.
+  try {
+    headers['X-BankResaneh-Api-Base'] = new URL(getApiBase()).origin;
+  } catch {
+    // Invalid server URLs are rejected by getApiUrl before the request.
+  }
+  return headers;
 }
 
 async function request<T = any>(url: string, options: RequestInit = {}): Promise<T> {
@@ -167,6 +177,46 @@ export const api = {
   },
   async deleteCustomGenre(id: string) {
     return request<{ success: boolean; affectedShows?: number }>(getApiUrl('api/genres?id=' + encodeURIComponent(id)), { method: 'DELETE' });
+  },
+
+  async getGenreFileInfo(genreId: string) {
+    return request<{ name: string; type: string; size: number; updatedAt: number }>(
+      getApiUrl('api/genres/' + encodeURIComponent(genreId) + '/file')
+    );
+  },
+  async uploadGenreFile(genreId: string, file: File) {
+    const form = new FormData();
+    form.append('file', file);
+    const response = await fetch(getApiUrl('api/genres/' + encodeURIComponent(genreId) + '/file'), {
+      method: 'POST',
+      headers: authHeaders(),
+      body: form,
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'بارگذاری فایل ناموفق بود');
+    return data;
+  },
+  async downloadGenreFile(genreId: string) {
+    const response = await fetch(getApiUrl('api/genres/' + encodeURIComponent(genreId) + '/file?download=1'), {
+      headers: authHeaders(),
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || 'دریافت فایل ناموفق بود');
+    }
+    const disposition = response.headers.get('Content-Disposition') || '';
+    const encodedName = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+    let filename = 'genre-attachment';
+    if (encodedName) {
+      try { filename = decodeURIComponent(encodedName); } catch { filename = encodedName; }
+    }
+    return { blob: await response.blob(), filename };
+  },
+  async deleteGenreFile(genreId: string) {
+    return request<{ success: boolean }>(
+      getApiUrl('api/genres/' + encodeURIComponent(genreId) + '/file'),
+      { method: 'DELETE' }
+    );
   },
   async getUsers() { const data = await request<{ users: User[] }>(getApiUrl('api/users')); return data.users || []; },
   async getCurrentUser(): Promise<User | null> {
