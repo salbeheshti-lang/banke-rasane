@@ -109,6 +109,7 @@ async function main() {
       NODE_ENV: 'test',
       PORT: String(apiPort),
       BANKRESANEH_HOST: '127.0.0.1',
+      BANKRESANEH_TRUSTED_PROXIES: '',
       BANKRESANEH_SEED_PATH: seedPath,
       BANKRESANEH_STARTUP_TOKEN: startupToken,
       DB_PATH: dbPath,
@@ -123,6 +124,7 @@ async function main() {
       NODE_ENV: 'test',
       PORT: String(customApiPort),
       BANKRESANEH_HOST: '127.0.0.1',
+      BANKRESANEH_TRUSTED_PROXIES: '',
       BANKRESANEH_SEED_PATH: seedPath,
       BANKRESANEH_STARTUP_TOKEN: startupToken,
       DB_PATH: customDbPath,
@@ -332,6 +334,55 @@ async function main() {
     body: { platform: 'invalid', token: 'bad' },
   });
   assert(socialValidation.status === 400, 'authorized social publishing route validates platform and token before sending');
+
+  // Real API login lockout: five consecutive failures from one client IP
+  // must block that IP for 180 seconds, and the block must survive a restart.
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    const failed = await request(apiBase, '/api/auth/login', {
+      method: 'POST',
+      body: { username: 'missing-lockout-user', password: 'incorrect-password' },
+      headers: { 'x-forwarded-for': `198.51.100.${72 + attempt}` },
+    });
+    assert(failed.status === 401, 'login failure ' + attempt + ' is counted before lockout despite changing spoofed X-Forwarded-For');
+  }
+  const locked = await request(apiBase, '/api/auth/login', {
+    method: 'POST',
+    body: { username: 'admin', password: 'NextRouteTest!2026' },
+    headers: { 'x-forwarded-for': '203.0.113.99' },
+  });
+  const initialRetryAfter = Number(locked.headers.get('Retry-After'));
+  assert(locked.status === 429 && initialRetryAfter >= 1 && initialRetryAfter <= 180 &&
+    /ثانیه/.test(locked.data.error || ''),
+    'fifth failed login activates a server-enforced 180-second lockout with Retry-After');
+
+  // Restart the actual Bun API with the same SQLite database. The blocked
+  // peer must remain blocked even when the caller changes its spoofed header.
+  const oldApi = children.shift();
+  const apiStopped = new Promise(resolve => oldApi.once('exit', resolve));
+  oldApi.kill('SIGTERM');
+  await apiStopped;
+  launch(bun, [apiEntry], {
+    cwd: path.dirname(apiEntry),
+    env: {
+      ...process.env,
+      NODE_ENV: 'test',
+      PORT: String(apiPort),
+      BANKRESANEH_HOST: '127.0.0.1',
+      BANKRESANEH_TRUSTED_PROXIES: '',
+      BANKRESANEH_SEED_PATH: seedPath,
+      BANKRESANEH_STARTUP_TOKEN: startupToken,
+      DB_PATH: dbPath,
+    },
+  });
+  await waitFor(apiBase + '/api/health', 'restarted Bun API');
+
+  const afterRestart = await request(apiBase, '/api/auth/login', {
+    method: 'POST',
+    body: { username: 'admin', password: 'NextRouteTest!2026' },
+    headers: { 'x-forwarded-for': '192.0.2.200' },
+  });
+  assert(afterRestart.status === 429 && Number(afterRestart.headers.get('Retry-After')) > 0,
+    'active login lockout persists across API restart and cannot be bypassed with a spoofed forwarding header');
 
   console.log('Next.js API route integration suite completed successfully.');
 }

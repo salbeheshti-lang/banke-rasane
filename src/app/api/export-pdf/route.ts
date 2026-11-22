@@ -1,7 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
+import fs from 'node:fs';
+import path from 'node:path';
+import { CLIENT_BRANDING } from '@/lib/branding';
 import { gatePermission, getApiBaseForRequest } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
+
+function getClientLogoDataUrl(variant: 'white' | 'color'): string {
+  const fileName = path.basename(variant === 'white' ? CLIENT_BRANDING.logoWhitePath : CLIENT_BRANDING.logoColorPath);
+  const candidate = path.join(process.cwd(), 'public', fileName);
+  try {
+    if (fs.existsSync(candidate)) return `data:image/png;base64,${fs.readFileSync(candidate).toString('base64')}`;
+  } catch { /* The report can still be generated without optional client branding. */ }
+  console.warn(`[PDF] Client logo not found: ${fileName}`);
+  return '';
+}
 
 export async function POST(request: NextRequest) {
   // --- Auth: requires export_reports permission (admin/editor by default).
@@ -39,7 +52,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate the legacy printable HTML format for integrations that still use it.
-    const html = generatePDFHtml(shows, { title, subtitle, organization, logoDataUrl });
+    const html = generatePDFHtml(shows, {
+      title, subtitle, organization, logoDataUrl,
+      clientLogoWhiteDataUrl: getClientLogoDataUrl('white'),
+      clientLogoDataUrl: getClientLogoDataUrl('color'),
+    });
 
     return new NextResponse(html, {
       status: 200,
@@ -62,6 +79,8 @@ interface PDFOptions {
   subtitle: string;
   organization: string;
   logoDataUrl: string;
+  clientLogoWhiteDataUrl: string;
+  clientLogoDataUrl: string;
 }
 
 function generatePDFHtml(shows: any[], opts: PDFOptions): string {
@@ -154,6 +173,9 @@ function generatePDFHtml(shows: any[], opts: PDFOptions): string {
   const logoHtml = opts.logoDataUrl
     ? `<img src="${opts.logoDataUrl}" alt="بانک رسانه" style="width: 140px; height: auto; display: block; margin: 0 auto; filter: brightness(1.2) drop-shadow(0 4px 20px rgba(16, 185, 129, 0.4));" />`
     : '';
+  const clientLogoHtml = opts.clientLogoWhiteDataUrl
+    ? `<div class="cover-client-logo-wrap"><div class="cover-client-text"><span class="cover-client-label">${escapeHtml(CLIENT_BRANDING.commissionedLabelFa)}</span><span class="cover-client-org">${escapeHtml(CLIENT_BRANDING.organizationFa)}</span></div><img src="${opts.clientLogoWhiteDataUrl}" alt="${escapeHtml(CLIENT_BRANDING.organizationFa)}" class="cover-client-logo" /></div>`
+    : '';
   const cover = `
     <section class="cover">
       <div class="cover-bg-deco"></div>
@@ -164,6 +186,7 @@ function generatePDFHtml(shows: any[], opts: PDFOptions): string {
         </div>
         <h1 class="cover-title">${escapeHtml(opts.title)}</h1>
         <p class="cover-subtitle">${escapeHtml(opts.subtitle)}</p>
+        ${clientLogoHtml}
 
         <div class="cover-stats">
           <div class="cover-stat">
@@ -1216,6 +1239,12 @@ body {
 }
 
 /* ============ PRINT ============ */
+.cover-client-logo-wrap { display:flex; align-items:center; justify-content:center; gap:12px; margin:18px auto 0; width:fit-content; }
+.cover-client-text { display:flex; flex-direction:column; align-items:flex-end; line-height:1.3; }
+.cover-client-label { font-size:11px; color:#a7f3d0; font-weight:600; white-space:nowrap; opacity:.8; }
+.cover-client-org { font-size:13px; color:#d1fae5; font-weight:700; white-space:nowrap; margin-top:2px; }
+.cover-client-logo { height:40px; width:auto; display:block; }
+.print-footer { display:none; }
 @media print {
   body { background: white; }
   .cover, .content-section, .toc-section {
@@ -1223,6 +1252,12 @@ body {
     box-shadow: none;
   }
   @page { size: A4; margin: 0; }
+  .print-footer { display:flex; align-items:center; justify-content:space-between; position:fixed; bottom:0; left:0; right:0; padding:6px 16px; border-top:1px solid #e2e8f0; background:white; z-index:100; }
+  .print-footer-brand,.print-footer-client { display:flex; align-items:center; gap:6px; font-size:9px; color:#475569; }
+  .print-footer-brand img { height:24px; width:auto; }
+  .print-footer-client img { height:22px; width:auto; }
+  .print-footer-client-text { display:flex; flex-direction:column; align-items:flex-end; line-height:1.2; }
+  .print-footer-client-org { font-size:9px; color:#334155; font-weight:600; margin-top:1px; white-space:nowrap; }
 }
 @media screen {
   body { padding: 20px 0; }
@@ -1240,6 +1275,11 @@ ${decorAnalysis}
 ${detailedListings}
 ${conclusion}
 ${appendix}
+<div class="print-footer">
+  <div class="print-footer-brand">${opts.logoDataUrl ? `<img src="${opts.logoDataUrl}" alt="بانک رسانه" />` : ''}<span>بانک رسانه — آرشیو تخصصی</span></div>
+  <div class="print-footer-page">${escapeHtml(opts.organization)} • ${faDateShort}</div>
+  <div class="print-footer-client"><span class="print-footer-client-text"><span>${escapeHtml(CLIENT_BRANDING.commissionedLabelFa)}</span><span class="print-footer-client-org">${escapeHtml(CLIENT_BRANDING.organizationFa)}</span></span>${opts.clientLogoDataUrl ? `<img src="${opts.clientLogoDataUrl}" alt="${escapeHtml(CLIENT_BRANDING.organizationFa)}" />` : ''}</div>
+</div>
 </body>
 </html>`;
 }
