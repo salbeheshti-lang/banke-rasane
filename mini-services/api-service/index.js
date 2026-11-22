@@ -15,6 +15,8 @@ import { promisify } from 'node:util';
 import { readFileSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { validateShowVideos } from './video-validation.mjs';
+import sharp from 'sharp';
+import sharp from 'sharp';
 
 const PORT = parseInt(process.env.PORT || '3002', 10);
 // Bind to loopback by default. Public/server deployments must opt in explicitly.
@@ -984,6 +986,146 @@ const server = Bun.serve({
       const bucket = db.prepare('SELECT reset_at FROM translation_rate_buckets WHERE user_id = ?').get(userId);
       const retryAfter = Math.max(1, Math.ceil(((bucket?.reset_at || resetAt) - now) / 1000));
       return json({ ok: false, retryAfter }, req);
+    }
+
+    // ----- Report settings and custom logo storage -----
+    if (pathname === '/api/settings/logo' && (method === 'GET' || method === 'POST')) {
+      db.exec('CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value BLOB NOT NULL, updated_at INTEGER NOT NULL)');
+
+      if (method === 'GET') {
+        let row = db.prepare('SELECT value FROM app_settings WHERE key = ?').get('logo');
+        if (!row?.value) {
+          const dataDir = process.env.BANKRESANEH_DATA_DIR
+            ? resolve(process.env.BANKRESANEH_DATA_DIR)
+            : resolve(import.meta.dir, 'data');
+          const legacyCandidates = [
+            join(dataDir, 'logo.png'),
+            resolve(import.meta.dir, '../../public/uploads/logo.png'),
+          ];
+          for (const candidate of legacyCandidates) {
+            if (!existsSync(candidate)) continue;
+            try {
+              const legacy = readFileSync(candidate);
+              db.prepare('INSERT OR REPLACE INTO app_settings (key, value, updated_at) VALUES (?, ?, ?)')
+                .run('logo', legacy, nowSec());
+              row = { value: legacy };
+              break;
+            } catch {}
+          }
+        }
+        if (!row?.value) return json({ error: 'Logo not found' }, 404, req);
+        return new Response(row.value, {
+          status: 200,
+          headers: {
+            'Content-Type': 'image/png',
+            'Cache-Control': 'no-store',
+            'X-Content-Type-Options': 'nosniff',
+          },
+        });
+      }
+
+      const user = requireUser(req);
+      if (!user || user.must_change_password) return json({ ok: false, error: 'Unauthorized' }, 401, req);
+      if (!hasPermission(user, 'manage_settings')) return json({ ok: false, error: 'Forbidden' }, 403, req);
+
+      try {
+        const formData = await req.formData();
+        const file = formData.get('file');
+        if (!(file instanceof File) || file.size <= 0) {
+          return json({ ok: false, error: 'فایلی ارسال نشده است' }, 400, req);
+        }
+        if (file.size > 5 * 1024 * 1024) {
+          return json({ ok: false, error: 'حجم فایل بیش از ۵ مگابایت است' }, 413, req);
+        }
+
+        const input = Buffer.from(await file.arrayBuffer());
+        let metadata;
+        try {
+          metadata = await sharp(input, { limitInputPixels: 4096 * 4096 }).metadata();
+        } catch {
+          return json({ ok: false, error: 'فایل تصویری معتبر نیست' }, 415, req);
+        }
+        if (!metadata.width || !metadata.height || metadata.width > 4096 || metadata.height > 4096) {
+          return json({ ok: false, error: 'ابعاد تصویر باید حداکثر ۴۰۹۶ در ۴۰۹۶ پیکسل باشد' }, 413, req);
+        }
+
+        const png = await sharp(input, { limitInputPixels: 4096 * 4096 }).rotate().png().toBuffer();
+        db.prepare('INSERT OR REPLACE INTO app_settings (key, value, updated_at) VALUES (?, ?, ?)')
+          .run('logo', png, nowSec());
+        return json({ ok: true, url: '/uploads/logo.png', size: png.length }, req);
+      } catch (error) {
+        console.error('[settings] logo upload failed:', error);
+        return json({ ok: false, error: 'Logo upload failed' }, 500, req);
+      }
+    }
+
+    if (pathname === '/api/settings/report' && (method === 'GET' || method === 'POST')) {
+      db.exec('CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value BLOB NOT NULL, updated_at INTEGER NOT NULL)');
+      const defaults = {
+        title: 'گزارش جامع آرشیو برنامه‌های تلویزیونی',
+        subtitle: 'بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی',
+        organization: 'بانک رسانه',
+      };
+
+      const readReportSettings = () => {
+        const row = db.prepare('SELECT value FROM app_settings WHERE key = ?').get('report-settings');
+        if (row?.value) {
+          try {
+            const parsed = JSON.parse(Buffer.from(row.value).toString('utf8'));
+            return {
+              title: typeof parsed.title === 'string' && parsed.title.trim() ? parsed.title : defaults.title,
+              subtitle: typeof parsed.subtitle === 'string' && parsed.subtitle.trim() ? parsed.subtitle : defaults.subtitle,
+              organization: typeof parsed.organization === 'string' && parsed.organization.trim() ? parsed.organization : defaults.organization,
+              updatedAt: parsed.updatedAt,
+            };
+          } catch {}
+        }
+
+        const dataDir = process.env.BANKRESANEH_DATA_DIR
+          ? resolve(process.env.BANKRESANEH_DATA_DIR)
+          : resolve(import.meta.dir, 'data');
+        const legacyPath = join(dataDir, 'report-settings.json');
+        if (existsSync(legacyPath)) {
+          try {
+            const parsed = JSON.parse(readFileSync(legacyPath, 'utf8'));
+            const migrated = {
+              title: parsed.title || defaults.title,
+              subtitle: parsed.subtitle || defaults.subtitle,
+              organization: parsed.organization || defaults.organization,
+              updatedAt: parsed.updatedAt,
+            };
+            db.prepare('INSERT OR REPLACE INTO app_settings (key, value, updated_at) VALUES (?, ?, ?)')
+              .run('report-settings', JSON.stringify(migrated), nowSec());
+            return migrated;
+          } catch {}
+        }
+        return { ...defaults };
+      };
+
+      if (method === 'GET') {
+        const user = requireUser(req);
+        if (!user) return json({ ok: false, error: 'Unauthorized' }, 401, req);
+        return json(readReportSettings(), req);
+      }
+
+      const user = requireUser(req);
+      if (!user || user.must_change_password) return json({ ok: false, error: 'Unauthorized' }, 401, req);
+      if (!hasPermission(user, 'manage_settings')) return json({ ok: false, error: 'Forbidden' }, 403, req);
+      try {
+        const body = await req.json();
+        const current = readReportSettings();
+        const next = {
+          title: typeof body.title === 'string' && body.title.trim() ? body.title.trim() : current.title,
+          subtitle: typeof body.subtitle === 'string' && body.subtitle.trim() ? body.subtitle.trim() : current.subtitle,
+          organization: typeof body.organization === 'string' && body.organization.trim() ? body.organization.trim() : current.organization,
+          updatedAt: new Date().toISOString(),
+        };
+        db.prepare('INSERT OR REPLACE INTO app_settings (key, value, updated_at) VALUES (?, ?, ?)')
+          .run('report-settings', JSON.stringify(next), nowSec());
+        return json({ ok: true, settings: next }, req);
+      } catch (error) {
+        return json({ ok: false, error: error instanceof Error ? error.message : String(error) }, 500, req);
+      }
     }
 
     // ----- Shared custom genres -----
