@@ -174,7 +174,7 @@ function generatePDFHtml(shows: any[], opts: PDFOptions): string {
     ? `<img src="${opts.logoDataUrl}" alt="بانک رسانه" style="width: 140px; height: auto; display: block; margin: 0 auto; filter: brightness(1.2) drop-shadow(0 4px 20px rgba(16, 185, 129, 0.4));" />`
     : '';
   const clientLogoHtml = opts.clientLogoWhiteDataUrl
-    ? `<div class="cover-client-logo-wrap"><div class="cover-client-text"><span class="cover-client-label">${escapeHtml(CLIENT_BRANDING.commissionedLabelFa)}</span><span class="cover-client-org">${escapeHtml(CLIENT_BRANDING.organizationFa)}</span></div><img src="${opts.clientLogoWhiteDataUrl}" alt="${escapeHtml(CLIENT_BRANDING.organizationFa)}" class="cover-client-logo" /></div>`
+    ? `<div class="cover-client-logo-wrap"><div class="cover-client-text"><span class="cover-client-org">${escapeHtml(CLIENT_BRANDING.organizationFa)}</span></div><img src="${opts.clientLogoWhiteDataUrl}" alt="${escapeHtml(CLIENT_BRANDING.organizationFa)}" class="cover-client-logo" /></div>`
     : '';
   const cover = `
     <section class="cover">
@@ -1278,7 +1278,7 @@ ${appendix}
 <div class="print-footer">
   <div class="print-footer-brand">${opts.logoDataUrl ? `<img src="${opts.logoDataUrl}" alt="بانک رسانه" />` : ''}<span>بانک رسانه — آرشیو تخصصی</span></div>
   <div class="print-footer-page">${escapeHtml(opts.organization)} • ${faDateShort}</div>
-  <div class="print-footer-client"><span class="print-footer-client-text"><span>${escapeHtml(CLIENT_BRANDING.commissionedLabelFa)}</span><span class="print-footer-client-org">${escapeHtml(CLIENT_BRANDING.organizationFa)}</span></span>${opts.clientLogoDataUrl ? `<img src="${opts.clientLogoDataUrl}" alt="${escapeHtml(CLIENT_BRANDING.organizationFa)}" />` : ''}</div>
+  <div class="print-footer-client"><span class="print-footer-client-text"><span class="print-footer-client-org">${escapeHtml(CLIENT_BRANDING.organizationFa)}</span></span>${opts.clientLogoDataUrl ? `<img src="${opts.clientLogoDataUrl}" alt="${escapeHtml(CLIENT_BRANDING.organizationFa)}" />` : ''}</div>
 </div>
 </body>
 </html>`;
