@@ -41,6 +41,9 @@ jobs:
       - name: Install Cloudflare adapter and Wrangler for this CI run
         run: bun add --dev @opennextjs/cloudflare@1.20.18 wrangler@4.68.0
 
+      - name: Build Next.js for Cloudflare Workers
+        run: bunx opennextjs-cloudflare build
+
       - name: Verify preview API before publishing the frontend
         shell: bash
         run: |
@@ -72,9 +75,6 @@ jobs:
             exit 1
           fi
           echo "Preview API translation rate-limit route is deployed and rejects unauthenticated requests."
-
-      - name: Build Next.js for Cloudflare Workers
-        run: bunx opennextjs-cloudflare build
 
       - name: Deploy preview Worker
         run: bunx opennextjs-cloudflare deploy
