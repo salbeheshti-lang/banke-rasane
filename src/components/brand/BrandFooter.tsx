@@ -129,29 +129,28 @@ export function BrandFooter({ variant = 'dark', withBottomNav = false }: { varia
         {/* Organization identity: show only the official organization name
             beside its logo. Never prepend a commissioning/attribution label. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {!isCompact && (
-            <div
-              className="footer-client-text"
+          <div
+            className="footer-client-text"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-end',
+              lineHeight: 1.2,
+              textAlign: 'left',
+              maxWidth: isCompact ? '112px' : 'none',
+            }}
+          >
+            <span
               style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'flex-end',
-                lineHeight: 1.25,
-                textAlign: 'left',
+                color: subTextColor,
+                fontSize: isCompact ? '0.56rem' : '0.74rem',
+                fontWeight: 700,
+                marginTop: 0,
               }}
             >
-              <span
-                style={{
-                  color: subTextColor,
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  marginTop: 0,
-                }}
-              >
-                {t('footer.clientOrg')}
-              </span>
-            </div>
-          )}
+              {t('footer.clientOrg')}
+            </span>
+          </div>
           {/* Client logo — true transparency, no backing box. On the dark
               theme we use the white knockout variant (client-logo-white.png)
               so the mark stays readable directly on the dark footer; on the
