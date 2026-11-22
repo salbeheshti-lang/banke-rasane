@@ -1,4 +1,4 @@
-/** Shared commissioning identity used by UI and report exports. */
+/** Shared official organization identity used by UI and report exports. */
 export const CLIENT_BRANDING = {
   organizationFa: 'مانیتورینگ مرکز طرح و برنامه سیما',
   organizationEn: 'Sima Plan & Program Monitoring Center',
