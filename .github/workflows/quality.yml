@@ -28,6 +28,9 @@ jobs:
       - name: Test API video upload validation
         run: node --test mini-services/api-service/video-validation.test.mjs
 
+      - name: Test Electron main-frame navigation policy
+        run: bun run test:electron-navigation
+
       - name: Audit bundled archive seed data
         run: bun run test:seed-data
 
