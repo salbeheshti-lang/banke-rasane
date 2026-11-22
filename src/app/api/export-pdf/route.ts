@@ -19,61 +19,82 @@ export const runtime = 'nodejs';
  *
  * Returns an empty string (no <img> rendered) if neither file exists.
  */
-function getLogoDataUrl(): string {
-  // Candidate order:
-  //   1. Custom logo uploaded by admin → writable data dir (data/logo.png
-  //      in dev, %APPDATA%\banke-rasane\logo.png in Electron prod).
-  //   2. Legacy custom logo path (public/uploads/logo.png) — kept for
-  //      backwards compat with installs that wrote here before the fix.
-  //   3. Default program logo → public/banke-rasane-logo.png (read-only OK).
+const API_BASE = (
+  process.env.BANKRESANEH_API_BASE ||
+  process.env.NEXT_PUBLIC_BANKRESANEH_API_BASE ||
+  'http://127.0.0.1:3002'
+).replace(/\/+$/, '');
+
+async function getLogoDataUrl(request: NextRequest): Promise<string> {
+  try {
+    const response = await fetch(`${API_BASE}/api/settings/logo`, {
+      headers: { Authorization: request.headers.get('Authorization') || '' },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(5000),
+    });
+    if (response.ok) {
+      const bytes = Buffer.from(await response.arrayBuffer());
+      return `data:image/png;base64,${bytes.toString('base64')}`;
+    }
+  } catch {
+    // Fall back to a legacy local logo when running the desktop app.
+  }
+
   const candidates = [
     getDataFile('logo.png'),
     path.join(process.cwd(), 'public', 'uploads', 'logo.png'),
     path.join(process.cwd(), 'public', 'banke-rasane-logo.png'),
   ];
-  for (const p of candidates) {
+  for (const candidate of candidates) {
     try {
-      if (fs.existsSync(p)) {
-        const buf = fs.readFileSync(p);
-        const b64 = buf.toString('base64');
-        return `data:image/png;base64,${b64}`;
+      if (fs.existsSync(candidate)) {
+        const bytes = fs.readFileSync(candidate);
+        return `data:image/png;base64,${bytes.toString('base64')}`;
       }
     } catch {
-      /* ignore — try next candidate */
+      // Try the next candidate.
     }
   }
   return '';
 }
 
-/**
- * Read persisted report settings (title / subtitle / organization) from disk.
- * Stored as JSON in the writable data directory (see @/lib/data-dir) so admins
- * can edit defaults without touching code. Returns sensible fallbacks if the
- * file is missing or unreadable.
- */
-function getReportSettings(): { title: string; subtitle: string; organization: string } {
-  try {
-    // Use the writable data dir — matches where /api/settings/report WRITES
-    // the file. The previous hardcoded process.cwd()/data path pointed at
-    // the read-only install directory in packaged Electron builds.
-    const f = getDataFile('report-settings.json');
-    if (fs.existsSync(f)) {
-      const raw = fs.readFileSync(f, 'utf-8');
-      const parsed = JSON.parse(raw);
-      return {
-        title: parsed.title || 'گزارش جامع آرشیو برنامه‌های تلویزیونی',
-        subtitle: parsed.subtitle || 'بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی',
-        organization: parsed.organization || 'بانک رسانه',
-      };
-    }
-  } catch {
-    /* ignore — use defaults */
-  }
-  return {
+async function getReportSettings(request: NextRequest): Promise<{ title: string; subtitle: string; organization: string }> {
+  const defaults = {
     title: 'گزارش جامع آرشیو برنامه‌های تلویزیونی',
     subtitle: 'بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی',
     organization: 'بانک رسانه',
   };
+  try {
+    const response = await fetch(`${API_BASE}/api/settings/report`, {
+      headers: { Authorization: request.headers.get('Authorization') || '' },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(5000),
+    });
+    if (response.ok) {
+      const parsed = await response.json();
+      return {
+        title: typeof parsed.title === 'string' && parsed.title.trim() ? parsed.title : defaults.title,
+        subtitle: typeof parsed.subtitle === 'string' && parsed.subtitle.trim() ? parsed.subtitle : defaults.subtitle,
+        organization: typeof parsed.organization === 'string' && parsed.organization.trim() ? parsed.organization : defaults.organization,
+      };
+    }
+  } catch {
+    // Fall back to legacy local report settings in desktop mode.
+  }
+  try {
+    const file = getDataFile('report-settings.json');
+    if (fs.existsSync(file)) {
+      const parsed = JSON.parse(fs.readFileSync(file, 'utf-8'));
+      return {
+        title: parsed.title || defaults.title,
+        subtitle: parsed.subtitle || defaults.subtitle,
+        organization: parsed.organization || defaults.organization,
+      };
+    }
+  } catch {
+    // Use defaults.
+  }
+  return defaults;
 }
 
 export async function POST(request: NextRequest) {
@@ -89,7 +110,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const shows = body.shows;
     // Request body can override saved defaults (per-export customisation).
-    const saved = getReportSettings();
+    const saved = await getReportSettings(request);
     const title = body.title || saved.title;
     const subtitle = body.subtitle || saved.subtitle;
     const organization = body.organization || saved.organization;
@@ -103,7 +124,7 @@ export async function POST(request: NextRequest) {
       title,
       subtitle,
       organization,
-      logoDataUrl: getLogoDataUrl(),
+      logoDataUrl: await getLogoDataUrl(request),
     });
 
     return new NextResponse(html, {
