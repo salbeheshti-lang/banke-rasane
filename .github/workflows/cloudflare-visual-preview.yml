@@ -67,10 +67,16 @@ jobs:
             sleep 5
           done
           grep -q 'مانیتورینگ مرکز طرح و برنامه سیما' /tmp/bankresaneh-worker.html
+          if grep -Eq 'تهیه[‌ ]شده برای|Made for' /tmp/bankresaneh-worker.html; then
+            echo "Forbidden commissioning label found in deployed login page."
+            exit 1
+          fi
           curl --fail --silent --show-error "$WORKER_URL/client-logo-white.png" -o /tmp/client-logo-white.png
           test -s /tmp/client-logo-white.png
           curl --fail --silent --show-error "$WORKER_URL/manifest.webmanifest" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const m=JSON.parse(s);if(m.name!=='بانک رسانه'||m.display!=='standalone')process.exit(1);});"
-          curl --fail --silent --show-error "$BANKRESANEH_API_BASE/api/health" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const h=JSON.parse(s);if(h.status!=='ok'||!Number.isFinite(h.showsCount)||h.showsCount<1)process.exit(1);console.log('Live archive API ready: '+h.showsCount+' shows');});"
+          curl --fail --silent --show-error -H "Origin: $WORKER_URL" "$BANKRESANEH_API_BASE/api/health" -o /tmp/bankresaneh-api-health.json -D /tmp/bankresaneh-api-headers.txt
+          grep -qi "access-control-allow-origin: $WORKER_URL" /tmp/bankresaneh-api-headers.txt
+          node -e "const h=require('/tmp/bankresaneh-api-health.json');if(h.status!=='ok'||!Number.isFinite(h.showsCount)||h.showsCount<1302)process.exit(1);console.log('Live archive API ready: '+h.showsCount+' shows; CORS origin verified.');"
           echo "PASS deployed Worker serves the organization-branded login, logo asset, PWA manifest, and non-empty archive API."
         env:
           WORKER_URL: https://bankresaneh-visual-preview.ginx11x5frrby9mvb.workers.dev
