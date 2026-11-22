@@ -288,8 +288,7 @@ export const dict: Dict = {
   'program.similar': { fa: 'برنامه‌های مشابه', en: 'Similar programs' },
   'program.noSimilar': { fa: 'برنامهٔ مشابهی یافت نشد', en: 'No similar programs found' },
 
-  // ===== Footer / commissioning organization =====
-  'footer.poweredBy': { fa: CLIENT_BRANDING.commissionedLabelFa, en: CLIENT_BRANDING.commissionedLabelEn },
+  // ===== Official organization identity =====
   'footer.clientOrg': { fa: CLIENT_BRANDING.organizationFa, en: CLIENT_BRANDING.organizationEn },
   'footer.copyright': { fa: '© {year} بانک رسانه', en: '© {year} BankResaneh' },
 

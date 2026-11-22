@@ -109,7 +109,12 @@ export async function POST(request: NextRequest) {
   // public OMDB API key — anyone could call it and exhaust the daily quota. ---
   const gate = await gatePermissionAny(request, 'add_shows', 'edit_shows');
   if (!gate.ok) {
-    return NextResponse.json({ error: gate.status === 401 ? 'احراز هویت لازم است' : 'دسترسی غیرمجاز — نیاز به دسترسی افزودن یا ویرایش برنامه' }, { status: gate.status });
+    const error = gate.reason === 'unauthenticated'
+      ? 'احراز هویت لازم است'
+      : gate.reason === 'password-change-required'
+        ? 'برای افزودن یا ویرایش برنامه، ابتدا رمز عبور اولیه خود را تغییر دهید'
+        : 'دسترسی غیرمجاز — حساب شما مجوز افزودن یا ویرایش برنامه را ندارد';
+    return NextResponse.json({ error }, { status: gate.status });
   }
   try {
     const { url, category = '', showName = '', isDecor: explicitIsDecor } = await request.json();

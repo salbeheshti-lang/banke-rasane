@@ -1,3 +1,4 @@
+/* eslint @typescript-eslint/no-require-imports: off */
 'use strict';
 
 const assert = require('node:assert/strict');

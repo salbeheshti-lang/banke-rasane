@@ -162,7 +162,8 @@ export async function requirePermissionAny(
 
 export type AuthGate =
   | { ok: true; user: AuthUser }
-  | { ok: false; status: 401 | 403 };
+  | { ok: false; status: 401; reason: 'unauthenticated' }
+  | { ok: false; status: 403; reason: 'password-change-required' | 'permission-denied' };
 
 /**
  * Check authentication + a single permission, returning a gate result that
@@ -173,13 +174,13 @@ export async function gatePermission(
   permission: string
 ): Promise<AuthGate> {
   const user = await requireUser(req);
-  if (!user) return { ok: false, status: 401 };
-  if (user.mustChangePassword) return { ok: false, status: 403 };
+  if (!user) return { ok: false, status: 401, reason: 'unauthenticated' };
+  if (user.mustChangePassword) return { ok: false, status: 403, reason: 'password-change-required' };
   if (user.isSuperAdmin) return { ok: true, user };
   if (Array.isArray(user.permissions) && user.permissions.includes(permission)) {
     return { ok: true, user };
   }
-  return { ok: false, status: 403 };
+  return { ok: false, status: 403, reason: 'permission-denied' };
 }
 
 /**
@@ -191,13 +192,13 @@ export async function gatePermissionAny(
   ...permissions: string[]
 ): Promise<AuthGate> {
   const user = await requireUser(req);
-  if (!user) return { ok: false, status: 401 };
-  if (user.mustChangePassword) return { ok: false, status: 403 };
+  if (!user) return { ok: false, status: 401, reason: 'unauthenticated' };
+  if (user.mustChangePassword) return { ok: false, status: 403, reason: 'password-change-required' };
   if (user.isSuperAdmin) return { ok: true, user };
   if (Array.isArray(user.permissions)) {
     for (const p of permissions) {
       if (user.permissions.includes(p)) return { ok: true, user };
     }
   }
-  return { ok: false, status: 403 };
+  return { ok: false, status: 403, reason: 'permission-denied' };
 }
