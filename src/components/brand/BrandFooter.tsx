@@ -143,15 +143,12 @@ export function BrandFooter({ variant = 'dark', withBottomNav = false }: { varia
                 textAlign: 'left',
               }}
             >
-              <span style={{ color: textColor, fontSize: '0.62rem', fontWeight: 500, letterSpacing: '0.02em' }}>
-                {t('footer.poweredBy')}
-              </span>
               <span
                 style={{
                   color: subTextColor,
                   fontSize: '0.74rem',
                   fontWeight: 700,
-                  marginTop: '1px',
+                  marginTop: 0,
                 }}
               >
                 {t('footer.clientOrg')}
