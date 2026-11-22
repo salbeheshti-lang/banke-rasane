@@ -6,6 +6,9 @@ import { langNoFlashScript } from "@/lib/i18n-context";
 export const metadata: Metadata = {
   title: "بانک رسانه",
   description: "آرشیو تخصصی برنامه‌های تلویزیونی",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "بانک رسانه" },
+  icons: { icon: [{ url: "/icons/icon-256.png", sizes: "256x256", type: "image/png" }], apple: [{ url: "/icons/icon-256.png", sizes: "256x256", type: "image/png" }] },
 };
 
 export default function RootLayout({
@@ -23,6 +26,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         {children}
+        <script dangerouslySetInnerHTML={{ __html: `if ('serviceWorker' in navigator && location.protocol !== 'file:') { window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {})); }` }} />
       </body>
     </html>
   );

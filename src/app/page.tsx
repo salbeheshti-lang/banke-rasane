@@ -6,6 +6,8 @@ import { api, setApiBase, getApiBase, getApiUrl, User, authHeaders } from '@/lib
 import { useTheme } from '@/hooks/use-theme';
 import { useEscapeKey } from '@/hooks/use-escape-key';
 import { LangProvider, useLang } from '@/lib/i18n-context';
+import { BrandFooter } from '@/components/brand/BrandFooter';
+import { CLIENT_BRANDING } from '@/lib/branding';
 
 // ============================================
 // TYPES
@@ -88,22 +90,30 @@ const NO_DECOR_CATEGORIES: string[] = [
   'آگهی‌های تبلیغاتی',     // includes PSA + energy-saving ads
   'مدرسه',              // back-to-school ads/teasers
   'پخش زنده',           // live webcams (no studio decor)
+  'سفرنامه و ماجراجویی', // travel/adventure formats do not imply a studio set
+  'سفر جاده‌ای',          // legacy alias for travel/adventure
 ];
 // Shows whose category starts with one of these prefixes are also excluded from Decor
 const NO_DECOR_PREFIXES: string[] = [
   'خارج از ژانر تاک‌شو:',  // competition/reality/documentary — not analyzable as decor
 ];
 
-function hasDecor(show: TalkShow): boolean {
-  // New/edited records honor the explicit checkbox. Legacy records retain their
-  // previous classification until a user makes an explicit choice.
+function canAnalyzeDecor(show: Partial<TalkShow>): boolean {
+  if (show.isFilm) return false;
+  const categories = String(show.category || '').split('|').map(value => value.trim()).filter(Boolean);
+  if (categories.some(category =>
+    NO_DECOR_CATEGORIES.includes(category) ||
+    NO_DECOR_PREFIXES.some(prefix => category.startsWith(prefix))
+  )) return false;
+  return true;
+}
+
+function hasDecor(show: Partial<TalkShow>): boolean {
+  // A genre that cannot have an analyzable studio set is never eligible,
+  // even if an old row or a stale form value has decorIncluded=true.
+  if (!canAnalyzeDecor(show)) return false;
   if (typeof show.decorIncluded === 'boolean') return show.decorIncluded;
-  if (show.isFilm) return false;            // films/series have no TV-studio decor
-  const cat = show.category || '';
-  if (NO_DECOR_CATEGORIES.includes(cat)) return false;
-  for (const p of NO_DECOR_PREFIXES) {
-    if (cat.startsWith(p)) return false;
-  }
+  // Preserve legacy inclusion only for categories that can genuinely have a set.
   return true;
 }
 
@@ -1162,7 +1172,8 @@ function HomeInner() {
   // User clicked "+ افزودن برنامه" from inside a genre view → preset the category
   // so AddEditView opens with this genre's Persian name already chosen.
   const handleAddFromGenre = (g: Genre) => {
-    setPresetCategory(g.nameFa);
+    // The Decor view is a cross-category analysis view, not a real show category.
+    setPresetCategory(g.id === 'decor' ? undefined : g.nameFa);
     setPresetGenre(g);
     setEditingShow(null);
     setViewStack(prev => [...prev, { view: currentView, genre: selectedGenre }]);
@@ -1267,7 +1278,7 @@ function HomeInner() {
   }
 
   return (
-    <div className="app-content min-h-screen">
+    <div className="app-content min-h-screen flex flex-col">
       <TopAppBar
         onMenuClick={() => setDrawerOpen(true)}
         isMobile={isMobile}
@@ -1299,10 +1310,10 @@ function HomeInner() {
 
       <main key={currentView} className={`animate-view-enter ${isMobile ? 'p-4 pt-24 pb-28' : 'p-8 pt-28'}`}>
         {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} onEditGenre={handleEditGenre} onDeleteGenre={handleDeleteGenre} onShowClick={setSelectedShow} />}
-        {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
-        {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={setEditingShow} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
-        {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} onExport={(shows, format, meta) => setExportPreview({ shows, format, ...meta })} />}
-        {currentView === 'add' && canEdit && <AddEditView talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setPresetCategory(undefined); setPresetGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} presetCategory={presetCategory} presetGenre={presetGenre} genres={genres} />}
+        {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={(s) => { setEditingShow(s); setPresetGenre(null); setPresetCategory(undefined); navigate('add'); }} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
+        {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={(s) => { setEditingShow(s); setPresetGenre(null); setPresetCategory(undefined); navigate('add'); }} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
+        {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} canManageSettings={isAdmin} onExport={(shows, format, meta) => setExportPreview({ shows, format, ...meta })} />}
+        {currentView === 'add' && canEdit && <AddEditView key={editingShow?.num ?? 'new'} talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setPresetCategory(undefined); setPresetGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} presetCategory={presetCategory} presetGenre={presetGenre} genres={genres} />}
         {currentView === 'add' && !canEdit && (
           <div className="premium-glass p-8 text-center">
             <h2 className="text-2xl font-bold mb-2" style={{ color: '#dc2626' }}>دسترسی غیرمجاز</h2>
@@ -1424,6 +1435,7 @@ function HomeInner() {
           {toast}
         </div>
       )}
+      <BrandFooter withBottomNav={isMobile} />
     </div>
   );
 }
@@ -1439,13 +1451,29 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lockoutSeconds, setLockoutSeconds] = useState(0);
+
+  // Keep the server-enforced lockout visible as a live countdown.
+  useEffect(() => {
+    if (lockoutSeconds <= 0) return;
+    const timer = window.setInterval(() => {
+      setLockoutSeconds((remaining) => Math.max(0, remaining - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [lockoutSeconds > 0]);
+
+  const formatLockout = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainder = seconds % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`;
+  };
 
    
 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading) return;
+    if (loading || lockoutSeconds > 0) return;
     setError(null);
     if (!username.trim() || !password) {
       setError(t('login.errorEmpty'));
@@ -1456,7 +1484,14 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
       const data = await api.login(username.trim(), password);
       onLogin(data.user);
     } catch (err: any) {
-      setError(err?.message || t('login.errorFailed'));
+      const message = err?.message || t('login.errorFailed');
+      const seconds = message.match(/(\d+)\s*ثانیه/);
+      if (seconds) {
+        setLockoutSeconds(Number(seconds[1]));
+        setError(null);
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -1469,7 +1504,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
       <div className="login-ambient-light green-3"></div>
 
       <div
-        className={`relative z-20 flex flex-col items-center px-8 transition-all duration-1000 ${isReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+        className={`relative z-20 flex flex-1 flex-col justify-center items-center px-8 transition-all duration-1000 ${isReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
         style={{ maxWidth: '440px', width: '100%' }}
       >
         {/* Logo — gradient light beam sweeps ONLY across the logo pixels.
@@ -1505,7 +1540,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder={t('login.usernamePlaceholder') || 'نام کاربری خود را وارد کنید'}
-              disabled={loading}
+              disabled={loading || lockoutSeconds > 0}
               style={{
                 width: '100%',
                 background: 'rgba(255, 255, 255, 0.96)',
@@ -1536,7 +1571,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={t('login.passwordPlaceholder') || 'رمز عبور خود را وارد کنید'}
-                disabled={loading}
+                disabled={loading || lockoutSeconds > 0}
                 style={{
                   width: '100%',
                   background: 'rgba(255, 255, 255, 0.96)',
@@ -1555,7 +1590,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
-                disabled={loading}
+                disabled={loading || lockoutSeconds > 0}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-colors"
                 style={{ color: '#0d7c4a', background: 'transparent' }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(13, 124, 74, 0.1)'; }}
@@ -1576,7 +1611,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
           </div>
 
           {/* Error message */}
-          {error && (
+          {(error || lockoutSeconds > 0) && (
             <div
               className="p-3 rounded-xl text-sm font-medium animate-fade-in"
               style={{
@@ -1585,14 +1620,14 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 color: '#fca5a5',
               }}
             >
-              ⚠ {error}
+              ⚠ {lockoutSeconds > 0 ? `به دلیل تلاش‌های ناموفق، ورود موقتاً قفل است. زمان باقی‌مانده: ${formatLockout(lockoutSeconds)}` : error}
             </div>
           )}
 
           {/* Submit — premium dark-green gradient button */}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || lockoutSeconds > 0}
             className="btn-enter-premium group"
             style={{ marginTop: '8px' }}
           >
@@ -1604,7 +1639,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 </>
               ) : (
                 <>
-                  <span>{t('login.submit')}</span>
+                  <span>{lockoutSeconds > 0 ? `لطفاً ${formatLockout(lockoutSeconds)} صبر کنید` : t('login.submit')}</span>
                   <svg
                     className="w-5 h-5 rtl-flip group-hover:-translate-x-1.5 transition-transform"
                     fill="none"
@@ -1620,12 +1655,8 @@ function LoginScreen({ onLogin }: { onLogin: (user: User) => void }) {
           </button>
         </form>
 
-        <div className="mt-10 text-center">
-          <p style={{ color: 'rgba(134, 239, 172, 0.6)' }} className="text-xs tracking-wider">
-            نسخه ۲.۰.۰ • مرجع جامع برنامه‌های تلویزیونی بین‌المللی
-          </p>
-        </div>
       </div>
+      <BrandFooter variant="login" />
     </div>
   );
 }
@@ -1735,6 +1766,13 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               </span>
               <span style={{ color: '#54D9C0', fontSize: '11px', marginTop: '2px' }}>
                 {t('app.title')} — {totalShows?.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US') || '0'} {t('dashboard.programs')} {t('dashboard.stripTitle').includes('ژانر') ? 'در' : 'in'} {totalGenres?.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US') || '0'} {t('drawer.genres')}
+              </span>
+              <span className="flex items-center gap-1.5" style={{ marginTop: '4px', opacity: 0.9 }} title={t('footer.clientOrg')}>
+                <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2, alignItems: 'flex-start' }}>
+                  <span style={{ color: 'rgba(167, 243, 208, 0.5)', fontSize: '9px', fontWeight: 500 }}>{t('footer.poweredBy')}</span>
+                  <span style={{ color: 'rgba(167, 243, 208, 0.85)', fontSize: '10px', fontWeight: 700, marginTop: '1px' }}>{t('footer.clientOrg')}</span>
+                </span>
+                <Image src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={24} height={25} style={{ opacity: 0.9, objectFit: 'contain' }} />
               </span>
             </div>
           )}
@@ -3273,52 +3311,105 @@ function GenreFileAttachment({ genreId, genreName, canEdit }: {
   canEdit: boolean;
 }) {
   const STORAGE_KEY = `bankresaneh_genre_file_${genreId}`;
-  const [fileData, setFileData] = useState<{ name: string; type: string; data: string } | null>(null);
+  const [fileData, setFileData] = useState<{ name: string; type: string; size: number; updatedAt: number } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setFileData(JSON.parse(raw));
+    let active = true;
+    const loadSharedFile = async () => {
+      setLoading(true);
+      try {
+        const remote = await api.getGenreFileInfo(genreId);
+        if (active) setFileData(remote);
+        return;
+      } catch {
+        // One-time migration: older releases stored this attachment only in
+        // the uploader's localStorage. Move it to the shared API when possible.
+        if (canEdit) {
+          try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) {
+              const legacy = JSON.parse(raw);
+              if (typeof legacy?.data === 'string' && typeof legacy?.name === 'string') {
+                const blobResponse = await fetch(legacy.data);
+                const blob = await blobResponse.blob();
+                const file = new File([blob], legacy.name, { type: legacy.type || blob.type });
+                await api.uploadGenreFile(genreId, file);
+                localStorage.removeItem(STORAGE_KEY);
+                const migrated = await api.getGenreFileInfo(genreId);
+                if (active) setFileData(migrated);
+                return;
+              }
+            }
+          } catch {
+            // Keep the local copy if the shared server is unavailable or rejects it.
+          }
+        }
+        if (active) setFileData(null);
+      } finally {
+        if (active) setLoading(false);
       }
-    } catch {}
-  }, [STORAGE_KEY]);
+    };
+    void loadSharedFile();
+    return () => { active = false; };
+  }, [genreId, canEdit]);
 
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
       alert('حداکثر حجم فایل ۵ مگابایت');
+      e.target.value = '';
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const data = { name: file.name, type: file.type, data: reader.result as string };
-      setFileData(data);
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {
-        alert('خطا در ذخیره — حجم فایل زیاد است');
-      }
-    };
-    reader.readAsDataURL(file);
+    setUploading(true);
+    try {
+      await api.uploadGenreFile(genreId, file);
+      localStorage.removeItem(STORAGE_KEY);
+      const saved = await api.getGenreFileInfo(genreId);
+      setFileData(saved);
+      alert('فایل برای همهٔ کاربران ثبت شد.');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'بارگذاری فایل ناموفق بود');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
   };
 
-  const handleDownload = () => {
-    if (!fileData) return;
-    const a = document.createElement('a');
-    a.href = fileData.data;
-    a.download = fileData.name;
-    a.click();
+  const handleDownload = async () => {
+    try {
+      const { blob, filename } = await api.downloadGenreFile(genreId);
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = filename || fileData?.name || 'genre-attachment';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'دریافت فایل ناموفق بود');
+    }
   };
 
-  const handleDelete = () => {
-    setFileData(null);
-    localStorage.removeItem(STORAGE_KEY);
+  const handleDelete = async () => {
+    if (!window.confirm(`فایل پیوست ژانر «${genreName}» حذف شود؟`)) return;
+    try {
+      await api.deleteGenreFile(genreId);
+      localStorage.removeItem(STORAGE_KEY);
+      setFileData(null);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'حذف فایل ناموفق بود');
+    }
   };
 
   return (
     <div className="flex items-center gap-2 mt-3 flex-wrap">
-      {fileData ? (
+      {loading ? (
+        <span className="text-xs" style={{ color: 'rgba(244,255,255,0.65)' }}>در حال بررسی پیوست...</span>
+      ) : fileData ? (
         <>
           <button
             onClick={handleDownload}
@@ -3352,10 +3443,12 @@ function GenreFileAttachment({ genreId, genreName, canEdit }: {
             background: 'rgba(255,255,255,0.1)',
             color: 'rgba(255,255,255,0.8)',
             border: '1px solid rgba(255,255,255,0.2)',
+            opacity: uploading ? 0.6 : 1,
+            cursor: uploading ? 'wait' : 'pointer',
           }}
         >
-          📎 آپلود PDF/Excel
-          <input type="file" accept=".pdf,.xls,.xlsx,.csv" onChange={handleUpload} style={{ display: 'none' }} />
+          {uploading ? '⏳ در حال بارگذاری...' : '📎 آپلود PDF/Excel'}
+          <input type="file" accept=".pdf,.xls,.xlsx,.csv" onChange={handleUpload} disabled={uploading} style={{ display: 'none' }} />
         </label>
       ) : null}
     </div>
@@ -4673,7 +4766,9 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
 }) {
   const { t } = useLang();
   const [form, setForm] = useState<Partial<TalkShow>>(
-    editingShow || {
+    editingShow
+      ? { ...editingShow, decorIncluded: typeof editingShow.decorIncluded === 'boolean' ? editingShow.decorIncluded : hasDecor(editingShow) }
+      : {
       num: Math.max(0, ...talkShows.map(s => s.num)) + 1,
       name: '',
       category: presetCategory || '',
@@ -4693,10 +4788,25 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       imdb: '',
       wikipedia: '',
       country: '',
-      decorIncluded: false,
+      decorIncluded: presetGenre?.id === 'decor',
       tags: [],
     }
   );
+
+  // Keep the form tied to the selected record even when the editor is reused
+  // without a full route remount. Legacy rows derive their initial decor state
+  // once; an explicit false/true value is always preserved.
+  useEffect(() => {
+    if (!editingShow) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronize the form when the selected edit record changes.
+    setForm({
+      ...editingShow,
+      decorIncluded: typeof editingShow.decorIncluded === 'boolean'
+        ? editingShow.decorIncluded
+        : hasDecor(editingShow),
+    });
+  }, [editingShow]);
+
   const [fetchUrl, setFetchUrl] = useState('');
   const [fetching, setFetching] = useState(false);
   const [translating, setTranslating] = useState(false);
@@ -4786,7 +4896,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       const res = await fetch('/api/fetch-show-info', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({ url: fetchUrl }),
+        body: JSON.stringify({ url: fetchUrl, category: form.category, showName: form.name, isDecor: hasDecor(form) }),
       });
       const data = await res.json();
       if (!res.ok || data.error) {
@@ -4795,15 +4905,29 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       }
 
       const info = data.info || {};
+      let importedImage = info.image;
+      if (typeof importedImage === 'string' && /^https:\/\//i.test(importedImage)) {
+        const imageResponse = await fetch('/api/import-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({ url: importedImage }),
+        });
+        const imageResult = await imageResponse.json().catch(() => ({}));
+        if (!imageResponse.ok || typeof imageResult.dataUrl !== 'string') {
+          showToast(imageResult.error || 'تصویر دریافت شد اما ذخیره‌سازی آن ناموفق بود؛ لینک مستقیم تصویر را بررسی کنید.');
+          return;
+        }
+        importedImage = imageResult.dataUrl;
+      }
       if (editingShow) {
         // Editing an existing program from an external page is image-only.
         // Existing curated metadata must never be replaced by imported text.
-        if (!info.image || typeof info.image !== 'string') {
+        if (!importedImage || typeof importedImage !== 'string') {
           showToast('از این لینک تصویر قابل دریافت نبود؛ اطلاعات فعلی برنامه بدون تغییر ماند.');
           return;
         }
         const existingImages = Array.isArray(form.images) ? form.images : [];
-        if (existingImages.includes(info.image)) {
+        if (existingImages.includes(importedImage)) {
           showToast('این تصویر قبلاً به برنامه اضافه شده است.');
           return;
         }
@@ -4811,7 +4935,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
           showToast('حداکثر ۸ تصویر برای هر برنامه قابل ثبت است.');
           return;
         }
-        setForm({ ...form, images: [...existingImages, info.image] });
+        setForm({ ...form, images: [...existingImages, importedImage] });
         showToast('تصویر اضافه شد؛ سایر اطلاعات برنامه بدون تغییر ماند.');
         return;
       }
@@ -4823,10 +4947,10 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
         updated.descriptionFa = info.description;
         if (!updated.summary) updated.summary = info.description.substring(0, 200);
       }
-      if (info.image) {
+      if (importedImage) {
         const existingImages = updated.images || [];
-        if (!existingImages.includes(info.image) && existingImages.length < 8) {
-          updated.images = [...existingImages, info.image];
+        if (!existingImages.includes(importedImage) && existingImages.length < 8) {
+          updated.images = [...existingImages, importedImage];
         }
       }
       if (info.country && !updated.country) updated.country = info.country;
@@ -4880,14 +5004,19 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
     const imdbId = (value?: string) => value?.match(/\btt\d+\b/i)?.[0]?.toLowerCase() || '';
     const candidateName = normalizeShowName(form.name);
     const candidateImdb = imdbId(form.imdb || '') || imdbId(fetchUrl);
-    const duplicate = talkShows.find(existing => {
-      if (editingShow && Number(existing.num) === Number(editingShow.num)) return false;
+    // A record can reach this form from both the details modal and the list.
+    // Treat a form whose stable number already exists in the archive as an edit,
+    // even if a caller failed to pass editingShow; the API PUT route remains the
+    // authoritative duplicate check and excludes this same record number.
+    const isEditing = Boolean(editingShow) || talkShows.some(existing => Number(existing.num) === Number(form.num));
+    const duplicate = isEditing ? undefined : talkShows.find(existing => {
       const sameName = normalizeShowName(existing.name) === candidateName;
       const existingImdb = imdbId(existing.imdb);
       return sameName || (!!candidateImdb && !!existingImdb && candidateImdb === existingImdb);
     });
     if (duplicate) {
-      const mainGenre = duplicate.category?.split('|').map(value => value.trim()).filter(Boolean)[0] || 'نامشخص';
+      const rawMainGenre = duplicate.category?.split('|').map(value => value.trim()).filter(Boolean)[0] || 'نامشخص';
+      const mainGenre = rawMainGenre === 'سفر جاده‌ای' ? 'سفرنامه و ماجراجویی' : rawMainGenre;
       showToast(`این برنامه قبلاً در آرشیو ثبت شده است؛ ژانر اصلی: «${mainGenre}». ثبت مجدد امکان‌پذیر نیست.`);
       return;
     }
@@ -4923,8 +5052,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
     setForm(finalForm);
 
     try {
-      if (editingShow) await onSave(finalForm as TalkShow, true);
-      else await onSave(finalForm as TalkShow, false);
+      await onSave(finalForm as TalkShow, isEditing);
       onDone();
     } catch {
       // The parent displays the server error; keep the form open for correction.
@@ -5070,8 +5198,8 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
           />
           <FormField label="کشور مبدا" value={form.country || ''} onChange={v => setForm({ ...form, country: v })} placeholder="مثلاً: ایران، ترکیه" />
           <label className="flex items-center gap-3 rounded-xl p-3 sm:col-span-2" style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(255,255,255,0.22)', color: '#f0fdf4', cursor: 'pointer' }}>
-            <input type="checkbox" checked={form.decorIncluded ?? (editingShow ? hasDecor(editingShow) : false)} onChange={e => setForm({ ...form, decorIncluded: e.target.checked })} />
-            <span><strong>قرار دادن در ژانر «دکور برنامه‌ها»</strong><span className="block text-xs opacity-75 mt-1">فقط با انتخاب این گزینه، برنامه در بخش دکور نمایش داده می‌شود.</span></span>
+            <input type="checkbox" checked={canAnalyzeDecor(form) && (form.decorIncluded ?? (editingShow ? hasDecor(editingShow) : false))} disabled={!canAnalyzeDecor(form)} onChange={e => setForm({ ...form, decorIncluded: e.target.checked })} />
+            <span><strong>قرار دادن در ژانر «دکور برنامه‌ها»</strong><span className="block text-xs opacity-75 mt-1">{canAnalyzeDecor(form) ? 'فقط با انتخاب این گزینه، برنامه در بخش دکور نمایش داده می‌شود.' : 'این ژانر یا نوع برنامه برای تحلیل دکور استودیویی مناسب نیست و در بخش دکور قرار نمی‌گیرد.'}</span></span>
           </label>
 
           <FormSelect
@@ -5281,6 +5409,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
   showToast: (msg: string) => void;
 }) {
   const [urlInput, setUrlInput] = useState('');
+  const [importingUrl, setImportingUrl] = useState(false);
   const [failedUrls, setFailedUrls] = useState<Set<number>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Keep a ref to the latest images array so async FileReader callbacks always see current state
@@ -5289,27 +5418,9 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
   imagesRef.current = images;
   const MAX_IMAGES = 8;
 
-  // Heuristic: detect whether a URL points to a direct image file (vs. an HTML
-  // page like a Wikipedia article URL). The user often pastes a Wikipedia/
-  // IMDb article URL expecting auto-extraction — warn them to use the
-  // "دریافت خودکار" box above for that, or to paste a direct image link here.
-  function looksLikeDirectImage(url: string): boolean {
-    const u = url.toLowerCase();
-    // data: URLs are always valid images (base64-encoded).
-    if (u.startsWith('data:image/')) return true;
-    // Direct image extensions in the path (before any query/hash).
-    try {
-      const path = new URL(url).pathname.toLowerCase();
-      if (/\.(jpe?g|png|gif|webp|bmp|svg|avif|ico)(\?|#|$)/.test(path)) return true;
-    } catch {}
-    // Known image hosts that serve images directly even without extension.
-    if (/upload\.wikimedia\.org|\.wikimedia\.org|\.wpimg\.cn|\.imdb-img|m\.media-amazon\.com/.test(u)) return true;
-    return false;
-  }
-
-  const addUrl = () => {
+  const addUrl = async () => {
     const trimmed = urlInput.trim();
-    if (!trimmed) return;
+    if (!trimmed || importingUrl) return;
     if (images.length >= MAX_IMAGES) {
       showToast(`حداکثر ${MAX_IMAGES.toLocaleString('fa-IR')} تصویر مجاز است`);
       return;
@@ -5318,16 +5429,37 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
       showToast('این تصویر قبلاً اضافه شده');
       return;
     }
-    // Warn (but still allow) if the URL doesn't look like a direct image.
-    // Many users paste a Wikipedia article URL here expecting the system to
-    // extract the cover image (which is what the auto-fetch box above does).
-    if (!looksLikeDirectImage(trimmed)) {
-      showToast('⚠ این لینک مستقیم تصویر نیست — برای استخراج از صفحهٔ ویکی‌پدیا/IMDb از کادر «دریافت خودکار اطلاعات» بالاتر استفاده کنید. با این حال لینک اضافه شد؛ در صورت نمایش‌نشدن، آدرس تصویر مستقیم را بچسبانید.');
-    } else {
+    if (trimmed.startsWith('data:image/')) {
+      onChange([...images, trimmed]);
+      setUrlInput('');
       showToast(`✓ تصویر اضافه شد (${(images.length + 1).toLocaleString('fa-IR')} از ${MAX_IMAGES.toLocaleString('fa-IR')})`);
+      return;
     }
-    onChange([...images, trimmed]);
-    setUrlInput('');
+
+    setImportingUrl(true);
+    try {
+      const response = await fetch('/api/import-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ url: trimmed }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || typeof result.dataUrl !== 'string') {
+        showToast(result.error || 'دریافت تصویر از لینک ناموفق بود');
+        return;
+      }
+      if (images.length >= MAX_IMAGES) {
+        showToast(`حداکثر ${MAX_IMAGES.toLocaleString('fa-IR')} تصویر مجاز است`);
+        return;
+      }
+      onChange([...images, result.dataUrl]);
+      setUrlInput('');
+      showToast(`✓ تصویر دریافت و بهینه شد (${(images.length + 1).toLocaleString('fa-IR')} از ${MAX_IMAGES.toLocaleString('fa-IR')})`);
+    } catch {
+      showToast('خطا در دریافت تصویر؛ لینک مستقیم و اتصال اینترنت را بررسی کنید.');
+    } finally {
+      setImportingUrl(false);
+    }
   };
 
   const compressImageFile = async (file: File): Promise<string> => {
@@ -5462,7 +5594,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
         />
         <button
           onClick={addUrl}
-          disabled={images.length >= MAX_IMAGES || !urlInput.trim()}
+          disabled={images.length >= MAX_IMAGES || !urlInput.trim() || importingUrl}
           className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
           style={{
             background: images.length >= MAX_IMAGES || !urlInput.trim() ? 'rgba(255, 255, 255, 0.6)' : 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)',
@@ -5471,7 +5603,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
             whiteSpace: 'nowrap',
           }}
         >
-          + افزودن لینک
+          {importingUrl ? '⏳ دریافت تصویر...' : '+ افزودن لینک'}
         </button>
         <button
           onClick={() => fileInputRef.current?.click()}
@@ -5657,8 +5789,12 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [exportedUrl, setExportedUrl] = useState('');
+  const [filmstrip, setFilmstrip] = useState<Array<{ time: number; src: string }>>([]);
+  const [filmstripLoading, setFilmstripLoading] = useState(false);
+  const [activeFilmstripHandle, setActiveFilmstripHandle] = useState<'start' | 'end' | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const filmstripTrackRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!previewUrl) return;
@@ -5668,6 +5804,8 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
   const chooseFile = (next: File | null) => {
     setError('');
     setExportedUrl('');
+    setFilmstrip([]);
+    setFilmstripLoading(false);
     if (!next) return;
     // Some Windows formats (notably MKV/AVI) are reported with an empty MIME type.
     // Accept the known video extensions here and let the browser's decoder validate playback.
@@ -5692,7 +5830,107 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
     setEnd(0);
     setError('');
     setExportedUrl('');
+    setFilmstrip([]);
+    setFilmstripLoading(false);
     if (inputRef.current) inputRef.current.value = '';
+  };
+
+  // Build a visual filmstrip from real decoded frames. A separate muted video keeps
+  // thumbnail seeking independent from the user's playback position.
+  const buildFilmstrip = async (url: string, videoDuration: number) => {
+    setFilmstripLoading(true);
+    setFilmstrip([]);
+    const thumbVideo = document.createElement('video');
+    thumbVideo.src = url;
+    thumbVideo.muted = true;
+    thumbVideo.preload = 'auto';
+    thumbVideo.playsInline = true;
+    const canvas = document.createElement('canvas');
+    canvas.width = 120;
+    canvas.height = 68;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) { setFilmstripLoading(false); return; }
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const timeout = window.setTimeout(() => reject(new Error('timeout')), 15000);
+        thumbVideo.onloadedmetadata = () => { window.clearTimeout(timeout); resolve(); };
+        thumbVideo.onerror = () => { window.clearTimeout(timeout); reject(new Error('decode')); };
+        thumbVideo.load();
+      });
+      if (thumbVideo.readyState < 2) {
+        await new Promise<void>((resolve, reject) => {
+          let settled = false;
+          const cleanup = () => {
+            window.clearTimeout(timeout);
+            thumbVideo.removeEventListener('loadeddata', onLoaded);
+            thumbVideo.removeEventListener('error', onError);
+          };
+          const finish = (error?: Error) => {
+            if (settled) return;
+            settled = true;
+            cleanup();
+            if (error) reject(error); else resolve();
+          };
+          const onLoaded = () => finish();
+          const onError = () => finish(new Error('داده تصویری ویدیو آماده نشد.'));
+          const timeout = window.setTimeout(() => finish(new Error('آماده‌سازی تصویر ویدیو بیش از حد طول کشید.')), 10000);
+          thumbVideo.addEventListener('loadeddata', onLoaded, { once: true });
+          thumbVideo.addEventListener('error', onError, { once: true });
+          if (thumbVideo.readyState >= 2) finish();
+        });
+      }
+      const count = Math.min(48, Math.max(12, Math.ceil(videoDuration / 1.25)));
+      const frames: Array<{ time: number; src: string }> = [];
+      let skippedFrames = 0;
+      for (let index = 0; index < count; index++) {
+        const time = count === 1 ? 0 : (videoDuration * index) / (count - 1);
+        const seekTime = Math.min(time, Math.max(0, videoDuration - 0.05));
+        try {
+          await new Promise<void>((resolve, reject) => {
+            let settled = false;
+            const cleanup = () => {
+              window.clearTimeout(timeout);
+              thumbVideo.removeEventListener('seeked', onSeeked);
+            };
+            const finish = (error?: Error) => {
+              if (settled) return;
+              settled = true;
+              cleanup();
+              if (error) reject(error); else resolve();
+            };
+            const onSeeked = () => {
+              if (thumbVideo.readyState < 2 || Math.abs(thumbVideo.currentTime - seekTime) > 0.25) {
+                finish(new Error('فریم موردنظر decode نشد.'));
+              } else {
+                finish();
+              }
+            };
+            const timeout = window.setTimeout(() => finish(new Error('مهلت استخراج این فریم تمام شد.')), 5000);
+            thumbVideo.addEventListener('seeked', onSeeked);
+            try {
+              thumbVideo.currentTime = seekTime;
+              if (Math.abs(thumbVideo.currentTime - seekTime) < 0.02 && thumbVideo.readyState >= 2) finish();
+            } catch {
+              finish(new Error('پرش به زمان فریم ممکن نشد.'));
+            }
+          });
+          if (thumbVideo.readyState < 2) throw new Error('داده تصویری فریم آماده نیست.');
+          ctx.drawImage(thumbVideo, 0, 0, canvas.width, canvas.height);
+          frames.push({ time, src: canvas.toDataURL('image/jpeg', 0.58) });
+        } catch {
+          skippedFrames++;
+        }
+      }
+      if (!frames.length) throw new Error('هیچ فریم قابل‌نمایشی از ویدیو استخراج نشد.');
+      setFilmstrip(frames);
+      if (skippedFrames) setError(`${skippedFrames} فریم به‌دلیل محدودیت رمزگشایی رد شد؛ فریم‌های قابل‌خواندن نمایش داده شده‌اند.`);
+    } catch {
+      setError('ساخت نوار فریم‌ها ممکن نشد؛ ممکن است کدک این ویدیو پشتیبانی نشود.');
+    } finally {
+      thumbVideo.removeAttribute('src');
+      thumbVideo.load();
+      setFilmstripLoading(false);
+    }
   };
 
   // Show tenths of a second: the sliders use 0.1s precision, so the UI
@@ -5704,6 +5942,23 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
     return String(minutes).padStart(2, '0') + ':' + seconds.toFixed(1).padStart(4, '0');
   };
 
+
+  const updateFilmstripHandle = (clientX: number, handle: 'start' | 'end') => {
+    const rect = filmstripTrackRef.current?.getBoundingClientRect();
+    if (!rect || rect.width <= 0 || duration <= 0 || busy) return;
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const targetTime = ratio * duration;
+    if (handle === 'start') {
+      const next = Math.min(targetTime, Math.max(0, end - 0.1));
+      setStart(next);
+      if (end - next > 30) setEnd(Math.min(duration, next + 30));
+      if (videoRef.current) videoRef.current.currentTime = next;
+    } else {
+      const next = Math.max(start + 0.1, Math.min(Math.min(duration, start + 30), targetTime));
+      setEnd(next);
+      if (videoRef.current) videoRef.current.currentTime = next;
+    }
+  };
 
   const exportClip = async () => {
     const video = videoRef.current;
@@ -5836,62 +6091,98 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
             setStart(0);
             setEnd(Math.min(30, d));
             if (!d) setError('مدت ویدیو قابل تشخیص نیست یا فرمت آن پشتیبانی نمی‌شود.');
+            else if (previewUrl) void buildFilmstrip(previewUrl, d);
           }} onError={() => setError('این فرمت یا کدک ویدیویی قابل خواندن نیست. فایل را به MP4 (H.264) یا WebM تبدیل کنید.')} style={{ width: '100%', maxHeight: 260, borderRadius: 10, background: '#000', objectFit: 'contain' }} />
           <div className="text-xs" style={{ color: '#d1fae5' }}>
             {file.name} · {(file.size / 1024 / 1024).toFixed(1)} MB · مدت اصلی {formatTime(duration)}
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="block min-w-0 text-xs" style={{ color: '#d1fae5' }}>
-              <span className="mb-2 flex items-center justify-between gap-2">
-                <span className="font-bold">نقطه شروع</span>
-                <span className="flex items-center gap-1.5">
-                  <span className="text-[11px]" style={{ color: '#9ccfc0' }}>ثانیه دقیق</span>
-                  <input type="number" aria-label="زمان شروع بر حسب ثانیه" min={0} max={Math.max(0, duration)} step={0.1} value={start.toFixed(1)} disabled={busy || duration <= 0}
-                    onChange={e => {
-                      const raw = Number(e.target.value);
-                      if (!Number.isFinite(raw)) return;
-                      const value = Math.max(0, Math.min(duration, raw));
-                      setStart(value);
-                      if (end - value > 30) setEnd(Math.min(duration, value + 30));
-                      if (value >= end) setEnd(Math.min(duration, value + 0.1));
-                      if (videoRef.current && !busy) videoRef.current.currentTime = value;
-                    }}
-                    className="w-20 rounded-lg px-2 py-1 text-center font-mono text-sm font-bold"
-                    style={{ color: '#ecfdf5', background: 'rgba(1,20,16,.55)', border: '1px solid rgba(110,231,183,.3)' }} />
-                  <span className="font-mono font-bold" style={{ color: '#6ee7b7' }}>{formatTime(start)}</span>
-                </span>
-              </span>
-              <input type="range" aria-label="انتخاب نقطه شروع" min={0} max={Math.max(0, duration)} step={0.1} value={Math.min(start, duration)} disabled={busy || duration <= 0} onChange={e => {
-                const value = Number(e.target.value);
-                setStart(value);
-                if (end - value > 30) setEnd(Math.min(duration, value + 30));
-                if (value >= end) setEnd(Math.min(duration, value + 0.1));
-                if (videoRef.current && !busy) videoRef.current.currentTime = value;
-              }} className="w-full" />
-            </label>
-            <label className="block min-w-0 text-xs" style={{ color: '#d1fae5' }}>
-              <span className="mb-2 flex items-center justify-between gap-2">
-                <span className="font-bold">نقطه پایان</span>
-                <span className="flex items-center gap-1.5">
-                  <span className="text-[11px]" style={{ color: '#9ccfc0' }}>ثانیه دقیق</span>
-                  <input type="number" aria-label="زمان پایان بر حسب ثانیه" min={Math.min(duration, start + 0.1)} max={Math.min(duration, start + 30)} step={0.1} value={end.toFixed(1)} disabled={busy || duration <= 0}
-                    onChange={e => {
-                      const raw = Number(e.target.value);
-                      if (!Number.isFinite(raw)) return;
-                      setEnd(Math.max(Math.min(duration, start + 0.1), Math.min(Math.min(duration, start + 30), raw)));
-                    }}
-                    className="w-20 rounded-lg px-2 py-1 text-center font-mono text-sm font-bold"
-                    style={{ color: '#ecfdf5', background: 'rgba(1,20,16,.55)', border: '1px solid rgba(110,231,183,.3)' }} />
-                  <span className="font-mono font-bold" style={{ color: '#6ee7b7' }}>{formatTime(end)}</span>
-                </span>
-              </span>
-              <input type="range" aria-label="انتخاب نقطه پایان" min={Math.min(duration, start + 0.1)} max={Math.min(duration, start + 30)} step={0.1} value={Math.min(end, duration)} disabled={busy || duration <= 0} onChange={e => setEnd(Number(e.target.value))} className="w-full" />
-            </label>
+          <div className="rounded-xl p-3 space-y-3" style={{ background: 'rgba(1,20,16,.58)', border: '1px solid rgba(110,231,183,.22)' }}>
+            <div className="flex items-center justify-between gap-2 text-xs" style={{ color: '#d1fae5' }}>
+              <strong>نوار فریم‌های ویدیو</strong>
+              <span style={{ color: '#9ccfc0' }}>{filmstripLoading ? 'در حال استخراج فریم‌ها…' : filmstrip.length ? `${filmstrip.length} فریم` : 'در انتظار فریم‌ها'}</span>
+            </div>
+            <div ref={filmstripTrackRef} className="relative overflow-hidden rounded-lg" style={{ height: 76, background: '#071510' }}
+              onPointerMove={e => { if (activeFilmstripHandle) updateFilmstripHandle(e.clientX, activeFilmstripHandle); }}
+              onPointerUp={() => setActiveFilmstripHandle(null)}
+              onPointerCancel={() => setActiveFilmstripHandle(null)}
+              onLostPointerCapture={() => setActiveFilmstripHandle(null)}
+            >
+              <div className="absolute inset-0 flex">
+                {filmstrip.map((frame, index) => (
+                  <div key={index} aria-hidden="true" className="h-full min-w-0 flex-1">
+                    <img src={frame.src} alt="" draggable={false} className="h-full w-full object-cover" />
+                  </div>
+                ))}
+              </div>
+              <div className="absolute inset-y-0 pointer-events-none" style={{ zIndex: 6, left: duration ? `${(start / duration) * 100}%` : '0%', right: duration ? `${100 - (end / duration) * 100}%` : '0%', borderLeft: '3px solid #34d399', borderRight: '3px solid #34d399', background: 'rgba(16,185,129,.16)', boxShadow: '0 0 0 999px rgba(0,0,0,.48)' }}>
+                <button type="button" aria-label="دستگیره شروع برش" title="کشیدن برای تغییر زمان شروع"
+                  className="absolute -left-3 top-0 h-full w-6 cursor-ew-resize touch-none"
+                  style={{ pointerEvents: 'auto', background: 'transparent' }}
+                  onPointerDown={e => { e.preventDefault(); e.stopPropagation(); setActiveFilmstripHandle('start'); e.currentTarget.setPointerCapture(e.pointerId); updateFilmstripHandle(e.clientX, 'start'); }}
+                >
+                  <span className="absolute left-2.5 top-1/2 h-10 w-1.5 -translate-y-1/2 rounded-full" style={{ background: '#34d399', boxShadow: '0 1px 8px rgba(0,0,0,.65)' }} />
+                </button>
+                <button type="button" aria-label="دستگیره پایان برش" title="کشیدن برای تغییر زمان پایان"
+                  className="absolute -right-3 top-0 h-full w-6 cursor-ew-resize touch-none"
+                  style={{ pointerEvents: 'auto', background: 'transparent' }}
+                  onPointerDown={e => { e.preventDefault(); e.stopPropagation(); setActiveFilmstripHandle('end'); e.currentTarget.setPointerCapture(e.pointerId); updateFilmstripHandle(e.clientX, 'end'); }}
+                >
+                  <span className="absolute right-2.5 top-1/2 h-10 w-1.5 -translate-y-1/2 rounded-full" style={{ background: '#34d399', boxShadow: '0 1px 8px rgba(0,0,0,.65)' }} />
+                </button>
+              </div>
+              <div role="group" aria-label="انتخاب محدوده برش روی فریم‌ها" className="absolute inset-0 cursor-crosshair touch-none" style={{ zIndex: 5 }}
+                onPointerDown={e => {
+                  if (busy || duration <= 0) return;
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                  const targetTime = ratio * duration;
+                  const handle = Math.abs(targetTime - start) <= Math.abs(targetTime - end) ? 'start' : 'end';
+                  setActiveFilmstripHandle(handle);
+                  e.currentTarget.setPointerCapture(e.pointerId);
+                  if (handle === 'start') {
+                    const next = Math.min(targetTime, Math.max(0, end - 0.1));
+                    setStart(next);
+                    if (end - next > 30) setEnd(Math.min(duration, next + 30));
+                    if (videoRef.current) videoRef.current.currentTime = next;
+                  } else {
+                    const next = Math.max(start + 0.1, Math.min(Math.min(duration, start + 30), targetTime));
+                    setEnd(next);
+                    if (videoRef.current) videoRef.current.currentTime = next;
+                  }
+                }}
+                onPointerUp={() => setActiveFilmstripHandle(null)}
+                onPointerCancel={() => setActiveFilmstripHandle(null)}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-2 text-[11px]" style={{ color: '#9ccfc0' }}>
+              <span>شروع: <b className="font-mono" style={{ color: '#6ee7b7' }}>{formatTime(start)}</b></span>
+              <span>پایان: <b className="font-mono" style={{ color: '#6ee7b7' }}>{formatTime(end)}</b></span>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="block min-w-0 text-xs" style={{ color: '#d1fae5' }}>
+                <span className="mb-1 flex items-center justify-between"><b>شروع دقیق</b><span className="font-mono">{formatTime(start)}</span></span>
+                <input type="number" aria-label="زمان شروع بر حسب ثانیه" min={0} max={Math.max(0, duration)} step={0.1} value={start.toFixed(1)} disabled={busy || duration <= 0} onChange={e => {
+                  const raw = Number(e.target.value); if (!Number.isFinite(raw)) return;
+                  const next = Math.max(0, Math.min(Math.min(duration, end - 0.1), raw));
+                  setStart(next); if (end - next > 30) setEnd(Math.min(duration, next + 30));
+                  if (videoRef.current) videoRef.current.currentTime = next;
+                }} className="w-full rounded-lg px-2 py-2 text-center font-mono" style={{ color: '#ecfdf5', background: 'rgba(1,20,16,.7)', border: '1px solid rgba(110,231,183,.3)' }} />
+              </label>
+              <label className="block min-w-0 text-xs" style={{ color: '#d1fae5' }}>
+                <span className="mb-1 flex items-center justify-between"><b>پایان دقیق</b><span className="font-mono">{formatTime(end)}</span></span>
+                <input type="number" aria-label="زمان پایان بر حسب ثانیه" min={Math.min(duration, start + 0.1)} max={Math.min(duration, start + 30)} step={0.1} value={end.toFixed(1)} disabled={busy || duration <= 0} onChange={e => {
+                  const raw = Number(e.target.value); if (!Number.isFinite(raw)) return;
+                  const next = Math.max(Math.min(duration, start + 0.1), Math.min(Math.min(duration, start + 30), raw));
+                  setEnd(next); if (videoRef.current) videoRef.current.currentTime = next;
+                }} className="w-full rounded-lg px-2 py-2 text-center font-mono" style={{ color: '#ecfdf5', background: 'rgba(1,20,16,.7)', border: '1px solid rgba(110,231,183,.3)' }} />
+              </label>
+            </div>
+            <p className="text-[11px]" style={{ color: 'rgba(209,250,229,.7)' }}>روی فریم‌ها بزن تا زمان نزدیک به آن انتخاب شود؛ محدوده سبز بخش انتخاب‌شده است. برای تنظیم دقیق‌تر، زمان شروع و پایان را وارد کن.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs" style={{ color: end > start && end - start <= 30 ? '#6ee7b7' : '#fca5a5' }}>مدت خروجی: {formatTime(end - start)} / ۰۰:۳۰</span>
             <button type="button" onClick={exportClip} disabled={busy || duration <= 0 || end <= start || end - start > 30} className="px-4 py-2 rounded-lg text-xs font-bold disabled:opacity-50" style={{ background: '#059669', color: 'white' }}>
-              {busy ? 'در حال پردازش ویدیو…' : 'پردازش و افزودن کلیپ'}
+              {busy ? 'در حال پردازش ویدیو…' : 'پردازش و پیش‌نمایش'}
             </button>
             <button type="button" onClick={resetEditor} disabled={busy} className="px-3 py-2 rounded-lg text-xs" style={{ background: 'rgba(255,255,255,.12)', color: '#d1fae5' }}>انصراف</button>
           </div>
@@ -6887,13 +7178,9 @@ function BotConfigModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
       // send the token in the POST body (encrypted in transit via HTTPS)
       // and use the {verify:true} flag to tell the backend to just validate
       // the token, not send a message.
-      const authToken = typeof window !== 'undefined' ? localStorage.getItem('bankresaneh_token') : '';
       const res = await fetch('/api/publish-social', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authToken ? { Authorization: 'Bearer ' + authToken } : {}),
-        },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ platform, token, verify: true }),
       });
       const data = await res.json();
@@ -7106,21 +7393,25 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
       if (format === 'pdf') {
         // Call API to generate professional PDF report — pass through any
         // caller-provided overrides so the rendered PDF matches the preview.
-        const res = await fetch('/api/export-pdf', {
+        const res = await fetch('/api/export-pdf-file', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({ shows, title, subtitle, organization }),
         });
-        if (res.ok) {
-          const html = await res.text();
-          // Open in new window for print-to-PDF
-          const w = window.open('', '_blank');
-          if (w) {
-            w.document.write(html);
-            w.document.close();
-            setTimeout(() => { w.print(); }, 1000);
-          }
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({}));
+          throw new Error(error.error || 'ساخت فایل PDF ناموفق بود');
         }
+        const blob = await res.blob();
+        if (blob.type !== 'application/pdf' || blob.size < 8) {
+          throw new Error('فایل PDF معتبر از سرور دریافت نشد');
+        }
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `bankresaneh-report-${Date.now()}.pdf`;
+        anchor.click();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       } else {
         // Excel: generate proper XLSX using SheetJS-style XML
         const headers = ['شماره', 'نام برنامه', 'دسته‌بندی', 'منبع', 'اندازه', 'تماشاگر', 'سبک', 'جلوه‌ها', 'چیدمان', 'عناصر', 'متریال', 'رنگ‌آمیزی', 'نورپردازی', 'توضیحات'];
@@ -7140,15 +7431,48 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
           s.lighting || '',
           (s.descriptionFa || s.summary || '').substring(0, 500),
         ]);
-        // Generate HTML table that Excel can open as .xls
-        const htmlTable = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th style="background:#10b981;color:white;font-weight:bold;padding:8px;">${h}</th>`).join('')}</tr>${rows.map(r => `<tr>${r.map(c => `<td style="padding:6px;border:1px solid #ddd;">${String(c).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
-        const blob = new Blob(['\ufeff' + htmlTable], { type: 'application/vnd.ms-excel;charset=utf-8' });
+        // Build a standards-compliant OOXML workbook (not HTML disguised as .xls).
+        const ExcelJS = await import('exceljs');
+        const workbook = new ExcelJS.Workbook();
+        workbook.creator = 'بانک رسانه';
+        workbook.subject = 'آرشیو تخصصی برنامه‌های تلویزیونی';
+        workbook.title = 'گزارش آرشیو بانک رسانه';
+        workbook.created = new Date();
+        const sheet = workbook.addWorksheet('آرشیو برنامه‌ها', {
+          views: [{ state: 'frozen', ySplit: 1, rightToLeft: true }],
+        });
+        sheet.columns = headers.map((header, index) => ({
+          header,
+          key: 'column' + index,
+          width: Math.min(54, Math.max(14, header.length + 4)),
+        }));
+        sheet.addRows(rows);
+        sheet.autoFilter = { from: 'A1', to: String.fromCharCode(64 + headers.length) + Math.max(1, rows.length + 1) };
+        const headerRow = sheet.getRow(1);
+        headerRow.height = 30;
+        headerRow.eachCell((cell) => {
+          cell.font = { name: 'Vazirmatn', bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF075B3B' } };
+          cell.alignment = { horizontal: 'right', vertical: 'middle', wrapText: true };
+          cell.border = { bottom: { style: 'medium', color: { argb: 'FF10B981' } } };
+        });
+        sheet.eachRow((row, rowNumber) => {
+          if (rowNumber === 1) return;
+          row.height = 34;
+          row.eachCell((cell) => {
+            cell.font = { name: 'Vazirmatn', size: 10, color: { argb: 'FF172B22' } };
+            cell.alignment = { horizontal: 'right', vertical: 'top', wrapText: true };
+            cell.border = { bottom: { style: 'hair', color: { argb: 'FFE2E8F0' } } };
+          });
+        });
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `bankresane-${Date.now()}.xls`;
+        a.download = `bankresaneh-${Date.now()}.xlsx`;
         a.click();
-        URL.revokeObjectURL(url);
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
       onDownload();
     } catch (e) {
@@ -7399,10 +7723,11 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
 // ============================================
 // REPORTS VIEW
 // ============================================
-function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
+function ReportsView({ talkShows, uploadedShows, showToast, onExport, canManageSettings }: {
   talkShows: TalkShow[];
   uploadedShows: number[];
   showToast: (msg: string) => void;
+  canManageSettings: boolean;
   onExport: (shows: TalkShow[], format: 'pdf' | 'excel', meta?: { title?: string; subtitle?: string; organization?: string }) => void;
 }) {
   const { t, lang } = useLang();
@@ -7421,8 +7746,10 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
   const [rTitle, setRTitle] = useState('');
   const [rSubtitle, setRSubtitle] = useState('');
   const [rOrg, setROrg] = useState('');
+  const [rText, setRText] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
-  const [logoVersion, setLogoVersion] = useState(0);          // cache-buster for the logo <img>
+  const [logoVersion, setLogoVersion] = useState(0);          // refreshes the authenticated logo preview after upload
+  const [logoSrc, setLogoSrc] = useState('');
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
   // Load persisted report defaults once on mount.
@@ -7437,10 +7764,34 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
         setRTitle(data.title || '');
         setRSubtitle(data.subtitle || '');
         setROrg(data.organization || '');
+        setRText(data.reportText || '');
       } catch { /* ignore — fields stay empty and the API falls back to its own defaults */ }
     })();
     return () => { cancelled = true; };
   }, []);
+
+  // The uploaded logo lives in the writable app-data directory, not /public.
+  // Fetch it with the user's Bearer token and render it through a temporary blob URL.
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl = '';
+    (async () => {
+      try {
+        const res = await fetch('/api/settings/logo', { headers: { ...authHeaders() } });
+        if (!res.ok) throw new Error('Custom logo is unavailable');
+        const blob = await res.blob();
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setLogoSrc(objectUrl);
+      } catch {
+        if (!cancelled) setLogoSrc('');
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [logoVersion]);
 
   const handleSaveSettings = async () => {
     setSavingSettings(true);
@@ -7448,7 +7799,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
       const res = await fetch('/api/settings/report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({ title: rTitle, subtitle: rSubtitle, organization: rOrg }),
+        body: JSON.stringify({ title: rTitle, subtitle: rSubtitle, organization: rOrg, reportText: rText }),
       });
       if (res.ok) {
         showToast(t('reports.settingsSaved'));
@@ -7518,7 +7869,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
       <div className="premium-glass overflow-hidden">
         <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(13, 124, 74, 0.1)' }}>
           <h3 className="font-bold" style={{ color: '#f0fdf4' }}>{t('reports.available')}</h3>
-          <button
+          {canManageSettings && <button
             onClick={() => setSettingsOpen(o => !o)}
             className="text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"
             style={{
@@ -7532,7 +7883,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
             {t('reports.reportSettings')}
-          </button>
+          </button>}
         </div>
 
         {/* ---------- Report settings panel (collapsible) ---------- */}
@@ -7546,17 +7897,10 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                   className="w-24 h-24 rounded-xl flex items-center justify-center overflow-hidden"
                   style={{ background: 'rgba(255,255,255,0.05)', border: '2px dashed rgba(16, 185, 129, 0.35)' }}
                 >
-                  {/* logoVersion cache-busts so a freshly uploaded logo re-renders
-                      immediately instead of serving the browser-cached old file. */}
                   <img
-                    key={logoVersion}
-                    src={`/uploads/logo.png?v=${logoVersion}`}
+                    src={logoSrc || '/banke-rasane-logo.png'}
                     alt={t('reports.reportLogo')}
                     style={{ width: '72px', height: 'auto', objectFit: 'contain' }}
-                    onError={(e) => {
-                      // Fall back to the default program logo if no custom logo exists yet.
-                      (e.currentTarget as HTMLImageElement).src = '/banke-rasane-logo.png';
-                    }}
                   />
                 </div>
                 <label
@@ -7570,7 +7914,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                   {uploadingLogo ? t('reports.uploading') : t('reports.uploadLogo')}
                   <input
                     type="file"
-                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    accept="image/png,image/jpeg"
                     style={{ display: 'none' }}
                     disabled={uploadingLogo}
                     onChange={(e) => {
@@ -7581,7 +7925,7 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                   />
                 </label>
                 <p className="text-[10px] leading-relaxed text-center" style={{ color: 'rgba(244, 255, 255, 0.5)' }}>
-                  PNG/JPG/WebP — حداکثر ۵ مگابایت<br />
+                  PNG/JPG — حداکثر ۵ مگابایت<br />
                   {t('reports.logoHint')}
                 </p>
               </div>
@@ -7632,6 +7976,19 @@ function ReportsView({ talkShows, uploadedShows, showToast, onExport }: {
                       border: '1px solid rgba(13, 124, 74, 0.3)',
                     }}
                   />
+                </div>
+                <div>
+                  <label className="text-xs font-bold mb-1.5 block" style={{ color: '#54D9C0' }}>متن پیش‌فرض گزارش هر برنامه</label>
+                  <textarea
+                    value={rText}
+                    onChange={(e) => setRText(e.target.value)}
+                    rows={5}
+                    maxLength={4000}
+                    placeholder="متن توضیحی انتهای گزارش PDF..."
+                    className="w-full px-3 py-2 rounded-lg text-sm"
+                    style={{ background: 'rgba(0,0,0,0.25)', color: '#f0fdf4', border: '1px solid rgba(13, 124, 74, 0.3)', resize: 'vertical' }}
+                  />
+                  <p className="text-[10px] mt-1" style={{ color: 'rgba(244,255,255,0.5)' }}>این متن در انتهای گزارش PDF برنامه‌ها درج می‌شود.</p>
                 </div>
                 <div className="flex items-center justify-end gap-2 pt-1">
                   <button
@@ -8092,28 +8449,32 @@ function SettingsReportTab({ showToast }: { showToast: (msg: string) => void }) 
   const [title, setTitle] = useState('');
   const [subtitle, setSubtitle] = useState('');
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [report, setReport] = useState<any>(null);
   const [reportLoading, setReportLoading] = useState(true);
   const [days, setDays] = useState(30);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('bankresaneh_report_defaults');
-      if (saved) {
-        const obj = JSON.parse(saved);
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setTitle(obj.title || '');
-         
-        setSubtitle(obj.subtitle || '');
-      } else {
-         
-        setTitle('گزارش جامع برنامه‌های تلویزیونی');
-         
-        setSubtitle('مرجع جامع برنامه‌های تلویزیونی بین‌المللی');
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch('/api/settings/report', { headers: { ...authHeaders() } });
+        if (!response.ok) throw new Error('Unable to load report defaults');
+        const settings = await response.json();
+        if (!cancelled) {
+          setTitle(settings.title || 'گزارش جامع آرشیو برنامه‌های تلویزیونی');
+          setSubtitle(settings.subtitle || 'بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی');
+        }
+      } catch {
+        if (!cancelled) {
+          setTitle('گزارش جامع آرشیو برنامه‌های تلویزیونی');
+          setSubtitle('بانک رسانه — آرشیو تخصصی برنامه‌های تلویزیونی');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    } catch {}
-     
-    setLoading(false);
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -8127,12 +8488,20 @@ function SettingsReportTab({ showToast }: { showToast: (msg: string) => void }) 
     return () => { cancelled = true; };
   }, [days]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    setSaving(true);
     try {
-      localStorage.setItem('bankresaneh_report_defaults', JSON.stringify({ title, subtitle }));
+      const response = await fetch('/api/settings/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ title, subtitle }),
+      });
+      if (!response.ok) throw new Error('Unable to save report defaults');
       showToast(t('reports.settingsSaved'));
     } catch {
       showToast(t('reports.settingsError'));
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -8388,10 +8757,11 @@ function SettingsReportTab({ showToast }: { showToast: (msg: string) => void }) 
           />
         </div>
         <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '8px' }}>
-          این عنوان‌ها در گزارش‌های PDF و Excel به‌صورت پیش‌فرض استفاده می‌شوند.
+          این عنوان‌ها به‌صورت مشترک و پیش‌فرض در خروجی PDF استفاده می‌شوند.
         </p>
         <button
           onClick={handleSave}
+          disabled={saving}
           className="mt-3"
           style={{
             width: '100%', padding: '12px', borderRadius: '14px',
@@ -8400,7 +8770,7 @@ function SettingsReportTab({ showToast }: { showToast: (msg: string) => void }) 
             border: '1px solid rgba(255,255,255,0.3)', cursor: 'pointer',
           }}
         >
-          ✓ ذخیره تنظیمات
+          {saving ? 'در حال ذخیره…' : '✓ ذخیره تنظیمات'}
         </button>
       </div>
     </div>
@@ -8437,7 +8807,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
 
   const handleSave = () => {
     setApiBase(url);
-    showToast('آدرس سرور ذخیره شد. برای اعمال کامل، صفحه را بارگذاری مجدد کنید.');
+    showToast('آدرس سرور ذخیره شد. برای اعمال کامل، صفحه را بارگذاری مجدد کنید؛ مسیرهای Next.js نیز با همین سرور احراز هویت می‌شوند.');
     setTestResult({ ok: true, msg: 'ذخیره شد ✓ — آدرس جدید اعمال شد.' });
   };
 
@@ -8446,7 +8816,7 @@ function SettingsServerTab({ showToast }: { showToast: (msg: string) => void }) 
       <div>
         <h3 className="text-base font-bold mb-1" style={{ color: '#f0fdf4' }}>🖥 آدرس سرور API</h3>
         <p className="text-sm mb-3" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>
-          آدرس سرویس API که این برنامه به آن متصل می‌شود. پیش‌فرض: <code dir="ltr" style={{ background: 'rgba(13, 124, 74,0.1)', padding: '2px 6px', borderRadius: '6px', color: '#54D9C0' }}>http://localhost:3002</code>
+          آدرس سرویس API که این برنامه به آن متصل می‌شود. برای سرور سفارشی از HTTPS استفاده کنید؛ دامنهٔ سرور باید در BANKRESANEH_ALLOWED_API_ORIGINS سمت سرور وب مجاز شده باشد. پیش‌فرض: <code dir="ltr" style={{ background: 'rgba(13, 124, 74,0.1)', padding: '2px 6px', borderRadius: '6px', color: '#54D9C0' }}>http://localhost:3002</code>
         </p>
         <input
           type="text"

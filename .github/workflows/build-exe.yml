@@ -32,6 +32,9 @@ jobs:
       - name: Install dependencies
         run: bun install --no-save
 
+      - name: Verify show edit, duplicate protection, and decor persistence through the real API
+        run: bun run test:api-crud
+
       - name: Generate Prisma client
         run: bunx prisma generate
         env:
@@ -359,8 +362,10 @@ jobs:
           foreach ($required in @($installedExe, (Join-Path $installDir 'resources\\next-service-dist\\server.js'), (Join-Path $installDir 'resources\\api-service\\index.js'), (Join-Path $installDir 'resources\\bun-runtime\\bin\\bun.exe'))) {
             if (-not (Test-Path $required)) { throw "$currentVersion installed file missing: $required" }
           }
+          $env:BANKRESANEH_VERIFY_VIDEO_EXPORT = '1'
           node scripts/smoke-electron.cjs "$installedExe"
-          if ($LASTEXITCODE -ne 0) { throw "$currentVersion application failed to start after in-place upgrade." }
+          if ($LASTEXITCODE -ne 0) { throw "$currentVersion application failed startup/API/DB/video smoke test after in-place upgrade." }
+          Remove-Item Env:BANKRESANEH_VERIFY_VIDEO_EXPORT -ErrorAction SilentlyContinue
           Write-Host "PASS: actual published 5.3.9 NSIS installation upgraded in place to $currentVersion; persistent DB and files survived; upgraded app starts."
 
       # ============================================================
@@ -384,10 +389,12 @@ jobs:
           # 4. Checks showsCount > 0 (database seeded)
           # 5. Probes /api/shows/search for 401 (auth enforced)
           # 6. Kills the process
+          $env:BANKRESANEH_VERIFY_VIDEO_EXPORT = '1'
           node scripts/smoke-electron.cjs
           if ($LASTEXITCODE -ne 0) {
             throw "FATAL: Smoke test failed — the packaged app does not work correctly"
           }
+          Remove-Item Env:BANKRESANEH_VERIFY_VIDEO_EXPORT -ErrorAction SilentlyContinue
           Write-Host "=== Smoke test passed ==="
 
       - name: Verify in-place installer upgrade preserves user data
@@ -427,8 +434,10 @@ jobs:
           Write-Host "PASS: in-place NSIS upgrade preserved $($before.Count) user-data files byte-for-byte, including SQLite database and sentinel."
 
           $installedExe = Join-Path $installDir 'BankResaneh.exe'
+          $env:BANKRESANEH_VERIFY_VIDEO_EXPORT = '1'
           node scripts/smoke-electron.cjs "$installedExe"
           if ($LASTEXITCODE -ne 0) { throw 'Application failed to start after in-place installer upgrade.' }
+          Remove-Item Env:BANKRESANEH_VERIFY_VIDEO_EXPORT -ErrorAction SilentlyContinue
           Write-Host 'PASS: installed application starts after in-place upgrade.'
 
       # ============================================================

@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     // via getMe (no message sent). This replaces the old unauthenticated GET
     // endpoint that accepted the token via query string.
     if (body.verify === true) {
-      const res = await fetch(`${API_BASE[platform]}/bot${token}/getMe`);
+      const res = await fetch(`${API_BASE[platform]}/bot${token}/getMe`, { signal: AbortSignal.timeout(15000) });
       const data = await res.json();
       if (!data.ok) {
         return NextResponse.json({ ok: false, error: data.description || 'توکن نامعتبر' }, { status: 502 });
@@ -79,8 +79,8 @@ export async function POST(request: NextRequest) {
           chat_id: chatId,
           photo: imageUrl,
           caption: cap,
-          parse_mode: 'HTML',
         }),
+        signal: AbortSignal.timeout(20000),
       });
       const tgData = await tgRes.json();
       if (!tgData.ok) {
@@ -98,8 +98,8 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         chat_id: chatId,
         text: trimmedText,
-        parse_mode: 'HTML',
       }),
+      signal: AbortSignal.timeout(20000),
     });
     const tgData = await tgRes.json();
     if (!tgData.ok) {
