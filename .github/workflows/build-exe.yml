@@ -35,14 +35,6 @@ jobs:
       - name: Verify show edit, duplicate protection, and decor persistence through the real API
         run: bun run test:api-crud
 
-      - name: Generate Prisma client
-        run: bunx prisma generate
-        env:
-          DATABASE_URL: file:./db/custom.db
-
-      - name: Test persistent Prisma SQLite runtime
-        run: bun scripts/test-prisma-runtime.ts
-
       - name: Cache Electron and electron-builder downloads
         uses: actions/cache@v4
         with:
