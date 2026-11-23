@@ -17,17 +17,27 @@ function defaultApiBase(): string {
   return 'http://127.0.0.1:3002';
 }
 
+function getStoredApiBase(): string | null {
+  if (typeof window === 'undefined') return null;
+  const custom = localStorage.getItem('server_url');
+  if (!custom) return null;
+
+  // Older preview builds could persist the preview Worker itself as the API
+  // server. That stale value takes precedence over the configured backend and
+  // makes login/archive requests hit the frontend Worker (404). Recover it
+  // automatically without overriding an explicitly configured external server.
+  const configured = process.env.NEXT_PUBLIC_BANKRESANEH_API_BASE?.trim();
+  if (configured && custom.replace(/\\/+$/, '') === window.location.origin) return null;
+  return custom;
+}
+
 export function getApiBase(): string {
-  if (typeof window !== 'undefined') {
-    const custom = localStorage.getItem('server_url');
-    if (custom) return custom;
-  }
-  return defaultApiBase();
+  return getStoredApiBase() || defaultApiBase();
 }
 
 export function getApiUrl(path: string, baseOverride?: string): string {
   const cleanPath = path.replace(/^\/+/, '');
-  const stored = typeof window !== 'undefined' ? localStorage.getItem('server_url') : null;
+  const stored = getStoredApiBase();
   const selected = (baseOverride ?? stored ?? '').trim();
   const base = (selected || getApiBase()).replace(/\/+$/, '');
   const isGatewayHost = typeof window !== 'undefined'
