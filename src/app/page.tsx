@@ -8263,6 +8263,7 @@ function ProfileTab({ currentUser, showToast }: { currentUser: User; showToast: 
   const { t } = useLang();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(currentUser.name || '');
+  const [username, setUsername] = useState(currentUser.username || '');
   const [phone, setPhone] = useState(currentUser.phone || '');
   const [jobTitle, setJobTitle] = useState(currentUser.jobTitle || '');
   const [deputy, setDeputy] = useState(currentUser.deputy || '');
@@ -8274,14 +8275,17 @@ function ProfileTab({ currentUser, showToast }: { currentUser: User; showToast: 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch(getApiUrl('api/auth/me'), {
+      const res = await fetch(getApiUrl('api/profile'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('bankresaneh_token')}` },
-        body: JSON.stringify({ name, phone, jobTitle, deputy, avatar }),
+        body: JSON.stringify({ username, name, phone, jobTitle, deputy, avatar }),
       });
       if (res.ok) {
+        const savedProfile = await res.clone().json();
+        localStorage.setItem('bankresaneh_user', JSON.stringify(savedProfile));
         showToast(t('settings.profile.saved'));
         setEditing(false);
+        window.location.reload();
       } else {
         showToast('خطا در بروزرسانی');
       }
@@ -8354,7 +8358,7 @@ function ProfileTab({ currentUser, showToast }: { currentUser: User; showToast: 
         </div>
         <div className="text-center">
           <div style={{ fontSize: '20px', fontWeight: 800, color: '#f0fdf4' }}>{name || currentUser.username}</div>
-          <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '2px' }}>@{currentUser.username}</div>
+          <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '2px' }}>@{username}</div>
         </div>
         <span
           style={{
@@ -8369,6 +8373,15 @@ function ProfileTab({ currentUser, showToast }: { currentUser: User; showToast: 
 
       {/* Info fields — iPhone Contacts style rows */}
       <div className="space-y-3">
+        <ProfileField
+          icon="🆔"
+          label="نام کاربری"
+          value={username}
+          isEditing={editing}
+          onChange={setUsername}
+          placeholder="نام کاربری"
+          dir="ltr"
+        />
         <ProfileField
           icon="👤"
           label="نام نمایشی"
