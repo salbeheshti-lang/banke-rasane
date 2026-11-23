@@ -48,7 +48,7 @@ async function resolvePageImageUrl(pageUrl: URL): Promise<URL | null> {
 
   if (host === 'wikipedia.org' || host.endsWith('.wikipedia.org')) {
     const firstLabel = host.split('.')[0];
-    const lang = firstLabel === 'www' || firstLabel === 'm' ? 'en' : firstLabel;
+    const lang = host === 'wikipedia.org' || firstLabel === 'www' || firstLabel === 'm' ? 'en' : firstLabel;
     if (!/^[a-z][a-z0-9-]{0,11}$/.test(lang)) return null;
 
     let title = '';
@@ -74,7 +74,7 @@ async function resolvePageImageUrl(pageUrl: URL): Promise<URL | null> {
     return typeof candidate === 'string' ? isAllowedImageUrl(candidate) : null;
   }
 
-  if (host === 'imdb.com' || host === 'www.imdb.com') {
+  if (host === 'imdb.com' || host === 'www.imdb.com' || host === 'm.imdb.com') {
     const match = pageUrl.pathname.match(/^\/title\/(tt\d+)/i);
     if (!match) return null;
     const response = await fetch(`https://www.imdb.com/title/${match[1]}/`, {
