@@ -1732,6 +1732,9 @@ const server = Bun.serve({
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
       const videoValidation = validateShowVideos(body?.videos);
       if (!videoValidation.valid) return json({ error: videoValidation.error }, 400, req);
+      if (String(body?.operationalCapacity || '').trim() && user.role !== 'admin' && !isSuperAdmin(user)) {
+        return json({ error: 'تکمیل ظرفیت بهره‌برداری فقط با دسترسی مدیر امکان‌پذیر است' }, 403, req);
+      }
       const duplicate = findDuplicateShow(body);
       if (duplicate) {
         return json({ error: 'این برنامه قبلاً ثبت شده است: «' + duplicate.name + '» — ژانر اصلی: ' + getPrimaryGenre(duplicate.category), duplicate: { num: duplicate.num, name: duplicate.name, category: duplicate.category, primaryGenre: getPrimaryGenre(duplicate.category) } }, 409, req);
