@@ -6872,8 +6872,12 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
   const [sendResult, setSendResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   const directSendSupported = selectedPlatform === 'تلگرام' || selectedPlatform === 'بله';
-  const directImageUrl = shows.length === 1 && shows[0].images && shows[0].images.length > 0
-    ? shows[0].images[0]
+  const directImageUrl = shows.length === 1
+    ? (shows[0].images && shows[0].images.length > 0
+        ? shows[0].images[0]
+        : shows[0].imageSource
+          ? getApiUrl(`api/image/${shows[0].num}?v=${encodeURIComponent(shows[0].imageSource)}`)
+          : undefined)
     : undefined;
   const directVideoUrl = shows.length === 1
     ? (shows[0].videos || []).find((value) => {
@@ -6907,6 +6911,23 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
     setSending(true);
     setSendResult(null);
     try {
+      let publishImageUrl = directImageUrl;
+      // Database-backed cover images are served by the selected API (often
+      // localhost in the Windows EXE). Convert them to a data URL so Bale or
+      // Telegram receives the actual image bytes rather than an unreachable
+      // localhost URL.
+      if (publishImageUrl && !publishImageUrl.startsWith('data:') &&
+          (!/^https:\/\//i.test(publishImageUrl) || (shows.length === 1 && shows[0].imageSource && !(shows[0].images || []).length))) {
+        const imageResponse = await fetch(publishImageUrl, { headers: authHeaders() });
+        if (!imageResponse.ok) throw new Error('تصویر اصلی برنامه از پایگاه داده دریافت نشد');
+        const imageBlob = await imageResponse.blob();
+        publishImageUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('تصویر قابل تبدیل نیست'));
+          reader.onerror = () => reject(new Error('خواندن تصویر ناموفق بود'));
+          reader.readAsDataURL(imageBlob);
+        });
+      }
       const res = await fetch('/api/publish-social', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
@@ -6915,7 +6936,7 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
           token: botConfig.token,
           chatId: botConfig.chatId,
           text: postText,
-          imageUrl: directImageUrl,
+          imageUrl: publishImageUrl,
           videoUrl: directVideoUrl,
         }),
       });
