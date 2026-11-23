@@ -1601,17 +1601,31 @@ const server = Bun.serve({
       if (!user) return json({ error: 'Unauthorized' }, 401, req);
       let body;
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
-      const updated = db.prepare(`
-        UPDATE users SET name = ?, job_title = ?, deputy = ?, avatar = ?, phone = ?
-        WHERE id = ?
-      `).run(
-        body.name ?? user.name,
-        body.jobTitle ?? user.job_title,
-        body.deputy ?? user.deputy,
-        body.avatar ?? user.avatar,
-        body.phone ?? user.phone,
-        user.id
-      );
+      const nextUsername = String(body.username ?? user.username).trim();
+      if (!nextUsername) return json({ error: 'نام کاربری نمی‌تواند خالی باشد' }, 400, req);
+      const duplicateUsername = getUserByUsername(nextUsername);
+      if (duplicateUsername && duplicateUsername.id !== user.id) {
+        return json({ error: 'این نام کاربری قبلاً استفاده شده است' }, 409, req);
+      }
+      try {
+        db.prepare(`
+          UPDATE users SET username = ?, name = ?, job_title = ?, deputy = ?, avatar = ?, phone = ?
+          WHERE id = ?
+        `).run(
+          nextUsername,
+          body.name ?? user.name,
+          body.jobTitle ?? user.job_title,
+          body.deputy ?? user.deputy,
+          body.avatar ?? user.avatar,
+          body.phone ?? user.phone,
+          user.id
+        );
+      } catch (error) {
+        if (String(error?.message || '').includes('UNIQUE constraint failed: users.username')) {
+          return json({ error: 'این نام کاربری قبلاً استفاده شده است' }, 409, req);
+        }
+        throw error;
+      }
       return json(publicUser(getUserById(user.id), user), req);
     }
 
