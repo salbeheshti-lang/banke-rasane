@@ -27,7 +27,18 @@ function getStoredApiBase(): string | null {
   // makes login/archive requests hit the frontend Worker (404). Recover it
   // automatically without overriding an explicitly configured external server.
   const configured = process.env.NEXT_PUBLIC_BANKRESANEH_API_BASE?.trim();
-  if (configured && custom.replace(/\/+$/, '') === window.location.origin) return null;
+  if (configured) {
+    const normalized = custom.replace(/\/+$/, '');
+    if (normalized === window.location.origin) return null;
+    // Also clear the previous public preview Worker URL, which may remain
+    // saved in browsers from an earlier preview session.
+    try {
+      const savedHost = new URL(normalized).hostname;
+      if (savedHost.endsWith('.workers.dev') && /bankresaneh-(?:visual-)?preview/i.test(savedHost)) return null;
+    } catch {
+      // Keep malformed/custom values visible to the existing connection error path.
+    }
+  }
   return custom;
 }
 
