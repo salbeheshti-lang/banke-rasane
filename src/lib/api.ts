@@ -9,7 +9,7 @@ function isHostedPreview(): boolean {
 }
 
 function configuredHostedApiBase(): string {
-  return (process.env.NEXT_PUBLIC_BANKRESANEH_API_BASE || '').trim().replace(/\\/+$/, '');
+  return (process.env.NEXT_PUBLIC_BANKRESANEH_API_BASE || '').trim().replace(/\/+$/, '');
 }
 
 function defaultApiBase(): string {
@@ -51,10 +51,10 @@ export function getApiBase(): string {
 }
 
 export function getApiUrl(path: string, baseOverride?: string): string {
-  const cleanPath = path.replace(/^\\/+/, '');
+  const cleanPath = path.replace(/^\/+/, '');
   const stored = getStoredApiBase();
   const selected = (isHostedPreview() ? '' : (baseOverride ?? stored ?? '')).trim();
-  const base = (selected || getApiBase()).replace(/\\/+$/, '');
+  const base = (selected || getApiBase()).replace(/\/+$/, '');
   const isGatewayHost = typeof window !== 'undefined'
     && (window.location.port === '81' || window.location.port === '' || window.location.port === '443' || window.location.hostname.includes('space-z.ai'));
   const isCurrentGateway = typeof window !== 'undefined' && isGatewayHost && base === window.location.origin;
