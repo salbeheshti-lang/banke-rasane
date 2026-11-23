@@ -31,6 +31,79 @@ function isAllowedImageUrl(value: string): URL | null {
   }
 }
 
+function decodeHtml(value: string): string {
+  return value
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
+// Accept a Wikipedia article or IMDb title page as a source, but never fetch
+// an arbitrary host. Resolve metadata through the publishers' fixed domains,
+// then pass the discovered image URL through the same strict image allowlist.
+async function resolvePageImageUrl(pageUrl: URL): Promise<URL | null> {
+  const host = pageUrl.hostname.toLowerCase();
+
+  if (host === 'wikipedia.org' || host.endsWith('.wikipedia.org')) {
+    const firstLabel = host.split('.')[0];
+    const lang = firstLabel === 'www' || firstLabel === 'm' ? 'en' : firstLabel;
+    if (!/^[a-z][a-z0-9-]{0,11}$/.test(lang)) return null;
+
+    let title = '';
+    if (pageUrl.pathname.startsWith('/wiki/')) {
+      try {
+        title = decodeURIComponent(pageUrl.pathname.slice('/wiki/'.length).split('/')[0]).replace(/_/g, ' ');
+      } catch {
+        return null;
+      }
+    } else {
+      title = pageUrl.searchParams.get('title') || pageUrl.searchParams.get('search') || '';
+    }
+    if (!title.trim()) return null;
+
+    const summaryUrl = `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title.trim())}`;
+    const response = await fetch(summaryUrl, {
+      headers: { 'User-Agent': 'BankResaneh/2.0 (image import)', Accept: 'application/json' },
+      signal: AbortSignal.timeout(12_000),
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    const candidate = data?.originalimage?.source || data?.thumbnail?.source;
+    return typeof candidate === 'string' ? isAllowedImageUrl(candidate) : null;
+  }
+
+  if (host === 'imdb.com' || host === 'www.imdb.com') {
+    const match = pageUrl.pathname.match(/^\\/title\\/(tt\\d+)/i);
+    if (!match) return null;
+    const response = await fetch(`https://www.imdb.com/title/${match[1]}/`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml',
+      },
+      signal: AbortSignal.timeout(12_000),
+    });
+    if (!response.ok) return null;
+    const html = await response.text();
+    const patterns = [
+      /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
+      /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i,
+      /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i,
+      /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i,
+    ];
+    for (const pattern of patterns) {
+      const match = html.match(pattern);
+      if (!match?.[1]) continue;
+      const candidate = decodeHtml(match[1]);
+      const image = isAllowedImageUrl(candidate);
+      if (image) return image;
+    }
+  }
+
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   const gate = await gatePermissionAny(request, 'add_shows', 'edit_shows');
   if (!gate.ok) {
@@ -48,9 +121,25 @@ export async function POST(request: NextRequest) {
 
     let target = isAllowedImageUrl(body.url.trim());
     if (!target) {
-      return NextResponse.json({
-        error: 'دامنهٔ این لینک برای دریافت امن تصویر پشتیبانی نمی‌شود؛ لینک مستقیم از IMDb یا Wikimedia را وارد کنید.',
-      }, { status: 400 });
+      let pageUrl: URL;
+      try {
+        pageUrl = new URL(body.url.trim());
+      } catch {
+        return NextResponse.json({ error: 'لینک تصویر یا صفحهٔ ویکی‌پدیا/IMDb معتبر نیست' }, { status: 400 });
+      }
+      if (pageUrl.protocol !== 'https:' || pageUrl.username || pageUrl.password) {
+        return NextResponse.json({ error: 'فقط لینک HTTPS معتبر پذیرفته می‌شود' }, { status: 400 });
+      }
+      try {
+        target = await resolvePageImageUrl(pageUrl);
+      } catch {
+        return NextResponse.json({ error: 'استخراج تصویر از صفحهٔ ویکی‌پدیا یا IMDb ناموفق بود؛ صفحه را بررسی کنید و دوباره تلاش کنید' }, { status: 502 });
+      }
+      if (!target) {
+        return NextResponse.json({
+          error: 'از این صفحه تصویر قابل دریافت پیدا نشد؛ لینک صفحهٔ دقیق یا لینک مستقیم تصویر را وارد کنید.',
+        }, { status: 404 });
+      }
     }
 
     let response: Response | null = null;
