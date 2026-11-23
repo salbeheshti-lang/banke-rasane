@@ -2,8 +2,22 @@
 
 const TOKEN_KEY = 'bankresaneh_token';
 
+function isHostedPreview(): boolean {
+  return typeof window !== 'undefined'
+    && window.location.hostname.endsWith('.workers.dev')
+    && /bankresaneh-(?:visual-)?preview/i.test(window.location.hostname);
+}
+
+function configuredHostedApiBase(): string {
+  return (process.env.NEXT_PUBLIC_BANKRESANEH_API_BASE || '').trim().replace(/\\/+$/, '');
+}
+
 function defaultApiBase(): string {
+  const configured = configuredHostedApiBase();
+  if (configured) return configured;
+
   if (typeof window !== 'undefined') {
+    if (isHostedPreview()) return 'https://bankresaneh-preview-api.onrender.com';
     const currentPort = window.location.port;
     const currentHost = window.location.hostname;
     if (currentPort === '81' || currentPort === '' || currentPort === '443' || currentHost.includes('space-z.ai')) return window.location.origin;
@@ -11,19 +25,36 @@ function defaultApiBase(): string {
   return 'http://127.0.0.1:3002';
 }
 
-export function getApiBase(): string {
-  if (typeof window !== 'undefined') {
-    const custom = localStorage.getItem('server_url');
-    if (custom) return custom;
+function getStoredApiBase(): string | null {
+  if (typeof window === 'undefined') return null;
+  const custom = localStorage.getItem('server_url');
+  if (!custom) return null;
+
+  // A Worker URL is the frontend origin, never the standalone API. Discard
+  // stale preview values saved by older builds while preserving custom APIs.
+  if (isHostedPreview()) {
+    try {
+      const saved = new URL(custom);
+      if (saved.origin === window.location.origin ||
+          (saved.hostname.endsWith('.workers.dev') && /bankresaneh-(?:visual-)?preview/i.test(saved.hostname))) {
+        return null;
+      }
+    } catch {
+      // Keep malformed values on the existing connection-error path.
+    }
   }
-  return defaultApiBase();
+  return custom;
+}
+
+export function getApiBase(): string {
+  return getStoredApiBase() || defaultApiBase();
 }
 
 export function getApiUrl(path: string, baseOverride?: string): string {
-  const cleanPath = path.replace(/^\/+/, '');
-  const stored = typeof window !== 'undefined' ? localStorage.getItem('server_url') : null;
-  const selected = (baseOverride ?? stored ?? '').trim();
-  const base = (selected || getApiBase()).replace(/\/+$/, '');
+  const cleanPath = path.replace(/^\\/+/, '');
+  const stored = getStoredApiBase();
+  const selected = (isHostedPreview() ? '' : (baseOverride ?? stored ?? '')).trim();
+  const base = (selected || getApiBase()).replace(/\\/+$/, '');
   const isGatewayHost = typeof window !== 'undefined'
     && (window.location.port === '81' || window.location.port === '' || window.location.port === '443' || window.location.hostname.includes('space-z.ai'));
   const isCurrentGateway = typeof window !== 'undefined' && isGatewayHost && base === window.location.origin;
@@ -33,19 +64,6 @@ export function getApiUrl(path: string, baseOverride?: string): string {
   }
   return base + '/' + cleanPath;
 }
-
-export function setApiBase(url: string): void {
-  if (typeof window === 'undefined') return;
-  const cleaned = (url || '').trim().replace(/\/+$/, '');
-  const previous = (localStorage.getItem('server_url') || defaultApiBase()).replace(/\/+$/, '');
-  const next = cleaned || defaultApiBase();
-  if (previous !== next) localStorage.removeItem(TOKEN_KEY);
-  if (cleaned) localStorage.setItem('server_url', cleaned);
-  else localStorage.removeItem('server_url');
-}
-
-export function getApiBaseUrl(): string { return getApiBase(); }
-export function getShowImageUrl(showNum: number): string { return getApiUrl('api/image/' + showNum); }
 
 export interface User {
   id: number;
