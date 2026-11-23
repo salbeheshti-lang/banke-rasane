@@ -3,10 +3,16 @@
 const TOKEN_KEY = 'bankresaneh_token';
 
 function defaultApiBase(): string {
+  // Hosted previews must use the API origin baked into the build. Treating
+  // every HTTPS host with an empty port as a local gateway sent /api/* back
+  // to the Next.js Worker, where backend-only endpoints return 404.
+  const configuredApiBase = process.env.NEXT_PUBLIC_BANKRESANEH_API_BASE?.trim();
+  if (configuredApiBase) return configuredApiBase.replace(/\\/+$/, '');
+
   if (typeof window !== 'undefined') {
     const currentPort = window.location.port;
     const currentHost = window.location.hostname;
-    if (currentPort === '81' || currentPort === '' || currentPort === '443' || currentHost.includes('space-z.ai')) return window.location.origin;
+    if (currentPort === '81' || currentPort === '443' || currentHost.includes('space-z.ai')) return window.location.origin;
   }
   return 'http://127.0.0.1:3002';
 }
