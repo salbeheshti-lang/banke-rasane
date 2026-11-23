@@ -1,8 +1,6 @@
 name: Read-only Cloudflare D1 audit
 
 on:
-  push:
-    branches: [work/d1-audit-account-from-worker-config]
   workflow_dispatch:
 
 permissions:
