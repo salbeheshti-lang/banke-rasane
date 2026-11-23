@@ -130,6 +130,12 @@ export async function POST(request: NextRequest) {
       if (pageUrl.protocol !== 'https:' || pageUrl.username || pageUrl.password) {
         return NextResponse.json({ error: 'فقط لینک HTTPS معتبر پذیرفته می‌شود' }, { status: 400 });
       }
+      const pageHost = pageUrl.hostname.toLowerCase();
+      const isWikipediaPage = pageHost === 'wikipedia.org' || pageHost.endsWith('.wikipedia.org');
+      const isImdbPage = pageHost === 'imdb.com' || pageHost === 'www.imdb.com' || pageHost === 'm.imdb.com';
+      if (!isWikipediaPage && !isImdbPage) {
+        return NextResponse.json({ error: 'دامنهٔ این لینک برای دریافت امن تصویر پشتیبانی نمی‌شود؛ صفحهٔ ویکی‌پدیا یا IMDb را وارد کنید' }, { status: 400 });
+      }
       try {
         target = await resolvePageImageUrl(pageUrl);
       } catch {
