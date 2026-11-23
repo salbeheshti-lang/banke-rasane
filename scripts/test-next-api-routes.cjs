@@ -277,7 +277,7 @@ async function main() {
   // It has export_reports by default and must be able to save shared PDF defaults.
   const editorCreated = await request(apiBase, '/api/users', {
     method: 'POST', token: adminToken,
-    body: { username: 'route_manager', password: 'ManagerRoute!2026', role: 'editor', name: 'Route Manager' },
+    body: { username: 'route_manager', password: 'ManagerRoute!2026', role: 'editor', name: 'Route Manager', phone: '09120000006' },
   });
   assert(editorCreated.status === 200, 'admin can create a manager/editor for report permission tests');
   const editorLogin = await request(apiBase, '/api/auth/login', {
