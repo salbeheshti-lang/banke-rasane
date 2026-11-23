@@ -116,7 +116,7 @@ async function main() {
   const created = await call('/api/users', {
     method: 'POST',
     token: adminToken,
-    body: { username: 'rate_editor', password: 'RateEditor!2026', role: 'editor', name: 'Rate Editor' },
+    body: { username: 'rate_editor', password: 'RateEditor!2026', role: 'editor', name: 'Rate Editor', phone: '09120000004' },
   });
   assert(created.status === 200, 'admin can create an editor for per-user quota test');
   const editorLogin = await call('/api/auth/login', {
