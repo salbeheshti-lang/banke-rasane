@@ -143,11 +143,11 @@ jobs:
           if (-not (Test-Path $seedFile)) {
             throw "FATAL: talk-shows-data.json missing from packaged standalone public directory"
           }
-          $legacyImages = Join-Path $serverDir 'public\\program-images'
+          $legacyImages = Join-Path $serverDir 'public\program-images'
           if (Test-Path $legacyImages) {
-            throw "FATAL: unused legacy public\\program-images folder must not be included in the installer"
+            throw "FATAL: unused legacy public\program-images folder must not be included in the installer"
           }
-          $appLogo = Join-Path $serverDir 'public\\banke-rasane-logo.png'
+          $appLogo = Join-Path $serverDir 'public\banke-rasane-logo.png'
           if (-not (Test-Path $appLogo)) {
             throw "FATAL: real BankResaneh app logo missing from packaged standalone public directory"
           }
