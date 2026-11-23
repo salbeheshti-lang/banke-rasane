@@ -8963,6 +8963,7 @@ const PERMISSION_LABELS: Record<string, { fa: string; en: string }> = {
   manage_settings: { fa: 'مدیریت تنظیمات',       en: 'Manage settings' },
   view_activity:   { fa: 'مشاهده گزارش فعالیت',  en: 'View activity log' },
   export_reports:  { fa: 'خروجی گزارش',          en: 'Export reports' },
+  view_user_phone: { fa: 'مشاهده شماره همراه کاربران', en: 'View users’ phone numbers' },
 };
 
 function PermissionsPanel({ user, currentUser, onSaved }: {
@@ -9089,6 +9090,10 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
   const handleCreate = async () => {
     if (!newUser.username.trim() || !newUser.password) {
       showToast(t('settings.username'));
+      return;
+    }
+    if (!newUser.phone.trim()) {
+      showToast('وارد کردن شماره همراه برای ایجاد کاربر الزامی است');
       return;
     }
     if (newUser.password.length < 8) {
@@ -9252,6 +9257,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
           <input
             type="tel"
             dir="ltr"
+            required
             placeholder="شماره همراه (0912xxxxxxx)"
             value={newUser.phone}
             onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
