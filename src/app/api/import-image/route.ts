@@ -75,7 +75,7 @@ async function resolvePageImageUrl(pageUrl: URL): Promise<URL | null> {
   }
 
   if (host === 'imdb.com' || host === 'www.imdb.com') {
-    const match = pageUrl.pathname.match(/^\\/title\\/(tt\\d+)/i);
+    const match = pageUrl.pathname.match(/^\/title\/(tt\d+)/i);
     if (!match) return null;
     const response = await fetch(`https://www.imdb.com/title/${match[1]}/`, {
       headers: {
