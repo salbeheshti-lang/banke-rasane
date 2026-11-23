@@ -1771,6 +1771,11 @@ const server = Bun.serve({
       // PUT with a complete named record is a deliberate recovery operation,
       // not a blind overwrite: validate videos and duplicates before insert.
       const merged = existing ? { ...rowToShow(existing), ...body, num } : { ...body, num };
+      const previousCapacity = existing ? String(rowToShow(existing).operationalCapacity || '') : '';
+      const nextCapacity = String(merged.operationalCapacity || '');
+      if (nextCapacity !== previousCapacity && user.role !== 'admin' && !isSuperAdmin(user)) {
+        return json({ error: 'تکمیل ظرفیت بهره‌برداری فقط با دسترسی مدیر امکان‌پذیر است' }, 403, req);
+      }
       if (!existing && (typeof merged.name !== 'string' || !merged.name.trim())) {
         return json({ error: 'show not found; a name is required to restore this record' }, 404, req);
       }
