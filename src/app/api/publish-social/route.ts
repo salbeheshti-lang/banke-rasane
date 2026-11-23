@@ -20,15 +20,12 @@ interface PublishBody {
 }
 
 export async function POST(request: NextRequest) {
-  // --- Auth: requires export_reports permission (admin/editor by default).
-  // Previously this endpoint was unauthenticated, which let anyone supply
-  // an arbitrary bot token + chatId and use this server as an anonymous
-  // spam relay. The token+chatId are still caller-supplied (per the
-  // existing bot-config feature), but now only authorized users can hit
-  // the endpoint at all. ---
-  const gate = await gatePermission(request, 'export_reports');
+  // Bot credentials and direct publishing are restricted to administrators.
+  // Editors may export reports, but must never be able to submit or verify
+  // a Bale/Telegram bot token through this endpoint.
+  const gate = await gatePermission(request, 'manage_settings');
   if (!gate.ok) {
-    return NextResponse.json({ ok: false, error: gate.status === 401 ? 'احراز هویت لازم است' : 'دسترسی غیرمجاز — نیاز به دسترسی گزارش‌گیری' }, { status: gate.status });
+    return NextResponse.json({ ok: false, error: gate.status === 401 ? 'احراز هویت لازم است' : 'دسترسی غیرمجاز — مدیریت ربات انتشار فقط برای مدیران مجاز است' }, { status: gate.status });
   }
   const user = gate.user;
   try {
