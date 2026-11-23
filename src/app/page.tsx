@@ -6872,6 +6872,23 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
   const [sendResult, setSendResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   const directSendSupported = selectedPlatform === 'تلگرام' || selectedPlatform === 'بله';
+  const directImageUrl = shows.length === 1 && shows[0].images && shows[0].images.length > 0
+    ? shows[0].images[0]
+    : undefined;
+  const directVideoUrl = shows.length === 1
+    ? (shows[0].videos || []).find((value) => {
+        try {
+          const parsed = new URL(value);
+          return parsed.protocol === 'https:' && /\\.mp4$/i.test(parsed.pathname);
+        } catch {
+          return false;
+        }
+      })
+    : undefined;
+  const mediaCaptionLimit = directImageUrl || directVideoUrl ? 1024 : 4096;
+  const directCaptionTooLong = postText.length > mediaCaptionLimit;
+  const hasVideoLinksWithoutDirectMp4 = shows.length === 1 &&
+    ((shows[0].videos || []).length > 0 || !!shows[0].youtube) && !directVideoUrl;
 
   // Send the post directly to the selected channel via the /api/publish-social route.
   const handleDirectSend = async () => {
@@ -6883,13 +6900,13 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
       setSendResult({ ok: false, msg: 'ابتدا تنظیمات ربات را وارد کنید' });
       return;
     }
+    if (directCaptionTooLong) {
+      setSendResult({ ok: false, msg: `کپشن رسانه باید حداکثر ${mediaCaptionLimit.toLocaleString('fa-IR')} نویسه باشد؛ متن را کوتاه کنید تا چیزی حذف نشود` });
+      return;
+    }
     setSending(true);
     setSendResult(null);
     try {
-      // Pick the first available image (real program image if present)
-      const imageUrl = shows.length === 1 && shows[0].images && shows[0].images.length > 0
-        ? shows[0].images[0]
-        : undefined;
       const res = await fetch('/api/publish-social', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
@@ -6898,12 +6915,14 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
           token: botConfig.token,
           chatId: botConfig.chatId,
           text: postText,
-          imageUrl,
+          imageUrl: directImageUrl,
+          videoUrl: directVideoUrl,
         }),
       });
       const data = await res.json();
       if (data.ok) {
-        setSendResult({ ok: true, msg: `✅ پست به ${selectedPlatform} ارسال شد` });
+        const mediaLabel = data.method === 'sendMediaGroup' ? 'ویدئو و تصویر' : data.method === 'sendVideo' ? 'ویدئو' : data.method === 'sendPhoto' ? 'تصویر' : 'پیام';
+        setSendResult({ ok: true, msg: `✅ ${mediaLabel} به ${selectedPlatform} ارسال شد` });
       } else {
         setSendResult({ ok: false, msg: `❌ ${data.error || 'ارسال ناموفق'}` });
       }
@@ -7143,6 +7162,15 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
                   resize: 'vertical',
                 }}
               />
+              <div className="mt-1 text-xs text-right" style={{ color: directCaptionTooLong ? '#fca5a5' : 'rgba(244,255,255,0.65)' }}>
+                {postText.length.toLocaleString('fa-IR')} / {mediaCaptionLimit.toLocaleString('fa-IR')} نویسه
+                {directCaptionTooLong ? ' — کپشن از حد مجاز بیشتر است' : ''}
+              </div>
+              {hasVideoLinksWithoutDirectMp4 && (
+                <div className="mt-2 text-xs" style={{ color: '#fbbf24' }}>
+                  لینک ویدئوی ثبت‌شده صفحهٔ پخش است، نه فایل MP4 مستقیم؛ برای ارسال ویدئو به کانال، یک لینک مستقیم HTTPS به فایل MP4 لازم است.
+                </div>
+              )}
             </div>
           </div>
 
@@ -7173,9 +7201,9 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
                 </div>
                 <button
                   onClick={handleDirectSend}
-                  disabled={!botConfig || sending}
+                  disabled={!botConfig || sending || directCaptionTooLong}
                   className="btn-enter-premium w-full mt-3"
-                  style={{ opacity: botConfig && !sending ? 1 : 0.5, cursor: botConfig && !sending ? 'pointer' : 'not-allowed' }}
+                  style={{ opacity: botConfig && !sending && !directCaptionTooLong ? 1 : 0.5, cursor: botConfig && !sending && !directCaptionTooLong ? 'pointer' : 'not-allowed' }}
                 >
                   {sending ? '⏳ در حال ارسال...' : `📡 ارسال مستقیم به ${selectedPlatform}`}
                 </button>
