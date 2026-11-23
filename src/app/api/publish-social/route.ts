@@ -86,8 +86,8 @@ export async function POST(request: NextRequest) {
     if (!chatId) {
       return NextResponse.json({ ok: false, error: 'شناسهٔ مقصد (Chat ID) الزامی است' }, { status: 400 });
     }
-    if (!text && !imageUrl) {
-      return NextResponse.json({ ok: false, error: 'متن یا تصویر پست الزامی است' }, { status: 400 });
+    if (!text && !imageUrl && !body.videoUrl) {
+      return NextResponse.json({ ok: false, error: 'متن، تصویر یا ویدئوی پست الزامی است' }, { status: 400 });
     }
 
     const base = API_BASE[platform];
@@ -117,6 +117,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (imageData) {
+      const sharp = (await import('sharp')).default;
+      const jpeg = await sharp(imageData.bytes).rotate().jpeg({ quality: 88 }).toBuffer();
+      if (!jpeg.length || jpeg.length > 5 * 1024 * 1024) {
+        return NextResponse.json({ ok: false, error: 'حجم تصویر برای ارسال به ربات بیش از حد مجاز است' }, { status: 413 });
+      }
+      imageData = { mime: 'image/jpeg', bytes: jpeg, extension: 'jpg' };
+    }
+
     const hasMedia = hasVideo || hasImage;
     if (hasMedia && rawText.length > 1024) {
       return NextResponse.json({ ok: false, error: 'سقف کپشن رسانه ۱۰۲۴ نویسه است؛ متن را در پیش‌نمایش کوتاه کنید تا هیچ بخشی بی‌صدا حذف نشود' }, { status: 400 });
@@ -136,7 +145,7 @@ export async function POST(request: NextRequest) {
         const form = new FormData();
         form.set('chat_id', chatId);
         form.set('media', JSON.stringify(media));
-        form.set('program_cover', new Blob([imageData.bytes], { type: imageData.mime }), `program-cover.${imageData.extension}`);
+        form.set('program_cover', new Blob([imageData.bytes.buffer.slice(imageData.bytes.byteOffset, imageData.bytes.byteOffset + imageData.bytes.byteLength) as ArrayBuffer], { type: imageData.mime }), `program-cover.${imageData.extension}`);
         tgRes = await fetch(`${base}/bot${token}/sendMediaGroup`, {
           method: 'POST',
           body: form,
@@ -180,7 +189,7 @@ export async function POST(request: NextRequest) {
       if (imageData) {
         const form = new FormData();
         form.set('chat_id', chatId);
-        form.set('photo', new Blob([imageData.bytes], { type: imageData.mime }), `program-image.${imageData.extension}`);
+        form.set('photo', new Blob([imageData.bytes.buffer.slice(imageData.bytes.byteOffset, imageData.bytes.byteOffset + imageData.bytes.byteLength) as ArrayBuffer], { type: imageData.mime }), `program-image.${imageData.extension}`);
         if (caption) form.set('caption', caption);
         tgRes = await fetch(`${base}/bot${token}/sendPhoto`, {
           method: 'POST',
