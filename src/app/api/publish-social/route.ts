@@ -27,6 +27,14 @@ export async function POST(request: NextRequest) {
   if (!gate.ok) {
     return NextResponse.json({ ok: false, error: gate.status === 401 ? 'احراز هویت لازم است' : 'دسترسی غیرمجاز — مدیریت ربات انتشار فقط برای مدیران مجاز است' }, { status: gate.status });
   }
+  // A configurable permission alone is not sufficient here: only an actual
+  // administrator or the designated super-admin may handle bot credentials.
+  if (gate.user.role !== 'admin' && !gate.user.isSuperAdmin) {
+    return NextResponse.json(
+      { ok: false, error: 'دسترسی غیرمجاز — فقط مدیران می‌توانند تنظیمات ربات انتشار را مدیریت کنند' },
+      { status: 403 }
+    );
+  }
   const user = gate.user;
   try {
     const body = (await request.json()) as PublishBody & { verify?: boolean };
