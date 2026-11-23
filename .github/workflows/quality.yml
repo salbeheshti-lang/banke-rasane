@@ -2,9 +2,9 @@ name: Quality checks
 
 on:
   push:
-    branches: [main, 'fix/**', 'feat/**']
+    branches: [main, 'fix/**', 'feat/**', 'preview/**']
   pull_request:
-    branches: [main, 'fix/**', 'feat/**']
+    branches: [main, 'fix/**', 'feat/**', 'preview/**']
 
 permissions:
   contents: read
@@ -103,6 +103,9 @@ jobs:
         run: bun run cloudflare:build
         env:
           DATABASE_URL: file:./db/custom.db
+
+      - name: Verify exact branding, capacity, decor, video editor, and Wikipedia/IMDb UI in compiled bundles
+        run: node scripts/test-preview-branding.cjs
 
       - name: Smoke-test local Cloudflare Worker preview
         run: bun run test:cloudflare-preview

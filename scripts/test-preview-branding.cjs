@@ -8,6 +8,13 @@ const path = require('node:path');
 const EXPECTED = 'مانیتورینگ مرکز طرح و برنامه سیما';
 const FORBIDDEN = [/تهیه[\u200c ]شده برای/u, /Made\s+for/i];
 const ASSETS = ['client-logo.png', 'client-logo-white.png', 'banke-rasane-logo.png'];
+const FEATURE_MARKERS = [
+  'ظرفیت بهره‌برداری',
+  'قرار دادن در ژانر «دکور برنامه‌ها»',
+  'MediaRecorder',
+  'ویکی‌پدیا',
+  'IMDb',
+];
 
 function walk(dir) {
   if (!fs.existsSync(dir)) return [];
@@ -25,6 +32,13 @@ function assertBranding(chunks, label) {
   }
 }
 
+function assertFeatures(chunks, label) {
+  const source = chunks.join('\\n');
+  for (const marker of FEATURE_MARKERS) {
+    assert(source.includes(marker), label + ': required UI feature missing from compiled bundle: ' + marker);
+  }
+}
+
 async function localCheck() {
   const assetRoot = path.join(process.cwd(), '.open-next', 'assets');
   for (const name of ASSETS) {
@@ -34,8 +48,10 @@ async function localCheck() {
   }
   const jsFiles = walk(path.join(assetRoot, '_next', 'static', 'chunks')).filter(file => file.endsWith('.js'));
   assert(jsFiles.length > 0, 'No compiled Next.js JavaScript chunks found');
-  assertBranding(jsFiles.map(file => fs.readFileSync(file, 'utf8')), 'Local Cloudflare build');
-  console.log('PASS local build contains exact organization identity, no commissioning label, and all three logo assets.');
+  const compiledChunks = jsFiles.map(file => fs.readFileSync(file, 'utf8'));
+  assertBranding(compiledChunks, 'Local Cloudflare build');
+  assertFeatures(compiledChunks, 'Local Cloudflare build');
+  console.log('PASS local build contains exact branding, required capacity/decor/video/import UI, and all three logo assets.');
 }
 
 async function remoteCheck(base) {
@@ -51,6 +67,7 @@ async function remoteCheck(base) {
     return response.text();
   }));
   assertBranding(chunks, 'Deployed preview');
+  assertFeatures(chunks, 'Deployed preview');
   for (const name of ASSETS) {
     const response = await fetch(new URL('/' + name, base));
     assert.equal(response.status, 200, 'Organization/app logo must load: ' + name);
