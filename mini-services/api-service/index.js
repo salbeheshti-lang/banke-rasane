@@ -122,6 +122,7 @@ db.exec(`
     lighting     TEXT NOT NULL DEFAULT '',
     summary      TEXT NOT NULL DEFAULT '',
     descriptionFa TEXT NOT NULL DEFAULT '',
+    operational_capacity TEXT NOT NULL DEFAULT '',
     youtube      TEXT NOT NULL DEFAULT '',
     imdb         TEXT NOT NULL DEFAULT '',
     wikipedia    TEXT NOT NULL DEFAULT '',
@@ -244,6 +245,7 @@ addColumnIfMissing('shows', 'is_film', 'INTEGER NOT NULL DEFAULT 0');
 addColumnIfMissing('shows', 'tags', "TEXT NOT NULL DEFAULT '[]'");
 addColumnIfMissing('shows', 'country', "TEXT NOT NULL DEFAULT ''");
 addColumnIfMissing('shows', 'decor_included', 'INTEGER');
+addColumnIfMissing('shows', 'operational_capacity', "TEXT NOT NULL DEFAULT ''");
 
 // Full-text search index for the archive. Triggers keep it in sync with show edits.
 let showsFtsAvailable = false;
@@ -403,7 +405,7 @@ function rowToShow(r) {
     size: fa(r.size), viewers: fa(r.viewers), style: fa(r.style), effects: fa(r.effects),
     layout: fa(r.layout), elements: fa(r.elements), materials: fa(r.materials),
     colors: fa(r.colors), lighting: fa(r.lighting), summary: fa(r.summary),
-    descriptionFa: fa(r.descriptionFa), youtube: r.youtube, imdb: r.imdb,
+    descriptionFa: fa(r.descriptionFa), operationalCapacity: fa(r.operational_capacity || ''), youtube: r.youtube, imdb: r.imdb,
     wikipedia: r.wikipedia, socialPost: fa(r.socialPost), country: fa(r.country || ''),
     images, videos, tags, decorIncluded: r.decor_included == null ? undefined : !!r.decor_included,
     isFilm: !!(r.is_film),
@@ -416,7 +418,7 @@ function rowToShow(r) {
 
 const SHOW_COLUMNS = [
   'num', 'name', 'category', 'source', 'size', 'viewers', 'style', 'effects', 'layout',
-  'elements', 'materials', 'colors', 'lighting', 'summary', 'descriptionFa',
+  'elements', 'materials', 'colors', 'lighting', 'summary', 'descriptionFa', 'operational_capacity',
   'youtube', 'imdb', 'wikipedia', 'socialPost', 'images', 'videos', 'tags',
   'is_film', 'country', 'decor_included',
 ];
@@ -424,7 +426,7 @@ function showToValues(s) {
   return [
     s.num, s.name || '', s.category || '', s.source || '', s.size || '', s.viewers || '',
     s.style || '', s.effects || '', s.layout || '', s.elements || '', s.materials || '',
-    s.colors || '', s.lighting || '', s.summary || '', s.descriptionFa || '',
+    s.colors || '', s.lighting || '', s.summary || '', s.descriptionFa || '', s.operationalCapacity || '',
     s.youtube || '', s.imdb || '', s.wikipedia || '', s.socialPost || '',
     JSON.stringify(Array.isArray(s.images) ? s.images : []),
     JSON.stringify(Array.isArray(s.videos) ? s.videos : []),
@@ -1730,6 +1732,9 @@ const server = Bun.serve({
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
       const videoValidation = validateShowVideos(body?.videos);
       if (!videoValidation.valid) return json({ error: videoValidation.error }, 400, req);
+      if (String(body?.operationalCapacity || '').trim() && user.role !== 'admin' && !isSuperAdmin(user)) {
+        return json({ error: 'تکمیل ظرفیت بهره‌برداری فقط با دسترسی مدیر امکان‌پذیر است' }, 403, req);
+      }
       const duplicate = findDuplicateShow(body);
       if (duplicate) {
         return json({ error: 'این برنامه قبلاً ثبت شده است: «' + duplicate.name + '» — ژانر اصلی: ' + getPrimaryGenre(duplicate.category), duplicate: { num: duplicate.num, name: duplicate.name, category: duplicate.category, primaryGenre: getPrimaryGenre(duplicate.category) } }, 409, req);
@@ -1766,6 +1771,11 @@ const server = Bun.serve({
       // PUT with a complete named record is a deliberate recovery operation,
       // not a blind overwrite: validate videos and duplicates before insert.
       const merged = existing ? { ...rowToShow(existing), ...body, num } : { ...body, num };
+      const previousCapacity = existing ? String(rowToShow(existing).operationalCapacity || '') : '';
+      const nextCapacity = String(merged.operationalCapacity || '');
+      if (nextCapacity !== previousCapacity && user.role !== 'admin' && !isSuperAdmin(user)) {
+        return json({ error: 'تکمیل ظرفیت بهره‌برداری فقط با دسترسی مدیر امکان‌پذیر است' }, 403, req);
+      }
       if (!existing && (typeof merged.name !== 'string' || !merged.name.trim())) {
         return json({ error: 'show not found; a name is required to restore this record' }, 404, req);
       }

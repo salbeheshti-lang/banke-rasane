@@ -28,6 +28,7 @@ interface TalkShow {
   lighting: string;
   summary: string;
   descriptionFa: string;
+  operationalCapacity?: string;
   youtube: string;
   imdb: string;
   wikipedia: string;
@@ -1313,7 +1314,7 @@ function HomeInner() {
         {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={(s) => { setEditingShow(s); setPresetGenre(null); setPresetCategory(undefined); navigate('add'); }} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={(s) => { setEditingShow(s); setPresetGenre(null); setPresetCategory(undefined); navigate('add'); }} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} canManageSettings={isAdmin} onExport={(shows, format, meta) => setExportPreview({ shows, format, ...meta })} />}
-        {currentView === 'add' && canEdit && <AddEditView key={editingShow?.num ?? 'new'} talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setPresetCategory(undefined); setPresetGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} presetCategory={presetCategory} presetGenre={presetGenre} genres={genres} />}
+        {currentView === 'add' && canEdit && <AddEditView key={editingShow?.num ?? 'new'} talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setPresetCategory(undefined); setPresetGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} presetCategory={presetCategory} presetGenre={presetGenre} genres={genres} canManageCapacity={isAdmin} />}
         {currentView === 'add' && !canEdit && (
           <div className="premium-glass p-8 text-center">
             <h2 className="text-2xl font-bold mb-2" style={{ color: '#dc2626' }}>دسترسی غیرمجاز</h2>
@@ -4458,6 +4459,15 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
             <p style={{ color: 'rgba(255, 255, 255, 0.9)', lineHeight: 1.8 }}>{show.descriptionFa}</p>
           </div>
 
+          <section className="mb-6 p-4 rounded-xl" style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.24)' }}>
+            <h4 className="font-bold mb-2" style={{ color: '#f0fdf4' }}>ظرفیت بهره‌برداری</h4>
+            {show.operationalCapacity?.trim() ? (
+              <p style={{ color: 'rgba(255, 255, 255, 0.9)', lineHeight: 1.9, whiteSpace: 'pre-wrap' }}>{show.operationalCapacity}</p>
+            ) : (
+              <p className="text-sm" style={{ color: 'rgba(244, 255, 255, 0.62)' }}>این بخش هنوز توسط مدیر تکمیل نشده است.</p>
+            )}
+          </section>
+
           {/* Video links gallery */}
           {show.videos && show.videos.length > 0 && (
             <div className="mb-6">
@@ -4753,7 +4763,7 @@ function DetailField({ label, value }: { label: string; value: string }) {
 // ============================================
 // ADD/EDIT VIEW
 // ============================================
-function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, showToast, presetCategory, presetGenre, genres = GENRES }: {
+function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, showToast, presetCategory, presetGenre, genres = GENRES, canManageCapacity = false }: {
   talkShows: TalkShow[];
   onSave: (show: TalkShow, isEdit: boolean) => Promise<void> | void;
   editingShow: TalkShow | null;
@@ -4763,6 +4773,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
   presetCategory?: string;
   presetGenre?: Genre | null;
   genres?: Genre[];
+  canManageCapacity?: boolean;
 }) {
   const { t } = useLang();
   const [form, setForm] = useState<Partial<TalkShow>>(
@@ -4784,6 +4795,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       lighting: 'خنثی',
       summary: '',
       descriptionFa: '',
+      operationalCapacity: '',
       youtube: '',
       imdb: '',
       wikipedia: '',
@@ -5251,6 +5263,21 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
         <FormField label="عناصر دکور" value={form.elements || ''} onChange={v => setForm({ ...form, elements: v })} placeholder="مثلاً: plants, screens/monitors" />
         <FormField label="مواد" value={form.materials || ''} onChange={v => setForm({ ...form, materials: v })} placeholder="مثلاً: wood, glass, metal" />
         <FormField label="رنگ‌آمیزی" value={form.colors || ''} onChange={v => setForm({ ...form, colors: v })} placeholder="مثلاً: red, blue, white" />
+
+        {/* Admin-maintained operational capacity — intentionally separate from imported show descriptions. */}
+        <div className="p-4 rounded-xl" style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.24)' }}>
+          <label className="text-sm font-bold mb-2 block" style={{ color: '#f0fdf4' }}>ظرفیت بهره‌برداری</label>
+          <p className="text-xs mb-3" style={{ color: 'rgba(244, 255, 255, 0.68)' }}>{canManageCapacity ? 'این بخش مستقل از اطلاعات ویکی‌پدیا و IMDb است و فقط مدیر می‌تواند آن را تکمیل و به‌روزرسانی کند.' : 'این بخش مستقل از اطلاعات ویکی‌پدیا و IMDb است و تکمیل آن فقط در اختیار مدیر قرار دارد.'}</p>
+          <textarea
+            value={form.operationalCapacity || ''}
+            onChange={(e) => setForm({ ...form, operationalCapacity: e.target.value })}
+            placeholder={canManageCapacity ? 'اطلاعات ظرفیت بهره‌برداری این برنامه را وارد کنید...' : 'تکمیل این بخش فقط توسط مدیر انجام می‌شود'}
+            disabled={!canManageCapacity}
+            rows={4}
+            maxLength={12000}
+            style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1px solid rgba(13, 124, 74, 0.2)', background: 'rgba(255, 255, 255, 0.12)', color: '#f0fdf4', fontFamily: 'inherit', outline: 'none', resize: 'vertical' }}
+          />
+        </div>
 
         {/* Persian description */}
         <div>
@@ -5807,12 +5834,30 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
     setFilmstrip([]);
     setFilmstripLoading(false);
     if (!next) return;
-    // Some Windows formats (notably MKV/AVI) are reported with an empty MIME type.
-    // Accept the known video extensions here and let the browser's decoder validate playback.
-    const hasVideoMime = next.type.startsWith('video/');
-    const hasSupportedExtension = /\.(mp4|mov|m4v|webm|mkv|avi)$/i.test(next.name);
-    if (!hasVideoMime && !hasSupportedExtension) { setError('لطفاً یک فایل ویدیویی معتبر انتخاب کنید.'); return; }
-    if (next.size > 200 * 1024 * 1024) { setError('حجم فایل ورودی نباید بیشتر از ۲۰۰ مگابایت باشد.'); return; }
+    // Chromium/Electron does not decode every codec merely because the container
+    // extension is accepted by an <input>. Restrict the picker to reliable containers
+    // and give a useful codec-specific recovery path instead of a generic media error.
+    const extension = next.name.split('.').pop()?.toLowerCase() || '';
+    const acceptedContainer = ['mp4', 'm4v', 'mov', 'webm'].includes(extension);
+    const acceptedMime = ['video/mp4', 'video/x-m4v', 'video/quicktime', 'video/webm'].includes(next.type);
+    if (!acceptedContainer && !acceptedMime) {
+      setFile(null); setPreviewUrl(''); setDuration(0); setStart(0); setEnd(0);
+      setError('این ظرف ویدیویی برای ویرایش مستقیم پشتیبانی نمی‌شود. فایل را به MP4 با کدک H.264 و صدای AAC یا WebM با VP8/VP9 تبدیل کنید؛ فایل‌های MKV و AVI را ابتدا تبدیل کنید.');
+      if (inputRef.current) inputRef.current.value = '';
+      return;
+    }
+    if (next.size <= 0) {
+      setFile(null); setPreviewUrl(''); setDuration(0); setStart(0); setEnd(0);
+      setError('فایل انتخاب‌شده خالی است یا داده‌ای ندارد.');
+      if (inputRef.current) inputRef.current.value = '';
+      return;
+    }
+    if (next.size > 200 * 1024 * 1024) {
+      setFile(null); setPreviewUrl(''); setDuration(0); setStart(0); setEnd(0);
+      setError('حجم فایل ورودی نباید بیشتر از ۲۰۰ مگابایت باشد. ابتدا فایل را با حفظ کیفیت بهینه کنید.');
+      if (inputRef.current) inputRef.current.value = '';
+      return;
+    }
     const url = URL.createObjectURL(next);
     setPreviewUrl(url);
     setFile(next);
@@ -6001,6 +6046,7 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
       });
 
       stream = captureStream.call(video);
+      if (!stream.getVideoTracks().length) throw new Error('جریان تصویر از فایل ساخته نشد؛ فایل را دوباره بارگذاری کنید.');
       const mimeType = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
         .find(type => MediaRecorder.isTypeSupported(type));
       if (!mimeType) throw new Error('کدک خروجی WebM در این سیستم پشتیبانی نمی‌شود.');
@@ -6078,9 +6124,10 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
     <div className="p-3 rounded-xl mb-3" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)' }}>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <strong className="text-sm" style={{ color: '#d1fae5' }}>✂️ ویرایش ویدیو از سیستم (حداکثر ۳۰ ثانیه)</strong>
+        <p className="w-full text-[11px]" style={{ color: 'rgba(209,250,229,.78)' }}>فرمت پیشنهادی: MP4 با H.264 و AAC یا WebM با VP8/VP9. فایل‌های HEVC/H.265، MKV و AVI ممکن است در موتور ویدیویی ویندوز رمزگشایی نشوند؛ در صورت خطا، فقط تغییر پسوند کافی نیست و باید تبدیل واقعی انجام شود.</p>
         <label className="px-3 py-2 rounded-lg text-xs font-bold cursor-pointer" style={{ background: '#0d7c4a', color: 'white' }}>
           انتخاب فایل ویدیو
-          <input ref={inputRef} type="file" accept="video/*,.mp4,.mov,.m4v,.webm,.mkv,.avi" onChange={e => chooseFile(e.target.files?.[0] || null)} style={{ display: 'none' }} />
+          <input ref={inputRef} type="file" accept="video/mp4,video/webm,video/quicktime,.mp4,.m4v,.mov,.webm" onChange={e => chooseFile(e.target.files?.[0] || null)} style={{ display: 'none' }} />
         </label>
       </div>
       {file && previewUrl && (
@@ -6090,9 +6137,21 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
             setDuration(d);
             setStart(0);
             setEnd(Math.min(30, d));
-            if (!d) setError('مدت ویدیو قابل تشخیص نیست یا فرمت آن پشتیبانی نمی‌شود.');
-            else if (previewUrl) void buildFilmstrip(previewUrl, d);
-          }} onError={() => setError('این فرمت یا کدک ویدیویی قابل خواندن نیست. فایل را به MP4 (H.264) یا WebM تبدیل کنید.')} style={{ width: '100%', maxHeight: 260, borderRadius: 10, background: '#000', objectFit: 'contain' }} />
+            if (!d || !e.currentTarget.videoWidth || !e.currentTarget.videoHeight) {
+              setError('اطلاعات ویدیویی این فایل قابل خواندن نیست. ممکن است فایل خراب باشد یا کدک آن پشتیبانی نشود؛ MP4 با H.264/AAC یا WebM با VP8/VP9 انتخاب کنید.');
+            } else if (previewUrl) {
+              setError('');
+              void buildFilmstrip(previewUrl, d);
+            }
+          }} onError={e => {
+            const mediaError = e.currentTarget.error;
+            const code = mediaError?.code;
+            setDuration(0); setStart(0); setEnd(0); setFilmstrip([]);
+            if (code === 2) setError('خواندن فایل ویدیو با خطای ورودی/خروجی مواجه شد. فایل را از دیسک محلی دیگری انتخاب کنید و مطمئن شوید ناقص یا قفل‌شده نیست.');
+            else if (code === 3) setError('کدک ویدیو در این نسخه از مرورگر قابل رمزگشایی نیست. لطفاً فایل را به MP4 با H.264 (نه H.265/HEVC) و صدای AAC یا WebM با VP8/VP9 تبدیل کنید.');
+            else if (code === 4) setError('مرورگر این ظرف یا کدک را پشتیبانی نمی‌کند. برای سازگاری مطمئن، MP4 (H.264 + AAC) یا WebM (VP8/VP9) انتخاب کنید؛ تغییر پسوند فایل کافی نیست.');
+            else setError('خواندن ویدیو ناموفق بود. سالم بودن فایل و پشتیبانی کدک آن را بررسی کنید.');
+          }} style={{ width: '100%', maxHeight: 260, borderRadius: 10, background: '#000', objectFit: 'contain' }} />
           <div className="text-xs" style={{ color: '#d1fae5' }}>
             {file.name} · {(file.size / 1024 / 1024).toFixed(1)} MB · مدت اصلی {formatTime(duration)}
           </div>

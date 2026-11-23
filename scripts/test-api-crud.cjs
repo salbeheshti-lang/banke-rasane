@@ -105,6 +105,18 @@ async function main() {
       method: 'POST', token, body: JSON.stringify(original),
     });
     assert(created.status === 200 && created.data.num === num, 'new fixture show is created');
+    const capacitySave = await request(`/api/shows/${num}`, { method: 'PUT', token, body: JSON.stringify({ operationalCapacity: 'ظرفیت نمونه برای آزمون' }) });
+    assert(capacitySave.status === 200 && capacitySave.data.operationalCapacity === 'ظرفیت نمونه برای آزمون', 'operational capacity can be saved on a show');
+    const capacityReload = await request('/api/shows/search?q=BankResaneh%20CRUD%20Integration%20Fixture', { token });
+    assert(capacityReload.status === 200 && capacityReload.data.shows?.[0]?.operationalCapacity === 'ظرفیت نمونه برای آزمون', 'operational capacity persists and is returned by archive search');
+    const editorCreated = await request('/api/users', { method: 'POST', token, body: JSON.stringify({ username: 'capacity_editor', password: 'EditorCap!2026', role: 'editor', name: 'Capacity Editor' }) });
+    assert(editorCreated.status === 200, 'admin can create an editor for capacity permission tests');
+    const editorLogin = await request('/api/auth/login', { method: 'POST', body: JSON.stringify({ username: 'capacity_editor', password: 'EditorCap!2026' }) });
+    assert(editorLogin.status === 200 && !!editorLogin.data.token, 'editor can authenticate for capacity permission tests');
+    const editorPassword = await request('/api/auth/change-password', { method: 'PUT', token: editorLogin.data.token, body: JSON.stringify({ oldPassword: 'EditorCap!2026', newPassword: 'EditorCapChanged!2026' }) });
+    assert(editorPassword.status === 200 && !!editorPassword.data.token, 'editor completes the required first-login password change');
+    const editorCapacityEdit = await request(`/api/shows/${num}`, { method: 'PUT', token: editorPassword.data.token, body: JSON.stringify({ operationalCapacity: 'تغییر غیرمجاز توسط ویراستار' }) });
+    assert(editorCapacityEdit.status === 403, 'editor cannot change the admin-only operational capacity field');
 
     const sameRecordUpdate = await request('/api/shows/' + num, {
       method: 'PUT', token,
