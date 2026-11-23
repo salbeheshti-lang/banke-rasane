@@ -60,6 +60,19 @@ if (!baseUrl || !token) {
   }
 
   console.log('PASS: authenticated decor IMDb import returned a reachable Wikimedia image.');
+
+  const wikipediaPageUrl = process.env.BANKRESANE_TEST_WIKIPEDIA_URL || 'https://en.wikipedia.org/wiki/Top_Gear';
+  const pageImportResponse = await fetch(`${baseUrl}/api/import-image`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ url: wikipediaPageUrl }),
+  });
+  const pageImport = await pageImportResponse.json().catch(() => ({}));
+  if (!pageImportResponse.ok || typeof pageImport.dataUrl !== 'string' || !pageImport.dataUrl.startsWith('data:image/webp;base64,')) {
+    throw new Error(`Wikipedia page image import failed (HTTP ${pageImportResponse.status}): ${pageImport.error || 'no optimized image returned'}`);
+  }
+
+  console.log(`PASS: Wikipedia article page was resolved and its image optimized (${new URL(wikipediaPageUrl).hostname}).`);
   console.log(`Title: ${payload.info.title || '(title unavailable)'}`);
   console.log(`Image: ${imageUrl}`);
   console.log('NOTE: confirm visually that the image belongs to the intended program/set; HTTP checks cannot establish semantic relevance.');
