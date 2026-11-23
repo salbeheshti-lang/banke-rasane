@@ -5846,6 +5846,12 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
       if (inputRef.current) inputRef.current.value = '';
       return;
     }
+    if (next.size <= 0) {
+      setFile(null); setPreviewUrl(''); setDuration(0); setStart(0); setEnd(0);
+      setError('فایل انتخاب‌شده خالی است یا داده‌ای ندارد.');
+      if (inputRef.current) inputRef.current.value = '';
+      return;
+    }
     if (next.size > 200 * 1024 * 1024) {
       setFile(null); setPreviewUrl(''); setDuration(0); setStart(0); setEnd(0);
       setError('حجم فایل ورودی نباید بیشتر از ۲۰۰ مگابایت باشد. ابتدا فایل را با حفظ کیفیت بهینه کنید.');
@@ -6040,6 +6046,7 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
       });
 
       stream = captureStream.call(video);
+      if (!stream.getVideoTracks().length) throw new Error('جریان تصویر از فایل ساخته نشد؛ فایل را دوباره بارگذاری کنید.');
       const mimeType = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
         .find(type => MediaRecorder.isTypeSupported(type));
       if (!mimeType) throw new Error('کدک خروجی WebM در این سیستم پشتیبانی نمی‌شود.');
@@ -6130,8 +6137,12 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
             setDuration(d);
             setStart(0);
             setEnd(Math.min(30, d));
-            if (!d) setError('مدت ویدیو قابل تشخیص نیست یا فرمت آن پشتیبانی نمی‌شود.');
-            else if (previewUrl) void buildFilmstrip(previewUrl, d);
+            if (!d || !e.currentTarget.videoWidth || !e.currentTarget.videoHeight) {
+              setError('اطلاعات ویدیویی این فایل قابل خواندن نیست. ممکن است فایل خراب باشد یا کدک آن پشتیبانی نشود؛ MP4 با H.264/AAC یا WebM با VP8/VP9 انتخاب کنید.');
+            } else if (previewUrl) {
+              setError('');
+              void buildFilmstrip(previewUrl, d);
+            }
           }} onError={e => {
             const mediaError = e.currentTarget.error;
             const code = mediaError?.code;
