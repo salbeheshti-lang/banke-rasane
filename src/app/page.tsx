@@ -6873,11 +6873,10 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
 
   const directSendSupported = selectedPlatform === 'تلگرام' || selectedPlatform === 'بله';
   const directImageUrl = shows.length === 1
-    ? (shows[0].images && shows[0].images.length > 0
-        ? shows[0].images[0]
-        : shows[0].imageSource
+    ? ((shows[0].images || []).find((image) => typeof image === 'string' && (/^data:image\//i.test(image) || /^https:\/\//i.test(image)))
+        || (shows[0].imageSource
           ? getApiUrl(`api/image/${shows[0].num}?v=${encodeURIComponent(shows[0].imageSource)}`)
-          : undefined)
+          : undefined))
     : undefined;
   const directVideoUrl = shows.length === 1
     ? (shows[0].videos || []).find((value) => {
