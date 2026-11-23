@@ -235,7 +235,7 @@ async function main() {
   // Create a viewer and verify the same permission boundaries in Next.js routes.
   const viewerCreated = await request(apiBase, '/api/users', {
     method: 'POST', token: adminToken,
-    body: { username: 'route_viewer', password: 'ViewerRoute!2026', role: 'viewer', name: 'Route Viewer' },
+    body: { username: 'route_viewer', password: 'ViewerRoute!2026', role: 'viewer', name: 'Route Viewer', phone: '09120000005' },
   });
   assert(viewerCreated.status === 200, 'admin can create a viewer for permission tests');
   const viewerLogin = await request(apiBase, '/api/auth/login', {
