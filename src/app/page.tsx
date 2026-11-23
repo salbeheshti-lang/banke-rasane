@@ -1314,7 +1314,7 @@ function HomeInner() {
         {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={(s) => { setEditingShow(s); setPresetGenre(null); setPresetCategory(undefined); navigate('add'); }} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={(s) => { setEditingShow(s); setPresetGenre(null); setPresetCategory(undefined); navigate('add'); }} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} canManageSettings={isAdmin} onExport={(shows, format, meta) => setExportPreview({ shows, format, ...meta })} />}
-        {currentView === 'add' && canEdit && <AddEditView key={editingShow?.num ?? 'new'} talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setPresetCategory(undefined); setPresetGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} presetCategory={presetCategory} presetGenre={presetGenre} genres={genres} />}
+        {currentView === 'add' && canEdit && <AddEditView key={editingShow?.num ?? 'new'} talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setPresetCategory(undefined); setPresetGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} presetCategory={presetCategory} presetGenre={presetGenre} genres={genres} canManageCapacity={isAdmin} />}
         {currentView === 'add' && !canEdit && (
           <div className="premium-glass p-8 text-center">
             <h2 className="text-2xl font-bold mb-2" style={{ color: '#dc2626' }}>دسترسی غیرمجاز</h2>
@@ -4763,7 +4763,7 @@ function DetailField({ label, value }: { label: string; value: string }) {
 // ============================================
 // ADD/EDIT VIEW
 // ============================================
-function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, showToast, presetCategory, presetGenre, genres = GENRES }: {
+function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, showToast, presetCategory, presetGenre, genres = GENRES, canManageCapacity = false }: {
   talkShows: TalkShow[];
   onSave: (show: TalkShow, isEdit: boolean) => Promise<void> | void;
   editingShow: TalkShow | null;
@@ -4773,6 +4773,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
   presetCategory?: string;
   presetGenre?: Genre | null;
   genres?: Genre[];
+  canManageCapacity?: boolean;
 }) {
   const { t } = useLang();
   const [form, setForm] = useState<Partial<TalkShow>>(
@@ -5266,11 +5267,12 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
         {/* Admin-maintained operational capacity — intentionally separate from imported show descriptions. */}
         <div className="p-4 rounded-xl" style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.24)' }}>
           <label className="text-sm font-bold mb-2 block" style={{ color: '#f0fdf4' }}>ظرفیت بهره‌برداری</label>
-          <p className="text-xs mb-3" style={{ color: 'rgba(244, 255, 255, 0.68)' }}>این بخش مستقل از اطلاعات ویکی‌پدیا و IMDb است و بعداً توسط مدیر تکمیل و به‌روزرسانی می‌شود.</p>
+          <p className="text-xs mb-3" style={{ color: 'rgba(244, 255, 255, 0.68)' }}>{canManageCapacity ? 'این بخش مستقل از اطلاعات ویکی‌پدیا و IMDb است و فقط مدیر می‌تواند آن را تکمیل و به‌روزرسانی کند.' : 'این بخش مستقل از اطلاعات ویکی‌پدیا و IMDb است و تکمیل آن فقط در اختیار مدیر قرار دارد.'}</p>
           <textarea
             value={form.operationalCapacity || ''}
             onChange={(e) => setForm({ ...form, operationalCapacity: e.target.value })}
-            placeholder="اطلاعات ظرفیت بهره‌برداری این برنامه را وارد کنید..."
+            placeholder={canManageCapacity ? 'اطلاعات ظرفیت بهره‌برداری این برنامه را وارد کنید...' : 'تکمیل این بخش فقط توسط مدیر انجام می‌شود'}
+            disabled={!canManageCapacity}
             rows={4}
             maxLength={12000}
             style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1px solid rgba(13, 124, 74, 0.2)', background: 'rgba(255, 255, 255, 0.12)', color: '#f0fdf4', fontFamily: 'inherit', outline: 'none', resize: 'vertical' }}
