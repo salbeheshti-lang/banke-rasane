@@ -184,6 +184,7 @@ async function main() {
   // Next.js route auth: anonymous callers must be rejected before side effects.
   const guardedRoutes = [
     ['/api/fetch-show-info', 'POST', { url: 'not-a-url' }],
+    ['/api/import-image', 'POST', { url: 'https://example.com/image.jpg' }],
     ['/api/translate', 'POST', { fields: {} }],
     ['/api/publish-social', 'POST', { platform: 'invalid', token: 'bad' }],
     ['/api/export-pdf', 'POST', { shows: [{ num: 1, name: 'Auth probe' }] }],
@@ -256,6 +257,11 @@ async function main() {
   assert(viewerReportSettings.status === 200, 'authenticated viewer can read non-sensitive report defaults');
 
   // Admin success paths for local Next.js features; external services are not contacted.
+  const unsafeImageSource = await request(nextBase, '/api/import-image', {
+    method: 'POST', token: adminToken, body: { url: 'https://example.com/untrusted.jpg' },
+  });
+  assert(unsafeImageSource.status === 400, 'image importer rejects untrusted hosts even for authenticated admins');
+
   const translateValidation = await request(nextBase, '/api/translate', {
     method: 'POST', token: adminToken, body: { fields: {} },
   });
