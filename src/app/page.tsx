@@ -1361,6 +1361,7 @@ function HomeInner() {
       {publishShows && (
         <PublishModal
           shows={publishShows}
+          canManageBotConfig={isAdmin}
           onClose={() => setPublishShows(null)}
           onConfirm={(platform) => {
             showToast(`${publishShows.length.toLocaleString('fa-IR')} برنامه به ${platform} منتشر شد`);
@@ -1371,7 +1372,7 @@ function HomeInner() {
       )}
 
       {/* Bot config modal (Telegram / Bale token + chat ID) */}
-      {showBotConfig && (
+      {showBotConfig && isAdmin && (
         <BotConfigModal
           onClose={() => setShowBotConfig(false)}
           onSaved={() => { setShowBotConfig(false); showToast(t('publish.saved')); }}
@@ -6850,8 +6851,9 @@ const SOCIAL_PLATFORMS = [
   { id: 'instagram', name: 'اینستاگرام', color: '#e1306c', icon: '📷' },
 ];
 
-function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
+function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBotConfig }: {
   shows: TalkShow[];
+  canManageBotConfig: boolean;
   onClose: () => void;
   onConfirm: (platform: string) => void;
   onOpenBotConfig: () => void;
@@ -6873,6 +6875,10 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
 
   // Send the post directly to the selected channel via the /api/publish-social route.
   const handleDirectSend = async () => {
+    if (!canManageBotConfig) {
+      setSendResult({ ok: false, msg: 'مدیریت توکن انتشار فقط برای مدیران مجاز است' });
+      return;
+    }
     if (!botConfig || !botConfig.token || !botConfig.chatId) {
       setSendResult({ ok: false, msg: 'ابتدا تنظیمات ربات را وارد کنید' });
       return;
@@ -7143,7 +7149,7 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
           {/* Action buttons */}
           <div className="space-y-3">
             {/* Direct send (Telegram / Bale only) */}
-            {directSendSupported && (
+            {directSendSupported && canManageBotConfig && (
               <div
                 className="p-3 rounded-xl"
                 style={{ background: 'rgba(13, 124, 74,0.06)', border: '1px solid rgba(13, 124, 74,0.18)' }}
