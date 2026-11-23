@@ -6879,7 +6879,7 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
     ? (shows[0].videos || []).find((value) => {
         try {
           const parsed = new URL(value);
-          return parsed.protocol === 'https:' && /\\.mp4$/i.test(parsed.pathname);
+          return parsed.protocol === 'https:' && /\.mp4$/i.test(parsed.pathname);
         } catch {
           return false;
         }
