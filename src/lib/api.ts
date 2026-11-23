@@ -27,7 +27,7 @@ function getStoredApiBase(): string | null {
   // makes login/archive requests hit the frontend Worker (404). Recover it
   // automatically without overriding an explicitly configured external server.
   const configured = process.env.NEXT_PUBLIC_BANKRESANEH_API_BASE?.trim();
-  if (configured && custom.replace(/\\/+$/, '') === window.location.origin) return null;
+  if (configured && custom.replace(/\/+$/, '') === window.location.origin) return null;
   return custom;
 }
 
