@@ -1,0 +1,61 @@
+name: Read-only Cloudflare D1 audit
+
+on:
+  push:
+    branches:
+      - preview/visual-only
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-live-d1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - name: Install locked project dependencies
+        run: bun install --no-save
+
+      - name: Verify Cloudflare credentials are available
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::CLOUDFLARE_API_TOKEN is not configured"; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::CLOUDFLARE_ACCOUNT_ID is not configured"; exit 1; }
+          echo "Cloudflare credentials are present; secret values are not printed."
+
+      - name: Read D1 table names and schema only
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          bunx wrangler d1 execute banke-rasane-db --remote --config worker/wrangler.toml --command "SELECT name, sql FROM sqlite_master WHERE type = 'table' ORDER BY name;"
+
+      - name: Read aggregate row counts only
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          bunx wrangler d1 execute banke-rasane-db --remote --config worker/wrangler.toml --command "SELECT 'shows' AS table_name, COUNT(*) AS row_count FROM shows;"
+          bunx wrangler d1 execute banke-rasane-db --remote --config worker/wrangler.toml --command "SELECT 'users' AS table_name, COUNT(*) AS row_count FROM users;"
+          bunx wrangler d1 execute banke-rasane-db --remote --config worker/wrangler.toml --command "SELECT 'sessions' AS table_name, COUNT(*) AS row_count FROM sessions;"
+
+      - name: Record safety boundary
+        if: always()
+        run: |
+          {
+            echo "## D1 audit scope"
+            echo "- Read-only SELECT queries only."
+            echo "- No rows containing usernames, phone numbers, password hashes, session tokens, or show content were queried."
+            echo "- No INSERT, UPDATE, DELETE, DROP, migration, deployment, or database mutation was performed."
+          } >> "$GITHUB_STEP_SUMMARY"
