@@ -13,7 +13,7 @@ const root = path.resolve(__dirname, '..');
  * Copy a directory tree recursively, following symlinks.
  * Uses fs.cpSync which properly resolves symbolic links on all platforms.
  */
-function copyTree(src, dest) {
+function copyTree(src, dest, filter) {
   if (!fs.existsSync(src)) {
     console.warn('[copy-standalone] WARNING: source does not exist: ' + src);
     return false;
@@ -27,6 +27,7 @@ function copyTree(src, dest) {
     dereference: true,
     errorOnExist: false,
     preserveTimestamps: false,
+    ...(filter ? { filter } : {}),
   });
   return true;
 }
@@ -51,7 +52,8 @@ copyTree(
 console.log('[copy-standalone] copying public → .next/standalone/public');
 copyTree(
   path.join(root, 'public'),
-  path.join(root, '.next', 'standalone', 'public')
+  path.join(root, '.next', 'standalone', 'public'),
+  (source) => !source.split(path.sep).includes('program-images')
 );
 
 // Legacy local poster paths are deliberately ignored by getShowThumbnail().
