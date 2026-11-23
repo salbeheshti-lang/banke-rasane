@@ -4926,7 +4926,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
         });
         const imageResult = await imageResponse.json().catch(() => ({}));
         if (!imageResponse.ok || typeof imageResult.dataUrl !== 'string') {
-          showToast(imageResult.error || 'تصویر دریافت شد اما ذخیره‌سازی آن ناموفق بود؛ لینک مستقیم تصویر را بررسی کنید.');
+          showToast(imageResult.error || 'تصویر دریافت شد اما ذخیره‌سازی آن ناموفق بود؛ لینک صفحهٔ برنامه یا تصویر را بررسی کنید.');
           return;
         }
         importedImage = imageResult.dataUrl;
@@ -5595,7 +5595,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
           value={urlInput}
           onChange={(e) => setUrlInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addUrl())}
-          placeholder="لینک مستقیم تصویر (مثلاً ...jpg یا png) را اینجا بچسبانید..."
+          placeholder="لینک مستقیم تصویر یا صفحهٔ برنامه در ویکی‌پدیا/IMDb را وارد کنید..."
           disabled={images.length >= MAX_IMAGES}
           style={{
             flex: 1,
