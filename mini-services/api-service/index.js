@@ -379,8 +379,12 @@ function publicUser(u, viewer) {
     isSuperAdmin: !!u.is_super_admin,
     permissions: Array.from(perms),
   };
-  // Phone visible only to admins (or self)
-  if (viewer && (viewer.role === 'admin' || viewer.id === u.id)) base.phone = u.phone || '';
+  // Users can always see their own phone. Other users' phone numbers are
+  // visible only to admins explicitly granted this permission by super admin.
+  if (viewer && (viewer.id === u.id ||
+      (viewer.role === 'admin' && hasPermission(viewer, 'view_user_phone')))) {
+    base.phone = u.phone || '';
+  }
   return base;
 }
 
@@ -528,6 +532,7 @@ const ALL_PERMISSIONS = {
   manage_genres:    ['admin'],           // add/edit/delete custom genres
   manage_settings:  ['admin'],           // change server URL, report settings
   view_activity:    ['admin'],           // view activity log
+  view_user_phone:  ['admin'],           // view users' phone numbers (explicitly granted by super admin)
   export_reports:   ['admin', 'editor'], // export PDF/Excel
 };
 
@@ -553,7 +558,7 @@ function getUserPermissions(user) {
   }
   
   // No custom permissions — use role-based defaults.
-  if (user.role === 'admin') return new Set(Object.keys(ALL_PERMISSIONS));
+  if (user.role === 'admin') return new Set(Object.keys(ALL_PERMISSIONS).filter(p => p !== 'view_user_phone'));
   if (user.role === 'editor') return new Set(['add_shows', 'edit_shows', 'export_reports']);
   return new Set();
 }
@@ -1841,14 +1846,25 @@ const server = Bun.serve({
       }
       const username = String(body?.username || '').trim();
       const password = String(body?.password || '');
+      const phone = String(body?.phone || '').trim();
       if (!username || !password) return json({ error: 'نام کاربری و رمز عبور را وارد کنید' }, 400, req);
+      if (!phone) return json({ error: 'شماره همراه برای ایجاد کاربر الزامی است' }, 400, req);
       if (password.length < 8) return json({ error: 'رمز عبور باید حداقل ۸ کاراکتر باشد' }, 400, req);
       const existing = getUserByUsername(username);
       if (existing) return json({ error: 'نام کاربری تکراری' }, 409, req);
       const passwordHash = await hashPassword(password);
-      const result = db.prepare('INSERT INTO users (username, password_hash, role, name, job_title, deputy, phone) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
-        username, passwordHash, role, body.name || '', body.jobTitle || '', body.deputy || '', body.phone || ''
-      );
+      let result;
+      try {
+        result = db.prepare('INSERT INTO users (username, password_hash, role, name, job_title, deputy, phone) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
+          username, passwordHash, role, body.name || '', body.jobTitle || '', body.deputy || '', phone
+        );
+      } catch (error) {
+        // The UNIQUE index is the final guard against concurrent duplicate creates.
+        if (String(error?.message || '').includes('UNIQUE constraint failed: users.username')) {
+          return json({ error: 'نام کاربری تکراری' }, 409, req);
+        }
+        throw error;
+      }
       logActivity(admin, 'create_user', 'user', result.lastInsertRowid, `Created user "${username}" with role "${role}"`);
       return json(publicUser(getUserById(result.lastInsertRowid), admin), req);
     }
