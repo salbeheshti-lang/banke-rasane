@@ -10,7 +10,7 @@ const FORBIDDEN = [/تهیه[\u200c ]شده برای/u, /Made\s+for/i];
 const ASSETS = ['client-logo.png', 'client-logo-white.png', 'banke-rasane-logo.png'];
 const FEATURE_MARKERS = [
   'ظرفیت بهره‌برداری',
-  'قرار دادن در ژانر «دکور برنامه‌ها»',
+  'decorIncluded',
   'MediaRecorder',
   'ویکی‌پدیا',
   'IMDb',
