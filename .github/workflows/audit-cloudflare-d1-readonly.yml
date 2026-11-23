@@ -1,6 +1,9 @@
 name: Read-only Cloudflare D1 audit
 
 on:
+  push:
+    branches:
+      - work/preview-d1-audit-trigger-2026-11-23
   workflow_dispatch:
 
 permissions:
