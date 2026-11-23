@@ -105,6 +105,10 @@ async function main() {
       method: 'POST', token, body: JSON.stringify(original),
     });
     assert(created.status === 200 && created.data.num === num, 'new fixture show is created');
+    const capacitySave = await request(`/api/shows/${num}`, { method: 'PUT', token, body: JSON.stringify({ operationalCapacity: 'ظرفیت نمونه برای آزمون' }) });
+    assert(capacitySave.status === 200 && capacitySave.data.operationalCapacity === 'ظرفیت نمونه برای آزمون', 'operational capacity can be saved on a show');
+    const capacityReload = await request(`/api/shows/${num}`, { token });
+    assert(capacityReload.status === 200 && capacityReload.data.operationalCapacity === 'ظرفیت نمونه برای آزمون', 'operational capacity persists after reloading a show');
 
     const sameRecordUpdate = await request('/api/shows/' + num, {
       method: 'PUT', token,
