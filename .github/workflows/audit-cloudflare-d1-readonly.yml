@@ -1,6 +1,9 @@
 name: Read-only Cloudflare D1 audit
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
