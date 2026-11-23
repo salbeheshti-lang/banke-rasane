@@ -7,7 +7,7 @@ function defaultApiBase(): string {
   // every HTTPS host with an empty port as a local gateway sent /api/* back
   // to the Next.js Worker, where backend-only endpoints return 404.
   const configuredApiBase = process.env.NEXT_PUBLIC_BANKRESANEH_API_BASE?.trim();
-  if (configuredApiBase) return configuredApiBase.replace(/\\/+$/, '');
+  if (configuredApiBase) return configuredApiBase.replace(/\/+$/, '');
 
   if (typeof window !== 'undefined') {
     const currentPort = window.location.port;
