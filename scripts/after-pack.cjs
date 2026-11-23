@@ -49,6 +49,7 @@ module.exports = async function afterPack(context) {
     path.join(destination, 'public', 'talk-shows-data.json'),
     path.join(destination, 'public', 'client-logo.png'),
     path.join(destination, 'public', 'client-logo-white.png'),
+    path.join(destination, 'public', 'banke-rasane-logo.png'),
   ];
   for (const file of required) {
     if (!fs.existsSync(file)) {
