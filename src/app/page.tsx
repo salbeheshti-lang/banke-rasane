@@ -28,6 +28,7 @@ interface TalkShow {
   lighting: string;
   summary: string;
   descriptionFa: string;
+  operationalCapacity?: string;
   youtube: string;
   imdb: string;
   wikipedia: string;
@@ -4458,6 +4459,15 @@ function ShowDetailsModal({ show, onClose, onEdit, onDelete, onPublish, onExport
             <p style={{ color: 'rgba(255, 255, 255, 0.9)', lineHeight: 1.8 }}>{show.descriptionFa}</p>
           </div>
 
+          <section className="mb-6 p-4 rounded-xl" style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.24)' }}>
+            <h4 className="font-bold mb-2" style={{ color: '#f0fdf4' }}>ظرفیت بهره‌برداری</h4>
+            {show.operationalCapacity?.trim() ? (
+              <p style={{ color: 'rgba(255, 255, 255, 0.9)', lineHeight: 1.9, whiteSpace: 'pre-wrap' }}>{show.operationalCapacity}</p>
+            ) : (
+              <p className="text-sm" style={{ color: 'rgba(244, 255, 255, 0.62)' }}>این بخش هنوز توسط مدیر تکمیل نشده است.</p>
+            )}
+          </section>
+
           {/* Video links gallery */}
           {show.videos && show.videos.length > 0 && (
             <div className="mb-6">
@@ -4784,6 +4794,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       lighting: 'خنثی',
       summary: '',
       descriptionFa: '',
+      operationalCapacity: '',
       youtube: '',
       imdb: '',
       wikipedia: '',
@@ -5251,6 +5262,20 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
         <FormField label="عناصر دکور" value={form.elements || ''} onChange={v => setForm({ ...form, elements: v })} placeholder="مثلاً: plants, screens/monitors" />
         <FormField label="مواد" value={form.materials || ''} onChange={v => setForm({ ...form, materials: v })} placeholder="مثلاً: wood, glass, metal" />
         <FormField label="رنگ‌آمیزی" value={form.colors || ''} onChange={v => setForm({ ...form, colors: v })} placeholder="مثلاً: red, blue, white" />
+
+        {/* Admin-maintained operational capacity — intentionally separate from imported show descriptions. */}
+        <div className="p-4 rounded-xl" style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.24)' }}>
+          <label className="text-sm font-bold mb-2 block" style={{ color: '#f0fdf4' }}>ظرفیت بهره‌برداری</label>
+          <p className="text-xs mb-3" style={{ color: 'rgba(244, 255, 255, 0.68)' }}>این بخش مستقل از اطلاعات ویکی‌پدیا و IMDb است و بعداً توسط مدیر تکمیل و به‌روزرسانی می‌شود.</p>
+          <textarea
+            value={form.operationalCapacity || ''}
+            onChange={(e) => setForm({ ...form, operationalCapacity: e.target.value })}
+            placeholder="اطلاعات ظرفیت بهره‌برداری این برنامه را وارد کنید..."
+            rows={4}
+            maxLength={12000}
+            style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1px solid rgba(13, 124, 74, 0.2)', background: 'rgba(255, 255, 255, 0.12)', color: '#f0fdf4', fontFamily: 'inherit', outline: 'none', resize: 'vertical' }}
+          />
+        </div>
 
         {/* Persian description */}
         <div>
