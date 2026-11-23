@@ -5834,12 +5834,24 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
     setFilmstrip([]);
     setFilmstripLoading(false);
     if (!next) return;
-    // Some Windows formats (notably MKV/AVI) are reported with an empty MIME type.
-    // Accept the known video extensions here and let the browser's decoder validate playback.
-    const hasVideoMime = next.type.startsWith('video/');
-    const hasSupportedExtension = /\.(mp4|mov|m4v|webm|mkv|avi)$/i.test(next.name);
-    if (!hasVideoMime && !hasSupportedExtension) { setError('لطفاً یک فایل ویدیویی معتبر انتخاب کنید.'); return; }
-    if (next.size > 200 * 1024 * 1024) { setError('حجم فایل ورودی نباید بیشتر از ۲۰۰ مگابایت باشد.'); return; }
+    // Chromium/Electron does not decode every codec merely because the container
+    // extension is accepted by an <input>. Restrict the picker to reliable containers
+    // and give a useful codec-specific recovery path instead of a generic media error.
+    const extension = next.name.split('.').pop()?.toLowerCase() || '';
+    const acceptedContainer = ['mp4', 'm4v', 'mov', 'webm'].includes(extension);
+    const acceptedMime = ['video/mp4', 'video/x-m4v', 'video/quicktime', 'video/webm'].includes(next.type);
+    if (!acceptedContainer && !acceptedMime) {
+      setFile(null); setPreviewUrl(''); setDuration(0); setStart(0); setEnd(0);
+      setError('این ظرف ویدیویی برای ویرایش مستقیم پشتیبانی نمی‌شود. فایل را به MP4 با کدک H.264 و صدای AAC یا WebM با VP8/VP9 تبدیل کنید؛ فایل‌های MKV و AVI را ابتدا تبدیل کنید.');
+      if (inputRef.current) inputRef.current.value = '';
+      return;
+    }
+    if (next.size > 200 * 1024 * 1024) {
+      setFile(null); setPreviewUrl(''); setDuration(0); setStart(0); setEnd(0);
+      setError('حجم فایل ورودی نباید بیشتر از ۲۰۰ مگابایت باشد. ابتدا فایل را با حفظ کیفیت بهینه کنید.');
+      if (inputRef.current) inputRef.current.value = '';
+      return;
+    }
     const url = URL.createObjectURL(next);
     setPreviewUrl(url);
     setFile(next);
@@ -6105,9 +6117,10 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
     <div className="p-3 rounded-xl mb-3" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)' }}>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <strong className="text-sm" style={{ color: '#d1fae5' }}>✂️ ویرایش ویدیو از سیستم (حداکثر ۳۰ ثانیه)</strong>
+        <p className="w-full text-[11px]" style={{ color: 'rgba(209,250,229,.78)' }}>فرمت پیشنهادی: MP4 با H.264 و AAC یا WebM با VP8/VP9. فایل‌های HEVC/H.265، MKV و AVI ممکن است در موتور ویدیویی ویندوز رمزگشایی نشوند؛ در صورت خطا، فقط تغییر پسوند کافی نیست و باید تبدیل واقعی انجام شود.</p>
         <label className="px-3 py-2 rounded-lg text-xs font-bold cursor-pointer" style={{ background: '#0d7c4a', color: 'white' }}>
           انتخاب فایل ویدیو
-          <input ref={inputRef} type="file" accept="video/*,.mp4,.mov,.m4v,.webm,.mkv,.avi" onChange={e => chooseFile(e.target.files?.[0] || null)} style={{ display: 'none' }} />
+          <input ref={inputRef} type="file" accept="video/mp4,video/webm,video/quicktime,.mp4,.m4v,.mov,.webm" onChange={e => chooseFile(e.target.files?.[0] || null)} style={{ display: 'none' }} />
         </label>
       </div>
       {file && previewUrl && (
@@ -6119,7 +6132,15 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
             setEnd(Math.min(30, d));
             if (!d) setError('مدت ویدیو قابل تشخیص نیست یا فرمت آن پشتیبانی نمی‌شود.');
             else if (previewUrl) void buildFilmstrip(previewUrl, d);
-          }} onError={() => setError('این فرمت یا کدک ویدیویی قابل خواندن نیست. فایل را به MP4 (H.264) یا WebM تبدیل کنید.')} style={{ width: '100%', maxHeight: 260, borderRadius: 10, background: '#000', objectFit: 'contain' }} />
+          }} onError={e => {
+            const mediaError = e.currentTarget.error;
+            const code = mediaError?.code;
+            setDuration(0); setStart(0); setEnd(0); setFilmstrip([]);
+            if (code === 2) setError('خواندن فایل ویدیو با خطای ورودی/خروجی مواجه شد. فایل را از دیسک محلی دیگری انتخاب کنید و مطمئن شوید ناقص یا قفل‌شده نیست.');
+            else if (code === 3) setError('کدک ویدیو در این نسخه از مرورگر قابل رمزگشایی نیست. لطفاً فایل را به MP4 با H.264 (نه H.265/HEVC) و صدای AAC یا WebM با VP8/VP9 تبدیل کنید.');
+            else if (code === 4) setError('مرورگر این ظرف یا کدک را پشتیبانی نمی‌کند. برای سازگاری مطمئن، MP4 (H.264 + AAC) یا WebM (VP8/VP9) انتخاب کنید؛ تغییر پسوند فایل کافی نیست.');
+            else setError('خواندن ویدیو ناموفق بود. سالم بودن فایل و پشتیبانی کدک آن را بررسی کنید.');
+          }} style={{ width: '100%', maxHeight: 260, borderRadius: 10, background: '#000', objectFit: 'contain' }} />
           <div className="text-xs" style={{ color: '#d1fae5' }}>
             {file.name} · {(file.size / 1024 / 1024).toFixed(1)} MB · مدت اصلی {formatTime(duration)}
           </div>
