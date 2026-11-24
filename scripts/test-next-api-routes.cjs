@@ -184,21 +184,7 @@ async function main() {
   // Image import is hosted by the selected Bun API backend so Sharp never runs inside Cloudflare Workers.
   const anonymousImageImport = await request(apiBase, '/api/import-image', { method: 'POST', body: { url: 'https://upload.wikimedia.org/test.png' } });
   assert(anonymousImageImport.status === 401, 'Bun image import rejects anonymous requests before fetching an image');
-  const invalidImageImport = await request(apiBase, '/api/import-image', {
-    method: 'POST', token: adminToken, body: { url: 'https://example.com/not-allowed.png' },
-  });
-  assert(invalidImageImport.status === 400, 'Bun image import rejects unapproved hosts before fetching');
-  const imageUploadForm = new FormData();
-  imageUploadForm.set('file', new Blob([
-    '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80"><rect width="120" height="80" fill="#167a50"/></svg>',
-  ], { type: 'image/svg+xml' }), 'program-logo.svg');
-  const imageUploadResponse = await fetch(`${apiBase}/api/import-image`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${adminToken}` },
-    body: imageUploadForm,
-  });
-  const imageUploadResult = await imageUploadResponse.json().catch(() => ({}));
-  assert(imageUploadResponse.status === 200 && typeof imageUploadResult.dataUrl === 'string' && imageUploadResult.dataUrl.startsWith('data:image/webp;base64,'), 'authenticated SVG upload is optimized to WebP on the API service');
+
 
   // The video transcoder is hosted by the selected Bun API backend, not a Next.js route.
   const anonymousTranscode = await request(apiBase, '/api/video/transcode', { method: 'POST', body: {} });
@@ -237,6 +223,22 @@ async function main() {
   });
   assert(changed.status === 200 && !!changed.data.token, 'admin password change rotates the session token');
   const adminToken = changed.data.token;
+
+  const invalidImageImport = await request(apiBase, '/api/import-image', {
+    method: 'POST', token: adminToken, body: { url: 'https://example.com/not-allowed.png' },
+  });
+  assert(invalidImageImport.status === 400, 'Bun image import rejects unapproved hosts before fetching');
+  const imageUploadForm = new FormData();
+  imageUploadForm.set('file', new Blob([
+    '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80"><rect width="120" height="80" fill="#167a50"/></svg>',
+  ], { type: 'image/svg+xml' }), 'program-logo.svg');
+  const imageUploadResponse = await fetch(`${apiBase}/api/import-image`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${adminToken}` },
+    body: imageUploadForm,
+  });
+  const imageUploadResult = await imageUploadResponse.json().catch(() => ({}));
+  assert(imageUploadResponse.status === 200 && typeof imageUploadResult.dataUrl === 'string' && imageUploadResult.dataUrl.startsWith('data:image/webp;base64,'), 'authenticated SVG upload is optimized to WebP on the API service');
 
   // A second, independent API instance proves that Next.js authentication
   // follows the selected backend rather than the frontend's default server.
