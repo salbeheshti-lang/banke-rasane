@@ -2,17 +2,25 @@
 
 const TOKEN_KEY = 'bankresaneh_token';
 
+function isHostedPreview(): boolean {
+  return typeof window !== 'undefined'
+    && window.location.hostname.endsWith('.workers.dev')
+    && /bankresaneh-(?:visual-)?preview/i.test(window.location.hostname);
+}
+
+function configuredHostedApiBase(): string {
+  return (process.env.NEXT_PUBLIC_BANKRESANEH_API_BASE || '').trim().replace(/\/+$/, '');
+}
+
 function defaultApiBase(): string {
-  // Hosted previews must use the API origin baked into the build. Treating
-  // every HTTPS host with an empty port as a local gateway sent /api/* back
-  // to the Next.js Worker, where backend-only endpoints return 404.
-  const configuredApiBase = process.env.NEXT_PUBLIC_BANKRESANEH_API_BASE?.trim();
-  if (configuredApiBase) return configuredApiBase.replace(/\/+$/, '');
+  const configured = configuredHostedApiBase();
+  if (configured) return configured;
 
   if (typeof window !== 'undefined') {
+    if (isHostedPreview()) return 'https://bankresaneh-preview-api.onrender.com';
     const currentPort = window.location.port;
     const currentHost = window.location.hostname;
-    if (currentPort === '81' || currentPort === '443' || currentHost.includes('space-z.ai')) return window.location.origin;
+    if (currentPort === '81' || currentPort === '' || currentPort === '443' || currentHost.includes('space-z.ai')) return window.location.origin;
   }
   return 'http://127.0.0.1:3002';
 }
@@ -22,21 +30,17 @@ function getStoredApiBase(): string | null {
   const custom = localStorage.getItem('server_url');
   if (!custom) return null;
 
-  // Older preview builds could persist the preview Worker itself as the API
-  // server. That stale value takes precedence over the configured backend and
-  // makes login/archive requests hit the frontend Worker (404). Recover it
-  // automatically without overriding an explicitly configured external server.
-  const configured = process.env.NEXT_PUBLIC_BANKRESANEH_API_BASE?.trim();
-  if (configured) {
-    const normalized = custom.replace(/\/+$/, '');
-    if (normalized === window.location.origin) return null;
-    // Also clear the previous public preview Worker URL, which may remain
-    // saved in browsers from an earlier preview session.
+  // A Worker URL is the frontend origin, never the standalone API. Discard
+  // stale preview values saved by older builds while preserving custom APIs.
+  if (isHostedPreview()) {
     try {
-      const savedHost = new URL(normalized).hostname;
-      if (savedHost.endsWith('.workers.dev') && /bankresaneh-(?:visual-)?preview/i.test(savedHost)) return null;
+      const saved = new URL(custom);
+      if (saved.origin === window.location.origin ||
+          (saved.hostname.endsWith('.workers.dev') && /bankresaneh-(?:visual-)?preview/i.test(saved.hostname))) {
+        return null;
+      }
     } catch {
-      // Keep malformed/custom values visible to the existing connection error path.
+      // Keep malformed values on the existing connection-error path.
     }
   }
   return custom;
@@ -49,7 +53,7 @@ export function getApiBase(): string {
 export function getApiUrl(path: string, baseOverride?: string): string {
   const cleanPath = path.replace(/^\/+/, '');
   const stored = getStoredApiBase();
-  const selected = (baseOverride ?? stored ?? '').trim();
+  const selected = (isHostedPreview() ? '' : (baseOverride ?? stored ?? '')).trim();
   const base = (selected || getApiBase()).replace(/\/+$/, '');
   const isGatewayHost = typeof window !== 'undefined'
     && (window.location.port === '81' || window.location.port === '' || window.location.port === '443' || window.location.hostname.includes('space-z.ai'));
