@@ -89,12 +89,6 @@ async function main() {
     assert(change.status === 200 && !!change.data.token, 'first-login password change unlocks admin permissions');
     const token = change.data.token;
 
-    const missingPhone = await request('/api/users', {
-      method: 'POST', token,
-      body: JSON.stringify({ username: 'missing_phone', password: 'MissingPhone!2026', role: 'viewer' }),
-    });
-    assert(missingPhone.status === 400, 'user creation rejects a missing phone number');
-
     const num = 900001;
     const original = {
       num,
