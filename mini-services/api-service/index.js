@@ -15,6 +15,8 @@ import { promisify } from 'node:util';
 import { readFileSync, writeFileSync, renameSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { validateShowVideos } from './video-validation.mjs';
+import { transcodeVideoToMp4, VIDEO_TRANSCODE_LIMITS } from './video-transcode.mjs';
+import { importImageFromUrl, optimizeImageBuffer } from './image-import.mjs';
 
 const PORT = parseInt(process.env.PORT || '3002', 10);
 // Bind to loopback by default. Public/server deployments must opt in explicitly.
@@ -128,7 +130,8 @@ db.exec(`
     wikipedia    TEXT NOT NULL DEFAULT '',
     socialPost   TEXT NOT NULL DEFAULT '',
     images       TEXT NOT NULL DEFAULT '[]',
-    videos       TEXT NOT NULL DEFAULT '[]'
+    videos       TEXT NOT NULL DEFAULT '[]',
+    program_logo_index INTEGER NOT NULL DEFAULT -1
   );
 `);
 
@@ -246,6 +249,7 @@ addColumnIfMissing('shows', 'tags', "TEXT NOT NULL DEFAULT '[]'");
 addColumnIfMissing('shows', 'country', "TEXT NOT NULL DEFAULT ''");
 addColumnIfMissing('shows', 'decor_included', 'INTEGER');
 addColumnIfMissing('shows', 'operational_capacity', "TEXT NOT NULL DEFAULT ''");
+addColumnIfMissing('shows', 'program_logo_index', 'INTEGER NOT NULL DEFAULT -1');
 
 // Full-text search index for the archive. Triggers keep it in sync with show edits.
 let showsFtsAvailable = false;
@@ -407,7 +411,7 @@ function rowToShow(r) {
     colors: fa(r.colors), lighting: fa(r.lighting), summary: fa(r.summary),
     descriptionFa: fa(r.descriptionFa), operationalCapacity: fa(r.operational_capacity || ''), youtube: r.youtube, imdb: r.imdb,
     wikipedia: r.wikipedia, socialPost: fa(r.socialPost), country: fa(r.country || ''),
-    images, videos, tags, decorIncluded: r.decor_included == null ? undefined : !!r.decor_included,
+    images, videos, tags, programLogo: Number.isInteger(r.program_logo_index) && r.program_logo_index >= 0 ? (images[r.program_logo_index] || '') : '', decorIncluded: r.decor_included == null ? undefined : !!r.decor_included,
     isFilm: !!(r.is_film),
     // Expose the image source so the frontend can:
     //   1. know whether a BLOB image exists (non-empty string)
@@ -420,7 +424,7 @@ const SHOW_COLUMNS = [
   'num', 'name', 'category', 'source', 'size', 'viewers', 'style', 'effects', 'layout',
   'elements', 'materials', 'colors', 'lighting', 'summary', 'descriptionFa', 'operational_capacity',
   'youtube', 'imdb', 'wikipedia', 'socialPost', 'images', 'videos', 'tags',
-  'is_film', 'country', 'decor_included',
+  'is_film', 'country', 'decor_included', 'program_logo_index',
 ];
 function showToValues(s) {
   return [
@@ -433,6 +437,7 @@ function showToValues(s) {
     JSON.stringify(Array.isArray(s.tags) ? s.tags : []),
     s.isFilm ? 1 : 0, s.country || '',
     s.decorIncluded === undefined ? null : (s.decorIncluded ? 1 : 0),
+    Array.isArray(s.images) && typeof s.programLogo === 'string' ? s.images.indexOf(s.programLogo) : -1,
   ];
 }
 
@@ -1383,6 +1388,91 @@ const server = Bun.serve({
           'X-Content-Type-Options': 'nosniff',
         },
       });
+    }
+
+    // ----- Authenticated safe image import (Wikipedia/IMDb/direct image URL) -----
+    if (pathname === '/api/import-image' && method === 'POST') {
+      const user = requirePermission(req, 'add_shows') || requirePermission(req, 'edit_shows');
+      if (!user) return permissionFailure(req, 'دسترسی غیرمجاز — نیاز به دسترسی افزودن یا ویرایش برنامه');
+      const contentType = (req.headers.get('content-type') || '').toLowerCase();
+      if (contentType.includes('multipart/form-data')) {
+        const declaredUploadBytes = Number(req.headers.get('content-length') || 0);
+        if (declaredUploadBytes > 26 * 1024 * 1024) return json({ error: 'حجم درخواست تصویر بیشتر از حد مجاز است' }, 413, req);
+        let form;
+        try { form = await req.formData(); } catch { return json({ error: 'فرم بارگذاری تصویر نامعتبر است' }, 400, req); }
+        const file = form.get('file');
+        if (!file || typeof file.arrayBuffer !== 'function' || typeof file.size !== 'number') {
+          return json({ error: 'فایل تصویر انتخاب نشده است' }, 400, req);
+        }
+        const extension = String(file.name || '').split('.').pop()?.toLowerCase() || '';
+        const supportedExtensions = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'tif', 'tiff', 'bmp', 'svg', 'heic', 'heif', 'jp2', 'jxl']);
+        if (!(String(file.type || '').toLowerCase().startsWith('image/') || supportedExtensions.has(extension))) {
+          return json({ error: 'نوع فایل تصویر پشتیبانی نمی‌شود' }, 415, req);
+        }
+        if (file.size < 1 || file.size > 25 * 1024 * 1024) {
+          return json({ error: 'حجم تصویر اولیه باید حداکثر ۲۵ مگابایت باشد' }, 413, req);
+        }
+        try {
+          const output = await optimizeImageBuffer(Buffer.from(await file.arrayBuffer()));
+          logActivity(user, 'import_image_upload', 'image', String(file.name || 'uploaded image').slice(0, 120),
+            'Optimized to WebP (' + output.length + ' bytes)');
+          return json({ dataUrl: 'data:image/webp;base64,' + output.toString('base64'), size: output.length }, 200, req);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : '';
+          if (message.includes('2 MiB')) return json({ error: 'حجم تصویر پس از بهینه‌سازی هنوز زیاد است' }, 413, req);
+          return json({ error: 'فایل تصویر معتبر یا قابل پردازش نیست؛ فرمت را بررسی کنید' }, 415, req);
+        }
+      }
+      let body;
+      try { body = await req.json(); } catch { return json({ error: 'درخواست تصویر نامعتبر است' }, 400, req); }
+      const result = await importImageFromUrl(body?.url);
+      return json(result.body, result.status, req);
+    }
+
+    // ----- Authenticated server-side video trim and MP4 transcode -----
+    if (pathname === '/api/video/transcode' && method === 'POST') {
+      const user = requirePermission(req, 'edit_shows');
+      if (!user) return permissionFailure(req, 'شما اجازه ویرایش و پردازش ویدیو را ندارید');
+      const declaredUploadBytes = Number(req.headers.get('content-length') || 0);
+      if (declaredUploadBytes > 210 * 1024 * 1024) return json({ error: 'حجم درخواست ویدئو بیشتر از حد مجاز است' }, 413, req);
+      let form;
+      try { form = await req.formData(); } catch { return json({ error: 'فرم بارگذاری ویدیو نامعتبر است' }, 400, req); }
+      const file = form.get('file');
+      if (!file || typeof file.arrayBuffer !== 'function' || typeof file.size !== 'number') {
+        return json({ error: 'فایل ویدیو انتخاب نشده است' }, 400, req);
+      }
+      const extension = String(file.name || '').split('.').pop()?.toLowerCase() || '';
+      const supportedExtensions = new Set(['mp4', 'm4v', 'mov', 'webm', 'mkv', 'avi', 'mpeg', 'mpg', '3gp', 'ts', 'flv', 'wmv']);
+      if (!(String(file.type || '').toLowerCase().startsWith('video/') || supportedExtensions.has(extension))) {
+        return json({ error: 'نوع فایل ویدیو پشتیبانی نمی‌شود' }, 415, req);
+      }
+      if (file.size < 1 || file.size > VIDEO_TRANSCODE_LIMITS.maxInputBytes) {
+        return json({ error: 'حجم فایل ورودی باید حداکثر ۲۰۰ مگابایت باشد' }, 413, req);
+      }
+      const startSeconds = Number(form.get('start'));
+      const endSeconds = Number(form.get('end'));
+      if (!Number.isFinite(startSeconds) || !Number.isFinite(endSeconds) ||
+          startSeconds < 0 || endSeconds <= startSeconds ||
+          endSeconds - startSeconds > VIDEO_TRANSCODE_LIMITS.maxClipSeconds) {
+        return json({ error: 'بازه برش باید معتبر و حداکثر ۳۰ ثانیه باشد' }, 400, req);
+      }
+      try {
+        const output = await transcodeVideoToMp4(file, startSeconds, endSeconds);
+        logActivity(user, 'transcode_video', 'video', String(file.name || 'uploaded video').slice(0, 120),
+          'Created H.264/AAC MP4 clip (' + (endSeconds - startSeconds).toFixed(1) + ' seconds)');
+        return json({
+          dataUrl: 'data:video/mp4;base64,' + output.toString('base64'),
+          mime: 'video/mp4',
+          size: output.length,
+          duration: Number((endSeconds - startSeconds).toFixed(3)),
+        }, 200, req);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Video conversion failed';
+        if (message.includes('larger than 8 MiB')) return json({ error: 'حجم خروجی MP4 بیشتر از ۸ مگابایت است؛ بازه کوتاه‌تری انتخاب کنید' }, 413, req);
+        if (message.includes('180-second')) return json({ error: 'پردازش ویدیو بیش از سه دقیقه طول کشید؛ فایل سبک‌تر یا بازه کوتاه‌تری انتخاب کنید' }, 504, req);
+        console.error('[video-transcode] conversion failed:', message.slice(0, 1400));
+        return json({ error: 'تبدیل ویدیو به MP4 ناموفق بود؛ سلامت فایل و پشتیبانی کدک ورودی را بررسی کنید' }, 422, req);
+      }
     }
 
     // ----- Fetch image from Wikipedia ONLY (exact show decor photos) -----

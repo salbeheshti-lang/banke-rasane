@@ -3,7 +3,7 @@
  * End-to-end smoke test for the decor IMDb -> Wikipedia/Wikimedia image fallback.
  *
  * Run with an authenticated local app:
- *   BANKRESANE_TEST_URL=http://localhost:3000
+ *   BANKRESANE_TEST_URL=http://localhost:3002
  *   BANKRESANE_TEST_TOKEN='your-bearer-token'
  *   node scripts/test-decor-image-fallback.cjs
  *

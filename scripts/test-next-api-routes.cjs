@@ -181,10 +181,32 @@ async function main() {
   const deniedReady = await request(nextBase, '/api/internal/ready');
   assert(deniedReady.status === 404, 'Next.js private readiness endpoint hides itself without the startup token');
 
+  // Image import is hosted by the selected Bun API backend so Sharp never runs inside Cloudflare Workers.
+  const anonymousImageImport = await request(apiBase, '/api/import-image', { method: 'POST', body: { url: 'https://upload.wikimedia.org/test.png' } });
+  assert(anonymousImageImport.status === 401, 'Bun image import rejects anonymous requests before fetching an image');
+  const invalidImageImport = await request(apiBase, '/api/import-image', {
+    method: 'POST', token: adminToken, body: { url: 'https://example.com/not-allowed.png' },
+  });
+  assert(invalidImageImport.status === 400, 'Bun image import rejects unapproved hosts before fetching');
+  const imageUploadForm = new FormData();
+  imageUploadForm.set('file', new Blob([
+    '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80"><rect width="120" height="80" fill="#167a50"/></svg>',
+  ], { type: 'image/svg+xml' }), 'program-logo.svg');
+  const imageUploadResponse = await fetch(`${apiBase}/api/import-image`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${adminToken}` },
+    body: imageUploadForm,
+  });
+  const imageUploadResult = await imageUploadResponse.json().catch(() => ({}));
+  assert(imageUploadResponse.status === 200 && typeof imageUploadResult.dataUrl === 'string' && imageUploadResult.dataUrl.startsWith('data:image/webp;base64,'), 'authenticated SVG upload is optimized to WebP on the API service');
+
+  // The video transcoder is hosted by the selected Bun API backend, not a Next.js route.
+  const anonymousTranscode = await request(apiBase, '/api/video/transcode', { method: 'POST', body: {} });
+  assert(anonymousTranscode.status === 401, 'Bun video transcoder rejects anonymous uploads before reading multipart data');
+
   // Next.js route auth: anonymous callers must be rejected before side effects.
   const guardedRoutes = [
     ['/api/fetch-show-info', 'POST', { url: 'not-a-url' }],
-    ['/api/import-image', 'POST', { url: 'https://example.com/image.jpg' }],
     ['/api/translate', 'POST', { fields: {} }],
     ['/api/publish-social', 'POST', { platform: 'invalid', token: 'bad' }],
     ['/api/export-pdf', 'POST', { shows: [{ num: 1, name: 'Auth probe' }] }],
@@ -262,6 +284,12 @@ async function main() {
     body: { platform: 'bale', token: fakeBotToken, chatId: '@bankresane_test', text: 'video', videoUrl: 'https://cdn.example.com/video.mov' },
   });
   assert(invalidVideoUrl.status === 400, 'direct publishing rejects non-MP4 and non-direct video links before contacting the bot API');
+
+  const invalidVideoDataUrl = await request(nextBase, '/api/publish-social', {
+    method: 'POST', token: adminToken,
+    body: { platform: 'bale', token: fakeBotToken, chatId: '@bankresane_test', text: 'video', videoUrl: 'data:video/webm;base64,d2VibQ==' },
+  });
+  assert(invalidVideoDataUrl.status === 400, 'direct publishing rejects edited WebM data URLs instead of mislabeling them as MP4');
   const oversizedMediaCaption = await request(nextBase, '/api/publish-social', {
     method: 'POST', token: adminToken,
     body: { platform: 'bale', token: fakeBotToken, chatId: '@bankresane_test', text: 'x'.repeat(1025), videoUrl: 'https://cdn.example.com/video.mp4' },
