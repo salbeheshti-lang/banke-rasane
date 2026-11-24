@@ -302,7 +302,7 @@ async function main() {
   const unsafeImageSource = await request(nextBase, '/api/import-image', {
     method: 'POST', token: adminToken, body: { url: 'https://example.com/untrusted.jpg' },
   });
-  assert(unsafeImageSource.status === 400, 'image importer rejects untrusted hosts even for authenticated admins');
+  assert(unsafeImageSource.status === 410 && String(unsafeImageSource.data?.error || '').includes('/api/import-image'), 'legacy Next.js image-import route directs clients to the selected Bun API service');
 
   const translateValidation = await request(nextBase, '/api/translate', {
     method: 'POST', token: adminToken, body: { fields: {} },
