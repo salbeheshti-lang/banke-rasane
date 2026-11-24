@@ -141,7 +141,9 @@
           "bankresaneh.sqlite-wal",
           "download-images.js",
           "download-all-images.bat",
-          "video-validation.mjs"
+          "video-validation.mjs",
+          "video-transcode.mjs",
+          "image-import.mjs"
         ]
       },
       {
