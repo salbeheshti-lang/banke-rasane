@@ -3,7 +3,12 @@ import { gatePermissionAny } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
 
-const MAX_SOURCE_BYTES = 5 * 1024 * 1024;
+const MAX_SOURCE_BYTES = 25 * 1024 * 1024;
+const MAX_SOURCE_PIXELS = 40_000_000;
+const SUPPORTED_IMAGE_MIME_TYPES = new Set([
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif',
+  'image/tiff', 'image/bmp', 'image/x-ms-bmp', 'image/svg+xml', 'image/heic', 'image/heif',
+]);
 const ALLOWED_IMAGE_HOSTS = new Set([
   'm.media-amazon.com',
   'images-na.ssl-images-amazon.com',
@@ -153,7 +158,7 @@ export async function POST(request: NextRequest) {
       response = await fetch(target.href, {
         headers: {
           'User-Agent': 'BankResaneh/2.0 (image import)',
-          Accept: 'image/avif,image/webp,image/png,image/jpeg,image/gif',
+          Accept: 'image/avif,image/webp,image/png,image/jpeg,image/gif,image/tiff,image/bmp,image/svg+xml,image/heic,image/heif',
         },
         redirect: 'manual',
         signal: AbortSignal.timeout(15_000),
@@ -178,23 +183,23 @@ export async function POST(request: NextRequest) {
     }
 
     const mime = (response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
-    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'].includes(mime)) {
+    if (!SUPPORTED_IMAGE_MIME_TYPES.has(mime)) {
       return NextResponse.json({ error: 'لینک واردشده به فایل تصویر مستقیم اشاره نمی‌کند' }, { status: 415 });
     }
     const declaredLength = Number(response.headers.get('content-length') || 0);
     if (declaredLength > MAX_SOURCE_BYTES) {
-      return NextResponse.json({ error: 'حجم تصویر بیشتر از ۵ مگابایت است' }, { status: 413 });
+      return NextResponse.json({ error: 'حجم تصویر اولیه بیشتر از ۲۵ مگابایت است' }, { status: 413 });
     }
 
     const source = Buffer.from(await response.arrayBuffer());
     if (!source.length || source.length > MAX_SOURCE_BYTES) {
-      return NextResponse.json({ error: 'حجم تصویر نامعتبر یا بیشتر از ۵ مگابایت است' }, { status: 413 });
+      return NextResponse.json({ error: 'حجم تصویر نامعتبر یا بیشتر از ۲۵ مگابایت است' }, { status: 413 });
     }
 
     let output: Buffer;
     try {
       const sharp = (await import('sharp')).default;
-      output = await sharp(source, { limitInputPixels: 40_000_000 })
+      output = await sharp(source, { limitInputPixels: MAX_SOURCE_PIXELS, failOn: 'error' })
         .rotate()
         .resize(1200, 1800, { fit: 'inside', withoutEnlargement: true })
         .webp({ quality: 82 })
