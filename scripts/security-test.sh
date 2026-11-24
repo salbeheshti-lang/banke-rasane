@@ -374,7 +374,7 @@ for username in limited_admin viewer1 admin2 editor1 willbe_suspended newadmin; 
 done
 
 # 1.1 Create a regular admin (limited_admin) — admin role but NOT super
-api POST /users "$SUPER_TOKEN" '{"username":"limited_admin","password":"Password123","role":"admin","name":"Limited Admin"}'
+api POST /users "$SUPER_TOKEN" '{"username":"limited_admin","password":"Password123","role":"admin","name":"Limited Admin","phone":"09120000099"}'
 LIMITED_ID=$(json_num "$RESP_BODY" "id")
 echo "  created limited_admin id=$LIMITED_ID role=$(json_get "$RESP_BODY" "role")"
 check "1.1 create-limited-admin" 200 "$HTTP_STATUS"
@@ -467,13 +467,13 @@ else
 fi
 
 # 2.2 limited_admin tries to create another admin
-api POST /users "$LIMITED_TOKEN" '{"username":"rogue_admin","password":"Password123","role":"admin","name":"Rogue"}'
+api POST /users "$LIMITED_TOKEN" '{"username":"rogue_admin","password":"Password123","role":"admin","name":"Rogue","phone":"09120000099"}'
 echo "  limited_admin tries to create admin → $HTTP_STATUS (depends: 403 if no create_admins)"
 # Note: limited_admin currently has the full permission set restored, so this might succeed
 # Let's instead test with a properly-restricted user below.
 
 # 2.3 Create a viewer and try to escalate it to admin via limited_admin
-api POST /users "$SUPER_TOKEN" '{"username":"viewer1","password":"Password123","role":"viewer","name":"Viewer One"}'
+api POST /users "$SUPER_TOKEN" '{"username":"viewer1","password":"Password123","role":"viewer","name":"Viewer One","phone":"09120000099"}'
 VIEWER_ID=$(json_num "$RESP_BODY" "id")
 echo "  created viewer1 id=$VIEWER_ID"
 
@@ -516,7 +516,7 @@ check "2.7 super-admin-not-suspendable" 403 "$HTTP_STATUS"
 
 # 2.8 limited_admin tries to modify ANOTHER admin's permissions (not super admin)
 # First, create another admin via super_admin
-api POST /users "$SUPER_TOKEN" '{"username":"admin2","password":"Password123","role":"admin","name":"Admin Two"}'
+api POST /users "$SUPER_TOKEN" '{"username":"admin2","password":"Password123","role":"admin","name":"Admin Two","phone":"09120000099"}'
 ADMIN2_ID=$(json_num "$RESP_BODY" "id")
 echo "  created admin2 id=$ADMIN2_ID"
 
@@ -534,7 +534,7 @@ echo "  → TEST 2 SUMMARY: Limited admin cannot escalate or harm super admin."
 hdr "TEST 3 — Editor role actions"
 
 # 3.1 Create an editor via super admin
-api POST /users "$SUPER_TOKEN" '{"username":"editor1","password":"Password123","role":"editor","name":"Editor One"}'
+api POST /users "$SUPER_TOKEN" '{"username":"editor1","password":"Password123","role":"editor","name":"Editor One","phone":"09120000099"}'
 EDITOR_ID=$(json_num "$RESP_BODY" "id")
 echo "  created editor1 id=$EDITOR_ID"
 
@@ -624,7 +624,7 @@ echo "  editor tries to list users → $HTTP_STATUS (should be 401)"
 check "3.5 editor-cant-list-users" 403 "$HTTP_STATUS"
 
 # 3.6 Editor tries to create a user (should FAIL — no manage_users)
-api POST /users "$EDITOR_TOKEN" '{"username":"rogue","password":"Password123","role":"viewer"}'
+api POST /users "$EDITOR_TOKEN" '{"username":"rogue","password":"Password123","role":"viewer","phone":"09120000099"}'
 echo "  editor tries to create user → $HTTP_STATUS (should be 401)"
 check "3.6 editor-cant-create-user" 403 "$HTTP_STATUS"
 
@@ -673,7 +673,7 @@ echo "  garbage-token GET /users → $HTTP_STATUS (should be 401)"
 check "4.2 garbage-token-rejected" 401 "$HTTP_STATUS"
 
 # 4.3 Suspended user — token must stop working after suspension
-api POST /users "$SUPER_TOKEN" '{"username":"willbe_suspended","password":"Password123","role":"admin","name":"Will Be Suspended"}'
+api POST /users "$SUPER_TOKEN" '{"username":"willbe_suspended","password":"Password123","role":"admin","name":"Will Be Suspended","phone":"09120000099"}'
 SUS_ID=$(json_num "$RESP_BODY" "id")
 api POST /auth/login "" '{"username":"willbe_suspended","password":"Password123"}'
 SUS_TOKEN=$(json_get "$RESP_BODY" "token")
@@ -853,7 +853,7 @@ echo "  users with isSuperAdmin=true: $SUPER_COUNT (should be exactly 1)"
 check "8.1 only-one-super-admin" 1 "$SUPER_COUNT"
 
 # 8.2 Create a new admin via super admin — verify it is NOT super
-api POST /users "$SUPER_TOKEN" '{"username":"newadmin","password":"Password123","role":"admin","name":"New Admin"}'
+api POST /users "$SUPER_TOKEN" '{"username":"newadmin","password":"Password123","role":"admin","name":"New Admin","phone":"09120000099"}'
 NEWADMIN_ID=$(json_num "$RESP_BODY" "id")
 NEWADMIN_IS_SUPER=$(json_bool "$RESP_BODY" "isSuperAdmin")
 echo "  newadmin id=$NEWADMIN_ID isSuper=$NEWADMIN_IS_SUPER (should be false)"

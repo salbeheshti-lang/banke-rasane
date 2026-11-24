@@ -1361,6 +1361,7 @@ function HomeInner() {
       {publishShows && (
         <PublishModal
           shows={publishShows}
+          canManageBotConfig={isAdmin}
           onClose={() => setPublishShows(null)}
           onConfirm={(platform) => {
             showToast(`${publishShows.length.toLocaleString('fa-IR')} برنامه به ${platform} منتشر شد`);
@@ -1371,7 +1372,7 @@ function HomeInner() {
       )}
 
       {/* Bot config modal (Telegram / Bale token + chat ID) */}
-      {showBotConfig && (
+      {showBotConfig && isAdmin && (
         <BotConfigModal
           onClose={() => setShowBotConfig(false)}
           onSaved={() => { setShowBotConfig(false); showToast(t('publish.saved')); }}
@@ -6850,8 +6851,9 @@ const SOCIAL_PLATFORMS = [
   { id: 'instagram', name: 'اینستاگرام', color: '#e1306c', icon: '📷' },
 ];
 
-function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
+function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBotConfig }: {
   shows: TalkShow[];
+  canManageBotConfig: boolean;
   onClose: () => void;
   onConfirm: (platform: string) => void;
   onOpenBotConfig: () => void;
@@ -6870,20 +6872,61 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
   const [sendResult, setSendResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   const directSendSupported = selectedPlatform === 'تلگرام' || selectedPlatform === 'بله';
+  const directImageUrl = shows.length === 1
+    ? ((shows[0].images || []).find((image) => typeof image === 'string' && (/^data:image\//i.test(image) || /^https:\/\//i.test(image)))
+        || (shows[0].imageSource
+          ? getApiUrl(`api/image/${shows[0].num}?v=${encodeURIComponent(shows[0].imageSource)}`)
+          : undefined))
+    : undefined;
+  const directVideoUrl = shows.length === 1
+    ? (shows[0].videos || []).find((value) => {
+        try {
+          const parsed = new URL(value);
+          return parsed.protocol === 'https:' && /\.mp4$/i.test(parsed.pathname);
+        } catch {
+          return false;
+        }
+      })
+    : undefined;
+  const mediaCaptionLimit = directImageUrl || directVideoUrl ? 1024 : 4096;
+  const directCaptionTooLong = postText.length > mediaCaptionLimit;
+  const hasVideoLinksWithoutDirectMp4 = shows.length === 1 &&
+    ((shows[0].videos || []).length > 0 || !!shows[0].youtube) && !directVideoUrl;
 
   // Send the post directly to the selected channel via the /api/publish-social route.
   const handleDirectSend = async () => {
+    if (!canManageBotConfig) {
+      setSendResult({ ok: false, msg: 'مدیریت توکن انتشار فقط برای مدیران مجاز است' });
+      return;
+    }
     if (!botConfig || !botConfig.token || !botConfig.chatId) {
       setSendResult({ ok: false, msg: 'ابتدا تنظیمات ربات را وارد کنید' });
+      return;
+    }
+    if (directCaptionTooLong) {
+      setSendResult({ ok: false, msg: `کپشن رسانه باید حداکثر ${mediaCaptionLimit.toLocaleString('fa-IR')} نویسه باشد؛ متن را کوتاه کنید تا چیزی حذف نشود` });
       return;
     }
     setSending(true);
     setSendResult(null);
     try {
-      // Pick the first available image (real program image if present)
-      const imageUrl = shows.length === 1 && shows[0].images && shows[0].images.length > 0
-        ? shows[0].images[0]
-        : undefined;
+      let publishImageUrl = directImageUrl;
+      // Database-backed cover images are served by the selected API (often
+      // localhost in the Windows EXE). Convert them to a data URL so Bale or
+      // Telegram receives the actual image bytes rather than an unreachable
+      // localhost URL.
+      if (publishImageUrl && !publishImageUrl.startsWith('data:') &&
+          (!/^https:\/\//i.test(publishImageUrl) || (shows.length === 1 && shows[0].imageSource && !(shows[0].images || []).length))) {
+        const imageResponse = await fetch(publishImageUrl, { headers: authHeaders() });
+        if (!imageResponse.ok) throw new Error('تصویر اصلی برنامه از پایگاه داده دریافت نشد');
+        const imageBlob = await imageResponse.blob();
+        publishImageUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('تصویر قابل تبدیل نیست'));
+          reader.onerror = () => reject(new Error('خواندن تصویر ناموفق بود'));
+          reader.readAsDataURL(imageBlob);
+        });
+      }
       const res = await fetch('/api/publish-social', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
@@ -6892,12 +6935,14 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
           token: botConfig.token,
           chatId: botConfig.chatId,
           text: postText,
-          imageUrl,
+          imageUrl: publishImageUrl,
+          videoUrl: directVideoUrl,
         }),
       });
       const data = await res.json();
       if (data.ok) {
-        setSendResult({ ok: true, msg: `✅ پست به ${selectedPlatform} ارسال شد` });
+        const mediaLabel = data.method === 'sendMediaGroup' ? 'ویدئو و تصویر' : data.method === 'sendVideo' ? 'ویدئو' : data.method === 'sendPhoto' ? 'تصویر' : 'پیام';
+        setSendResult({ ok: true, msg: `✅ ${mediaLabel} به ${selectedPlatform} ارسال شد` });
       } else {
         setSendResult({ ok: false, msg: `❌ ${data.error || 'ارسال ناموفق'}` });
       }
@@ -7137,13 +7182,22 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
                   resize: 'vertical',
                 }}
               />
+              <div className="mt-1 text-xs text-right" style={{ color: directCaptionTooLong ? '#fca5a5' : 'rgba(244,255,255,0.65)' }}>
+                {postText.length.toLocaleString('fa-IR')} / {mediaCaptionLimit.toLocaleString('fa-IR')} نویسه
+                {directCaptionTooLong ? ' — کپشن از حد مجاز بیشتر است' : ''}
+              </div>
+              {hasVideoLinksWithoutDirectMp4 && (
+                <div className="mt-2 text-xs" style={{ color: '#fbbf24' }}>
+                  لینک ویدئوی ثبت‌شده صفحهٔ پخش است، نه فایل MP4 مستقیم؛ برای ارسال ویدئو به کانال، یک لینک مستقیم HTTPS به فایل MP4 لازم است.
+                </div>
+              )}
             </div>
           </div>
 
           {/* Action buttons */}
           <div className="space-y-3">
             {/* Direct send (Telegram / Bale only) */}
-            {directSendSupported && (
+            {directSendSupported && canManageBotConfig && (
               <div
                 className="p-3 rounded-xl"
                 style={{ background: 'rgba(13, 124, 74,0.06)', border: '1px solid rgba(13, 124, 74,0.18)' }}
@@ -7167,9 +7221,9 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
                 </div>
                 <button
                   onClick={handleDirectSend}
-                  disabled={!botConfig || sending}
+                  disabled={!botConfig || sending || directCaptionTooLong}
                   className="btn-enter-premium w-full mt-3"
-                  style={{ opacity: botConfig && !sending ? 1 : 0.5, cursor: botConfig && !sending ? 'pointer' : 'not-allowed' }}
+                  style={{ opacity: botConfig && !sending && !directCaptionTooLong ? 1 : 0.5, cursor: botConfig && !sending && !directCaptionTooLong ? 'pointer' : 'not-allowed' }}
                 >
                   {sending ? '⏳ در حال ارسال...' : `📡 ارسال مستقیم به ${selectedPlatform}`}
                 </button>

@@ -256,6 +256,18 @@ async function main() {
   const viewerReportSettings = await request(nextBase, '/api/settings/report', { token: viewerToken });
   assert(viewerReportSettings.status === 200, 'authenticated viewer can read non-sensitive report defaults');
 
+  const fakeBotToken = '1234567890:abcdefghijklmnopqrstuvwxyz123456';
+  const invalidVideoUrl = await request(nextBase, '/api/publish-social', {
+    method: 'POST', token: adminToken,
+    body: { platform: 'bale', token: fakeBotToken, chatId: '@bankresane_test', text: 'video', videoUrl: 'https://cdn.example.com/video.mov' },
+  });
+  assert(invalidVideoUrl.status === 400, 'direct publishing rejects non-MP4 and non-direct video links before contacting the bot API');
+  const oversizedMediaCaption = await request(nextBase, '/api/publish-social', {
+    method: 'POST', token: adminToken,
+    body: { platform: 'bale', token: fakeBotToken, chatId: '@bankresane_test', text: 'x'.repeat(1025), videoUrl: 'https://cdn.example.com/video.mp4' },
+  });
+  assert(oversizedMediaCaption.status === 400, 'direct publishing rejects over-limit media captions instead of silently truncating program details');
+
   // Admin success paths for local Next.js features; external services are not contacted.
   const unsafeImageSource = await request(nextBase, '/api/import-image', {
     method: 'POST', token: adminToken, body: { url: 'https://example.com/untrusted.jpg' },
