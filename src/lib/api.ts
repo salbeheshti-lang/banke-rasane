@@ -9,7 +9,7 @@ function isHostedPreview(): boolean {
 }
 
 function configuredHostedApiBase(): string {
-  return (process.env.NEXT_PUBLIC_BANKRESANEH_API_BASE || '').trim().replace(/\\/+$/, '');
+  return (process.env.NEXT_PUBLIC_BANKRESANEH_API_BASE || '').trim().replace(/\/+$/, '');
 }
 
 function defaultApiBase(): string {
@@ -51,10 +51,10 @@ export function getApiBase(): string {
 }
 
 export function getApiUrl(path: string, baseOverride?: string): string {
-  const cleanPath = path.replace(/^\\/+/, '');
+  const cleanPath = path.replace(/^\/+/, '');
   const stored = getStoredApiBase();
   const selected = (isHostedPreview() ? '' : (baseOverride ?? stored ?? '')).trim();
-  const base = (selected || getApiBase()).replace(/\\/+$/, '');
+  const base = (selected || getApiBase()).replace(/\/+$/, '');
   const isGatewayHost = typeof window !== 'undefined'
     && (window.location.port === '81' || window.location.port === '' || window.location.port === '443' || window.location.hostname.includes('space-z.ai'));
   const isCurrentGateway = typeof window !== 'undefined' && isGatewayHost && base === window.location.origin;
@@ -64,6 +64,19 @@ export function getApiUrl(path: string, baseOverride?: string): string {
   }
   return base + '/' + cleanPath;
 }
+
+export function setApiBase(url: string): void {
+  if (typeof window === 'undefined') return;
+  const cleaned = (url || '').trim().replace(/\/+$/, '');
+  const previous = (localStorage.getItem('server_url') || defaultApiBase()).replace(/\/+$/, '');
+  const next = cleaned || defaultApiBase();
+  if (previous !== next) localStorage.removeItem(TOKEN_KEY);
+  if (cleaned) localStorage.setItem('server_url', cleaned);
+  else localStorage.removeItem('server_url');
+}
+
+export function getApiBaseUrl(): string { return getApiBase(); }
+export function getShowImageUrl(showNum: number): string { return getApiUrl('api/image/' + showNum); }
 
 export interface User {
   id: number;
