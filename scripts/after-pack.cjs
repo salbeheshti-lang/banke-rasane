@@ -49,6 +49,7 @@ module.exports = async function afterPack(context) {
     path.join(destination, 'public', 'talk-shows-data.json'),
     path.join(destination, 'public', 'client-logo.png'),
     path.join(destination, 'public', 'client-logo-white.png'),
+    path.join(destination, 'public', 'banke-rasane-logo.png'),
   ];
   for (const file of required) {
     if (!fs.existsSync(file)) {
@@ -64,10 +65,12 @@ module.exports = async function afterPack(context) {
 
   const standaloneBytes = directorySizeBytes(destination);
   const bundledImages = path.join(destination, 'public', 'program-images');
-  const bundledImageBytes = directorySizeBytes(bundledImages);
+  if (fs.existsSync(bundledImages)) {
+    throw new Error('[afterPack] Unused legacy public/program-images directory must not be included in the installer');
+  }
   console.log('[afterPack] ✓ dereferenced Next.js standalone copied once to resources/next-service-dist');
   console.log('[afterPack] ✓ next@' + nextPackage.version + ' and ' + seed.length + ' archive records verified');
   console.log('[afterPack] standalone payload: ' + (standaloneBytes / 1024 / 1024).toFixed(1) + ' MiB');
-  console.log('[afterPack] program-images payload: ' + (bundledImageBytes / 1024 / 1024).toFixed(1) + ' MiB');
+  console.log('[afterPack] ✓ unused program-images excluded; SQLite image_data BLOBs preserved');
   console.log('[afterPack] duplicate standalone tree: absent');
 };

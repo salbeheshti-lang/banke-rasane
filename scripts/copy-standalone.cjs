@@ -13,7 +13,7 @@ const root = path.resolve(__dirname, '..');
  * Copy a directory tree recursively, following symlinks.
  * Uses fs.cpSync which properly resolves symbolic links on all platforms.
  */
-function copyTree(src, dest) {
+function copyTree(src, dest, filter) {
   if (!fs.existsSync(src)) {
     console.warn('[copy-standalone] WARNING: source does not exist: ' + src);
     return false;
@@ -27,8 +27,20 @@ function copyTree(src, dest) {
     dereference: true,
     errorOnExist: false,
     preserveTimestamps: false,
+    ...(filter ? { filter } : {}),
   });
   return true;
+}
+
+function directorySizeBytes(directory) {
+  if (!fs.existsSync(directory)) return 0;
+  let total = 0;
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const fullPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) total += directorySizeBytes(fullPath);
+    else if (entry.isFile()) total += fs.statSync(fullPath).size;
+  }
+  return total;
 }
 
 console.log('[copy-standalone] copying .next/static → .next/standalone/.next/static');
@@ -40,8 +52,19 @@ copyTree(
 console.log('[copy-standalone] copying public → .next/standalone/public');
 copyTree(
   path.join(root, 'public'),
-  path.join(root, '.next', 'standalone', 'public')
+  path.join(root, '.next', 'standalone', 'public'),
+  (source) => !source.split(path.sep).includes('program-images')
 );
+
+// Legacy local poster paths are deliberately ignored by getShowThumbnail().
+// Real images come from HTTPS sources or the image_data BLOBs in SQLite, so
+// this old static directory must not inflate the Windows installer.
+const legacyProgramImages = path.join(root, '.next', 'standalone', 'public', 'program-images');
+if (fs.existsSync(legacyProgramImages)) {
+  const removedBytes = directorySizeBytes(legacyProgramImages);
+  fs.rmSync(legacyProgramImages, { recursive: true, force: true });
+  console.log('[copy-standalone] excluded unused public/program-images (' + (removedBytes / 1024 / 1024).toFixed(1) + ' MiB); SQLite image_data BLOBs are untouched');
+}
 
 // === Verify that standalone/node_modules exists and has 'next' ===
 const standaloneNodeModules = path.join(root, '.next', 'standalone', 'node_modules');
