@@ -37,6 +37,7 @@ interface TalkShow {
   isFilm?: boolean;
   tags?: string[];
   images?: string[];
+  programLogo?: string;
   videos?: string[];
   // Explicit user choice; undefined preserves legacy decor classification.
   decorIncluded?: boolean;
@@ -1361,6 +1362,7 @@ function HomeInner() {
       {publishShows && (
         <PublishModal
           shows={publishShows}
+          canManageBotConfig={isAdmin}
           onClose={() => setPublishShows(null)}
           onConfirm={(platform) => {
             showToast(`${publishShows.length.toLocaleString('fa-IR')} برنامه به ${platform} منتشر شد`);
@@ -1371,7 +1373,7 @@ function HomeInner() {
       )}
 
       {/* Bot config modal (Telegram / Bale token + chat ID) */}
-      {showBotConfig && (
+      {showBotConfig && isAdmin && (
         <BotConfigModal
           onClose={() => setShowBotConfig(false)}
           onSaved={() => { setShowBotConfig(false); showToast(t('publish.saved')); }}
@@ -2684,7 +2686,7 @@ function UserProfileModal({ user, onClose, showToast }: {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
               تغییر عکس
-              <input type="file" accept="image/*" onChange={handleAvatarUpload} style={{ display: 'none' }} />
+              <input type="file" accept="image/*,.heic,.heif,.tif,.tiff,.bmp,.svg,.jxl,.jp2" onChange={handleAvatarUpload} style={{ display: 'none' }} />
             </label>
           )}
           {/* Name + role + username — overlaid ON the image */}
@@ -4919,14 +4921,14 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       const info = data.info || {};
       let importedImage = info.image;
       if (typeof importedImage === 'string' && /^https:\/\//i.test(importedImage)) {
-        const imageResponse = await fetch('/api/import-image', {
+        const imageResponse = await fetch(getApiUrl('api/import-image'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({ url: importedImage }),
         });
         const imageResult = await imageResponse.json().catch(() => ({}));
         if (!imageResponse.ok || typeof imageResult.dataUrl !== 'string') {
-          showToast(imageResult.error || 'تصویر دریافت شد اما ذخیره‌سازی آن ناموفق بود؛ لینک مستقیم تصویر را بررسی کنید.');
+          showToast(imageResult.error || 'تصویر دریافت شد اما ذخیره‌سازی آن ناموفق بود؛ لینک صفحهٔ برنامه یا تصویر را بررسی کنید.');
           return;
         }
         importedImage = imageResult.dataUrl;
@@ -5326,6 +5328,8 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
         <ImageGalleryEditor
           images={form.images || []}
           onChange={(imgs) => setForm({ ...form, images: imgs })}
+          programLogo={form.programLogo || ''}
+          onProgramLogoChange={(logo) => setForm({ ...form, programLogo: logo })}
           showToast={showToast}
         />
 
@@ -5430,9 +5434,11 @@ function FormSelect({ label, value, onChange, options }: {
 // IMAGE GALLERY EDITOR — up to 8 images per show
 // Supports both URL paste and file upload (base64 for offline storage)
 // ============================================
-function ImageGalleryEditor({ images, onChange, showToast }: {
+function ImageGalleryEditor({ images, onChange, programLogo, onProgramLogoChange, showToast }: {
   images: string[];
   onChange: (imgs: string[]) => void;
+  programLogo: string;
+  onProgramLogoChange: (logo: string) => void;
   showToast: (msg: string) => void;
 }) {
   const [urlInput, setUrlInput] = useState('');
@@ -5465,7 +5471,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
 
     setImportingUrl(true);
     try {
-      const response = await fetch('/api/import-image', {
+      const response = await fetch(getApiUrl('api/import-image'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ url: trimmed }),
@@ -5489,53 +5495,6 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
     }
   };
 
-  const compressImageFile = async (file: File): Promise<string> => {
-    if (!file.type.startsWith('image/')) throw new Error('فایل انتخاب‌شده تصویر نیست');
-    if (file.size > 25 * 1024 * 1024) throw new Error('حجم تصویر اولیه نباید بیشتر از ۲۵ مگابایت باشد');
-
-    // createImageBitmap applies EXIF orientation where supported. The scale
-    // calculation preserves the original aspect ratio; no stretching/cropping.
-    const bitmap = await createImageBitmap(file);
-    try {
-      const maxWidth = 1200;
-      const maxHeight = 1800;
-      const scale = Math.min(1, maxWidth / bitmap.width, maxHeight / bitmap.height);
-      const width = Math.max(1, Math.round(bitmap.width * scale));
-      const height = Math.max(1, Math.round(bitmap.height * scale));
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const context = canvas.getContext('2d');
-      if (!context) throw new Error('امکان پردازش تصویر وجود ندارد');
-      context.imageSmoothingEnabled = true;
-      context.imageSmoothingQuality = 'high';
-      context.drawImage(bitmap, 0, 0, width, height);
-
-      const encode = (type: string, quality: number) => new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('تبدیل تصویر ناموفق بود')), type, quality);
-      });
-      let output = await encode('image/webp', 0.84);
-      let mime = output.type === 'image/webp' ? 'image/webp' : 'image/jpeg';
-      if (output.size > 1.2 * 1024 * 1024) {
-        output = await encode(mime, 0.74);
-      }
-      if (output.size > 1.8 * 1024 * 1024) {
-        output = await encode(mime, 0.66);
-      }
-      if (output.size > 2.5 * 1024 * 1024) {
-        throw new Error('حجم تصویر پس از فشرده‌سازی هنوز زیاد است؛ تصویر کوچک‌تری انتخاب کنید');
-      }
-      return await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('خواندن تصویر ناموفق بود'));
-        reader.onerror = () => reject(new Error('خواندن تصویر ناموفق بود'));
-        reader.readAsDataURL(output);
-      });
-    } finally {
-      bitmap.close();
-    }
-  };
-
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -5546,24 +5505,37 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
       showToast(`فقط ${toAdd.length.toLocaleString('fa-IR')} تصویر اضافه می‌شود (حداکثر ${MAX_IMAGES.toLocaleString('fa-IR')})`);
     }
 
-    // Process sequentially so order is deterministic and memory use stays low.
+    // Process sequentially so the selected API backend optimizes each source
+    // format safely without relying on the browser's image decoder.
     for (const file of toAdd) {
       try {
-        const result = await compressImageFile(file);
+        const formData = new FormData();
+        formData.set('file', file, file.name);
+        const response = await fetch(getApiUrl('api/import-image'), {
+          method: 'POST',
+          headers: authHeaders(),
+          body: formData,
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || typeof result.dataUrl !== 'string') {
+          throw new Error(result.error || `پردازش تصویر ${file.name} ناموفق بود`);
+        }
         const current = imagesRef.current;
-        if (current.length < MAX_IMAGES && !current.includes(result)) {
-          onChange([...current, result]);
+        if (current.length < MAX_IMAGES && !current.includes(result.dataUrl)) {
+          onChange([...current, result.dataUrl]);
         }
       } catch (error) {
         showToast(error instanceof Error ? error.message : `خطا در پردازش تصویر: ${file.name}`);
       }
     }
-    showToast('تصاویر بهینه شدند؛ نسبت تصویر حفظ شده و حجم فایل کاهش یافته است.');
+    showToast('تصاویر در سرور انتخاب‌شده به WebP بهینه شدند؛ نسبت تصویر حفظ شده است.');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const removeImage = (idx: number) => {
+    const removed = images[idx];
     onChange(images.filter((_, i) => i !== idx));
+    if (programLogo && programLogo === removed) onProgramLogoChange('');
   };
 
   const moveImage = (idx: number, dir: 'left' | 'right') => {
@@ -5584,7 +5556,9 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
           </span>
         </h4>
         {images.length > 0 && (
-          <span className="text-xs" style={{ color: '#54D9C0' }}>تصویر اول = کاور</span>
+          <span className="text-xs" style={{ color: programLogo ? '#fbbf24' : '#54D9C0' }}>
+            {programLogo ? 'لوگوی برنامه انتخاب شده' : 'برای تعیین لوگوی برنامه، روی تصویر موردنظر بزنید'}
+          </span>
         )}
       </div>
 
@@ -5595,7 +5569,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
           value={urlInput}
           onChange={(e) => setUrlInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addUrl())}
-          placeholder="لینک مستقیم تصویر (مثلاً ...jpg یا png) را اینجا بچسبانید..."
+          placeholder="لینک مستقیم تصویر یا صفحهٔ برنامه در ویکی‌پدیا/IMDb را وارد کنید..."
           disabled={images.length >= MAX_IMAGES}
           style={{
             flex: 1,
@@ -5725,6 +5699,14 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
                   کاور
                 </span>
               )}
+              {programLogo === img && (
+                <span
+                  className="absolute bottom-1 right-1 text-[10px] px-2 py-1 rounded-md font-bold"
+                  style={{ background: '#f59e0b', color: '#1f2937' }}
+                >
+                  لوگوی برنامه
+                </span>
+              )}
               {/* Number badge */}
               <span
                 className="absolute top-1 left-1 text-xs px-1.5 py-0.5 rounded-md font-bold"
@@ -5751,6 +5733,14 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                   </svg>
+                </button>
+                <button
+                  onClick={() => onProgramLogoChange(programLogo === img ? '' : img)}
+                  className="px-2 py-1.5 rounded-lg text-[10px] font-bold"
+                  style={{ background: programLogo === img ? '#f59e0b' : 'rgba(255,255,255,0.9)', color: '#1a2e1a' }}
+                  title={programLogo === img ? 'حذف انتخاب لوگو' : 'انتخاب به‌عنوان لوگوی برنامه'}
+                >
+                  {programLogo === img ? '★ انتخاب شد' : '★ لوگو'}
                 </button>
                 <button
                   onClick={() => removeImage(idx)}
@@ -5806,7 +5796,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
 }
 
 // ============================================
-// LOCAL VIDEO CLIP EDITOR — browser-native trim/transcode, max 30 seconds
+// LOCAL VIDEO CLIP EDITOR — authenticated FFmpeg MP4 trim/transcode, max 30 seconds
 function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState('');
@@ -5842,7 +5832,7 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
     const acceptedMime = ['video/mp4', 'video/x-m4v', 'video/quicktime', 'video/webm'].includes(next.type);
     if (!acceptedContainer && !acceptedMime) {
       setFile(null); setPreviewUrl(''); setDuration(0); setStart(0); setEnd(0);
-      setError('این ظرف ویدیویی برای ویرایش مستقیم پشتیبانی نمی‌شود. فایل را به MP4 با کدک H.264 و صدای AAC یا WebM با VP8/VP9 تبدیل کنید؛ فایل‌های MKV و AVI را ابتدا تبدیل کنید.');
+      setError('این فایل در قالب شناخته‌شده ویدیویی نیست. فایل ویدیویی سالم با فرمت‌های رایج را انتخاب کنید.');
       if (inputRef.current) inputRef.current.value = '';
       return;
     }
@@ -6006,116 +5996,33 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
   };
 
   const exportClip = async () => {
-    const video = videoRef.current;
-    if (!video || !previewUrl || busy) return;
+    if (!file || !previewUrl || busy) return;
     const clipLength = end - start;
     if (!Number.isFinite(duration) || duration <= 0 || !(clipLength > 0) || clipLength > 30) {
       setError('مدت کلیپ باید بیشتر از صفر و حداکثر ۳۰ ثانیه باشد.');
       return;
     }
-    const captureStream = (video as HTMLVideoElement & { captureStream?: () => MediaStream }).captureStream;
-    if (typeof MediaRecorder === 'undefined' || typeof captureStream !== 'function') {
-      setError('پردازش ویدیو در این نسخه پشتیبانی نمی‌شود. لطفاً از نسخه دسکتاپ به‌روز استفاده کنید.');
-      return;
-    }
 
     setBusy(true);
     setError('');
-    let stream: MediaStream | null = null;
-    let recorder: MediaRecorder | null = null;
-    let stopTimer: number | undefined;
     try {
-      video.pause();
-      await new Promise<void>((resolve, reject) => {
-        const timeout = window.setTimeout(() => { cleanup(); reject(new Error('آماده‌سازی فریم ویدیو بیش از حد طول کشید.')); }, 12000);
-        const cleanup = () => {
-          window.clearTimeout(timeout);
-          video.removeEventListener('seeked', onSeeked);
-          video.removeEventListener('error', onError);
-        };
-        const onSeeked = () => { cleanup(); resolve(); };
-        const onError = () => { cleanup(); reject(new Error('خواندن فایل ویدیو ناموفق بود.')); };
-        video.addEventListener('seeked', onSeeked, { once: true });
-        video.addEventListener('error', onError, { once: true });
-        if (Math.abs(video.currentTime - start) < 0.02 && video.readyState >= 2) {
-          cleanup();
-          resolve();
-        } else {
-          video.currentTime = start;
-        }
+      const form = new FormData();
+      form.set('file', file, file.name);
+      form.set('start', String(start));
+      form.set('end', String(end));
+      const response = await fetch(getApiUrl('api/video/transcode'), {
+        method: 'POST',
+        headers: authHeaders(),
+        body: form,
       });
-
-      stream = captureStream.call(video);
-      if (!stream.getVideoTracks().length) throw new Error('جریان تصویر از فایل ساخته نشد؛ فایل را دوباره بارگذاری کنید.');
-      const mimeType = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
-        .find(type => MediaRecorder.isTypeSupported(type));
-      if (!mimeType) throw new Error('کدک خروجی WebM در این سیستم پشتیبانی نمی‌شود.');
-      recorder = new MediaRecorder(stream, {
-        mimeType,
-        videoBitsPerSecond: 900000,
-        audioBitsPerSecond: 96000,
-      });
-      const chunks: BlobPart[] = [];
-      const finished = new Promise<Blob>((resolve, reject) => {
-        recorder!.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
-        recorder!.onerror = () => reject(new Error('پردازش ویدیو با خطا متوقف شد.'));
-        recorder!.onstop = () => resolve(new Blob(chunks, { type: mimeType }));
-      });
-
-      const stopped = new Promise<void>((resolve, reject) => {
-        let settled = false;
-        const finish = (err?: Error) => {
-          if (settled) return;
-          settled = true;
-          if (stopTimer) window.clearTimeout(stopTimer);
-          video.removeEventListener('timeupdate', checkEnd);
-          if (err) reject(err); else resolve();
-        };
-        const stop = () => {
-          video.pause();
-          if (recorder && recorder.state !== 'inactive') recorder.stop();
-          finish();
-        };
-        const checkEnd = () => {
-          if (video.currentTime >= end || video.ended) stop();
-        };
-        video.addEventListener('timeupdate', checkEnd);
-        stopTimer = window.setTimeout(() => {
-          // Do not silently save a truncated clip when decoding stalls or playback is throttled.
-          if (video.currentTime < end - 0.25) {
-            video.pause();
-            if (recorder && recorder.state !== 'inactive') recorder.stop();
-            finish(new Error('پردازش پیش از رسیدن به نقطه پایان متوقف شد؛ فایل را دوباره انتخاب یا بازه کوتاه‌تری تعیین کنید.'));
-            return;
-          }
-          stop();
-        }, Math.ceil(clipLength * 1000) + 2500);
-        video.play().then(() => {
-          if (video.currentTime >= end) stop();
-        }).catch(() => finish(new Error('پخش ویدیو برای پردازش آغاز نشد.')));
-      });
-
-      recorder.start(200);
-      await stopped;
-      const blob = await finished;
-      if (!blob.size) throw new Error('فایل خروجی خالی است؛ دوباره تلاش کنید.');
-      if (blob.size > 8 * 1024 * 1024) throw new Error('حجم خروجی بیش از ۸ مگابایت شد. بازه کوتاه‌تری انتخاب کنید.');
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result));
-        reader.onerror = () => reject(new Error('ذخیره فایل پردازش‌شده ناموفق بود.'));
-        reader.readAsDataURL(blob);
-      });
-      setExportedUrl(dataUrl);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'پردازش ویدیو ناموفق بود.');
-    } finally {
-      if (stopTimer) window.clearTimeout(stopTimer);
-      if (recorder && recorder.state !== 'inactive') {
-        try { recorder.stop(); } catch {}
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || typeof result.dataUrl !== 'string' || !result.dataUrl.startsWith('data:video/mp4;base64,')) {
+        throw new Error(result.error || 'تبدیل ویدیو به MP4 ناموفق بود.');
       }
-      if (stream) stream.getTracks().forEach(track => track.stop());
-      if (videoRef.current) videoRef.current.pause();
+      setExportedUrl(result.dataUrl);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'پردازش ویدیو ناموفق بود.');
+    } finally {
       setBusy(false);
     }
   };
@@ -6124,7 +6031,7 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
     <div className="p-3 rounded-xl mb-3" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)' }}>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <strong className="text-sm" style={{ color: '#d1fae5' }}>✂️ ویرایش ویدیو از سیستم (حداکثر ۳۰ ثانیه)</strong>
-        <p className="w-full text-[11px]" style={{ color: 'rgba(209,250,229,.78)' }}>فرمت پیشنهادی: MP4 با H.264 و AAC یا WebM با VP8/VP9. فایل‌های HEVC/H.265، MKV و AVI ممکن است در موتور ویدیویی ویندوز رمزگشایی نشوند؛ در صورت خطا، فقط تغییر پسوند کافی نیست و باید تبدیل واقعی انجام شود.</p>
+        <p className="w-full text-[11px]" style={{ color: 'rgba(209,250,229,.78)' }}>برای پیش‌نمایش، ورودی باید MP4 با H.264/AAC یا WebM با VP8/VP9 باشد؛ خروجی نهایی همیشه MP4 با H.264/AAC است.</p>
         <label className="px-3 py-2 rounded-lg text-xs font-bold cursor-pointer" style={{ background: '#0d7c4a', color: 'white' }}>
           انتخاب فایل ویدیو
           <input ref={inputRef} type="file" accept="video/mp4,video/webm,video/quicktime,.mp4,.m4v,.mov,.webm" onChange={e => chooseFile(e.target.files?.[0] || null)} style={{ display: 'none' }} />
@@ -6245,7 +6152,7 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
             </button>
             <button type="button" onClick={resetEditor} disabled={busy} className="px-3 py-2 rounded-lg text-xs" style={{ background: 'rgba(255,255,255,.12)', color: '#d1fae5' }}>انصراف</button>
           </div>
-          <p className="text-[11px]" style={{ color: 'rgba(209,250,229,.75)' }}>خروجی WebM با حفظ نسبت تصویر و صدای اصلی ساخته می‌شود؛ فایل اصلی تغییر نمی‌کند. حجم ورودی حداکثر ۲۰۰ مگابایت و خروجی حداکثر ۸ مگابایت است. پشتیبانی از فرمت ورودی به کدک‌های نصب‌شده در مرورگر وابسته است.</p>
+          <p className="text-[11px]" style={{ color: 'rgba(209,250,229,.75)' }}>خروجی عمودی MP4 با نسبت ۹:۱۶، کدک H.264 و صدای AAC ساخته می‌شود؛ تصویر اصلی بدون کشیدگی در مرکز می‌ماند و پس‌زمینهٔ محو از همان ویدئو قاب را پر می‌کند. فایل اصلی تغییر نمی‌کند. حجم ورودی حداکثر ۲۰۰ مگابایت و خروجی حداکثر ۸ مگابایت است.</p>
         </div>
       )}
       {exportedUrl && (
@@ -6257,7 +6164,7 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
           <video src={exportedUrl} controls playsInline preload="metadata" style={{ width: '100%', maxHeight: 260, borderRadius: 10, background: '#000', objectFit: 'contain' }} />
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => { onAdd(exportedUrl); resetEditor(); }} className="px-4 py-2 rounded-lg text-sm font-bold" style={{ background: '#0d7c4a', color: 'white' }}>تأیید و افزودن خروجی به برنامه</button>
-            <a href={exportedUrl} download="bankresaneh-edited-clip.webm" className="px-4 py-2 rounded-lg text-sm" style={{ background: 'rgba(255,255,255,.12)', color: '#d1fae5' }}>دانلود فایل خروجی</a>
+            <a href={exportedUrl} download="bankresaneh-edited-clip.mp4" className="px-4 py-2 rounded-lg text-sm" style={{ background: 'rgba(255,255,255,.12)', color: '#d1fae5' }}>دانلود فایل خروجی</a>
             <button type="button" onClick={() => setExportedUrl('')} className="px-4 py-2 rounded-lg text-sm" style={{ color: '#fca5a5' }}>حذف پیش‌نمایش</button>
           </div>
         </div>
@@ -6850,8 +6757,9 @@ const SOCIAL_PLATFORMS = [
   { id: 'instagram', name: 'اینستاگرام', color: '#e1306c', icon: '📷' },
 ];
 
-function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
+function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBotConfig }: {
   shows: TalkShow[];
+  canManageBotConfig: boolean;
   onClose: () => void;
   onConfirm: (platform: string) => void;
   onOpenBotConfig: () => void;
@@ -6870,20 +6778,157 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
   const [sendResult, setSendResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   const directSendSupported = selectedPlatform === 'تلگرام' || selectedPlatform === 'بله';
+  const directImageUrl = shows.length === 1
+    ? ((shows[0].images || []).find((image) => typeof image === 'string' && (/^data:image\//i.test(image) || /^https:\/\//i.test(image)))
+        || (shows[0].imageSource
+          ? getApiUrl(`api/image/${shows[0].num}?v=${encodeURIComponent(shows[0].imageSource)}`)
+          : undefined))
+    : undefined;
+  const directVideoUrl = shows.length === 1
+    ? (shows[0].videos || []).find((value) => {
+        if (typeof value === 'string' && /^data:video\/mp4;base64,/i.test(value)) return true;
+        try {
+          const parsed = new URL(value);
+          return parsed.protocol === 'https:' && !parsed.username && !parsed.password && /\.mp4$/i.test(parsed.pathname);
+        } catch {
+          return false;
+        }
+      })
+    : undefined;
+  const mediaCaptionLimit = directImageUrl || directVideoUrl ? 1024 : 4096;
+  const directCaptionTooLong = postText.length > mediaCaptionLimit;
+  const hasVideoLinksWithoutDirectMp4 = shows.length === 1 &&
+    ((shows[0].videos || []).length > 0 || !!shows[0].youtube) && !directVideoUrl;
 
   // Send the post directly to the selected channel via the /api/publish-social route.
   const handleDirectSend = async () => {
+    if (!canManageBotConfig) {
+      setSendResult({ ok: false, msg: 'مدیریت توکن انتشار فقط برای مدیران مجاز است' });
+      return;
+    }
     if (!botConfig || !botConfig.token || !botConfig.chatId) {
       setSendResult({ ok: false, msg: 'ابتدا تنظیمات ربات را وارد کنید' });
+      return;
+    }
+    if (directCaptionTooLong) {
+      setSendResult({ ok: false, msg: `کپشن رسانه باید حداکثر ${mediaCaptionLimit.toLocaleString('fa-IR')} نویسه باشد؛ متن را کوتاه کنید تا چیزی حذف نشود` });
       return;
     }
     setSending(true);
     setSendResult(null);
     try {
-      // Pick the first available image (real program image if present)
-      const imageUrl = shows.length === 1 && shows[0].images && shows[0].images.length > 0
-        ? shows[0].images[0]
-        : undefined;
+      let publishImageUrl = directImageUrl;
+      // Database-backed cover images are served by the selected API (often
+      // localhost in the Windows EXE). Convert them to a data URL so Bale or
+      // Telegram receives the actual image bytes rather than an unreachable
+      // localhost URL.
+      if (publishImageUrl && !publishImageUrl.startsWith('data:') &&
+          (!/^https:\/\//i.test(publishImageUrl) || (shows.length === 1 && shows[0].imageSource && !(shows[0].images || []).length))) {
+        const imageResponse = await fetch(publishImageUrl, { headers: authHeaders() });
+        if (!imageResponse.ok) throw new Error('تصویر اصلی برنامه از پایگاه داده دریافت نشد');
+        const imageBlob = await imageResponse.blob();
+        publishImageUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('تصویر قابل تبدیل نیست'));
+          reader.onerror = () => reject(new Error('خواندن تصویر ناموفق بود'));
+          reader.readAsDataURL(imageBlob);
+        });
+      }
+      // Normalize approved external image URLs through the selected API backend.
+      // This avoids asking Bale to fetch a temporary or unsupported image format.
+      if (publishImageUrl && /^https:\/\//i.test(publishImageUrl)) {
+        try {
+          const normalizedResponse = await fetch(getApiUrl('api/import-image'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+            body: JSON.stringify({ url: publishImageUrl }),
+          });
+          const normalized = await normalizedResponse.json().catch(() => ({}));
+          if (normalizedResponse.ok && typeof normalized.dataUrl === 'string') {
+            publishImageUrl = normalized.dataUrl;
+          }
+        } catch {
+          // If a legacy external host is not in the safe image allowlist,
+          // retain its HTTPS URL and let Bale fetch it directly.
+        }
+      }
+      // Compose the second Bale slide with the selected program logo and the
+      // official organization logo. The description remains the photo caption.
+      if (publishImageUrl?.startsWith('data:image/')) {
+        const loadImage = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
+          const image = document.createElement('img');
+          image.onload = () => resolve(image);
+          image.onerror = () => reject(new Error('تصویر برای آماده‌سازی انتشار قابل خواندن نیست'));
+          image.src = src;
+        });
+        const sourceImage = await loadImage(publishImageUrl);
+        let programLogoImage: HTMLImageElement | null = null;
+        const selectedProgramLogo = shows[0]?.programLogo || '';
+        if (selectedProgramLogo) {
+          try {
+            let logoSource = selectedProgramLogo;
+            if (/^https:\/\//i.test(logoSource)) {
+              const logoResponse = await fetch(getApiUrl('api/import-image'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...authHeaders() },
+                body: JSON.stringify({ url: logoSource }),
+              });
+              const logoResult = await logoResponse.json().catch(() => ({}));
+              if (logoResponse.ok && typeof logoResult.dataUrl === 'string') logoSource = logoResult.dataUrl;
+            }
+            if (logoSource.startsWith('data:image/')) programLogoImage = await loadImage(logoSource);
+          } catch {
+            programLogoImage = null;
+          }
+        }
+        let organizationLogoImage: HTMLImageElement | null = null;
+        try {
+          organizationLogoImage = await loadImage(CLIENT_BRANDING.logoColorPath);
+        } catch {
+          organizationLogoImage = null;
+        }
+
+        const scale = Math.min(1, 1600 / sourceImage.naturalWidth, 1600 / sourceImage.naturalHeight);
+        const width = Math.max(1, Math.round(sourceImage.naturalWidth * scale));
+        const height = Math.max(1, Math.round(sourceImage.naturalHeight * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('امکان آماده‌سازی تصویر برای بله وجود ندارد');
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, width, height);
+        context.drawImage(sourceImage, 0, 0, width, height);
+
+        const logos = [
+          { image: programLogoImage, side: 'left' as const },
+          { image: organizationLogoImage, side: 'right' as const },
+        ].filter((item): item is { image: HTMLImageElement; side: 'left' | 'right' } => Boolean(item.image));
+        if (logos.length) {
+          const margin = Math.max(12, Math.round(width * 0.025));
+          const badgeWidth = Math.max(110, Math.round(width * 0.25));
+          const badgeHeight = Math.max(54, Math.round(height * 0.09));
+          const badgeY = height - badgeHeight - margin;
+          for (const item of logos) {
+            const badgeX = item.side === 'left' ? margin : width - badgeWidth - margin;
+            context.fillStyle = 'rgba(255,255,255,0.94)';
+            context.fillRect(badgeX, badgeY, badgeWidth, badgeHeight);
+            const maxLogoWidth = badgeWidth - margin;
+            const maxLogoHeight = badgeHeight - margin;
+            const logoScale = Math.min(maxLogoWidth / item.image.naturalWidth, maxLogoHeight / item.image.naturalHeight);
+            const logoWidth = Math.max(1, item.image.naturalWidth * logoScale);
+            const logoHeight = Math.max(1, item.image.naturalHeight * logoScale);
+            context.drawImage(
+              item.image,
+              badgeX + (badgeWidth - logoWidth) / 2,
+              badgeY + (badgeHeight - logoHeight) / 2,
+              logoWidth,
+              logoHeight,
+            );
+          }
+        }
+        publishImageUrl = canvas.toDataURL('image/jpeg', 0.9);
+      }
       const res = await fetch('/api/publish-social', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
@@ -6892,12 +6937,14 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
           token: botConfig.token,
           chatId: botConfig.chatId,
           text: postText,
-          imageUrl,
+          imageUrl: publishImageUrl,
+          videoUrl: directVideoUrl,
         }),
       });
       const data = await res.json();
       if (data.ok) {
-        setSendResult({ ok: true, msg: `✅ پست به ${selectedPlatform} ارسال شد` });
+        const mediaLabel = data.method === 'sendMediaGroup' ? 'ویدئو و تصویر' : data.method === 'sendVideo' ? 'ویدئو' : data.method === 'sendPhoto' ? 'تصویر' : 'پیام';
+        setSendResult({ ok: true, msg: `✅ ${mediaLabel} به ${selectedPlatform} ارسال شد` });
       } else {
         setSendResult({ ok: false, msg: `❌ ${data.error || 'ارسال ناموفق'}` });
       }
@@ -7137,13 +7184,22 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
                   resize: 'vertical',
                 }}
               />
+              <div className="mt-1 text-xs text-right" style={{ color: directCaptionTooLong ? '#fca5a5' : 'rgba(244,255,255,0.65)' }}>
+                {postText.length.toLocaleString('fa-IR')} / {mediaCaptionLimit.toLocaleString('fa-IR')} نویسه
+                {directCaptionTooLong ? ' — کپشن از حد مجاز بیشتر است' : ''}
+              </div>
+              {hasVideoLinksWithoutDirectMp4 && (
+                <div className="mt-2 text-xs" style={{ color: '#fbbf24' }}>
+                  لینک ویدئوی ثبت‌شده صفحهٔ پخش است، نه فایل MP4 مستقیم؛ برای ارسال ویدئو به کانال، یک لینک مستقیم HTTPS به فایل MP4 لازم است.
+                </div>
+              )}
             </div>
           </div>
 
           {/* Action buttons */}
           <div className="space-y-3">
             {/* Direct send (Telegram / Bale only) */}
-            {directSendSupported && (
+            {directSendSupported && canManageBotConfig && (
               <div
                 className="p-3 rounded-xl"
                 style={{ background: 'rgba(13, 124, 74,0.06)', border: '1px solid rgba(13, 124, 74,0.18)' }}
@@ -7167,9 +7223,9 @@ function PublishModal({ shows, onClose, onConfirm, onOpenBotConfig }: {
                 </div>
                 <button
                   onClick={handleDirectSend}
-                  disabled={!botConfig || sending}
+                  disabled={!botConfig || sending || directCaptionTooLong}
                   className="btn-enter-premium w-full mt-3"
-                  style={{ opacity: botConfig && !sending ? 1 : 0.5, cursor: botConfig && !sending ? 'pointer' : 'not-allowed' }}
+                  style={{ opacity: botConfig && !sending && !directCaptionTooLong ? 1 : 0.5, cursor: botConfig && !sending && !directCaptionTooLong ? 'pointer' : 'not-allowed' }}
                 >
                   {sending ? '⏳ در حال ارسال...' : `📡 ارسال مستقیم به ${selectedPlatform}`}
                 </button>

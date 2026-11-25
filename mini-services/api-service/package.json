@@ -5,6 +5,13 @@
     "dev": "bun --hot index.js"
   },
   "dependencies": {
-    "sharp": "^0.34.3"
-  }
+    "sharp": "^0.34.3",
+    "ffmpeg-static": "^5.2.0",
+    "detect-libc": "^2.0.4",
+    "semver": "^7.7.2"
+  },
+  "trustedDependencies": [
+    "ffmpeg-static",
+    "sharp"
+  ]
 }
