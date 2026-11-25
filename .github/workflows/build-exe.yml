@@ -312,18 +312,18 @@ jobs:
       # This catches extraction/install hangs that win-unpacked tests
       # cannot detect. Silent mode still runs the NSIS install sections.
       # ============================================================
-      - name: Install 5.3.9, upgrade in place to current version, and verify data preservation
+      - name: Install 5.3.6, upgrade in place to current version, and verify data preservation
         shell: pwsh
         timeout-minutes: 30
         run: |
           $ErrorActionPreference = 'Stop'
           $currentVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
           $installDir = Join-Path $env:RUNNER_TEMP 'BankResaneh-Installer-Smoke'
-          $oldSetup = Join-Path $env:RUNNER_TEMP 'BankResaneh-5.3.9-Setup.exe'
+          $oldSetup = Join-Path $env:RUNNER_TEMP 'BankResaneh-5.3.6-Setup.exe'
           $newSetup = (Resolve-Path 'release/BankResaneh-Setup.exe').Path
-          $oldUrl = 'https://github.com/salbeheshti-lang/banke-rasane/releases/download/v5.3.9/BankResaneh-Setup.exe'
+          $oldUrl = 'https://github.com/salbeheshti-lang/banke-rasane/releases/download/v5.3.6/BankResaneh-Setup.exe'
           Invoke-WebRequest -Uri $oldUrl -OutFile $oldSetup
-          if ((Get-Item $oldSetup).Length -lt 100MB) { throw 'Downloaded 5.3.9 installer is unexpectedly small.' }
+          if ((Get-Item $oldSetup).Length -lt 100MB) { throw 'Downloaded 5.3.6 installer is unexpectedly small.' }
 
           function Invoke-Installer([string]$Path, [string]$LogPath) {
             $p = Start-Process -FilePath $Path -ArgumentList @('/S', "/LOG=$LogPath", "/D=$installDir") -PassThru
@@ -332,32 +332,32 @@ jobs:
           }
 
           if (Test-Path $installDir) { Remove-Item $installDir -Recurse -Force }
-          Write-Host '=== Installing the published 5.3.9 baseline ==='
-          Invoke-Installer $oldSetup (Join-Path $env:RUNNER_TEMP 'install-5.3.9.log')
+          Write-Host '=== Installing the published 5.3.6 baseline ==='
+          Invoke-Installer $oldSetup (Join-Path $env:RUNNER_TEMP 'install-5.3.6.log')
           $installedExe = Join-Path $installDir 'BankResaneh.exe'
-          if (-not (Test-Path $installedExe)) { throw '5.3.9 executable missing after baseline install.' }
+          if (-not (Test-Path $installedExe)) { throw '5.3.6 executable missing after baseline install.' }
           node scripts/smoke-electron.cjs "$installedExe"
-          if ($LASTEXITCODE -ne 0) { throw '5.3.9 baseline application did not pass startup/API/database smoke test.' }
+          if ($LASTEXITCODE -ne 0) { throw '5.3.6 baseline application did not pass startup/API/database smoke test.' }
 
           $userData = Join-Path $env:APPDATA 'banke-rasane'
           $dbPath = Join-Path $userData 'db\\bankresaneh.sqlite'
-          if (-not (Test-Path $dbPath)) { throw "5.3.9 did not create its persistent SQLite database: $dbPath" }
+          if (-not (Test-Path $dbPath)) { throw "5.3.6 did not create its persistent SQLite database: $dbPath" }
           $before = @{}
           Get-ChildItem $userData -File -Recurse | ForEach-Object {
             $relative = $_.FullName.Substring($userData.Length).TrimStart('\\')
             $before[$relative] = (Get-FileHash $_.FullName -Algorithm SHA256).Hash
           }
-          Set-Content -LiteralPath (Join-Path $userData 'upgrade-preservation-sentinel.txt') -Value 'created-under-5.3.9' -NoNewline
+          Set-Content -LiteralPath (Join-Path $userData 'upgrade-preservation-sentinel.txt') -Value 'created-under-5.3.6' -NoNewline
           $before['upgrade-preservation-sentinel.txt'] = (Get-FileHash (Join-Path $userData 'upgrade-preservation-sentinel.txt') -Algorithm SHA256).Hash
 
-          Write-Host "=== Upgrading the existing 5.3.9 installation in place to the current $currentVersion build ==="
+          Write-Host "=== Upgrading the existing 5.3.6 installation in place to the current $currentVersion build ==="
           Invoke-Installer $newSetup (Join-Path $env:RUNNER_TEMP "upgrade-to-$currentVersion.log")
           foreach ($relative in $before.Keys) {
             $file = Join-Path $userData $relative
-            if (-not (Test-Path $file -PathType Leaf)) { throw "$currentVersion installer deleted 5.3.9 user-data file: $relative" }
-            if ((Get-FileHash $file -Algorithm SHA256).Hash -ne $before[$relative]) { throw "$currentVersion installer modified 5.3.9 user-data file: $relative" }
+            if (-not (Test-Path $file -PathType Leaf)) { throw "$currentVersion installer deleted 5.3.6 user-data file: $relative" }
+            if ((Get-FileHash $file -Algorithm SHA256).Hash -ne $before[$relative]) { throw "$currentVersion installer modified 5.3.6 user-data file: $relative" }
           }
-          Write-Host "PASS: 5.3.9 -> $currentVersion preserved $($before.Count) user-data files byte-for-byte, including the SQLite database."
+          Write-Host "PASS: 5.3.6 -> $currentVersion preserved $($before.Count) user-data files byte-for-byte, including the SQLite database."
 
           foreach ($required in @($installedExe, (Join-Path $installDir 'resources\\next-service-dist\\server.js'), (Join-Path $installDir 'resources\\api-service\\index.js'), (Join-Path $installDir 'resources\\bun-runtime\\bin\\bun.exe'))) {
             if (-not (Test-Path $required)) { throw "$currentVersion installed file missing: $required" }
@@ -366,7 +366,7 @@ jobs:
           node scripts/smoke-electron.cjs "$installedExe"
           if ($LASTEXITCODE -ne 0) { throw "$currentVersion application failed startup/API/DB/video smoke test after in-place upgrade." }
           Remove-Item Env:BANKRESANEH_VERIFY_VIDEO_EXPORT -ErrorAction SilentlyContinue
-          Write-Host "PASS: actual published 5.3.9 NSIS installation upgraded in place to $currentVersion; persistent DB and files survived; upgraded app starts."
+          Write-Host "PASS: actual published 5.3.6 NSIS installation upgraded in place to $currentVersion; persistent DB and files survived; upgraded app starts."
 
       # ============================================================
       # FULL SMOKE TEST — run the actual BankResaneh.exe and verify:
@@ -416,7 +416,7 @@ jobs:
           if (-not $before.ContainsKey('db\bankresaneh.sqlite')) {
             throw 'The real user database was not created; cannot claim upgrade preservation was tested.'
           }
-          Set-Content -LiteralPath (Join-Path $userData 'upgrade-preservation-sentinel.txt') -Value '5.3.9-to-5.4.0-upgrade-preservation' -NoNewline
+          Set-Content -LiteralPath (Join-Path $userData 'upgrade-preservation-sentinel.txt') -Value '5.3.6-to-5.4.0-upgrade-preservation' -NoNewline
           $before['upgrade-preservation-sentinel.txt'] = (Get-FileHash (Join-Path $userData 'upgrade-preservation-sentinel.txt') -Algorithm SHA256).Hash
 
           Write-Host "Re-running the actual NSIS installer over the existing installation: $installDir"
