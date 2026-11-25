@@ -921,6 +921,14 @@ function HomeInner() {
   const [selectedGenre, setSelectedGenre] = useState<Genre | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  // Responsive detection — without this isMobile stays false forever and
+  // the org badge crowds the mobile header (the reported mobile issue).
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
   const [talkShows, setTalkShows] = useState<TalkShow[]>([]);
   // Base archive data loaded from the authenticated shared API.
   const [baseShows, setBaseShows] = useState<TalkShow[]>([]);
