@@ -1766,6 +1766,7 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               flexShrink: 0,
             }}
           />
+          {/* Desktop: tagline + counts + organization name & logo */}
           {!isMobile && (
             <div
               className="flex flex-col"
@@ -1777,12 +1778,19 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               <span style={{ color: '#54D9C0', fontSize: '11px', marginTop: '2px' }}>
                 {t('app.title')} — {totalShows?.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US') || '0'} {t('dashboard.programs')} {t('dashboard.stripTitle').includes('ژانر') ? 'در' : 'in'} {totalGenres?.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US') || '0'} {t('drawer.genres')}
               </span>
-              <span className="flex items-center gap-1.5" style={{ marginTop: '4px', opacity: 0.9 }} title={t('footer.clientOrg')}>
-                <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2, alignItems: 'flex-start' }}>
-                  <span style={{ color: 'rgba(167, 243, 208, 0.85)', fontSize: '10px', fontWeight: 700, marginTop: '1px' }}>{t('footer.clientOrg')}</span>
-                </span>
-                <Image src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={24} height={25} style={{ opacity: 0.9, objectFit: 'contain' }} />
+              <span className="flex items-center gap-1.5" style={{ marginTop: '4px', opacity: 0.95 }} title={CLIENT_BRANDING.organizationFa}>
+                <span style={{ color: 'rgba(167, 243, 208, 0.9)', fontSize: '10px', fontWeight: 700, lineHeight: 1.2 }}>{CLIENT_BRANDING.organizationFa}</span>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={32} height={32} style={{ opacity: 0.95, objectFit: 'contain' }} />
               </span>
+            </div>
+          )}
+          {/* Mobile: compact organization name + logo next to the main logo */}
+          {isMobile && (
+            <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={26} height={26} style={{ opacity: 0.95, objectFit: 'contain' }} />
+              <span style={{ color: 'rgba(167, 243, 208, 0.85)', fontSize: '8.5px', fontWeight: 700, lineHeight: 1.1, whiteSpace: 'nowrap' }}>{CLIENT_BRANDING.organizationFa}</span>
             </div>
           )}
         </div>
@@ -1864,15 +1872,27 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               {!isMobile && <span>{t('nav.backShort')}</span>}
             </button>
           ) : isMobile ? (
+            /* Mobile: small connection-status dot only (the old app.title badge
+               box was redundant next to the main logo and crowded the header). */
             <span
-              className="px-2.5 py-1 rounded-full text-xs font-bold"
+              className="flex items-center justify-center"
               style={{
-                background: 'rgba(13, 124, 74, 0.1)',
-                color: '#54D9C0',
-                border: '1px solid rgba(13, 124, 74, 0.2)',
+                minWidth: '36px',
+                minHeight: '36px',
               }}
+              title={t('app.connected')}
+              aria-label={t('app.connected')}
             >
-              {t('app.title')}
+              <span
+                className="rounded-full"
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  backgroundColor: '#10b981',
+                  boxShadow: '0 0 8px #10b981',
+                  animation: 'pulse 2s ease-in-out infinite',
+                }}
+              />
             </span>
           ) : (
             <div

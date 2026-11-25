@@ -8,7 +8,7 @@ import { CLIENT_BRANDING } from '@/lib/branding';
  * BrandFooter — sticky footer shown on every page.
  *
  * Layout: a single row with the BankResaneh mark on the right (RTL start)
- * and the client logo (مؤسسه فرهنگی هنری مرکز عروج منیر) on the left (RTL end),
+ * and the organization logo on the left (RTL end),
  * separated by a thin vertical divider. Designed to fit the app's emerald
  * dark theme and to stick to the bottom of the viewport on short pages
  * while being pushed down naturally on long pages.
