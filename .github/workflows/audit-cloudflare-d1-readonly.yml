@@ -65,6 +65,7 @@ jobs:
             response=$(printf '%s\n' "$raw" | sed '$d')
             if [[ "$http_code" == "200" ]] && [[ "$(echo "$response" | jq -r '.success // false')" == "true" ]]; then
               echo "D1 list access: account $account = allowed"
+              echo "$response" | jq -r '.result[]? | "D1 database in account $account: " + .name'
             else
               echo "D1 list access: account $account = denied (HTTP $http_code)"
               echo "$response" | jq -r '.errors[]? | "Cloudflare error \(.code): \(.message)"' || true
