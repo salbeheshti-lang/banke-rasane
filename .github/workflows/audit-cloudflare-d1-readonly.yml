@@ -51,6 +51,25 @@ jobs:
           fi
           echo "Cloudflare token status: $(echo "$response" | jq -r '.result.status // "unknown"')"
 
+      - name: Diagnose D1 account scope without reading database contents
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          D1_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          WORKER_ACCOUNT_ID: 128caa74c4d03e4cf84cd0d2b3f07bbf
+        run: |
+          for account in "$WORKER_ACCOUNT_ID" "$D1_ACCOUNT_ID"; do
+            raw=$(curl --silent --show-error -w '\n%{http_code}' \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              "https://api.cloudflare.com/client/v4/accounts/$account/d1/database")
+            http_code=$(printf '%s\n' "$raw" | tail -n 1)
+            response=$(printf '%s\n' "$raw" | sed '$d')
+            if [[ "$http_code" == "200" ]] && [[ "$(echo "$response" | jq -r '.success // false')" == "true" ]]; then
+              echo "D1 list access: account $account = allowed"
+            else
+              echo "D1 list access: account $account = denied (HTTP $http_code)"
+              echo "$response" | jq -r '.errors[]? | "Cloudflare error \(.code): \(.message)"' || true
+            fi
+          done
       - name: Locate the configured D1 database in the active Cloudflare account
         id: d1
         env:
