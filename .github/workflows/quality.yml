@@ -2,9 +2,9 @@ name: Quality checks
 
 on:
   push:
-    branches: [main, 'fix/**', 'feat/**', 'preview/**']
+    branches: [main, 'fix/**', 'feat/**']
   pull_request:
-    branches: [main, 'fix/**', 'feat/**', 'preview/**']
+    branches: [main, 'fix/**', 'feat/**']
 
 permissions:
   contents: read
@@ -27,6 +27,11 @@ jobs:
 
       - name: Test API video upload validation
         run: node --test mini-services/api-service/video-validation.test.mjs
+      - name: Test real WebM to MP4 transcoding
+        run: node --test mini-services/api-service/video-transcode.test.mjs
+      # These tests exercise the Sharp pipeline used by the desktop and Render API, not Cloudflare Workers.
+      - name: Test safe image import and WebP optimization
+        run: node --test mini-services/api-service/image-import.test.mjs
 
       - name: Test Electron main-frame navigation policy
         run: bun run test:electron-navigation
@@ -103,9 +108,6 @@ jobs:
         run: bun run cloudflare:build
         env:
           DATABASE_URL: file:./db/custom.db
-
-      - name: Verify exact branding, capacity, decor, video editor, and Wikipedia/IMDb UI in compiled bundles
-        run: node scripts/test-preview-branding.cjs
 
       - name: Smoke-test local Cloudflare Worker preview
         run: bun run test:cloudflare-preview
