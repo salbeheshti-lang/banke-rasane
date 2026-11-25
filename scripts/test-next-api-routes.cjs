@@ -385,6 +385,8 @@ async function main() {
       env: {
         ...process.env,
         BANKRESANE_TEST_URL: apiBase,
+        BANKRESANE_TEST_NEXT_URL: nextBase,
+        BANKRESANE_TEST_API_URL: apiBase,
         BANKRESANE_TEST_TOKEN: adminToken,
       },
       stdio: 'inherit',
