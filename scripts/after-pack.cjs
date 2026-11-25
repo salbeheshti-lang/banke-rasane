@@ -51,15 +51,21 @@ module.exports = async function afterPack(context) {
     throw new Error('[afterPack] MP4 transcoder or bundled Windows FFmpeg binary is missing');
   }
 
-  const sharpPackage = path.join(context.appOutDir, 'resources', 'api-service', 'node_modules', 'sharp', 'lib', 'index.js');
-  const sharpPlatformPackages = path.join(context.appOutDir, 'resources', 'api-service', 'node_modules', '@img');
-  if (!fs.existsSync(sharpPackage) || !fs.existsSync(sharpPlatformPackages)) {
-    throw new Error('[afterPack] Sharp image optimizer or its platform binaries are missing from the packaged API service');
+  const apiServiceRoot = path.join(context.appOutDir, 'resources', 'api-service');
+  const sharpPackage = path.join(apiServiceRoot, 'node_modules', 'sharp', 'lib', 'index.js');
+  const sharpPlatformPackages = path.join(apiServiceRoot, 'node_modules', '@img');
+  const semverPackage = path.join(apiServiceRoot, 'node_modules', 'semver', 'functions', 'coerce.js');
+  if (!fs.existsSync(sharpPackage) || !fs.existsSync(sharpPlatformPackages) || !fs.existsSync(semverPackage)) {
+    throw new Error('[afterPack] Sharp, @img platform binaries, or semver runtime dependency is missing from the packaged API service');
   }
 
   // Verify the native binaries from their final packaged location, not only
   // that the folders exist. This catches missing Windows optional packages.
-  const apiRequire = createRequire(path.join(context.appOutDir, 'resources', 'api-service', 'index.js'));
+  const apiRequire = createRequire(path.join(apiServiceRoot, 'index.js'));
+  const semverResolved = apiRequire.resolve('semver/functions/coerce');
+  if (!semverResolved.startsWith(path.join(apiServiceRoot, 'node_modules', 'semver') + path.sep)) {
+    throw new Error('[afterPack] semver resolved outside the packaged API service; Bun would not be able to load it');
+  }
   const packagedSharp = apiRequire('sharp');
   const optimizedProbe = await packagedSharp({
     create: { width: 16, height: 16, channels: 3, background: { r: 20, g: 120, b: 80 } },
@@ -76,6 +82,22 @@ module.exports = async function afterPack(context) {
   });
   if (ffmpegProbe.status !== 0) {
     throw new Error('[afterPack] Packaged FFmpeg binary failed to execute: ' + (ffmpegProbe.stderr || 'unknown error'));
+  }
+
+  // The actual desktop API is launched by bundled Bun, not Node. Exercise
+  // Sharp from that exact runtime and API-service working directory so a
+  // dependency hidden in resources/app/node_modules cannot mask a bad package.
+  const bunExecutable = path.join(context.appOutDir, 'resources', 'bun-runtime', 'bin', 'bun.exe');
+  if (!fs.existsSync(bunExecutable)) {
+    throw new Error('[afterPack] Bundled Bun executable is missing');
+  }
+  const bunSharpProbe = spawnSync(bunExecutable, ['-e',
+    "import sharp from 'sharp'; const bytes = await sharp({ create: { width: 16, height: 16, channels: 3, background: { r: 20, g: 120, b: 80 } } }).webp().toBuffer(); if (bytes.toString('ascii', 8, 12) !== 'WEBP') throw new Error('invalid WebP output'); console.log('Bun Sharp WebP probe passed');"
+  ], {
+    cwd: apiServiceRoot, encoding: 'utf8', timeout: 30000, windowsHide: true,
+  });
+  if (bunSharpProbe.status !== 0) {
+    throw new Error('[afterPack] Bundled Bun cannot run Sharp in the packaged API service: ' + (bunSharpProbe.stderr || bunSharpProbe.stdout || 'unknown error'));
   }
 
   const imageImporter = path.join(context.appOutDir, 'resources', 'api-service', 'image-import.mjs');
@@ -112,6 +134,6 @@ module.exports = async function afterPack(context) {
   console.log('[afterPack] ✓ next@' + nextPackage.version + ' and ' + seed.length + ' archive records verified');
   console.log('[afterPack] standalone payload: ' + (standaloneBytes / 1024 / 1024).toFixed(1) + ' MiB');
   console.log('[afterPack] ✓ unused program-images excluded; SQLite image_data BLOBs preserved');
-  console.log('[afterPack] ✓ packaged Sharp WebP conversion and FFmpeg Windows binary executed successfully');
+  console.log('[afterPack] ✓ packaged Sharp WebP conversion works in both Node and bundled Bun; FFmpeg Windows binary executed successfully');
   console.log('[afterPack] duplicate standalone tree: absent');
 };
