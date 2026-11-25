@@ -10,11 +10,10 @@ export const maxDuration = 60;
 function getClientLogoDataUrl(): string {
   const fileName = path.basename(CLIENT_BRANDING.logoColorPath);
   const candidate = path.join(process.cwd(), 'public', fileName);
-  try {
-    if (fs.existsSync(candidate)) return `data:image/png;base64,${fs.readFileSync(candidate).toString('base64')}`;
-  } catch { /* The report can still be generated without optional client branding. */ }
-  console.warn('[PDF] Client logo not found in packaged public paths');
-  return '';
+  if (!fs.existsSync(candidate)) {
+    throw new Error(`لوگوی سازمانی الزامی در مسیر public/${fileName} پیدا نشد`);
+  }
+  return `data:image/png;base64,${fs.readFileSync(candidate).toString('base64')}`;
 }
 
 type ShowRow = {
@@ -83,6 +82,12 @@ export async function POST(request: NextRequest) {
       const mime = logoResponse.headers.get('content-type') || 'image/png';
       const encoded = Buffer.from(await logoResponse.arrayBuffer()).toString('base64');
       logoDataUrl = `data:${mime};base64,${encoded}`;
+    } else if (logoResponse.status === 404) {
+      const appLogoPath = path.join(process.cwd(), 'public', 'banke-rasane-logo.png');
+      if (!fs.existsSync(appLogoPath)) throw new Error('لوگوی واقعی بانک رسانه در بسته برنامه پیدا نشد');
+      logoDataUrl = `data:image/png;base64,${fs.readFileSync(appLogoPath).toString('base64')}`;
+    } else {
+      throw new Error('دریافت لوگوی گزارش ناموفق بود');
     }
     const clientLogoDataUrl = getClientLogoDataUrl();
     const categories = new Map<string, number>();
