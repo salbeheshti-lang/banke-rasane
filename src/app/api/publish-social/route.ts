@@ -29,8 +29,19 @@ function isDirectMp4Url(value: string): boolean {
   }
 }
 
+function parseVideoDataUrl(value: string): { mime: 'video/mp4'; bytes: Buffer; extension: 'mp4' } | null {
+  const match = value.match(/^data:video\/mp4;base64,([A-Za-z0-9+/=\r\n]+)$/i);
+  if (!match) return null;
+  const bytes = Buffer.from(match[1], 'base64');
+  if (!bytes.length || bytes.length > 8 * 1024 * 1024) return null;
+  if (bytes.length < 12 || bytes.subarray(4, 8).toString('ascii') !== 'ftyp') return null;
+  return { mime: 'video/mp4', bytes, extension: 'mp4' };
+}
+
 function parseImageDataUrl(value: string): { mime: string; bytes: Buffer; extension: string } | null {
-  const match = value.match(/^data:(image\/(?:jpeg|png|webp|gif|avif));base64,([A-Za-z0-9+/=\r\n]+)$/i);
+  // Browser-generated carousel covers are normalized to JPEG before reaching this route.
+  // Keep this Worker-compatible: native Sharp binaries are unavailable in Cloudflare Workers.
+  const match = value.match(/^data:(image\/(?:jpeg|png));base64,([A-Za-z0-9+/=\r\n]+)$/i);
   if (!match) return null;
   const mime = match[1].toLowerCase();
   const bytes = Buffer.from(match[2], 'base64');
@@ -96,8 +107,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: 'متن پست بیشتر از سقف ۴۰۹۶ نویسه است؛ متن را کوتاه کنید تا هیچ بخشی حذف نشود' }, { status: 400 });
     }
     const hasVideo = typeof body.videoUrl === 'string' && body.videoUrl.length > 0;
-    if (hasVideo && !isDirectMp4Url(body.videoUrl!)) {
-      return NextResponse.json({ ok: false, error: 'برای ارسال ویدئو، لینک مستقیم HTTPS به فایل MP4 لازم است؛ لینک صفحهٔ یوتیوب/آپارات قابل ارسال مستقیم نیست' }, { status: 400 });
+    let videoData: ReturnType<typeof parseVideoDataUrl> = null;
+    if (hasVideo) {
+      if (body.videoUrl!.startsWith('data:')) {
+        videoData = parseVideoDataUrl(body.videoUrl!);
+        if (!videoData) {
+          return NextResponse.json({ ok: false, error: 'فایل MP4 ویرایش‌شده معتبر نیست یا حجم آن بیشتر از ۸ مگابایت است' }, { status: 400 });
+        }
+      } else if (!isDirectMp4Url(body.videoUrl!)) {
+        return NextResponse.json({ ok: false, error: 'برای ارسال ویدئو، لینک مستقیم HTTPS به فایل MP4 لازم است؛ لینک صفحهٔ یوتیوب/آپارات قابل ارسال مستقیم نیست' }, { status: 400 });
+      }
     }
     const hasImage = typeof imageUrl === 'string' && imageUrl.length > 0;
     let imageData: ReturnType<typeof parseImageDataUrl> = null;
@@ -117,15 +136,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (imageData) {
-      const sharp = (await import('sharp')).default;
-      const jpeg = await sharp(imageData.bytes).rotate().jpeg({ quality: 88 }).toBuffer();
-      if (!jpeg.length || jpeg.length > 5 * 1024 * 1024) {
-        return NextResponse.json({ ok: false, error: 'حجم تصویر برای ارسال به ربات بیش از حد مجاز است' }, { status: 413 });
-      }
-      imageData = { mime: 'image/jpeg', bytes: jpeg, extension: 'jpg' };
-    }
-
     const hasMedia = hasVideo || hasImage;
     if (hasMedia && rawText.length > 1024) {
       return NextResponse.json({ ok: false, error: 'سقف کپشن رسانه ۱۰۲۴ نویسه است؛ متن را در پیش‌نمایش کوتاه کنید تا هیچ بخشی بی‌صدا حذف نشود' }, { status: 400 });
@@ -136,16 +146,24 @@ export async function POST(request: NextRequest) {
     // video first (with the full caption), then the real program image.
     // This uses sendMediaGroup; it never splits the caption into a separate message.
     if (hasVideo && hasImage) {
+      // Keep the first album item as a clean video slide. The full program
+      // description belongs to the second (image) slide, directly beneath its
+      // cover, matching the requested Bale carousel order.
       const media = [
-        { type: 'video', media: body.videoUrl, ...(caption ? { caption } : {}) },
-        { type: 'photo', media: imageData ? 'attach://program_cover' : imageUrl },
+        { type: 'video', media: videoData ? 'attach://program_video' : body.videoUrl },
+        { type: 'photo', media: imageData ? 'attach://program_cover' : imageUrl, ...(caption ? { caption } : {}) },
       ];
       let tgRes: Response;
-      if (imageData) {
+      if (videoData || imageData) {
         const form = new FormData();
         form.set('chat_id', chatId);
         form.set('media', JSON.stringify(media));
-        form.set('program_cover', new Blob([imageData.bytes.buffer.slice(imageData.bytes.byteOffset, imageData.bytes.byteOffset + imageData.bytes.byteLength) as ArrayBuffer], { type: imageData.mime }), `program-cover.${imageData.extension}`);
+        if (videoData) {
+          form.set('program_video', new Blob([videoData.bytes.buffer.slice(videoData.bytes.byteOffset, videoData.bytes.byteOffset + videoData.bytes.byteLength) as ArrayBuffer], { type: videoData.mime }), 'program-video.mp4');
+        }
+        if (imageData) {
+          form.set('program_cover', new Blob([imageData.bytes.buffer.slice(imageData.bytes.byteOffset, imageData.bytes.byteOffset + imageData.bytes.byteLength) as ArrayBuffer], { type: imageData.mime }), `program-cover.${imageData.extension}`);
+        }
         tgRes = await fetch(`${base}/bot${token}/sendMediaGroup`, {
           method: 'POST',
           body: form,
@@ -171,12 +189,25 @@ export async function POST(request: NextRequest) {
     }
 
     if (hasVideo) {
-      const tgRes = await fetch(`${base}/bot${token}/sendVideo`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, video: body.videoUrl, ...(caption ? { caption } : {}) }),
-        signal: AbortSignal.timeout(60000),
-      });
+      let tgRes: Response;
+      if (videoData) {
+        const form = new FormData();
+        form.set('chat_id', chatId);
+        form.set('video', new Blob([videoData.bytes.buffer.slice(videoData.bytes.byteOffset, videoData.bytes.byteOffset + videoData.bytes.byteLength) as ArrayBuffer], { type: videoData.mime }), 'program-video.mp4');
+        if (caption) form.set('caption', caption);
+        tgRes = await fetch(`${base}/bot${token}/sendVideo`, {
+          method: 'POST',
+          body: form,
+          signal: AbortSignal.timeout(60000),
+        });
+      } else {
+        tgRes = await fetch(`${base}/bot${token}/sendVideo`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chatId, video: body.videoUrl, ...(caption ? { caption } : {}) }),
+          signal: AbortSignal.timeout(60000),
+        });
+      }
       const tgData = await tgRes.json().catch(() => ({}));
       if (!tgData.ok) {
         return NextResponse.json({ ok: false, error: tgData.description || 'ارسال ویدئو ناموفق بود' }, { status: 502 });
