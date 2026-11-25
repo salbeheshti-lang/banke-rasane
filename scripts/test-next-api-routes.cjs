@@ -298,6 +298,11 @@ async function main() {
     body: { username: 'route_manager', password: 'ManagerRoute!2026', role: 'editor', name: 'Route Manager', phone: '09120000006' },
   });
   assert(editorCreated.status === 200, 'admin can create a manager/editor for report permission tests');
+  const editorPermissions = await request(apiBase, '/api/users?id=' + editorCreated.data.id, {
+    method: 'PUT', token: adminToken,
+    body: { permissions: ['export_reports', 'manage_settings'] },
+  });
+  assert(editorPermissions.status === 200, 'super admin can grant report settings permission to a manager/editor');
   const editorLogin = await request(apiBase, '/api/auth/login', {
     method: 'POST', body: { username: 'route_manager', password: 'ManagerRoute!2026' },
   });
