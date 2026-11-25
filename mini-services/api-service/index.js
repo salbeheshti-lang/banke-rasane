@@ -1076,8 +1076,8 @@ const server = Bun.serve({
     }
 
     if (pathname === '/api/settings/report' && method === 'POST') {
-      const user = requirePermission(req, 'manage_settings') || requirePermission(req, 'export_reports');
-      if (!user) return permissionFailure(req, 'فقط مدیر سیستم یا کاربران دارای مجوز خروجی گزارش می‌توانند تنظیمات پیش‌فرض گزارش را تغییر دهند');
+      const user = requirePermission(req, 'manage_settings');
+      if (!user) return permissionFailure(req, 'فقط مدیر سیستم یا مدیر دارای مجوز مدیریت تنظیمات می‌تواند متن و تنظیمات پیش‌فرض گزارش را تغییر دهد');
       let body;
       try { body = await req.json(); } catch { return json({ ok: false, error: 'بدنه درخواست معتبر نیست' }, 400, req); }
       let current = { ...DEFAULT_REPORT_SETTINGS };
@@ -1122,8 +1122,8 @@ const server = Bun.serve({
     }
 
     if (pathname === '/api/settings/logo' && method === 'POST') {
-      const user = requirePermission(req, 'manage_settings') || requirePermission(req, 'export_reports');
-      if (!user) return permissionFailure(req, 'فقط مدیر سیستم یا کاربران دارای مجوز خروجی گزارش می‌توانند لوگوی گزارش را تغییر دهند');
+      const user = requirePermission(req, 'manage_settings');
+      if (!user) return permissionFailure(req, 'فقط مدیر سیستم یا مدیر دارای مجوز مدیریت تنظیمات می‌تواند لوگوی گزارش را تغییر دهد');
       try {
         const form = await req.formData();
         const file = form.get('file');
