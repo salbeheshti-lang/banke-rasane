@@ -188,6 +188,13 @@ async function main() {
     assert(genreUploadResponse.status === 200 && genreUpload.success,
       'admin can upload a shared PDF attachment for a genre');
 
+    const missingPhoneUser = await request('/api/users', {
+      method: 'POST', token,
+      body: JSON.stringify({ username: 'missing_phone_user', password: 'MissingPhone!2026', role: 'viewer', name: 'Missing Phone User' }),
+    });
+    assert(missingPhoneUser.status === 400,
+      'API rejects user creation when the required phone number is missing');
+
     const viewerCreated = await request('/api/users', {
       method: 'POST', token,
       body: JSON.stringify({ username: 'genre_file_viewer', password: 'ViewerFile!2026', role: 'viewer', name: 'Genre File Viewer', phone: '09120000002' }),
