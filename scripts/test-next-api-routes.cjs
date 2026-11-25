@@ -184,6 +184,7 @@ async function main() {
   // Next.js route auth: anonymous callers must be rejected before side effects.
   const guardedRoutes = [
     ['/api/fetch-show-info', 'POST', { url: 'not-a-url' }],
+    ['/api/import-image', 'POST', { url: 'https://example.com/image.jpg' }],
     ['/api/translate', 'POST', { fields: {} }],
     ['/api/publish-social', 'POST', { platform: 'invalid', token: 'bad' }],
     ['/api/export-pdf', 'POST', { shows: [{ num: 1, name: 'Auth probe' }] }],
@@ -235,7 +236,7 @@ async function main() {
   // Create a viewer and verify the same permission boundaries in Next.js routes.
   const viewerCreated = await request(apiBase, '/api/users', {
     method: 'POST', token: adminToken,
-    body: { username: 'route_viewer', password: 'ViewerRoute!2026', role: 'viewer', name: 'Route Viewer' },
+    body: { username: 'route_viewer', password: 'ViewerRoute!2026', role: 'viewer', name: 'Route Viewer', phone: '09120000005' },
   });
   assert(viewerCreated.status === 200, 'admin can create a viewer for permission tests');
   const viewerLogin = await request(apiBase, '/api/auth/login', {
@@ -255,7 +256,24 @@ async function main() {
   const viewerReportSettings = await request(nextBase, '/api/settings/report', { token: viewerToken });
   assert(viewerReportSettings.status === 200, 'authenticated viewer can read non-sensitive report defaults');
 
+  const fakeBotToken = '1234567890:abcdefghijklmnopqrstuvwxyz123456';
+  const invalidVideoUrl = await request(nextBase, '/api/publish-social', {
+    method: 'POST', token: adminToken,
+    body: { platform: 'bale', token: fakeBotToken, chatId: '@bankresane_test', text: 'video', videoUrl: 'https://cdn.example.com/video.mov' },
+  });
+  assert(invalidVideoUrl.status === 400, 'direct publishing rejects non-MP4 and non-direct video links before contacting the bot API');
+  const oversizedMediaCaption = await request(nextBase, '/api/publish-social', {
+    method: 'POST', token: adminToken,
+    body: { platform: 'bale', token: fakeBotToken, chatId: '@bankresane_test', text: 'x'.repeat(1025), videoUrl: 'https://cdn.example.com/video.mp4' },
+  });
+  assert(oversizedMediaCaption.status === 400, 'direct publishing rejects over-limit media captions instead of silently truncating program details');
+
   // Admin success paths for local Next.js features; external services are not contacted.
+  const unsafeImageSource = await request(nextBase, '/api/import-image', {
+    method: 'POST', token: adminToken, body: { url: 'https://example.com/untrusted.jpg' },
+  });
+  assert(unsafeImageSource.status === 400, 'image importer rejects untrusted hosts even for authenticated admins');
+
   const translateValidation = await request(nextBase, '/api/translate', {
     method: 'POST', token: adminToken, body: { fields: {} },
   });
@@ -277,9 +295,14 @@ async function main() {
   // It has export_reports by default and must be able to save shared PDF defaults.
   const editorCreated = await request(apiBase, '/api/users', {
     method: 'POST', token: adminToken,
-    body: { username: 'route_manager', password: 'ManagerRoute!2026', role: 'editor', name: 'Route Manager' },
+    body: { username: 'route_manager', password: 'ManagerRoute!2026', role: 'editor', name: 'Route Manager', phone: '09120000006' },
   });
   assert(editorCreated.status === 200, 'admin can create a manager/editor for report permission tests');
+  const editorPermissions = await request(apiBase, '/api/users?id=' + editorCreated.data.id, {
+    method: 'PUT', token: adminToken,
+    body: { permissions: ['export_reports', 'manage_settings'] },
+  });
+  assert(editorPermissions.status === 200, 'super admin can grant report settings permission to a manager/editor');
   const editorLogin = await request(apiBase, '/api/auth/login', {
     method: 'POST', body: { username: 'route_manager', password: 'ManagerRoute!2026' },
   });

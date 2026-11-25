@@ -118,7 +118,80 @@ export async function POST(request: NextRequest) {
   }
   try {
     const { url, category = '', showName = '', isDecor: explicitIsDecor } = await request.json();
-    if (typeof url !== 'string' || !url.trim()) return NextResponse.json({ error: 'URL الزامی است' }, { status: 400 });
+    const isDecor = typeof explicitIsDecor === 'boolean'
+      ? explicitIsDecor
+      : /(?:^|[,،\s])(?:دکور|decor)(?:$|[,،\s])/i.test(String(category || ''));
+    const info: Record<string,string> = {};
+
+    // ── Name-only search mode ──────────────────────────────────────────
+    // When the user provides just a program name (no URL), automatically
+    // search OMDb first, then Wikipedia (English + Persian), and return the
+    // best match with title + description + image + links. This lets admins
+    // add a program by typing its name instead of hunting for a URL.
+    if (typeof url !== 'string' || !url.trim()) {
+      const nameQuery = cleanQuery(String(showName || ''));
+      if (!nameQuery) return NextResponse.json({ error: 'نام برنامه یا لینک IMDb/ویکی‌پدیا لازم است' }, { status: 400 });
+
+      // 1) OMDb by-title search
+      try {
+        const r = await fetchRetry(`https://www.omdbapi.com/?s=${encodeURIComponent(nameQuery)}&apikey=${encodeURIComponent(OMDB_API_KEY)}`, {}, 1);
+        if (r) {
+          const d = await r.json();
+          const first = Array.isArray(d.Search) ? d.Search[0] : null;
+          if (first?.imdbID) {
+            const dr = await fetchRetry(`https://www.omdbapi.com/?i=${encodeURIComponent(first.imdbID)}&apikey=${encodeURIComponent(OMDB_API_KEY)}&plot=full`, {}, 1);
+            if (dr) {
+              const record = await dr.json();
+              if (record?.Response === 'True') {
+                if (record.Title) info.title = record.Title;
+                if (record.Plot && record.Plot !== 'N/A') info.description = record.Plot;
+                if (record.Poster && record.Poster !== 'N/A' && /^https:\/\//i.test(record.Poster)) info.image = record.Poster;
+                if (record.Country && record.Country !== 'N/A') info.country = record.Country;
+                if (record.Year && record.Year !== 'N/A') info.year = record.Year;
+                info.imdbUrl = `https://www.imdb.com/title/${first.imdbID}/`;
+              }
+            }
+          }
+        }
+      } catch { /* OMDb unreachable — fall through to Wikipedia */ }
+
+      // 2) Wikipedia search (English + Persian) — fill title/description/image if OMDb missed
+      if (!info.title || !info.image) {
+        for (const lang of ['en', 'fa']) {
+          if (info.title && info.image) break;
+          try {
+            const sr = await fetchRetry(`https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srnamespace=0&srlimit=3&format=json&srsearch=${encodeURIComponent(nameQuery)}`, { headers: { 'User-Agent': UA } }, 1);
+            if (!sr) continue;
+            const sd = await sr.json();
+            const pageTitle = sd?.query?.search?.[0]?.title;
+            if (!pageTitle) continue;
+            const r = await fetchRetry(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(pageTitle)}`, { headers: { 'User-Agent': UA } }, 1);
+            if (!r) continue;
+            const d = await r.json();
+            if (!info.title && d.title) info.title = d.title;
+            if (!info.description && d.extract) info.description = d.extract;
+            if (!info.image) {
+              if (d.originalimage?.source) info.image = d.originalimage.source;
+              else if (d.thumbnail?.source) info.image = d.thumbnail.source;
+            }
+            if (!info.wikiUrl) info.wikiUrl = `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(pageTitle.replace(/ /g, '_'))}`;
+          } catch { /* ignore — try next lang */ }
+        }
+      }
+
+      // 3) Decor fallback: if still no image, try Wikimedia Commons
+      if (!info.image && isDecor) {
+        const decorImage = await fetchWikipediaShowImage(info.title || nameQuery);
+        if (decorImage) info.image = decorImage;
+      }
+
+      if (!info.title && !info.description && !info.image) {
+        return NextResponse.json({ error: 'برنامه‌ای با این نام پیدا نشد. نام را دقیق‌تر وارد کنید یا لینک IMDb/ویکی‌پدیا را مستقیم بدهید.' }, { status: 404 });
+      }
+      return NextResponse.json({ info });
+    }
+
+    // ── URL mode (existing behavior) ───────────────────────────────────
     let parsed: URL;
     try { parsed = new URL(url); } catch { return NextResponse.json({ error: 'لینک معتبر نیست' }, { status: 400 }); }
     if (parsed.protocol !== 'https:') return NextResponse.json({ error: 'فقط لینک HTTPS پذیرفته می‌شود' }, { status: 400 });
@@ -126,10 +199,6 @@ export async function POST(request: NextRequest) {
     const isImdb = host === 'imdb.com' || host.endsWith('.imdb.com');
     const isWikipedia = host === 'wikipedia.org' || host.endsWith('.wikipedia.org');
     if (!isImdb && !isWikipedia) return NextResponse.json({ error: 'فعلاً فقط لینک IMDb و ویکی‌پدیا پشتیبانی می‌شود' }, { status: 400 });
-    const info: Record<string,string> = {};
-    const isDecor = typeof explicitIsDecor === 'boolean'
-      ? explicitIsDecor
-      : /(?:^|[,،\s])(?:دکور|decor)(?:$|[,،\s])/i.test(String(category || ''));
 
     if (isImdb) {
       const imdbMatch = parsed.pathname.match(/(?:^|\/)title\/(tt\d+)/i) || parsed.href.match(/\b(tt\d+)\b/i);

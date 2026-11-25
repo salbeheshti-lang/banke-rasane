@@ -109,7 +109,7 @@ async function main() {
     assert(capacitySave.status === 200 && capacitySave.data.operationalCapacity === 'ظرفیت نمونه برای آزمون', 'operational capacity can be saved on a show');
     const capacityReload = await request('/api/shows/search?q=BankResaneh%20CRUD%20Integration%20Fixture', { token });
     assert(capacityReload.status === 200 && capacityReload.data.shows?.[0]?.operationalCapacity === 'ظرفیت نمونه برای آزمون', 'operational capacity persists and is returned by archive search');
-    const editorCreated = await request('/api/users', { method: 'POST', token, body: JSON.stringify({ username: 'capacity_editor', password: 'EditorCap!2026', role: 'editor', name: 'Capacity Editor' }) });
+    const editorCreated = await request('/api/users', { method: 'POST', token, body: JSON.stringify({ username: 'capacity_editor', password: 'EditorCap!2026', role: 'editor', name: 'Capacity Editor', phone: '09120000001' }) });
     assert(editorCreated.status === 200, 'admin can create an editor for capacity permission tests');
     const editorLogin = await request('/api/auth/login', { method: 'POST', body: JSON.stringify({ username: 'capacity_editor', password: 'EditorCap!2026' }) });
     assert(editorLogin.status === 200 && !!editorLogin.data.token, 'editor can authenticate for capacity permission tests');
@@ -190,7 +190,7 @@ async function main() {
 
     const viewerCreated = await request('/api/users', {
       method: 'POST', token,
-      body: JSON.stringify({ username: 'genre_file_viewer', password: 'ViewerFile!2026', role: 'viewer', name: 'Genre File Viewer' }),
+      body: JSON.stringify({ username: 'genre_file_viewer', password: 'ViewerFile!2026', role: 'viewer', name: 'Genre File Viewer', phone: '09120000002' }),
     });
     assert(viewerCreated.status === 200, 'admin can create a viewer for shared attachment access tests');
     const viewerLogin = await request('/api/auth/login', {
