@@ -17,13 +17,13 @@ interface PublishBody {
   chatId: string;
   text: string;
   imageUrl?: string; // remote URL or optimized data URL for a program image
-  videoUrl?: string; // direct HTTPS MP4 URL only
+  videoUrl?: string; // direct HTTPS MP4/WebM URL OR a video data URL from the clip editor
 }
 
-function isDirectMp4Url(value: string): boolean {
+function isDirectVideoUrl(value: string): boolean {
   try {
     const url = new URL(value);
-    return url.protocol === 'https:' && !url.username && !url.password && url.pathname.toLowerCase().endsWith('.mp4');
+    return url.protocol === 'https:' && !url.username && !url.password && /\.(mp4|webm)$/i.test(url.pathname);
   } catch {
     return false;
   }
@@ -36,6 +36,18 @@ function parseImageDataUrl(value: string): { mime: string; bytes: Buffer; extens
   const bytes = Buffer.from(match[2], 'base64');
   if (!bytes.length || bytes.length > 5 * 1024 * 1024) return null;
   const extension = mime === 'image/jpeg' ? 'jpg' : mime.split('/')[1];
+  return { mime, bytes, extension };
+}
+
+// Accept video clips exported by the in-browser editor (WebM via MediaRecorder)
+// as well as MP4 data URLs. Telegram and Bale both accept WebM uploads.
+function parseVideoDataUrl(value: string): { mime: string; bytes: Buffer; extension: string } | null {
+  const match = value.match(/^data:(video\/(?:mp4|webm|ogg));base64,([A-Za-z0-9+/=\r\n]+)$/i);
+  if (!match) return null;
+  const mime = match[1].toLowerCase();
+  const bytes = Buffer.from(match[2], 'base64');
+  if (!bytes.length || bytes.length > 50 * 1024 * 1024) return null;
+  const extension = mime === 'video/mp4' ? 'mp4' : mime === 'video/webm' ? 'webm' : 'ogv';
   return { mime, bytes, extension };
 }
 
@@ -171,12 +183,31 @@ export async function POST(request: NextRequest) {
     }
 
     if (hasVideo) {
-      const tgRes = await fetch(`${base}/bot${token}/sendVideo`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, video: body.videoUrl, ...(caption ? { caption } : {}) }),
-        signal: AbortSignal.timeout(60000),
-      });
+      const videoDataUrl = body.videoUrl && body.videoUrl.startsWith('data:video/') ? parseVideoDataUrl(body.videoUrl) : null;
+      const videoRemoteUrl = body.videoUrl && isDirectVideoUrl(body.videoUrl) ? body.videoUrl : null;
+      if (!videoDataUrl && !videoRemoteUrl) {
+        return NextResponse.json({ ok: false, error: 'ویدئو باید یک لینک مستقیم HTTPS به فایل MP4/WebM یا یک فایل data URL معتبر باشد.' }, { status: 400 });
+      }
+      let tgRes: Response;
+      if (videoDataUrl) {
+        // Upload the clip bytes directly (supports WebM from the editor + MP4).
+        const form = new FormData();
+        form.set('chat_id', chatId);
+        form.set('video', new Blob([videoDataUrl.bytes.buffer.slice(videoDataUrl.bytes.byteOffset, videoDataUrl.bytes.byteOffset + videoDataUrl.bytes.byteLength) as ArrayBuffer], { type: videoDataUrl.mime }), `program-clip.${videoDataUrl.extension}`);
+        if (caption) form.set('caption', caption);
+        tgRes = await fetch(`${base}/bot${token}/sendVideo`, {
+          method: 'POST',
+          body: form,
+          signal: AbortSignal.timeout(120000),
+        });
+      } else {
+        tgRes = await fetch(`${base}/bot${token}/sendVideo`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chatId, video: videoRemoteUrl, ...(caption ? { caption } : {}) }),
+          signal: AbortSignal.timeout(120000),
+        });
+      }
       const tgData = await tgRes.json().catch(() => ({}));
       if (!tgData.ok) {
         return NextResponse.json({ ok: false, error: tgData.description || 'ارسال ویدئو ناموفق بود' }, { status: 502 });
