@@ -2577,6 +2577,7 @@ function UserProfileModal({ user, onClose, showToast }: {
   const [editing, setEditing] = useState(false);
   useEscapeKey(onClose, editing); // don't close on Escape while editing
   const [name, setName] = useState(user.name || '');
+  const [username, setUsername] = useState(user.username || '');
   const [phone, setPhone] = useState(user.phone || '');
   const [jobTitle, setJobTitle] = useState(user.jobTitle || '');
   const [deputy, setDeputy] = useState(user.deputy || '');
@@ -2588,14 +2589,17 @@ function UserProfileModal({ user, onClose, showToast }: {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch(getApiUrl('api/auth/me'), {
+      const res = await fetch(getApiUrl('api/profile'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('bankresaneh_token')}` },
-        body: JSON.stringify({ name, phone, jobTitle, deputy, avatar }),
+        body: JSON.stringify({ username, name, phone, jobTitle, deputy, avatar }),
       });
       if (res.ok) {
+        const savedProfile = await res.clone().json();
+        localStorage.setItem('bankresaneh_user', JSON.stringify(savedProfile));
         showToast(t('settings.profile.saved'));
         setEditing(false);
+        window.location.reload();
       } else {
         showToast(t('toast.error'));
       }
@@ -2723,7 +2727,7 @@ function UserProfileModal({ user, onClose, showToast }: {
               {name || user.username}
             </div>
             <div style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.85)', textShadow: '0 1px 4px rgba(0,0,0,0.6)' }}>
-              @{user.username}
+              @{username}
             </div>
             <span style={{
               fontSize: '12px', fontWeight: 700, padding: '5px 16px', borderRadius: '999px',
@@ -2740,6 +2744,7 @@ function UserProfileModal({ user, onClose, showToast }: {
 
         {/* Contact details — below the banner */}
         <div className="flex-1 overflow-y-auto px-4 pt-4 pb-4 space-y-2">
+          <ContactRow icon="🆔" label="نام کاربری" value={username} editing={editing} onChange={setUsername} placeholder="نام کاربری" dir="ltr" />
           <ContactRow icon="👤" label="نام نمایشی" value={name} editing={editing} onChange={setName} placeholder="نام و نام خانوادگی" />
           <ContactRow icon="📱" label="شماره همراه" value={phone} editing={editing} onChange={setPhone} placeholder="0912xxxxxxx" dir="ltr" />
           <ContactRow icon="💼" label="عنوان شغلی" value={jobTitle} editing={editing} onChange={setJobTitle} placeholder="مثلاً: تهیه‌کننده" />
@@ -8247,6 +8252,7 @@ function ProfileTab({ currentUser, showToast }: { currentUser: User; showToast: 
   const { t } = useLang();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(currentUser.name || '');
+  const [username, setUsername] = useState(currentUser.username || '');
   const [phone, setPhone] = useState(currentUser.phone || '');
   const [jobTitle, setJobTitle] = useState(currentUser.jobTitle || '');
   const [deputy, setDeputy] = useState(currentUser.deputy || '');
@@ -8258,14 +8264,17 @@ function ProfileTab({ currentUser, showToast }: { currentUser: User; showToast: 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch(getApiUrl('api/auth/me'), {
+      const res = await fetch(getApiUrl('api/profile'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('bankresaneh_token')}` },
-        body: JSON.stringify({ name, phone, jobTitle, deputy, avatar }),
+        body: JSON.stringify({ username, name, phone, jobTitle, deputy, avatar }),
       });
       if (res.ok) {
+        const savedProfile = await res.clone().json();
+        localStorage.setItem('bankresaneh_user', JSON.stringify(savedProfile));
         showToast(t('settings.profile.saved'));
         setEditing(false);
+        window.location.reload();
       } else {
         showToast('خطا در بروزرسانی');
       }
@@ -8338,7 +8347,7 @@ function ProfileTab({ currentUser, showToast }: { currentUser: User; showToast: 
         </div>
         <div className="text-center">
           <div style={{ fontSize: '20px', fontWeight: 800, color: '#f0fdf4' }}>{name || currentUser.username}</div>
-          <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '2px' }}>@{currentUser.username}</div>
+          <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '2px' }}>@{username}</div>
         </div>
         <span
           style={{
@@ -8353,6 +8362,15 @@ function ProfileTab({ currentUser, showToast }: { currentUser: User; showToast: 
 
       {/* Info fields — iPhone Contacts style rows */}
       <div className="space-y-3">
+        <ProfileField
+          icon="🆔"
+          label="نام کاربری"
+          value={username}
+          isEditing={editing}
+          onChange={setUsername}
+          placeholder="نام کاربری"
+          dir="ltr"
+        />
         <ProfileField
           icon="👤"
           label="نام نمایشی"
@@ -8947,6 +8965,7 @@ const PERMISSION_LABELS: Record<string, { fa: string; en: string }> = {
   manage_settings: { fa: 'مدیریت تنظیمات',       en: 'Manage settings' },
   view_activity:   { fa: 'مشاهده گزارش فعالیت',  en: 'View activity log' },
   export_reports:  { fa: 'خروجی گزارش',          en: 'Export reports' },
+  view_user_phone: { fa: 'مشاهده شماره همراه کاربران', en: 'View users’ phone numbers' },
 };
 
 function PermissionsPanel({ user, currentUser, onSaved }: {
@@ -9073,6 +9092,10 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
   const handleCreate = async () => {
     if (!newUser.username.trim() || !newUser.password) {
       showToast(t('settings.username'));
+      return;
+    }
+    if (!newUser.phone.trim()) {
+      showToast('وارد کردن شماره همراه برای ایجاد کاربر الزامی است');
       return;
     }
     if (newUser.password.length < 8) {
@@ -9236,6 +9259,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
           <input
             type="tel"
             dir="ltr"
+            required
             placeholder="شماره همراه (0912xxxxxxx)"
             value={newUser.phone}
             onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}

@@ -188,6 +188,13 @@ async function main() {
     assert(genreUploadResponse.status === 200 && genreUpload.success,
       'admin can upload a shared PDF attachment for a genre');
 
+    const missingPhoneUser = await request('/api/users', {
+      method: 'POST', token,
+      body: JSON.stringify({ username: 'missing_phone_user', password: 'MissingPhone!2026', role: 'viewer', name: 'Missing Phone User' }),
+    });
+    assert(missingPhoneUser.status === 400,
+      'API rejects user creation when the required phone number is missing');
+
     const viewerCreated = await request('/api/users', {
       method: 'POST', token,
       body: JSON.stringify({ username: 'genre_file_viewer', password: 'ViewerFile!2026', role: 'viewer', name: 'Genre File Viewer', phone: '09120000002' }),
@@ -243,13 +250,42 @@ async function main() {
     assert(profileBefore.status === 200, 'authenticated user can read their own profile');
     const profileUpdated = await request('/api/profile', {
       method: 'PUT', token,
-      body: JSON.stringify({ name: 'CRUD Integration Admin', jobTitle: 'QA', deputy: 'Test Unit', phone: '000-TEST' }),
+      body: JSON.stringify({ username: 'crud_admin_renamed', name: 'CRUD Integration Admin', jobTitle: 'QA', deputy: 'Test Unit', phone: '000-TEST' }),
     });
-    assert(profileUpdated.status === 200 && profileUpdated.data.name === 'CRUD Integration Admin',
-      'user can update their own profile fields');
+    assert(profileUpdated.status === 200 && profileUpdated.data.name === 'CRUD Integration Admin' && profileUpdated.data.username === 'crud_admin_renamed',
+      'user can update their own profile fields and username');
+    const duplicateUsernameUpdate = await request('/api/profile', {
+      method: 'PUT', token, body: JSON.stringify({ username: 'genre_file_viewer' }),
+    });
+    assert(duplicateUsernameUpdate.status === 409, 'profile username update rejects a username already owned by another account');
     const profileReadBack = await request('/api/profile', { token });
-    assert(profileReadBack.data.jobTitle === 'QA' && profileReadBack.data.phone === '000-TEST',
+    assert(profileReadBack.data.jobTitle === 'QA' && profileReadBack.data.phone === '000-TEST' && profileReadBack.data.username === 'crud_admin_renamed',
       'profile changes persist across authenticated reads');
+
+    const limitedAdminCreated = await request('/api/users', {
+      method: 'POST', token,
+      body: JSON.stringify({ username: 'phone_limited_admin', password: 'PhoneAdmin!2026', role: 'admin', name: 'Phone Limited Admin', phone: '09120000003' }),
+    });
+    assert(limitedAdminCreated.status === 200, 'super admin can create a regular admin for phone-visibility tests');
+    const limitedAdminLogin = await request('/api/auth/login', {
+      method: 'POST', body: JSON.stringify({ username: 'phone_limited_admin', password: 'PhoneAdmin!2026' }),
+    });
+    assert(limitedAdminLogin.status === 200 && !!limitedAdminLogin.data.token, 'regular admin can authenticate for phone-visibility tests');
+    const limitedAdminToken = limitedAdminLogin.data.token;
+    const limitedAdminUsers = await request('/api/users', { token: limitedAdminToken });
+    const viewerRowBeforeGrant = limitedAdminUsers.data.users?.find(user => user.username === 'genre_file_viewer');
+    const ownAdminRow = limitedAdminUsers.data.users?.find(user => user.username === 'phone_limited_admin');
+    assert(limitedAdminUsers.status === 200 && ownAdminRow?.phone === '09120000003' && viewerRowBeforeGrant?.phone === undefined,
+      'regular admin sees their own phone but not other users’ phones by default');
+    const phoneGrant = await request('/api/users?id=' + limitedAdminCreated.data.id, {
+      method: 'PUT', token,
+      body: JSON.stringify({ permissions: ['manage_users', 'create_admins', 'suspend_users', 'add_shows', 'edit_shows', 'delete_shows', 'manage_genres', 'manage_settings', 'view_activity', 'view_user_phone', 'export_reports'] }),
+    });
+    assert(phoneGrant.status === 200, 'super admin can grant the dedicated view_user_phone permission');
+    const limitedAdminUsersAfterGrant = await request('/api/users', { token: limitedAdminToken });
+    const viewerRowAfterGrant = limitedAdminUsersAfterGrant.data.users?.find(user => user.username === 'genre_file_viewer');
+    assert(viewerRowAfterGrant?.phone === '09120000002',
+      'regular admin sees other users’ phone numbers only after super-admin permission grant');
 
     const permissions = await request('/api/permissions', { token });
     assert(permissions.status === 200 && permissions.data.permissions.includes('manage_users'),
