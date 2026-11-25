@@ -1004,9 +1004,10 @@ try {
 // Bun server
 // ---------------------------------------------------------------------------
 const server = Bun.serve({
-  // A bounded JSON body protects the local service from unbounded uploads.
-  // The 64 MiB ceiling accommodates up to 40 MiB of decoded local clips (base64 overhead included).
-  maxRequestBodySize: 64 * 1024 * 1024,
+  // Bound every request globally while allowing the documented 200 MiB video
+  // input plus multipart framing. Individual image/video routes enforce tighter
+  // per-file limits after parsing; this ceiling also protects chunked requests.
+  maxRequestBodySize: 220 * 1024 * 1024,
   port: PORT,
   // Default to loopback (127.0.0.1) for security: the API service owns auth,
   // sessions, and the database, so it must not be exposed to the network by
