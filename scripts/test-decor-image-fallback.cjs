@@ -11,7 +11,9 @@
  *   BANKRESANE_TEST_SHOW_NAME='known program title'
  */
 const IMDbUrl = 'https://www.imdb.com/title/tt1121180/?ref_=ttep_ep_1';
-const baseUrl = (process.env.BANKRESANE_TEST_URL || '').replace(/\/$/, '');
+const legacyBase = (process.env.BANKRESANEH_TEST_URL || '').replace(/\/$/, '');
+const nextBase = (process.env.BANKRESANEH_TEST_NEXT_URL || legacyBase).replace(/\/$/, '');
+const apiBase = (process.env.BANKRESANEH_TEST_API_URL || legacyBase).replace(/\/$/, '');
 const token = process.env.BANKRESANE_TEST_TOKEN;
 const showName = process.env.BANKRESANE_TEST_SHOW_NAME || '';
 
