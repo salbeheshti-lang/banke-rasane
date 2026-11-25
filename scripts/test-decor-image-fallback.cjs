@@ -15,17 +15,18 @@ const baseUrl = (process.env.BANKRESANE_TEST_URL || '').replace(/\/$/, '');
 const token = process.env.BANKRESANE_TEST_TOKEN;
 const showName = process.env.BANKRESANE_TEST_SHOW_NAME || '';
 
-if (!baseUrl || !token) {
+if (!nextBase || !apiBase || !token) {
   console.error('Set BANKRESANE_TEST_URL and BANKRESANE_TEST_TOKEN to run this authenticated end-to-end test.');
   process.exit(2);
 }
 
 (async () => {
-  const response = await fetch(`${baseUrl}/api/fetch-show-info`, {
+  const response = await fetch(`${nextBase}/api/fetch-show-info`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
       Authorization: `Bearer ${token}`,
+      'X-BankResaneh-Api-Base': apiBase,
     },
     body: JSON.stringify({
       url: IMDbUrl,
@@ -62,7 +63,7 @@ if (!baseUrl || !token) {
   console.log('PASS: authenticated decor IMDb import returned a reachable Wikimedia image.');
 
   const wikipediaPageUrl = process.env.BANKRESANE_TEST_WIKIPEDIA_URL || 'https://en.wikipedia.org/wiki/Top_Gear';
-  const pageImportResponse = await fetch(`${baseUrl}/api/import-image`, {
+  const pageImportResponse = await fetch(`${apiBase}/api/import-image`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ url: wikipediaPageUrl }),
