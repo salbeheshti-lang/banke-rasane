@@ -104,17 +104,17 @@ jobs:
           ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.ci-cache/electron-builder
           ELECTRON_CACHE: ${{ github.workspace }}/.ci-cache/electron
 
-      - name: Verify published 5.3.9 to current-version in-place upgrade
+      - name: Verify published 5.3.6 to current-version in-place upgrade
         shell: pwsh
         timeout-minutes: 30
         run: |
           $ErrorActionPreference = 'Stop'
           $installDir = Join-Path $env:RUNNER_TEMP 'BankResaneh-Upgrade-Test'
-          $oldSetup = Join-Path $env:RUNNER_TEMP 'BankResaneh-5.3.9-Setup.exe'
+          $oldSetup = Join-Path $env:RUNNER_TEMP 'BankResaneh-5.3.6-Setup.exe'
           $newSetup = Get-ChildItem release -Filter '*Setup*.exe' | Select-Object -First 1
           if (-not $newSetup) { throw 'Current-version NSIS installer was not produced.' }
-          Invoke-WebRequest -Uri 'https://github.com/salbeheshti-lang/banke-rasane/releases/download/v5.3.9/BankResaneh-Setup.exe' -OutFile $oldSetup
-          if ((Get-Item $oldSetup).Length -lt 100MB) { throw 'Published 5.3.9 installer download is incomplete.' }
+          Invoke-WebRequest -Uri 'https://github.com/salbeheshti-lang/banke-rasane/releases/download/v5.3.6/BankResaneh-Setup.exe' -OutFile $oldSetup
+          if ((Get-Item $oldSetup).Length -lt 100MB) { throw 'Published 5.3.6 installer download is incomplete.' }
 
           function Install-App([string]$Path, [string]$Log) {
             $p = Start-Process -FilePath $Path -ArgumentList @('/S', "/LOG=$Log", "/D=$installDir") -PassThru
@@ -126,7 +126,7 @@ jobs:
           Install-App $oldSetup (Join-Path $env:RUNNER_TEMP 'install-539.log')
           $exe = Join-Path $installDir 'BankResaneh.exe'
           node scripts/smoke-electron.cjs "$exe"
-          if ($LASTEXITCODE -ne 0) { throw '5.3.9 baseline startup/API/DB smoke test failed.' }
+          if ($LASTEXITCODE -ne 0) { throw '5.3.6 baseline startup/API/DB smoke test failed.' }
 
           # Reproduce the exact package version already installed by the user.
           $baselineSetup = Join-Path $env:RUNNER_TEMP 'BankResaneh-5.4.4-Setup.exe'
@@ -157,7 +157,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Upgraded application failed startup/API/DB/video smoke test.' }
           Remove-Item Env:BANKRESANEH_VERIFY_VIDEO_EXPORT -ErrorAction SilentlyContinue
           $packageVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
-          Write-Host "PASS: 5.3.9 -> audited 5.4.4 -> candidate $packageVersion in-place upgrade; $($snapshot.Count) persistent files including SQLite survived the 5.4.4 -> candidate step byte-for-byte."
+          Write-Host "PASS: 5.3.6 -> audited 5.4.4 -> candidate $packageVersion in-place upgrade; $($snapshot.Count) persistent files including SQLite survived the 5.4.4 -> candidate step byte-for-byte."
 
       - name: Run packaged app smoke test
         run: npm run smoke:desktop
