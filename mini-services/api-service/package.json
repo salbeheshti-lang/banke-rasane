@@ -6,7 +6,8 @@
   },
   "dependencies": {
     "sharp": "^0.34.3",
-    "ffmpeg-static": "^5.2.0"
+    "ffmpeg-static": "^5.2.0",
+    "detect-libc": "^2.0.4"
   },
   "trustedDependencies": [
     "ffmpeg-static",
