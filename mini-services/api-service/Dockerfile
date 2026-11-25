@@ -2,15 +2,17 @@ FROM oven/bun:1.4.4
 
 WORKDIR /app
 
-# Render builds with the repository root as Docker context.
+# Build context is the repository root (Render dockerContext: ".").
 COPY mini-services/api-service/package.json ./package.json
 RUN bun install --production
 
 COPY mini-services/api-service/index.js ./index.js
 COPY mini-services/api-service/video-validation.mjs ./video-validation.mjs
+COPY mini-services/api-service/video-transcode.mjs ./video-transcode.mjs
+COPY mini-services/api-service/image-import.mjs ./image-import.mjs
 COPY public/talk-shows-data.json ./talk-shows-data.json
 
-# Bind publicly inside the Render container and seed the existing baseline archive.
+# Render must be able to reach the Bun server from outside the container.
 ENV PORT=10000
 ENV BANKRESANEH_HOST=0.0.0.0
 ENV BANKRESANEH_SEED_PATH=/app/talk-shows-data.json
