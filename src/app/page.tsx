@@ -1771,7 +1771,6 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               </span>
               <span className="flex items-center gap-1.5" style={{ marginTop: '4px', opacity: 0.9 }} title={t('footer.clientOrg')}>
                 <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2, alignItems: 'flex-start' }}>
-                  <span style={{ color: 'rgba(167, 243, 208, 0.5)', fontSize: '9px', fontWeight: 500 }}>{t('footer.poweredBy')}</span>
                   <span style={{ color: 'rgba(167, 243, 208, 0.85)', fontSize: '10px', fontWeight: 700, marginTop: '1px' }}>{t('footer.clientOrg')}</span>
                 </span>
                 <Image src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={24} height={25} style={{ opacity: 0.9, objectFit: 'contain' }} />
