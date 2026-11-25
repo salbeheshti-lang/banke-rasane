@@ -173,6 +173,13 @@
         "filter": [
           "**/*"
         ]
+      },
+      {
+        "from": "node_modules/detect-libc",
+        "to": "api-service/node_modules/detect-libc",
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "win": {
