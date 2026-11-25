@@ -40,9 +40,16 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          response=$(curl --fail --silent --show-error \
+          raw=$(curl --silent --show-error -w '\n%{http_code}' \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database")
+          http_code="${raw##*$'\n'}"
+          response="${raw%$'\n'*}"
+          if [[ "$http_code" != "200" ]] || [[ "$(echo "$response" | jq -r '.success // false')" != "true" ]]; then
+            echo "::error::Cloudflare D1 database-list request failed (HTTP $http_code)."
+            echo "$response" | jq -r '.errors[]? | "Cloudflare error \(.code): \(.message)"' || true
+            exit 1
+          fi
           echo "$response" | jq -r '.result[] | [.name, .uuid] | @tsv'
           database_id=$(echo "$response" | jq -r '.result[] | select(.name == "banke-rasane-db") | .uuid' | head -n 1)
           if [[ -z "$database_id" || "$database_id" == "null" ]]; then
