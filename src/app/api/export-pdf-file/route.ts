@@ -244,8 +244,17 @@ export async function POST(request: NextRequest) {
             paddingBottom: () => 4,
           },
         },
-        { text: 'یادداشت', style: 'section' },
-        { text: text(saved.reportText, 'این گزارش به‌صورت خودکار از داده‌های انتخاب‌شده در آرشیو بانک رسانه تهیه شده است. اطلاعات و دسته‌بندی‌ها مطابق داده‌های ثبت‌شده در زمان تهیه گزارش هستند.'), fontSize: 8, color: '#475569' },
+        ...(typeof saved.reportText === 'string' && saved.reportText.trim()
+          ? [
+              { text: 'یادداشت', style: 'section' },
+              { text: saved.reportText.trim(), fontSize: 8, color: '#475569' },
+            ]
+          : typeof saved.reportText !== 'string'
+            ? [
+                { text: 'یادداشت', style: 'section' },
+                { text: 'این گزارش به‌صورت خودکار از داده‌های انتخاب‌شده در آرشیو بانک رسانه تهیه شده است. اطلاعات و دسته‌بندی‌ها مطابق داده‌های ثبت‌شده در زمان تهیه گزارش هستند.', fontSize: 8, color: '#475569' },
+              ]
+            : []),
       ],
     };
 
