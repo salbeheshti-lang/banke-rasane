@@ -1780,7 +1780,6 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               </span>
               <span className="flex items-center gap-1.5" style={{ marginTop: '4px', opacity: 0.95 }} title={CLIENT_BRANDING.organizationFa}>
                 <span style={{ color: 'rgba(167, 243, 208, 0.9)', fontSize: '10px', fontWeight: 700, lineHeight: 1.2 }}>{CLIENT_BRANDING.organizationFa}</span>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={32} height={32} style={{ opacity: 0.95, objectFit: 'contain' }} />
               </span>
             </div>
@@ -1788,7 +1787,6 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
           {/* Mobile: compact organization name + logo next to the main logo */}
           {isMobile && (
             <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={26} height={26} style={{ opacity: 0.95, objectFit: 'contain' }} />
               <span style={{ color: 'rgba(167, 243, 208, 0.85)', fontSize: '8.5px', fontWeight: 700, lineHeight: 1.1, whiteSpace: 'nowrap' }}>{CLIENT_BRANDING.organizationFa}</span>
             </div>
