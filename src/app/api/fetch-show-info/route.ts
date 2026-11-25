@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
         if (record.Title) info.title = record.Title;
         if (record.Plot && record.Plot !== 'N/A') info.description = record.Plot;
         // Preserve IMDb/OMDb posters for other genres; decor needs real program/set imagery.
-        if (record.Poster && record.Poster !== 'N/A' && /^https:\/\//i.test(record.Poster)) info.image = record.Poster;
+        if (!isDecor && record.Poster && record.Poster !== 'N/A' && /^https:\/\//i.test(record.Poster)) info.image = record.Poster;
         if (record.imdbRating && record.imdbRating !== 'N/A') info.rating = record.imdbRating;
         if (record.Genre && record.Genre !== 'N/A') info.genres = record.Genre;
         if (record.Year && record.Year !== 'N/A') info.year = record.Year;
@@ -175,13 +175,18 @@ export async function POST(request: NextRequest) {
       // Prefer the poster belonging to the exact IMDb title ID. Do not
       // replace it with a loosely matched Wikipedia search result (which can
       // return an unrelated image for ambiguous titles such as "Top Gear").
-      if (!info.image && imdbMatch) {
+      if (!isDecor && !info.image && imdbMatch) {
         const fallbackPoster = await fetchImdbPoster(imdbMatch[1]);
         if (fallbackPoster) info.image = fallbackPoster;
       }
       // Only use Wikipedia/Wikimedia as a last resort when IMDb has no image.
       if (!info.image && (isDecor || info.title || showName)) {
-        const fallbackImage = await fetchWikipediaShowImage(info.title || String(showName || ''));
+        // In decor mode the user-supplied programme name is more reliable
+        // than an IMDb episode title; search for the programme/studio image.
+        const fallbackTitle = isDecor && showName
+          ? String(showName)
+          : (info.title || String(showName || ''));
+        const fallbackImage = await fetchWikipediaShowImage(fallbackTitle);
         if (fallbackImage) info.image = fallbackImage;
       }
     }
@@ -213,7 +218,10 @@ export async function POST(request: NextRequest) {
         }
       }
       if (!info.image && (isDecor || info.title || showName)) {
-        const fallbackImage = await fetchWikipediaShowImage(info.title || pageTitle || String(showName || ''));
+        const fallbackTitle = isDecor && showName
+          ? String(showName)
+          : (info.title || pageTitle || String(showName || ''));
+        const fallbackImage = await fetchWikipediaShowImage(fallbackTitle);
         if (fallbackImage) info.image = fallbackImage;
       }
     }
