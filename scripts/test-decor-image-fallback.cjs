@@ -39,6 +39,7 @@ if (!nextBase || !apiBase || !token) {
   });
 
   const payload = await response.json().catch(() => ({}));
+  console.log(`[IMDb import] HTTP ${response.status}; title=${payload.info?.title || 'none'}; image=${payload.info?.image || 'none'}; error=${payload.error || payload.message || 'none'}`);
   if (!response.ok) {
     throw new Error(`API returned HTTP ${response.status}: ${payload.error || 'unknown error'}`);
   }
