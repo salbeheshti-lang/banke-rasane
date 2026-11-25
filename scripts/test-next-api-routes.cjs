@@ -1,5 +1,5 @@
 /* eslint @typescript-eslint/no-require-imports: off */
-const { spawn } = require('node:child_process');
+const { spawn, execFileSync } = require('node:child_process');
 const { mkdtempSync, mkdirSync, writeFileSync, rmSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const path = require('node:path');
@@ -377,6 +377,20 @@ async function main() {
     body: { url: 'not-a-url', category: 'تاک‌شوی مصاحبه‌محور', showName: 'Integration Show', isDecor: true },
   });
   assert(importValidation.status === 400, 'authorized IMDb/Wikipedia import route validates URL before external lookup');
+
+  if (process.env.BANKRESANE_TEST_EXTERNAL_IMPORTS === '1') {
+    // Live, authenticated smoke test: real IMDb page fallback to Wikimedia and
+    // real Wikipedia article image download + Sharp WebP optimization.
+    execFileSync(process.execPath, [path.join(root, 'scripts', 'test-decor-image-fallback.cjs')], {
+      env: {
+        ...process.env,
+        BANKRESANE_TEST_URL: apiBase,
+        BANKRESANE_TEST_TOKEN: adminToken,
+      },
+      stdio: 'inherit',
+      timeout: 120000,
+    });
+  }
 
   const socialValidation = await request(nextBase, '/api/publish-social', {
     method: 'POST', token: adminToken,
