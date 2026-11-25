@@ -125,8 +125,12 @@ jobs:
           if (Test-Path $installDir) { Remove-Item $installDir -Recurse -Force }
           Install-App $oldSetup (Join-Path $env:RUNNER_TEMP 'install-539.log')
           $exe = Join-Path $installDir 'BankResaneh.exe'
-          node scripts/smoke-electron.cjs "$exe"
-          if ($LASTEXITCODE -ne 0) { throw '5.3.6 baseline startup/API/DB smoke test failed.' }
+          if (-not (Test-Path $exe)) { throw 'Published 5.3.6 installer did not install BankResaneh.exe.' }
+          # 5.3.6 is the known-broken version reported by the user. Its startup
+          # failure (missing Next.js runtime) is the reason for this upgrade
+          # test, so do not require the old app to pass a startup smoke test.
+          # Verify that its installer can be upgraded to the audited baseline,
+          # then test the baseline and candidate application normally.
 
           # Reproduce the exact package version already installed by the user.
           $baselineSetup = Join-Path $env:RUNNER_TEMP 'BankResaneh-5.4.4-Setup.exe'
