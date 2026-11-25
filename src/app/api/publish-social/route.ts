@@ -39,7 +39,9 @@ function parseVideoDataUrl(value: string): { mime: 'video/mp4'; bytes: Buffer; e
 }
 
 function parseImageDataUrl(value: string): { mime: string; bytes: Buffer; extension: string } | null {
-  const match = value.match(/^data:(image\/(?:jpeg|png|webp|gif|avif));base64,([A-Za-z0-9+/=\r\n]+)$/i);
+  // Browser-generated carousel covers are normalized to JPEG before reaching this route.
+  // Keep this Worker-compatible: native Sharp binaries are unavailable in Cloudflare Workers.
+  const match = value.match(/^data:(image\/(?:jpeg|png));base64,([A-Za-z0-9+/=\r\n]+)$/i);
   if (!match) return null;
   const mime = match[1].toLowerCase();
   const bytes = Buffer.from(match[2], 'base64');
@@ -132,15 +134,6 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ ok: false, error: 'لینک تصویر باید HTTPS معتبر یا تصویر ذخیره‌شدهٔ داخلی باشد' }, { status: 400 });
         }
       }
-    }
-
-    if (imageData) {
-      const sharp = (await import('sharp')).default;
-      const jpeg = await sharp(imageData.bytes).rotate().jpeg({ quality: 88 }).toBuffer();
-      if (!jpeg.length || jpeg.length > 5 * 1024 * 1024) {
-        return NextResponse.json({ ok: false, error: 'حجم تصویر برای ارسال به ربات بیش از حد مجاز است' }, { status: 413 });
-      }
-      imageData = { mime: 'image/jpeg', bytes: jpeg, extension: 'jpg' };
     }
 
     const hasMedia = hasVideo || hasImage;
