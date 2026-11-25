@@ -387,6 +387,7 @@ async function main() {
         BANKRESANE_TEST_URL: apiBase,
         BANKRESANE_TEST_NEXT_URL: nextBase,
         BANKRESANE_TEST_API_URL: apiBase,
+        BANKRESANE_TEST_SHOW_NAME: 'Top Gear',
         BANKRESANE_TEST_TOKEN: adminToken,
       },
       stdio: 'inherit',
