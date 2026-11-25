@@ -18,6 +18,11 @@ on:
       - 'src/lib/api.ts'
       - 'src/app/page.tsx'
       - 'package.json'
+      - 'electron/**'
+      - 'scripts/after-pack.cjs'
+      - 'scripts/copy-standalone.cjs'
+      - '.github/workflows/build-exe.yml'
+      - '.github/workflows/create-release-tag.yml'
       - '.github/workflows/security-tests.yml'
   pull_request:
     branches: [main, 'fix/**', 'feat/**']
@@ -29,6 +34,11 @@ on:
       - 'src/lib/api.ts'
       - 'src/app/page.tsx'
       - 'package.json'
+      - 'electron/**'
+      - 'scripts/after-pack.cjs'
+      - 'scripts/copy-standalone.cjs'
+      - '.github/workflows/build-exe.yml'
+      - '.github/workflows/create-release-tag.yml'
       - '.github/workflows/security-tests.yml'
 
 permissions:
