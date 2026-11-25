@@ -1862,6 +1862,7 @@ const server = Bun.serve({
       const password = String(body?.password || '');
       const phone = String(body?.phone || '').trim();
       if (!username || !password) return json({ error: 'نام کاربری و رمز عبور را وارد کنید' }, 400, req);
+      if (!phone) return json({ error: 'شماره همراه الزامی است' }, 400, req);
       if (password.length < 8) return json({ error: 'رمز عبور باید حداقل ۸ کاراکتر باشد' }, 400, req);
       const existing = getUserByUsername(username);
       if (existing) return json({ error: 'نام کاربری تکراری' }, 409, req);
