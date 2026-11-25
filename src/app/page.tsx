@@ -1313,7 +1313,7 @@ function HomeInner() {
         {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} onEditGenre={handleEditGenre} onDeleteGenre={handleDeleteGenre} onShowClick={setSelectedShow} />}
         {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={(s) => { setEditingShow(s); setPresetGenre(null); setPresetCategory(undefined); navigate('add'); }} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={(s) => { setEditingShow(s); setPresetGenre(null); setPresetCategory(undefined); navigate('add'); }} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
-        {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} canManageSettings={isAdmin} onExport={(shows, format, meta) => setExportPreview({ shows, format, ...meta })} />}
+        {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} canManageSettings={hasPermission('manage_settings') || isAdmin} onExport={(shows, format, meta) => setExportPreview({ shows, format, ...meta })} />}
         {currentView === 'add' && canEdit && <AddEditView key={editingShow?.num ?? 'new'} talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setPresetCategory(undefined); setPresetGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} presetCategory={presetCategory} presetGenre={presetGenre} genres={genres} canManageCapacity={isAdmin} />}
         {currentView === 'add' && !canEdit && (
           <div className="premium-glass p-8 text-center">
@@ -7494,6 +7494,36 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
   const { t, lang } = useLang();
   useEscapeKey(onClose);
   const [downloading, setDownloading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [previewError, setPreviewError] = useState('');
+  useEffect(() => {
+    if (format !== 'pdf') return;
+    let cancelled = false;
+    let objectUrl = '';
+    (async () => {
+      try {
+        const response = await fetch('/api/export-pdf-file', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({ shows, title, subtitle, organization }),
+        });
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || 'ساخت پیش‌نمایش PDF ناموفق بود');
+        }
+        const blob = await response.blob();
+        if (blob.type !== 'application/pdf' || blob.size < 8) throw new Error('پیش‌نمایش PDF معتبر نیست');
+        objectUrl = URL.createObjectURL(blob);
+        if (!cancelled) setPreviewUrl(objectUrl);
+      } catch (error) {
+        if (!cancelled) setPreviewError(error instanceof Error ? error.message : 'ساخت پیش‌نمایش PDF ناموفق بود');
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [format, shows, title, subtitle, organization]);
 
   // Resolve the effective report metadata — caller-provided overrides win,
   // otherwise we fall back to the canonical defaults used by the API.
@@ -7629,142 +7659,14 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
             </div>
           </div>
 
-          {/* PDF report preview — multi-section professional template */}
+          {/* PDF preview renders the exact authenticated PDF bytes that the Download button saves. */}
           {format === 'pdf' && (
             <div className="mb-4 rounded-2xl overflow-hidden" style={{ border: '2px solid #0d7c4a', boxShadow: '0 8px 24px rgba(13, 124, 74, 0.15)' }}>
-              {/* Cover preview */}
-              <div
-                className="p-6 text-center relative overflow-hidden"
-                style={{
-                  background: 'radial-gradient(ellipse 80% 60% at 70% 20%, rgba(54, 179, 126, 0.35) 0%, transparent 60%), radial-gradient(ellipse 70% 50% at 25% 80%, rgba(13, 124, 74, 0.4) 0%, transparent 60%), linear-gradient(160deg, #0a1f14 0%, #0d2218 50%, #0a1f14 100%)',
-                  color: 'white',
-                }}
-              >
-                <div style={{ color: 'rgba(134, 239, 172, 0.6)', fontSize: '11px', letterSpacing: '4px', marginBottom: '12px' }}>{t('app.title')}</div>
-                <div style={{ marginBottom: '10px', filter: 'drop-shadow(0 0 16px rgba(16, 185, 129, 0.5))' }}>
-                  {/* Real program logo instead of a generic film/tv SVG icon. */}
-                  <img
-                    src="/banke-rasane-logo.png"
-                    alt={t('app.title')}
-                    style={{ width: '64px', height: 'auto', display: 'inline-block', borderRadius: '10px' }}
-                  />
-                </div>
-                <h3 className="text-xl font-black mb-2" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.4)' }}>{reportTitle}</h3>
-                <p className="text-xs" style={{ color: 'rgba(134, 239, 172, 0.8)' }}>{reportSubtitle}</p>
-                <div
-                  className="flex justify-center gap-4 mt-4 mx-auto"
-                  style={{
-                    background: 'rgba(13, 124, 74, 0.1)',
-                    border: '1px solid rgba(13, 124, 74, 0.25)',
-                    borderRadius: '12px',
-                    padding: '12px 16px',
-                    maxWidth: '380px',
-                    backdropFilter: 'blur(8px)',
-                  }}
-                >
-                  <div>
-                    <div className="text-xl font-black" style={{ color: '#10b981' }}>{shows.length.toLocaleString('fa-IR')}</div>
-                    <div className="text-xs" style={{ color: 'rgba(134, 239, 172, 0.7)' }}>برنامه</div>
-                  </div>
-                  <div style={{ width: '1px', background: 'rgba(16, 185, 129, 0.3)' }}></div>
-                  <div>
-                    <div className="text-xl font-black" style={{ color: '#10b981' }}>{new Set(shows.map(s => s.category)).size.toLocaleString('fa-IR')}</div>
-                    <div className="text-xs" style={{ color: 'rgba(134, 239, 172, 0.7)' }}>دستهٔ ژانری</div>
-                  </div>
-                  <div style={{ width: '1px', background: 'rgba(16, 185, 129, 0.3)' }}></div>
-                  <div>
-                    <div className="text-xl font-black" style={{ color: '#10b981' }}>{new Date().toLocaleDateString('fa-IR')}</div>
-                    <div className="text-xs" style={{ color: 'rgba(134, 239, 172, 0.7)' }}>تاریخ</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Sections list — shows the report structure with descriptions */}
-              <div className="p-4" style={{ background: '#f8faf9' }}>
-                <div className="text-xs font-bold mb-3" style={{ color: '#0d7c4a', paddingRight: '8px', borderRight: '3px solid #0d7c4a' }}>
-                  {lang === 'fa' ? 'ساختار گزارش (۸ بخش) — هر بخش شامل توضیحات کامل' : 'Report structure (8 sections) — each with full descriptions'}
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {[
-                    { n: 1, t: 'خلاصه اجرایی', icon: '📋', desc: 'مرور کلی آرشیو، حجم داده‌ها، یافته‌های کلیدی و نکات مهم برای تصمیم‌گیرندگان' },
-                    { n: 2, t: 'روش جمع‌آوری داده', icon: '🔬', desc: 'توضیح منابع داده، فرایند طبقه‌بندی ژانری و رویکرد ترکیبی' },
-                    { n: 3, t: 'نمای آماری کلی', icon: '📊', desc: '۴ کارت آماری + ۵ نمودار میله‌ای: اندازه استودیو، سبک دکور، تماشاگر، نورپردازی، چیدمان' },
-                    { n: 4, t: 'تحلیل توزیع ژانرها', icon: '🏷', desc: 'نمودار کامل توزیع + معرفی تفصیلی هر دسته با شمارش، درصد، و برنامه‌های شاخص' },
-                    { n: 5, t: 'تحلیل دکور و صحنه', icon: '🎨', desc: '۴ نمودار: عناصر پرتکرار صحنه، مصالح، طیف رنگی، نورپردازی + یافته‌های تحلیلی' },
-                    { n: 6, t: 'فهرست تفصیلی برنامه‌ها', icon: '📚', desc: 'کارت کامل برای هر برنامه: تصویر، توضیحات فارسی، تگ‌ها، مشخصات دکور، خلاصه' },
-                    { n: 7, t: 'نتیجه‌گیری و پیشنهادها', icon: '💡', desc: 'جمع‌بندی یافته‌ها + ۵ پیشنهاد اجرایی + بخش امضا و تاریخ' },
-                    { n: 8, t: 'پیوست: نمایهٔ الفبایی', icon: '📑', desc: 'فهرست کامل همهٔ برنامه‌ها به ترتیب الفبایی با شماره و دستهٔ ژانری' },
-                  ].map(s => (
-                    <div
-                      key={s.n}
-                      className="p-3 rounded-lg flex gap-2.5"
-                      style={{ background: 'white', border: '1px solid rgba(13, 124, 74, 0.3)' }}
-                    >
-                      <span
-                        className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0"
-                        style={{ background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)', border: '1px solid rgba(255, 255, 255, 0.3)', color: 'white', boxShadow: '0 2px 6px rgba(13, 124, 74, 0.3)' }}
-                      >
-                        {s.n.toLocaleString('fa-IR')}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <span className="text-sm">{s.icon}</span>
-                          <span className="text-xs font-bold" style={{ color: '#1a2e1a' }}>{s.t}</span>
-                        </div>
-                        <p className="text-xs leading-relaxed" style={{ color: '#4a5d52', fontSize: '10.5px' }}>
-                          {s.desc}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Sample program card preview */}
-              <div className="p-4" style={{ background: 'white', borderTop: '1px solid rgba(13, 124, 74, 0.3)' }}>
-                <div className="text-xs font-bold mb-2" style={{ color: '#0d7c4a' }}>{lang === 'fa' ? 'نمونه کارت برنامه (از بخش ۶)' : 'Sample program card (from section 6)'}</div>
-                <div
-                  className="rounded-lg overflow-hidden"
-                  style={{ border: '1px solid rgba(13, 124, 74, 0.3)', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}
-                >
-                  <div
-                    className="p-2 flex items-center gap-2"
-                    style={{ background: 'linear-gradient(135deg, #f0f8f4 0%, #e8f4ee 100%)', borderBottom: '1px solid #c8e0d4' }}
-                  >
-                    <span
-                      className="w-5 h-5 rounded flex items-center justify-center text-xs font-bold flex-shrink-0"
-                      style={{ background: '#0d7c4a', color: 'white' }}
-                    >۱</span>
-                    <span className="text-xs font-bold flex-1" style={{ color: '#1a2e1a', direction: 'ltr', textAlign: 'right' }}>
-                      {shows[0]?.name || (lang === 'fa' ? 'نمونه برنامه' : 'Sample program')}
-                    </span>
-                    <span className="text-xs" style={{ color: '#4a5d52' }}>شناسه: ۱</span>
-                  </div>
-                  <div className="p-2 flex gap-2">
-                    <div
-                      className="w-12 h-9 rounded flex-shrink-0"
-                      style={{ background: 'linear-gradient(135deg, #0d7c4a 0%, #0a6b40 100%)' }}
-                    ></div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap gap-1 mb-1">
-                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(13, 124, 74,0.1)', color: '#0d7c4a', fontSize: '9px' }}>
-                          {shows[0]?.style || 'مدرن'}
-                        </span>
-                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(13, 124, 74,0.1)', color: '#0d7c4a', fontSize: '9px' }}>
-                          {shows[0]?.size || 'متوسط'}
-                        </span>
-                      </div>
-                      <p className="text-xs" style={{ color: '#2a3a30', lineHeight: 1.5 }}>
-                        {(shows[0]?.descriptionFa || '').substring(0, 100)}...
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {shows.length > 80 && (
-                <div className="p-2 text-center text-xs" style={{ background: '#fef9e7', color: '#8a6d1a' }}>
-                  در گزارش کامل، ۸۰ برنامهٔ نخست به‌صورت تفصیلی و همهٔ {shows.length.toLocaleString('fa-IR')} برنامه در نمایهٔ الفبایی
+              {previewUrl ? (
+                <iframe title="پیش‌نمایش واقعی گزارش PDF" src={previewUrl} style={{ width: '100%', height: 'min(72vh, 760px)', border: 0, background: '#fff' }} />
+              ) : (
+                <div className="p-8 text-center" style={{ background: '#f8faf9', color: '#0d7c4a' }}>
+                  {previewError ? previewError : 'در حال ساخت پیش‌نمایش واقعی PDF با لوگوها و متن ذخیره‌شده...'}
                 </div>
               )}
             </div>
