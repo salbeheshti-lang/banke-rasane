@@ -87,6 +87,7 @@
     "react-syntax-highlighter": "^15.6.1",
     "recharts": "^2.15.4",
     "sharp": "^0.34.3",
+    "semver": "^7.7.2",
     "sonner": "^2.0.6",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
@@ -177,6 +178,13 @@
       {
         "from": "node_modules/detect-libc",
         "to": "api-service/node_modules/detect-libc",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "node_modules/semver",
+        "to": "api-service/node_modules/semver",
         "filter": [
           "**/*"
         ]
