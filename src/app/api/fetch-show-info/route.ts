@@ -229,7 +229,7 @@ export async function POST(request: NextRequest) {
     // ── URL mode (existing behavior) ───────────────────────────────────
     let parsed: URL;
     try { parsed = new URL(url); } catch { return NextResponse.json({ error: 'لینک معتبر نیست' }, { status: 400 }); }
-    if (parsed.protocol !== 'https:') return NextResponse.json({ error: 'فقط لینک HTTPS پذیرفته می‌شود' }, { status: 400 });
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password || (parsed.port && parsed.port !== '443')) return NextResponse.json({ error: 'فقط لینک HTTPS معتبر و بدون اطلاعات ورود پذیرفته می‌شود' }, { status: 400 });
     const host = parsed.hostname.toLowerCase();
     const isImdb = host === 'imdb.com' || host.endsWith('.imdb.com');
     const isWikipedia = host === 'wikipedia.org' || host.endsWith('.wikipedia.org');
