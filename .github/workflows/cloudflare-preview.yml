@@ -150,3 +150,31 @@ jobs:
             exit 1
           fi
           echo "Deployed organization logo is a valid PNG and the login proxy reaches the API."
+
+      - name: Smoke-test the public preview page and browser API proxy
+        shell: bash
+        run: |
+          set -euo pipefail
+          page_status="$(curl --silent --show-error --output /tmp/preview-home.html --write-out '%{http_code}' --max-time 25 "${PREVIEW_URL}/" || true)"
+          if [ "$page_status" != "200" ] || ! grep -Eqi '<html|<!doctype html' /tmp/preview-home.html; then
+            cat /tmp/preview-home.html || true
+            echo "::error::Preview home page did not return a valid HTML document (HTTP ${page_status:-no-response})."
+            exit 1
+          fi
+          asset_path="$(grep -Eo '/_next/static/[^" ]+\\.js' /tmp/preview-home.html | head -n 1 || true)"
+          if [ -z "$asset_path" ]; then
+            echo "::error::Preview home page did not reference a Next.js JavaScript bundle."
+            exit 1
+          fi
+          asset_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --max-time 20 "${PREVIEW_URL}${asset_path}" || true)"
+          if [ "$asset_status" != "200" ]; then
+            echo "::error::Preview JavaScript bundle failed (HTTP ${asset_status:-no-response})."
+            exit 1
+          fi
+          api_status="$(curl --silent --show-error --output /tmp/preview-shows.json --write-out '%{http_code}' --max-time 25 "${PREVIEW_URL}/api/shows?page=1&limit=1" || true)"
+          if [ "$api_status" != "200" ] || ! grep -q '"shows"' /tmp/preview-shows.json; then
+            cat /tmp/preview-shows.json || true
+            echo "::error::Preview browser API proxy did not return show data (HTTP ${api_status:-no-response})."
+            exit 1
+          fi
+          echo "Preview HTML, JavaScript bundle, and browser API proxy all passed."
