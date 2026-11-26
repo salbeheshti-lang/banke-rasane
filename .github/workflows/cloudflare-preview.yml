@@ -32,7 +32,7 @@ jobs:
           [[ -n "$API_BASE" ]] || missing+=("BANKRESANEH_API_BASE (GitHub Variable)")
           [[ -n "$API_ALLOWLIST" ]] || missing+=("BANKRESANEH_ALLOWED_API_ORIGINS (GitHub Variable)")
           if [[ ${#missing[@]} -ne 0 ]]; then
-            printf '::error::Missing required live-preview configuration: %s\\n' "${missing[@]}"
+            printf '::error::Missing required live-preview configuration: %s\n' "${missing[@]}"
             exit 1
           fi
           echo "ready=true" >> "$GITHUB_OUTPUT"
@@ -68,8 +68,8 @@ jobs:
       - name: Deploy isolated preview Worker
         if: steps.config.outputs.ready == 'true'
         run: |
-          bunx wrangler deploy --name bankresaneh-visual-preview \\
-            --var "BANKRESANEH_API_BASE:${BANKRESANEH_API_BASE}" \\
+          bunx wrangler deploy --name bankresaneh-visual-preview \
+            --var "BANKRESANEH_API_BASE:${BANKRESANEH_API_BASE}" \
             --var "BANKRESANEH_ALLOWED_API_ORIGINS:${BANKRESANEH_ALLOWED_API_ORIGINS}"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -93,7 +93,7 @@ jobs:
 
           # Discover the actual CSS chunk referenced by the deployed HTML,
           # then download and validate CSS and both local font binaries.
-          node -e "const fs=require('fs');const html=fs.readFileSync('/tmp/bankresaneh-preview-root.html','utf8');const css=[...html.matchAll(/_next\/static\/css\/[^\"' ]+\.css/g)].map(x=>x[0]);if(!css.length)throw Error('No compiled CSS asset found in live HTML');fs.writeFileSync('/tmp/bankresaneh-css-urls.txt',[...new Set(css)].join('\n'));"
+          node -e "const fs=require('fs');const html=fs.readFileSync('/tmp/bankresaneh-preview-root.html','utf8');const css=[...html.matchAll(/_next\/static\/css\/[A-Za-z0-9._-]+\.css/g)].map(x=>x[0]);if(!css.length)throw Error('No compiled CSS asset found in live HTML');fs.writeFileSync('/tmp/bankresaneh-css-urls.txt',[...new Set(css)].join('\n'));"
           while IFS= read -r asset; do
             [[ -n "$asset" ]] || continue
             case "$asset" in http*) asset_url="$asset" ;; /*) asset_url="$WORKER_URL$asset" ;; *) asset_url="$WORKER_URL/$asset" ;; esac
