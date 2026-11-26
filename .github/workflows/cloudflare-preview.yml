@@ -1,4 +1,5 @@
 name: Cloudflare full preview
+# Preview deployment trigger: keep this workflow scoped to cloudflare/full-preview.
 
 on:
   push:
