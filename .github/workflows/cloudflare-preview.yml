@@ -171,10 +171,13 @@ jobs:
             echo "::error::Preview JavaScript bundle failed (HTTP ${asset_status:-no-response})."
             exit 1
           fi
+          # The archive is intentionally private: without a bearer token the
+          # correct response is 401. This verifies the Worker proxy forwards
+          # the request to the protected API instead of exposing archive data.
           api_status="$(curl --silent --show-error --output /tmp/preview-shows.json --write-out '%{http_code}' --max-time 25 "${PREVIEW_URL}/api/shows?page=1&limit=1" || true)"
-          if [ "$api_status" != "200" ] || ! grep -q '"shows"' /tmp/preview-shows.json; then
+          if [ "$api_status" != "401" ] || ! grep -q '"error":"Unauthorized"' /tmp/preview-shows.json; then
             cat /tmp/preview-shows.json || true
-            echo "::error::Preview browser API proxy did not return show data (HTTP ${api_status:-no-response})."
+            echo "::error::Preview browser API proxy did not enforce the expected authentication gate (HTTP ${api_status:-no-response})."
             exit 1
           fi
-          echo "Preview HTML, JavaScript bundle, and browser API proxy all passed."
+          echo "Preview HTML, JavaScript bundle, and protected browser API proxy all passed."
