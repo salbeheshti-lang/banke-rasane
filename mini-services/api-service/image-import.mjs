@@ -106,7 +106,7 @@ export async function optimizeImageBuffer(source) {
   const metadata = await sharp(bytes, { limitInputPixels: MAX_SOURCE_PIXELS, failOn: 'error' }).metadata();
   if (metadata.format === 'svg') {
     const svg = bytes.toString('utf8');
-    if (/<script\b|<foreignObject\b|(?:href|xlink:href)\s*=\s*["'](?:https?:|file:|\/\/)|url\(\s*["']?(?:https?:|file:|\/\/)/i.test(svg)) {
+    if (/<script\b|<foreignObject\b|<!DOCTYPE|<!ENTITY|(?:href|xlink:href)\s*=\s*["'](?:https?:|file:|\/\/)|url\(\s*["']?(?:https?:|file:|\/\/)/i.test(svg)) {
       throw new Error('SVG contains external or executable content.');
     }
   }
