@@ -20,9 +20,6 @@ jobs:
             echo "::error::GitHub secret CLOUDFLARE_D1_API_TOKEN is missing or empty."
             exit 1
           fi
-          # Cloudflare account IDs are 32-character hex strings. The repository
-          # variable currently contains a UUID, so also test the two account IDs
-          # recorded in the earlier D1 setup history. Read-only enumeration only.
           candidates=("$CONFIGURED_ACCOUNT_ID" "34fe29bd9259dcb2c47fd320f40b2eac" "128caa74c4d03e4cf84cd0d2b3f07bbf")
           for account in "${candidates[@]}"; do
             [[ "$account" =~ ^[a-fA-F0-9]{32}$ ]] || continue
@@ -34,7 +31,7 @@ jobs:
               echo "D1 listing not available for candidate account (HTTP $status); trying next."
               continue
             fi
-            node - "$account" <<'NODE'
+            if node - "$account" <<'NODE'
           const fs = require('node:fs');
           const account = process.argv[2];
           const payload = JSON.parse(fs.readFileSync('/tmp/d1-databases.json', 'utf8'));
@@ -52,8 +49,9 @@ jobs:
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,
             '## Existing D1 database found\n- Name: `' + target.name + '`\n- UUID: `' + target.uuid + '`\n- Account ID: `' + account + '`\n');
           NODE
-            result=$?
-            if [[ "$result" -eq 0 ]]; then exit 0; fi
+            then
+              exit 0
+            fi
           done
-          echo "::error::Could not locate banke-rasane-db. Check that the token is scoped to the account containing that database and has Account D1 Read."
+          echo "::error::Could not locate banke-rasane-db. Check token scope and Account D1 Read permission."
           exit 1
