@@ -117,5 +117,5 @@ test('resolves a Wikimedia Commons file page through the Commons imageinfo API',
   assert.equal(result.status, 200);
   assert.equal(calls.length, 2);
   assert.ok(calls[0].includes('commons.wikimedia.org/w/api.php'));
-  assert.match(result.body.dataUrl, /^data:image\\/webp;base64,/);
+  assert.match(result.body.dataUrl, /^data:image\/webp;base64,/);
 });
