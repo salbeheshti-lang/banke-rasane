@@ -5121,15 +5121,15 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
           <h4 className="font-bold mb-2" style={{ color: '#f0fdf4' }}>⚡ دریافت خودکار اطلاعات</h4>
           <p className="text-xs mb-3" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>
 {editingShow
-              ? 'لینک IMDb یا ویکی‌پدیا را وارد کنید تا فقط تصویر کاور دریافت و به تصاویر برنامه اضافه شود؛ سایر اطلاعات تغییر نمی‌کنند.'
-              : 'لینک IMDb یا ویکی‌پدیا برنامه را وارد کنید تا نام، توضیحات، تصویر و اطلاعات قابل‌استخراج برای تکمیل فرم دریافت شود.'}
+              ? 'نام برنامه را در فیلد نام وارد کنید یا لینک IMDb، ویکی‌پدیا یا ویکی‌مدیا را بدهید تا فقط تصویر دریافت و به تصاویر برنامه اضافه شود؛ سایر اطلاعات تغییر نمی‌کنند.'
+              : 'نام برنامه یا لینک IMDb، ویکی‌پدیا یا ویکی‌مدیا را وارد کنید تا اطلاعات و تصویر قابل‌استخراج برای تکمیل فرم دریافت شود.'}
           </p>
           <div className="flex gap-2">
             <input
               type="text"
               value={fetchUrl}
               onChange={(e) => setFetchUrl(e.target.value)}
-              placeholder="https://www.imdb.com/title/... یا https://fa.wikipedia.org/..."
+              placeholder="نام برنامه را بالا وارد کنید یا لینک IMDb / Wikipedia / Wikimedia Commons"
               style={{
                 flex: 1,
                 padding: '10px 16px',
