@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
  * Audits every seeded program image and separately reports decor coverage.
- * It verifies live image delivery, Commons file/license metadata, and exact
- * attribution-manifest coverage. Semantic program/set matching remains a
- * human visual-review requirement and is never inferred from HTTP success.
+ * Wikimedia files are checked in a single batched Commons API request to avoid
+ * CDN rate limits. The check verifies file existence, MIME/source URLs,
+ * reuse-license metadata, and exact attribution coverage. Semantic program/set
+ * matching remains a human visual-review requirement.
  */
 import { readFileSync, appendFileSync } from 'node:fs';
 
@@ -47,7 +48,7 @@ const uniqueUrls = [...new Set(candidates.map(item => item.url))];
 const failures = [];
 const warnings = [];
 const checked = [];
-const timeout = 15000;
+const timeout = 20000;
 
 function commonsFileName(raw) {
   try {
@@ -57,8 +58,7 @@ function commonsFileName(raw) {
     const parts = url.pathname.split('/').filter(Boolean);
     let name = host === 'thumb.wikimedia.org' ? parts.at(-2) : parts.at(-1);
     if (host === 'upload.wikimedia.org' && parts.includes('thumb')) name = parts.at(-1);
-    name = decodeURIComponent(name || '').replace(/^\d+px-/, '');
-    return name || null;
+    return decodeURIComponent(name || '').replace(/^\d+px-/, '') || null;
   } catch { return null; }
 }
 function metadataValue(value) {
@@ -69,70 +69,100 @@ function isReusableLicense(value) {
   return /CC0|Creative Commons|CC BY(?:-SA)?|Public domain|PD-/i.test(value) &&
     !/All rights reserved|non.?free|fair use/i.test(value);
 }
-async function fetchWithTimeout(url, init = {}) {
-  return fetch(url, { ...init, signal: AbortSignal.timeout(timeout), headers: { 'User-Agent': 'BankResaneh-Image-Audit/1.1 (repository quality check)', ...(init.headers || {}) } });
-}
-async function checkUrl(raw) {
-  let response;
-  try {
-    response = await fetchWithTimeout(raw, { method: 'HEAD', redirect: 'follow' });
-    if (!response.ok || !/^image\//i.test(response.headers.get('content-type') || '')) {
-      response = await fetchWithTimeout(raw, { method: 'GET', headers: { Range: 'bytes=0-0' }, redirect: 'follow' });
-    }
-    if (!response.ok) throw new Error('HTTP ' + response.status);
-    const mime = (response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
-    if (!mime.startsWith('image/')) throw new Error('not an image MIME (' + (mime || 'missing') + ')');
-    await response.body?.cancel();
-  } catch (error) {
-    failures.push({ url: raw, error: 'image URL unavailable: ' + (error?.message || String(error)) });
-    return;
-  }
-
-  const fileName = commonsFileName(raw);
-  let license = 'external license not machine-verifiable';
-  if (fileName) {
+async function fetchWithRetry(url, init = {}) {
+  let lastError;
+  for (let attempt = 0; attempt < 4; attempt++) {
     try {
-      const api = new URL('https://commons.wikimedia.org/w/api.php');
-      api.search = new URLSearchParams({
-        action: 'query', format: 'json', prop: 'imageinfo', iiprop: 'url|extmetadata',
-        titles: 'File:' + fileName,
-      }).toString();
-      const metaResponse = await fetchWithTimeout(api.href);
-      if (!metaResponse.ok) throw new Error('Commons API HTTP ' + metaResponse.status);
-      const payload = await metaResponse.json();
-      const page = Object.values(payload?.query?.pages || {})[0];
+      const response = await fetch(url, {
+        ...init,
+        signal: AbortSignal.timeout(timeout),
+        headers: { 'User-Agent': 'BankResaneh-Image-Audit/1.2 (repository quality check)', ...(init.headers || {}) },
+      });
+      if (response.status === 429 || response.status >= 500) {
+        const retryAfter = Number(response.headers.get('retry-after') || 0);
+        await response.body?.cancel();
+        if (attempt < 3) {
+          await new Promise(resolve => setTimeout(resolve, Math.max(retryAfter * 1000, 1500 * (attempt + 1))));
+          continue;
+        }
+      }
+      return response;
+    } catch (error) {
+      lastError = error;
+      if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 1500 * (attempt + 1)));
+    }
+  }
+  throw lastError || new Error('request failed after retries');
+}
+
+const commonsByName = new Map();
+for (const url of uniqueUrls) {
+  const fileName = commonsFileName(url);
+  if (fileName) {
+    const key = fileName.toLocaleLowerCase();
+    if (!commonsByName.has(key)) commonsByName.set(key, { fileName, urls: [] });
+    commonsByName.get(key).urls.push(url);
+  }
+}
+const nonCommonsUrls = uniqueUrls.filter(url => !commonsFileName(url));
+
+if (commonsByName.size) {
+  try {
+    const api = new URL('https://commons.wikimedia.org/w/api.php');
+    api.search = new URLSearchParams({
+      action: 'query', format: 'json', prop: 'imageinfo',
+      iiprop: 'url|extmetadata', iiurlwidth: '1280',
+      titles: [...commonsByName.values()].map(item => 'File:' + item.fileName).join('|'),
+    }).toString();
+    const response = await fetchWithRetry(api.href);
+    if (!response.ok) throw new Error('Commons API HTTP ' + response.status);
+    const payload = await response.json();
+    const pages = Object.values(payload?.query?.pages || {});
+    const byTitle = new Map(pages.map(page => [String(page.title || '').replace(/^File:/i, '').toLocaleLowerCase(), page]));
+    for (const item of commonsByName.values()) {
+      const page = byTitle.get(item.fileName.toLocaleLowerCase());
       const info = page?.imageinfo?.[0];
-      if (!info) throw new Error('Commons file metadata not found');
+      if (!info) {
+        for (const url of item.urls) failures.push({ url, error: 'Wikimedia Commons file metadata not found' });
+        continue;
+      }
       const ext = info.extmetadata || {};
       const short = metadataValue(ext.LicenseShortName);
       const licenseUrl = metadataValue(ext.LicenseUrl);
       const creator = metadataValue(ext.Artist || ext.Credit);
-      if (!short || !isReusableLicense(short)) {
-        failures.push({ url: raw, error: 'Commons reuse license is missing or not clearly reusable: ' + (short || 'unknown') });
-      } else if (!credits.includes(raw) || !creator) {
-        failures.push({ url: raw, error: 'Commons attribution manifest is incomplete (URL/creator missing)' });
+      const mediaUrl = info.thumburl || info.url;
+      if (!mediaUrl || !/^https:\/\/(?:upload|thumb)\.wikimedia\.org\//i.test(mediaUrl)) {
+        for (const url of item.urls) failures.push({ url, error: 'Commons API did not return a valid image media URL' });
+      } else if (!short || !isReusableLicense(short)) {
+        for (const url of item.urls) failures.push({ url, error: 'Commons reuse license is missing or not clearly reusable: ' + (short || 'unknown') });
+      } else if (!creator || item.urls.some(url => !credits.includes(url))) {
+        for (const url of item.urls) failures.push({ url, error: 'Commons attribution manifest is incomplete (exact URL/creator missing)' });
       } else {
-        license = short + (licenseUrl ? ' — ' + licenseUrl : '');
+        for (const url of item.urls) checked.push({ url, mediaUrl, license: short + (licenseUrl ? ' — ' + licenseUrl : '') });
       }
-    } catch (error) {
-      failures.push({ url: raw, error: 'Commons metadata audit failed: ' + (error?.message || String(error)) });
     }
-  } else if (!credits.includes(raw)) {
-    failures.push({ url: raw, error: 'External image URL has no exact entry in public/IMAGE-CREDITS.md' });
-  } else {
-    warnings.push({ url: raw, warning: 'Attribution entry exists; license requires manual source verification' });
+  } catch (error) {
+    for (const item of commonsByName.values()) for (const url of item.urls) {
+      failures.push({ url, error: 'Commons metadata audit failed: ' + (error?.message || String(error)) });
+    }
   }
-  checked.push({ url: raw, mime: response.headers.get('content-type') || '', license });
 }
-
-let cursor = 0;
-const concurrency = 5;
-await Promise.all(Array.from({ length: Math.min(concurrency, uniqueUrls.length) }, async () => {
-  while (cursor < uniqueUrls.length) {
-    const url = uniqueUrls[cursor++];
-    await checkUrl(url);
+for (const raw of nonCommonsUrls) {
+  try {
+    const response = await fetchWithRetry(raw, { method: 'HEAD', redirect: 'follow' });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    const mime = (response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+    if (!mime.startsWith('image/')) throw new Error('not an image MIME (' + (mime || 'missing') + ')');
+    if (!credits.includes(raw)) failures.push({ url: raw, error: 'External image URL has no exact entry in public/IMAGE-CREDITS.md' });
+    else {
+      checked.push({ url: raw, mediaUrl: raw, license: 'external license requires manual source verification' });
+      warnings.push({ url: raw, warning: 'Attribution entry exists; license requires manual source verification' });
+    }
+    await response.body?.cancel();
+  } catch (error) {
+    failures.push({ url: raw, error: 'image URL unavailable: ' + (error?.message || String(error)) });
   }
-}));
+}
 
 const decorImageRefs = candidates.filter(item => item.decor);
 const report = {
