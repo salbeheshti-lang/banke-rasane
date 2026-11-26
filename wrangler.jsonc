@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "bankresaneh-preview",
+  "name": "bankresaneh-visual-preview",
   "main": ".open-next/worker.js",
   "account_id": "128caa74c4d03e4cf84cd0d2b3f07bbf",
   "compatibility_date": "2026-11-22",
