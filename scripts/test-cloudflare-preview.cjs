@@ -43,7 +43,9 @@ async function main() {
 
   const serviceWorker = await fetch(base + '/sw.js');
   assert.equal(serviceWorker.status, 200);
-  assert.match(await serviceWorker.text(), /url\.pathname\.startsWith\('\/api\/'\)/);
+  const swSource = await serviceWorker.text();
+  assert.match(swSource, /request\\.mode !== 'navigate'/, 'Service worker must leave non-navigation requests to the browser');
+  assert.doesNotMatch(swSource, /STATIC_PREFIXES|event\\.respondWith\\(fetch\\(request\\)\\.catch/, 'Static assets must not be intercepted by the service worker');
 
   const offline = await fetch(base + '/offline.html');
   assert.equal(offline.status, 200);
