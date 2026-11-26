@@ -161,7 +161,7 @@ jobs:
             echo "::error::Preview home page did not return a valid HTML document (HTTP ${page_status:-no-response})."
             exit 1
           fi
-          asset_path="$(grep -Eo '/_next/static/[^" ]+\\.js' /tmp/preview-home.html | head -n 1 || true)"
+          asset_path="$(grep -Eo '/_next/static/[^" ]+\.js' /tmp/preview-home.html | head -n 1 || true)"
           if [ -z "$asset_path" ]; then
             echo "::error::Preview home page did not reference a Next.js JavaScript bundle."
             exit 1
