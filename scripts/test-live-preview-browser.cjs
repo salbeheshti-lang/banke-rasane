@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { chromium } = require('@playwright/test');
 
-const baseURL = (process.env.WORKER_URL || 'https://bankresaneh-visual-preview.bankresaneh.workers.dev').replace(/\\/$/, '');
+const baseURL = (process.env.WORKER_URL || 'https://bankresaneh-visual-preview.bankresaneh.workers.dev').replace(/\/$/, '');
 const artifactDir = path.join(process.cwd(), 'artifacts', 'live-preview');
 fs.mkdirSync(artifactDir, { recursive: true });
 const diagnostics = { url: baseURL, failedRequests: [], badResponses: [], consoleErrors: [], pageErrors: [], runtime: null };
