@@ -20,7 +20,7 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       BANKRESANEH_API_BASE: https://bankresaneh-preview-api.onrender.com
-      PREVIEW_URL: https://bankresaneh-preview.ginx11x5frrby9mvb.workers.dev
+      PREVIEW_URL: https://bankresaneh-visual-preview.bankresaneh.workers.dev
 
     steps:
       - name: Checkout preview branch
