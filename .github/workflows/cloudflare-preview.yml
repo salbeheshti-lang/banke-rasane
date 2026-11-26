@@ -3,6 +3,7 @@ name: Cloudflare Preview
 on:
   push:
     branches:
+      - main
       - fix/audit-hardening-5.4.5
   workflow_dispatch:
 
@@ -23,28 +24,21 @@ jobs:
         shell: bash
         env:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CF_ACCOUNT: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-          API_BASE: ${{ vars.BANKRESANEH_API_BASE }}
-          API_ALLOWLIST: ${{ vars.BANKRESANEH_ALLOWED_API_ORIGINS }}
+          CF_ACCOUNT: ${{ vars.CLOUDFLARE_WORKERS_ACCOUNT_ID || '128caa74c4d03e4cf84cd0d2b3f07bbf' }}
+          API_BASE: ${{ vars.BANKRESANEH_API_BASE || 'https://bankresaneh-preview-api.onrender.com' }}
+          API_ALLOWLIST: ${{ vars.BANKRESANEH_ALLOWED_API_ORIGINS || 'https://bankresaneh-preview-api.onrender.com' }}
         run: |
           missing=()
           [[ -n "$CF_TOKEN" ]] || missing+=("CLOUDFLARE_API_TOKEN (GitHub Secret)")
           [[ -n "$CF_ACCOUNT" ]] || missing+=("CLOUDFLARE_ACCOUNT_ID (GitHub Variable)")
           [[ -n "$API_BASE" ]] || missing+=("BANKRESANEH_API_BASE (GitHub Variable)")
           [[ -n "$API_ALLOWLIST" ]] || missing+=("BANKRESANEH_ALLOWED_API_ORIGINS (GitHub Variable)")
-          if [[ ${#missing[@]} -eq 0 ]]; then
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-            echo "Cloudflare deployment credentials and API endpoint variables are present." >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-            {
-              echo "## Preview deployment is not ready"
-              echo "The build and local Worker smoke test will still run. Live deployment is withheld because these settings are missing:"
-              for item in "${missing[@]}"; do echo "- $item"; done
-              echo ""
-              echo "No secret values are printed."
-            } >> "$GITHUB_STEP_SUMMARY"
+          if [[ ${#missing[@]} -ne 0 ]]; then
+            printf '::error::Missing required live-preview configuration: %s\n' "${missing[@]}"
+            exit 1
           fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+          echo "Cloudflare credentials and the isolated preview API endpoint are configured." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -61,6 +55,10 @@ jobs:
         run: bun run cloudflare:build
         env:
           DATABASE_URL: file:./db/custom.db
+          NEXT_PUBLIC_BANKRESANEH_API_BASE: ${{ vars.BANKRESANEH_API_BASE || 'https://bankresaneh-preview-api.onrender.com' }}
+
+      - name: Verify exact organization branding and required UI features in the build
+        run: node scripts/test-preview-branding.cjs
 
       - name: Test local Cloudflare Worker preview
         run: bun run test:cloudflare-preview
@@ -77,11 +75,30 @@ jobs:
             --var "BANKRESANEH_ALLOWED_API_ORIGINS:${BANKRESANEH_ALLOWED_API_ORIGINS}"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-          BANKRESANEH_API_BASE: ${{ vars.BANKRESANEH_API_BASE }}
-          BANKRESANEH_ALLOWED_API_ORIGINS: ${{ vars.BANKRESANEH_ALLOWED_API_ORIGINS }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_WORKERS_ACCOUNT_ID || '128caa74c4d03e4cf84cd0d2b3f07bbf' }}
+          BANKRESANEH_API_BASE: ${{ vars.BANKRESANEH_API_BASE || 'https://bankresaneh-preview-api.onrender.com' }}
+          BANKRESANEH_ALLOWED_API_ORIGINS: ${{ vars.BANKRESANEH_ALLOWED_API_ORIGINS || 'https://bankresaneh-preview-api.onrender.com' }}
 
-      - name: Record live deployment status
-        if: always() && steps.config.outputs.ready != 'true'
+      - name: Verify live Cloudflare Preview and connected test API
+        shell: bash
+        env:
+          WORKER_URL: https://bankresaneh-preview.ginx11x5frrby9mvb.workers.dev
+          API_BASE: ${{ vars.BANKRESANEH_API_BASE || 'https://bankresaneh-preview-api.onrender.com' }}
         run: |
-          echo "Local Cloudflare build and smoke test completed. No public preview URL was created because the persistent API service has not yet been configured." >> "$GITHUB_STEP_SUMMARY"
+          set -euo pipefail
+          API_BASE="${API_BASE%/}"
+          node scripts/test-preview-branding.cjs --url "$WORKER_URL"
+          curl --fail --silent --show-error "$WORKER_URL/" -o /tmp/bankresaneh-preview-root.html
+          curl --fail --silent --show-error "$WORKER_URL/manifest.webmanifest" -o /tmp/bankresaneh-preview-manifest.json
+          node -e "const m=JSON.parse(require('fs').readFileSync('/tmp/bankresaneh-preview-manifest.json','utf8'));if(m.name!=='بانک رسانه'||m.display!=='standalone')process.exit(1);"
+          curl --fail --silent --show-error "$WORKER_URL/sw.js" -o /tmp/bankresaneh-preview-sw.js
+          curl --fail --silent --show-error "$WORKER_URL/offline.html" -o /tmp/bankresaneh-preview-offline.html
+          curl --fail --silent --show-error -D /tmp/bankresaneh-api-headers.txt -H "Origin: $WORKER_URL" "$API_BASE/api/health" -o /tmp/bankresaneh-api-health.json
+          grep -Fqi "access-control-allow-origin: $WORKER_URL" /tmp/bankresaneh-api-headers.txt
+          node -e "const h=JSON.parse(require('fs').readFileSync('/tmp/bankresaneh-api-health.json','utf8'));if(h.status!=='ok'||!Number.isFinite(h.showsCount)||h.showsCount<1)process.exit(1);console.log('Live test API ready: '+h.showsCount+' shows; CORS verified.');"
+          {
+            echo "## Live Cloudflare Preview passed"
+            echo "- Worker root, manifest, service worker, offline page, compiled branding and logos are available."
+            echo "- Connected Render test API health and exact Worker CORS origin are verified."
+            echo "- Archive records: $(node -e "const h=require('/tmp/bankresane-api-health.json');process.stdout.write(String(h.showsCount))")."
+          } >> "$GITHUB_STEP_SUMMARY"
