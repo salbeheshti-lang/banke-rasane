@@ -102,3 +102,20 @@ test('rejects oversized streamed images even when Content-Length is absent', asy
   );
   assert.equal(result.status, 413);
 });
+
+test('resolves a Wikimedia Commons file page through the Commons imageinfo API', async () => {
+  const calls = [];
+  const result = await importImageFromUrl('https://commons.wikimedia.org/wiki/File:Example_studio.jpg', async (url) => {
+    calls.push(String(url));
+    if (String(url).includes('/w/api.php')) {
+      return new Response(JSON.stringify({
+        query: { pages: { 123: { imageinfo: [{ thumburl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Example_studio.jpg/1600px-Example_studio.jpg' }] } } },
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    return imageResponse();
+  });
+  assert.equal(result.status, 200);
+  assert.equal(calls.length, 2);
+  assert.ok(calls[0].includes('commons.wikimedia.org/w/api.php'));
+  assert.match(result.body.dataUrl, /^data:image\\/webp;base64,/);
+});
