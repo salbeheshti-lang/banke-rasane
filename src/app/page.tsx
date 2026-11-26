@@ -6884,82 +6884,201 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
           // retain its HTTPS URL and let Bale fetch it directly.
         }
       }
-      // Compose the second Bale slide with the selected program logo and the
-      // official organization logo. The description remains the photo caption.
+      // Compose a real vertical 9:16 cover for the video/photo album.
+      // The program image is preferred; if it is missing, use the first MP4 frame.
+      let coverMedia: HTMLImageElement | HTMLVideoElement | null = null;
       if (publishImageUrl?.startsWith('data:image/')) {
-        const loadImage = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
+        try {
+          coverMedia = await new Promise<HTMLImageElement>((resolve, reject) => {
+            const image = document.createElement('img');
+            image.crossOrigin = 'anonymous';
+            image.onload = () => resolve(image);
+            image.onerror = () => reject(new Error('تصویر برای آماده‌سازی انتشار قابل خواندن نیست'));
+            image.src = publishImageUrl!;
+          });
+        } catch {
+          coverMedia = null;
+        }
+      }
+
+      let coverVideo: HTMLVideoElement | null = null;
+      if (!coverMedia && directVideoUrl) {
+        coverVideo = document.createElement('video');
+        coverVideo.muted = true;
+        coverVideo.playsInline = true;
+        coverVideo.preload = 'auto';
+        coverVideo.crossOrigin = 'anonymous';
+        try {
+          await new Promise<void>((resolve, reject) => {
+            const timer = window.setTimeout(() => reject(new Error('video cover timeout')), 9000);
+            coverVideo!.onloadeddata = () => { window.clearTimeout(timer); resolve(); };
+            coverVideo!.onerror = () => { window.clearTimeout(timer); reject(new Error('video cover decode failed')); };
+            coverVideo!.src = directVideoUrl!;
+            coverVideo!.load();
+          });
+          if (coverVideo.videoWidth > 0 && coverVideo.videoHeight > 0) coverMedia = coverVideo;
+        } catch {
+          coverMedia = null;
+        }
+      }
+
+      let programLogoImage: HTMLImageElement | null = null;
+      const selectedProgramLogo = typeof shows[0]?.programLogo === 'string' ? shows[0].programLogo : '';
+      if (selectedProgramLogo) {
+        try {
+          let logoSource = selectedProgramLogo;
+          if (/^https:\/\//i.test(logoSource)) {
+            const logoResponse = await fetch(getApiUrl('api/import-image'), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...authHeaders() },
+              body: JSON.stringify({ url: logoSource }),
+            });
+            const logoResult = await logoResponse.json().catch(() => ({}));
+            if (logoResponse.ok && typeof logoResult.dataUrl === 'string') logoSource = logoResult.dataUrl;
+          }
+          if (logoSource.startsWith('data:image/')) {
+            programLogoImage = await new Promise<HTMLImageElement>((resolve, reject) => {
+              const image = document.createElement('img');
+              image.onload = () => resolve(image);
+              image.onerror = () => reject(new Error('program logo decode failed'));
+              image.src = logoSource;
+            });
+          }
+        } catch {
+          programLogoImage = null;
+        }
+      }
+      let organizationLogoImage: HTMLImageElement | null = null;
+      try {
+        organizationLogoImage = await new Promise<HTMLImageElement>((resolve, reject) => {
           const image = document.createElement('img');
           image.onload = () => resolve(image);
-          image.onerror = () => reject(new Error('تصویر برای آماده‌سازی انتشار قابل خواندن نیست'));
-          image.src = src;
+          image.onerror = () => reject(new Error('organization logo decode failed'));
+          image.src = CLIENT_BRANDING.logoColorPath;
         });
-        const sourceImage = await loadImage(publishImageUrl);
-        let programLogoImage: HTMLImageElement | null = null;
-        const selectedProgramLogo = shows[0]?.programLogo || '';
-        if (selectedProgramLogo) {
-          try {
-            let logoSource = selectedProgramLogo;
-            if (/^https:\/\//i.test(logoSource)) {
-              const logoResponse = await fetch(getApiUrl('api/import-image'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...authHeaders() },
-                body: JSON.stringify({ url: logoSource }),
-              });
-              const logoResult = await logoResponse.json().catch(() => ({}));
-              if (logoResponse.ok && typeof logoResult.dataUrl === 'string') logoSource = logoResult.dataUrl;
-            }
-            if (logoSource.startsWith('data:image/')) programLogoImage = await loadImage(logoSource);
-          } catch {
-            programLogoImage = null;
-          }
-        }
-        let organizationLogoImage: HTMLImageElement | null = null;
-        try {
-          organizationLogoImage = await loadImage(CLIENT_BRANDING.logoColorPath);
-        } catch {
-          organizationLogoImage = null;
-        }
+      } catch {
+        organizationLogoImage = null;
+      }
 
-        const scale = Math.min(1, 1600 / sourceImage.naturalWidth, 1600 / sourceImage.naturalHeight);
-        const width = Math.max(1, Math.round(sourceImage.naturalWidth * scale));
-        const height = Math.max(1, Math.round(sourceImage.naturalHeight * scale));
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const context = canvas.getContext('2d');
-        if (!context) throw new Error('امکان آماده‌سازی تصویر برای بله وجود ندارد');
-        context.fillStyle = '#ffffff';
-        context.fillRect(0, 0, width, height);
-        context.drawImage(sourceImage, 0, 0, width, height);
+      const canvas = document.createElement('canvas');
+      canvas.width = 1080;
+      canvas.height = 1920;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('امکان آماده‌سازی تصویر عمودی برای انتشار وجود ندارد');
+      context.direction = 'rtl';
+      context.textAlign = 'center';
 
-        const logos = [
-          { image: programLogoImage, side: 'left' as const },
-          { image: organizationLogoImage, side: 'right' as const },
-        ].filter((item): item is { image: HTMLImageElement; side: 'left' | 'right' } => Boolean(item.image));
-        if (logos.length) {
-          const margin = Math.max(12, Math.round(width * 0.025));
-          const badgeWidth = Math.max(110, Math.round(width * 0.25));
-          const badgeHeight = Math.max(54, Math.round(height * 0.09));
-          const badgeY = height - badgeHeight - margin;
-          for (const item of logos) {
-            const badgeX = item.side === 'left' ? margin : width - badgeWidth - margin;
-            context.fillStyle = 'rgba(255,255,255,0.94)';
-            context.fillRect(badgeX, badgeY, badgeWidth, badgeHeight);
-            const maxLogoWidth = badgeWidth - margin;
-            const maxLogoHeight = badgeHeight - margin;
-            const logoScale = Math.min(maxLogoWidth / item.image.naturalWidth, maxLogoHeight / item.image.naturalHeight);
-            const logoWidth = Math.max(1, item.image.naturalWidth * logoScale);
-            const logoHeight = Math.max(1, item.image.naturalHeight * logoScale);
-            context.drawImage(
-              item.image,
-              badgeX + (badgeWidth - logoWidth) / 2,
-              badgeY + (badgeHeight - logoHeight) / 2,
-              logoWidth,
-              logoHeight,
-            );
-          }
+      const background = context.createLinearGradient(0, 0, 1080, 1920);
+      background.addColorStop(0, '#08291e');
+      background.addColorStop(0.5, '#0d7c4a');
+      background.addColorStop(1, '#061a17');
+      context.fillStyle = background;
+      context.fillRect(0, 0, 1080, 1920);
+
+      // Cover image / first video frame.
+      context.save();
+      context.beginPath();
+      context.roundRect(64, 260, 952, 1010, 56);
+      context.clip();
+      if (coverMedia) {
+        const sw = 'videoWidth' in coverMedia ? coverMedia.videoWidth : coverMedia.naturalWidth;
+        const sh = 'videoHeight' in coverMedia ? coverMedia.videoHeight : coverMedia.naturalHeight;
+        if (sw > 0 && sh > 0) {
+          const scale = Math.max(952 / sw, 1010 / sh);
+          const cropWidth = 952 / scale;
+          const cropHeight = 1010 / scale;
+          context.drawImage(coverMedia, (sw - cropWidth) / 2, (sh - cropHeight) / 2, cropWidth, cropHeight, 64, 260, 952, 1010);
         }
-        publishImageUrl = canvas.toDataURL('image/jpeg', 0.9);
+      } else {
+        const coverGradient = context.createLinearGradient(64, 260, 1016, 1270);
+        coverGradient.addColorStop(0, 'rgba(26, 165, 115, 0.88)');
+        coverGradient.addColorStop(1, 'rgba(3, 27, 31, 0.98)');
+        context.fillStyle = coverGradient;
+        context.fillRect(64, 260, 952, 1010);
+      }
+      const overlay = context.createLinearGradient(0, 760, 0, 1270);
+      overlay.addColorStop(0, 'rgba(0,0,0,0)');
+      overlay.addColorStop(1, 'rgba(0,0,0,0.58)');
+      context.fillStyle = overlay;
+      context.fillRect(64, 260, 952, 1010);
+      context.restore();
+
+      // Brand, title, description, and category.
+      context.fillStyle = '#f0fdf4';
+      context.font = 'bold 42px Vazirmatn, sans-serif';
+      context.fillText('بانک رسانه', 540, 145);
+      context.fillStyle = 'rgba(240,253,244,0.78)';
+      context.font = '25px Vazirmatn, sans-serif';
+      context.fillText('آرشیو تخصصی برنامه‌های تلویزیونی', 540, 205);
+
+      context.fillStyle = 'rgba(3, 23, 19, 0.84)';
+      context.beginPath();
+      context.roundRect(64, 1310, 952, 490, 46);
+      context.fill();
+      context.strokeStyle = 'rgba(167,243,208,0.35)';
+      context.lineWidth = 2;
+      context.stroke();
+
+      const wrap = (value: string, font: string, maxWidth: number, maxLines: number) => {
+        context.font = font;
+        const words = String(value || '').replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
+        const lines: string[] = [];
+        let line = '';
+        for (const word of words) {
+          const next = line ? line + ' ' + word : word;
+          if (line && context.measureText(next).width > maxWidth) {
+            lines.push(line);
+            line = word;
+            if (lines.length >= maxLines) break;
+          } else line = next;
+        }
+        if (line && lines.length < maxLines) lines.push(line);
+        return lines;
+      };
+      const title = String(shows[0]?.name || 'برنامه منتخب');
+      const titleLines = wrap(title, 'bold 58px Vazirmatn, sans-serif', 830, 2);
+      context.fillStyle = '#ffffff';
+      titleLines.forEach((line, index) => context.fillText(line, 540, 1415 + index * 70));
+
+      const description = String(shows[0]?.descriptionFa || shows[0]?.summary || postText || '');
+      const descriptionLines = wrap(description, '29px Vazirmatn, sans-serif', 830, 3);
+      const descriptionY = 1415 + titleLines.length * 70 + 35;
+      context.fillStyle = 'rgba(240,253,244,0.88)';
+      descriptionLines.forEach((line, index) => context.fillText(line, 540, descriptionY + index * 43));
+
+      const category = String(shows[0]?.category || 'تاک‌شو').replace(/^\d+\.\s*/, '').split('|')[0];
+      context.fillStyle = 'rgba(16,185,129,0.22)';
+      context.beginPath();
+      context.roundRect(330, 1710, 420, 56, 28);
+      context.fill();
+      context.fillStyle = '#d1fae5';
+      context.font = 'bold 25px Vazirmatn, sans-serif';
+      context.fillText(category, 540, 1747);
+
+      // Program and organization marks sit on a white footer rail.
+      const logos = [
+        { image: programLogoImage, side: 'left' as const },
+        { image: organizationLogoImage, side: 'right' as const },
+      ].filter((item): item is { image: HTMLImageElement; side: 'left' | 'right' } => Boolean(item.image));
+      if (logos.length) {
+        context.fillStyle = 'rgba(255,255,255,0.96)';
+        context.beginPath();
+        context.roundRect(64, 1815, 952, 78, 28);
+        context.fill();
+        const badgeWidth = 260;
+        const badgeHeight = 58;
+        for (const item of logos) {
+          const x = item.side === 'left' ? 110 : 710;
+          const scale = Math.min(badgeWidth / item.image.naturalWidth, badgeHeight / item.image.naturalHeight);
+          const width = Math.max(1, item.image.naturalWidth * scale);
+          const height = Math.max(1, item.image.naturalHeight * scale);
+          context.drawImage(item.image, x + (badgeWidth - width) / 2, 1825 + (badgeHeight - height) / 2, width, height);
+        }
+      }
+      publishImageUrl = canvas.toDataURL('image/jpeg', 0.88);
+      if (coverVideo) {
+        coverVideo.removeAttribute('src');
+        coverVideo.load();
       }
       const res = await fetch('/api/publish-social', {
         method: 'POST',
