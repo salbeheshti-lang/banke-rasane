@@ -181,3 +181,35 @@ jobs:
             exit 1
           fi
           echo "Preview HTML, JavaScript bundle, and protected browser API proxy all passed."
+
+      - name: Verify the actual login screen in Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          bun add --dev playwright@1.56.1
+          bunx playwright install --with-deps chromium
+          bun -e '
+            import { chromium } from "playwright";
+            const url = process.env.PREVIEW_URL;
+            const browser = await chromium.launch({ headless: true });
+            try {
+              const page = await browser.newPage();
+              const failures = [];
+              page.on("pageerror", error => failures.push(error.message));
+              await page.goto(url, { waitUntil: "domcontentloaded", timeout: 45000 });
+              await page.locator("#login-username").waitFor({ state: "visible", timeout: 30000 });
+              await page.locator("#login-password").waitFor({ state: "visible", timeout: 10000 });
+              if (await page.locator(".login-screen").count() !== 1) {
+                throw new Error("Login screen container did not render exactly once.");
+              }
+              if (failures.length) throw new Error("Browser runtime errors: " + failures.join(" | "));
+              console.log("PASS: Chromium rendered the real BankResaneh login screen and both credential fields.");
+              await page.evaluate(() => localStorage.setItem("bankresaneh_token", "stale-preview-smoke-token"));
+              await page.reload({ waitUntil: "domcontentloaded", timeout: 45000 });
+              await page.locator("#login-username").waitFor({ state: "visible", timeout: 15000 });
+              await page.locator("#login-password").waitFor({ state: "visible", timeout: 10000 });
+              console.log("PASS: A stale saved token returns to the login screen instead of leaving the green loading screen stuck.");
+            } finally {
+              await browser.close();
+            }
+          '
