@@ -63,14 +63,11 @@ jobs:
           D1_ACCOUNT_OVERRIDE: ${{ vars.CLOUDFLARE_D1_ACCOUNT_ID }}
           WORKER_ACCOUNT_ID: 128caa74c4d03e4cf84cd0d2b3f07bbf
         run: |
-          candidates=("$CONFIGURED_ACCOUNT_ID" "$WORKER_ACCOUNT_ID")
-          if [[ -n "$D1_ACCOUNT_OVERRIDE" ]]; then candidates=("$D1_ACCOUNT_OVERRIDE" "$CONFIGURED_ACCOUNT_ID" "$WORKER_ACCOUNT_ID"); fi
           found=""
-          seen=" "
-          for account_id in "${candidates[@]}"; do
-            [[ "$account_id" =~ ^[a-f0-9]{32}$ ]] || continue
-            [[ "$seen" == *" $account_id "* ]] && continue
-            seen="$seen$account_id "
+          for account_id in "$D1_ACCOUNT_OVERRIDE" "$CONFIGURED_ACCOUNT_ID" "$WORKER_ACCOUNT_ID"; do
+            [[ -n "$account_id" ]] || continue
+            [[ "$account_id" =~ ^[a-f0-9]{32}$ ]] || { echo "Skipping invalid account ID value."; continue; }
+            echo "Checking D1 access in account $account_id..."
             raw=$(curl --silent --show-error -w '\n%{http_code}' \
               -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
               "https://api.cloudflare.com/client/v4/accounts/$account_id/d1/database")
