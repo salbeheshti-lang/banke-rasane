@@ -17,7 +17,7 @@ interface PublishBody {
   chatId: string;
   text: string;
   imageUrl?: string; // remote URL or optimized data URL for a program image
-  videoUrl?: string; // direct HTTPS MP4/WebM URL OR a video data URL from the clip editor
+  videoUrl?: string; // direct HTTPS MP4 URL OR an MP4 data URL from the FFmpeg clip editor
 }
 
 function isDirectVideoUrl(value: string): boolean {
@@ -108,12 +108,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: 'متن پست بیشتر از سقف ۴۰۹۶ نویسه است؛ متن را کوتاه کنید تا هیچ بخشی حذف نشود' }, { status: 400 });
     }
     const hasVideo = typeof body.videoUrl === 'string' && body.videoUrl.length > 0;
-    // Early guard: accept either a data:video/ URL (clip from the in-browser
-    // editor) or a direct HTTPS .mp4/.webm URL. Reject page links (YouTube,
-    // Aparat, etc.) up front with a clear message. The deeper byte-level
-    // validation happens later via parseVideoDataUrl / isDirectVideoUrl.
+    // Early guard: accept only a direct HTTPS MP4 or the server-transcoded MP4
+    // data URL. Browser-native WebM and streaming-page links are not publishable.
     if (hasVideo && !body.videoUrl!.startsWith('data:video/') && !isDirectVideoUrl(body.videoUrl!)) {
-      return NextResponse.json({ ok: false, error: 'ویدئو باید یک لینک مستقیم HTTPS به فایل MP4/WebM یا فایل ویدئویی ذخیره‌شده (data URL) باشد؛ لینک صفحهٔ یوتیوب/آپارات قابل ارسال مستقیم نیست' }, { status: 400 });
+      return NextResponse.json({ ok: false, error: 'ویدئو باید فایل MP4 مستقیم یا خروجی MP4 ویرایشگر باشد؛ ابتدا فرمت‌های دیگر را با ویرایشگر به MP4 تبدیل کنید.' }, { status: 400 });
     }
     const hasImage = typeof imageUrl === 'string' && imageUrl.length > 0;
     let imageData: ReturnType<typeof parseImageDataUrl> = null;
