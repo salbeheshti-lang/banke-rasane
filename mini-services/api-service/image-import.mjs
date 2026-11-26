@@ -21,6 +21,7 @@ const ALLOWED_IMAGE_HOSTS = new Set([
 const SUPPORTED_IMAGE_MIME_TYPES = new Set([
   'image/jpeg', 'image/jpg', 'image/png', 'image/x-png', 'image/webp', 'image/gif', 'image/avif',
   'image/tiff', 'image/x-tiff', 'image/bmp', 'image/x-ms-bmp', 'image/svg+xml', 'image/heic', 'image/heif',
+  'image/jp2', 'image/jpx', 'image/jxl', 'image/x-icon', 'image/vnd.microsoft.icon',
 ]);
 
 function isAllowedImageUrl(value) {
@@ -120,6 +121,38 @@ export async function optimizeImageBuffer(source) {
   return output;
 }
 
+async function readLimitedBody(response, maxBytes) {
+  const reader = response.body?.getReader();
+  if (!reader) {
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (bytes.length > maxBytes) {
+      const error = new Error('Image source exceeds the byte limit.');
+      error.code = 'IMAGE_TOO_LARGE';
+      throw error;
+    }
+    return bytes;
+  }
+  const chunks = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel().catch(() => {});
+        const error = new Error('Image source exceeds the byte limit.');
+        error.code = 'IMAGE_TOO_LARGE';
+        throw error;
+      }
+      chunks.push(Buffer.from(value));
+    }
+    return Buffer.concat(chunks, total);
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 function failure(status, error) {
   return { status, body: { error } };
 }
@@ -180,9 +213,18 @@ export async function importImageFromUrl(rawUrl, fetchImpl = fetch) {
     const mime = (response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
     if (!SUPPORTED_IMAGE_MIME_TYPES.has(mime)) return failure(415, 'لینک واردشده به فایل تصویر پشتیبانی‌شده اشاره نمی‌کند');
     const declaredLength = Number(response.headers.get('content-length') || 0);
-    if (declaredLength > MAX_SOURCE_BYTES) return failure(413, 'حجم تصویر اولیه بیشتر از ۲۵ مگابایت است');
-    const source = Buffer.from(await response.arrayBuffer());
-    if (!source.length || source.length > MAX_SOURCE_BYTES) return failure(413, 'حجم تصویر نامعتبر یا بیشتر از ۲۵ مگابایت است');
+    if (declaredLength > MAX_SOURCE_BYTES) {
+      await response.body?.cancel();
+      return failure(413, 'حجم تصویر اولیه بیشتر از ۲۵ مگابایت است');
+    }
+    let source;
+    try {
+      source = await readLimitedBody(response, MAX_SOURCE_BYTES);
+    } catch (error) {
+      if (error?.code === 'IMAGE_TOO_LARGE') return failure(413, 'حجم تصویر نامعتبر یا بیشتر از ۲۵ مگابایت است');
+      throw error;
+    }
+    if (!source.length) return failure(415, 'فایل تصویر خالی است');
 
     let output;
     try {
