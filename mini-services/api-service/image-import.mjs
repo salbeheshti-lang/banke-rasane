@@ -22,7 +22,7 @@ const ALLOWED_IMAGE_HOSTS = new Set([
 const SUPPORTED_IMAGE_MIME_TYPES = new Set([
   'image/jpeg', 'image/jpg', 'image/png', 'image/x-png', 'image/webp', 'image/gif', 'image/avif',
   'image/tiff', 'image/x-tiff', 'image/bmp', 'image/x-ms-bmp', 'image/svg+xml', 'image/heic', 'image/heif',
-  'image/jp2', 'image/jpx', 'image/jxl', 'image/x-icon', 'image/vnd.microsoft.icon',
+  'image/jp2', 'image/jpx', 'image/jxl', 'image/x-icon', 'image/vnd.microsoft.icon', 'application/octet-stream', 'binary/octet-stream',
 ]);
 
 function isAllowedImageUrl(value) {
@@ -221,7 +221,7 @@ export async function importImageFromUrl(rawUrl, fetchImpl = fetch) {
       response = await fetchImpl(target.href, {
         headers: {
           'User-Agent': 'BankResaneh/2.0 (image import)',
-          Accept: 'image/avif,image/webp,image/png,image/jpeg,image/gif,image/tiff,image/bmp,image/svg+xml,image/heic,image/heif',
+          Accept: 'image/avif,image/webp,image/png,image/jpeg,image/gif,image/tiff,image/bmp,image/svg+xml,image/heic,image/heif,image/jp2,image/jpx,image/jxl,image/x-icon,application/octet-stream',
         },
         redirect: 'manual',
         signal: AbortSignal.timeout(15_000),
