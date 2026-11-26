@@ -7008,7 +7008,7 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
       image.onerror = () => reject(new Error('image load failed'));
       image.src = src;
     });
-    const drawCover = (image: CanvasImageSource, width: number, height: number) => {
+    const drawCover = (image: CanvasImageSource, x: number, y: number, width: number, height: number) => {
       const source = image as HTMLImageElement | HTMLVideoElement;
       const sw = 'videoWidth' in source ? source.videoWidth : source.naturalWidth;
       const sh = 'videoHeight' in source ? source.videoHeight : source.naturalHeight;
@@ -7018,7 +7018,7 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
       const cropHeight = height / scale;
       const sx = (sw - cropWidth) / 2;
       const sy = (sh - cropHeight) / 2;
-      ctx.drawImage(image, sx, sy, cropWidth, cropHeight, 0, 0, width, height);
+      ctx.drawImage(image, sx, sy, cropWidth, cropHeight, x, y, width, height);
     };
     const wrapText = (raw: string, font: string, maxWidth: number, maxLines: number) => {
       ctx.font = font;
@@ -7063,7 +7063,7 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
         const image = await loadImage(coverSource);
         ctx.save();
         ctx.beginPath(); ctx.roundRect(64, 300, 952, 870, 56); ctx.clip();
-        drawCover(image, 952, 870);
+        drawCover(image, 64, 300, 952, 870);
         ctx.fillStyle = 'rgba(2, 18, 14, 0.30)';
         ctx.fillRect(0, 0, 952, 870);
         ctx.restore();
@@ -7088,7 +7088,7 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
         if (video.videoWidth > 0 && video.videoHeight > 0) {
           ctx.save();
           ctx.beginPath(); ctx.roundRect(64, 300, 952, 870, 56); ctx.clip();
-          drawCover(video, 952, 870);
+          drawCover(video, 64, 300, 952, 870);
           ctx.fillStyle = 'rgba(2, 18, 14, 0.26)';
           ctx.fillRect(0, 0, 952, 870);
           ctx.restore();
@@ -7145,9 +7145,9 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
     const description = shows.length === 1
       ? String(shows[0]?.descriptionFa || shows[0]?.summary || shows[0]?.description || '')
       : shows.slice(0, 4).map((show: any) => show.name).join(' • ');
-    const descriptionLines = wrapText(description || postText, '32px Vazirmatn, sans-serif', 840, 5);
+    const descriptionLines = wrapText(description || postText, '30px Vazirmatn, sans-serif', 840, 4);
     const descriptionY = 1310 + titleLines.length * 78 + 45;
-    descriptionLines.forEach((line, index) => ctx.fillText(line, 540, descriptionY + index * 52));
+    descriptionLines.forEach((line, index) => ctx.fillText(line, 540, descriptionY + index * 44));
 
     // Genre chip.
     const category = String(shows[0]?.category || 'تاک‌شو').replace(/^\d+\.\s*/, '').split('|')[0];
