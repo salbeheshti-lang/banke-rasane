@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   build-windows:
-    if: (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success') && (github.event_name != 'workflow_dispatch' || github.ref_type == 'tag')
+    if: vars.ENABLE_WINDOWS_BUILDS == 'true' && (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success') && (github.event_name != 'workflow_dispatch' || github.ref_type == 'tag')
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
