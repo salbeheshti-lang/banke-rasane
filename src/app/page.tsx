@@ -6887,7 +6887,7 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
       // Compose a real vertical 9:16 cover for the video/photo album.
       // The program image is preferred; if it is missing, use the first MP4 frame.
       let coverMedia: HTMLImageElement | HTMLVideoElement | null = null;
-      if (publishImageUrl?.startsWith('data:image/')) {
+      if (publishImageUrl) {
         try {
           coverMedia = await new Promise<HTMLImageElement>((resolve, reject) => {
             const image = document.createElement('img');
