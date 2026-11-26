@@ -7528,105 +7528,233 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
   const { t, lang } = useLang();
   useEscapeKey(onClose);
   const [downloading, setDownloading] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState('');
-  const [previewError, setPreviewError] = useState('');
+  const [downloadError, setDownloadError] = useState('');
+  const [pdfPreviewBlob, setPdfPreviewBlob] = useState<Blob | null>(null);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState('');
+  const [pdfPreviewError, setPdfPreviewError] = useState('');
+  const [pdfPreviewKey, setPdfPreviewKey] = useState('');
+  const pdfObjectUrlRef = useRef<string | null>(null);
+  const [savedReportSettings, setSavedReportSettings] = useState<{ title?: string; subtitle?: string; organization?: string } | null>(null);
+  const [excelPage, setExcelPage] = useState(0);
+
+  const fallbackTitle = t('reports.report1Title');
+  const fallbackSubtitle = t('app.tagline');
+  const reportTitle = title || savedReportSettings?.title || fallbackTitle;
+  const reportSubtitle = subtitle || savedReportSettings?.subtitle || fallbackSubtitle;
+  const reportOrganization = organization || savedReportSettings?.organization || 'بانک رسانه';
+  const previewKey = useMemo(
+    () => JSON.stringify({ shows, title, subtitle, organization, fallbackTitle, fallbackSubtitle }),
+    [shows, title, subtitle, organization, fallbackTitle, fallbackSubtitle],
+  );
+  const pdfReady = format === 'pdf' && !!pdfPreviewBlob && !!pdfPreviewUrl && pdfPreviewKey === previewKey;
+  const pdfPreviewLoading = format === 'pdf' && !pdfReady && !pdfPreviewError;
+
+  const makePdfThumbnail = async (blob: Blob): Promise<string | null> => {
+    const objectUrl = URL.createObjectURL(blob);
+    try {
+      const image = new window.Image();
+      await new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error('تصویر برنامه قابل خواندن نیست'));
+        image.src = objectUrl;
+      });
+      if (!image.naturalWidth || !image.naturalHeight) return null;
+      const scale = Math.min(1, 96 / image.naturalWidth, 96 / image.naturalHeight);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const context = canvas.getContext('2d');
+      if (!context) return null;
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL('image/jpeg', 0.76);
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
+  };
+
+  const preparePdfShows = async (sourceShows: TalkShow[], signal: AbortSignal): Promise<TalkShow[]> => {
+    const prepared = sourceShows.slice();
+    const candidates = sourceShows.slice(0, 200);
+    for (let offset = 0; offset < candidates.length; offset += 6) {
+      const batch = candidates.slice(offset, offset + 6);
+      await Promise.all(batch.map(async (show, batchIndex) => {
+        const targetIndex = offset + batchIndex;
+        try {
+          const inlineImage = (show.images || []).find((image) => image.startsWith('data:image/'));
+          let imageBlob: Blob | null = null;
+          if (inlineImage) {
+            const response = await fetch(inlineImage, { signal });
+            if (response.ok) imageBlob = await response.blob();
+          } else if (show.imageSource) {
+            const imageUrl = getApiUrl('api/image/' + show.num + '?v=' + encodeURIComponent(show.imageSource));
+            const response = await fetch(imageUrl, { cache: 'no-store', signal });
+            if (response.ok) imageBlob = await response.blob();
+          }
+          if (imageBlob) {
+            const thumbnail = await makePdfThumbnail(imageBlob);
+            if (thumbnail) prepared[targetIndex] = { ...show, images: [thumbnail] };
+          }
+        } catch {
+          // A missing image must not prevent the complete text report from being generated.
+        }
+      }));
+      if (signal.aborted) break;
+    }
+    return prepared;
+  };
+
   useEffect(() => {
     if (format !== 'pdf') return;
-    let cancelled = false;
-    let objectUrl = '';
+
+    const controller = new AbortController();
     (async () => {
       try {
+        let saved: { title?: string; subtitle?: string; organization?: string } = {};
+        const settingsResponse = await fetch('/api/settings/report', {
+          headers: authHeaders(),
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+        if (settingsResponse.ok) {
+          saved = await settingsResponse.json();
+          if (!controller.signal.aborted) setSavedReportSettings(saved);
+        }
+        if (!controller.signal.aborted) {
+          setPdfPreviewBlob(null);
+          setPdfPreviewUrl('');
+          setPdfPreviewError('');
+        }
+
+        const effectiveTitle = title || saved.title || fallbackTitle;
+        const effectiveSubtitle = subtitle || saved.subtitle || fallbackSubtitle;
+        const effectiveOrganization = organization || saved.organization || 'بانک رسانه';
+        const preparedShows = await preparePdfShows(shows, controller.signal);
         const response = await fetch('/api/export-pdf-file', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders() },
-          body: JSON.stringify({ shows, title, subtitle, organization }),
+          body: JSON.stringify({
+            shows: preparedShows,
+            title: effectiveTitle,
+            subtitle: effectiveSubtitle,
+            organization: effectiveOrganization,
+          }),
+          signal: controller.signal,
         });
         if (!response.ok) {
           const error = await response.json().catch(() => ({}));
           throw new Error(error.error || 'ساخت پیش‌نمایش PDF ناموفق بود');
         }
         const blob = await response.blob();
-        if (blob.type !== 'application/pdf' || blob.size < 8) throw new Error('پیش‌نمایش PDF معتبر نیست');
-        objectUrl = URL.createObjectURL(blob);
-        if (!cancelled) setPreviewUrl(objectUrl);
+        if (blob.type !== 'application/pdf' || blob.size < 8) {
+          throw new Error('فایل PDF معتبر برای پیش‌نمایش دریافت نشد');
+        }
+        const objectUrl = URL.createObjectURL(blob);
+        if (!controller.signal.aborted) {
+          if (pdfObjectUrlRef.current) URL.revokeObjectURL(pdfObjectUrlRef.current);
+          pdfObjectUrlRef.current = objectUrl;
+          setPdfPreviewBlob(blob);
+          setPdfPreviewUrl(objectUrl);
+          setPdfPreviewKey(previewKey);
+        } else {
+          URL.revokeObjectURL(objectUrl);
+        }
       } catch (error) {
-        if (!cancelled) setPreviewError(error instanceof Error ? error.message : 'ساخت پیش‌نمایش PDF ناموفق بود');
+        if (!controller.signal.aborted) {
+          setPdfPreviewError(error instanceof Error ? error.message : 'ساخت پیش‌نمایش PDF ناموفق بود');
+        }
       }
     })();
-    return () => {
-      cancelled = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [format, shows, title, subtitle, organization]);
 
-  // Resolve the effective report metadata — caller-provided overrides win,
-  // otherwise we fall back to the canonical defaults used by the API.
-  const reportTitle = title || t('reports.report1Title');
-  const reportSubtitle = subtitle || t('app.tagline');
+    return () => {
+      controller.abort();
+    };
+  }, [format, shows, title, subtitle, organization, fallbackTitle, fallbackSubtitle, previewKey]);
+
+  useEffect(() => () => {
+    if (pdfObjectUrlRef.current) URL.revokeObjectURL(pdfObjectUrlRef.current);
+  }, []);
+
+  const excelHeaders = [
+    'ردیف', 'شماره برنامه', 'نام برنامه', 'ژانر', 'کشور', 'منبع', 'اندازه', 'تماشاگر',
+    'سبک', 'جلوه‌ها', 'چیدمان', 'عناصر', 'مصالح', 'رنگ‌ها', 'نورپردازی',
+    'ظرفیت بهره‌برداری', 'خلاصه', 'توضیحات فارسی', 'برچسب‌ها', 'لینک یوتیوب',
+    'IMDb', 'ویکی‌پدیا', 'متن انتشار', 'تصاویر', 'ویدئوها', 'فیلم', 'در ژانر دکور',
+  ];
+  const excelRows = shows.map((s, index) => [
+    index + 1,
+    s.num ?? '',
+    s.name || '',
+    (s.category || '').replace(/^\d+\.\s*/, ''),
+    s.country || '',
+    s.source || '',
+    s.size || '',
+    s.viewers || '',
+    s.style || '',
+    s.effects || '',
+    s.layout || '',
+    s.elements || '',
+    s.materials || '',
+    s.colors || '',
+    s.lighting || '',
+    s.operationalCapacity || '',
+    s.summary || '',
+    s.descriptionFa || '',
+    (s.tags || []).join('، '),
+    s.youtube || '',
+    s.imdb || '',
+    s.wikipedia || '',
+    s.socialPost || '',
+    (s.images || []).map((image) => image.startsWith('data:') ? 'تصویر ذخیره‌شده' : image).join(' | ') || (s.imageSource ? 'تصویر ذخیره‌شده (' + s.imageSource + ')' : ''),
+    (s.videos || []).join(' | '),
+    s.isFilm ? 'بله' : 'خیر',
+    s.decorIncluded === undefined ? 'نامشخص' : s.decorIncluded ? 'بله' : 'خیر',
+  ]);
+  const excelPageSize = 20;
+  const excelPageCount = Math.max(1, Math.ceil(excelRows.length / excelPageSize));
+  const visibleExcelRows = excelRows.slice(excelPage * excelPageSize, (excelPage + 1) * excelPageSize);
+  const excelColumnName = (number: number) => {
+    let value = number;
+    let name = '';
+    while (value > 0) {
+      const remainder = (value - 1) % 26;
+      name = String.fromCharCode(65 + remainder) + name;
+      value = Math.floor((value - 1) / 26);
+    }
+    return name;
+  };
 
   const handleDownload = async () => {
     setDownloading(true);
+    setDownloadError('');
     try {
       if (format === 'pdf') {
-        // Call API to generate professional PDF report — pass through any
-        // caller-provided overrides so the rendered PDF matches the preview.
-        const res = await fetch('/api/export-pdf-file', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...authHeaders() },
-          body: JSON.stringify({ shows, title, subtitle, organization }),
-        });
-        if (!res.ok) {
-          const error = await res.json().catch(() => ({}));
-          throw new Error(error.error || 'ساخت فایل PDF ناموفق بود');
-        }
-        const blob = await res.blob();
-        if (blob.type !== 'application/pdf' || blob.size < 8) {
-          throw new Error('فایل PDF معتبر از سرور دریافت نشد');
-        }
-        const url = URL.createObjectURL(blob);
+        if (!pdfReady || !pdfPreviewBlob) throw new Error('پیش‌نمایش واقعی PDF هنوز برای همین انتخاب آماده نشده است');
+        const url = URL.createObjectURL(pdfPreviewBlob);
         const anchor = document.createElement('a');
         anchor.href = url;
-        anchor.download = `bankresaneh-report-${Date.now()}.pdf`;
+        anchor.download = 'bankresaneh-report-' + Date.now() + '.pdf';
         anchor.click();
         window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       } else {
-        // Excel: generate proper XLSX using SheetJS-style XML
-        const headers = ['شماره', 'نام برنامه', 'دسته‌بندی', 'منبع', 'اندازه', 'تماشاگر', 'سبک', 'جلوه‌ها', 'چیدمان', 'عناصر', 'متریال', 'رنگ‌آمیزی', 'نورپردازی', 'توضیحات'];
-        const rows = shows.map((s, i) => [
-          i + 1,
-          s.name,
-          (s.category || '').replace(/^\d+\.\s*/, ''),
-          s.source || '',
-          s.size || '',
-          s.viewers || '',
-          s.style || '',
-          s.effects || '',
-          s.layout || '',
-          s.elements || '',
-          s.materials || '',
-          s.colors || '',
-          s.lighting || '',
-          (s.descriptionFa || s.summary || '').substring(0, 500),
-        ]);
-        // Build a standards-compliant OOXML workbook (not HTML disguised as .xls).
         const ExcelJS = await import('exceljs');
         const workbook = new ExcelJS.Workbook();
         workbook.creator = 'بانک رسانه';
         workbook.subject = 'آرشیو تخصصی برنامه‌های تلویزیونی';
-        workbook.title = 'گزارش آرشیو بانک رسانه';
+        workbook.title = 'گزارش کامل آرشیو بانک رسانه';
         workbook.created = new Date();
         const sheet = workbook.addWorksheet('آرشیو برنامه‌ها', {
           views: [{ state: 'frozen', ySplit: 1, rightToLeft: true }],
         });
-        sheet.columns = headers.map((header, index) => ({
+        sheet.columns = excelHeaders.map((header, index) => ({
           header,
           key: 'column' + index,
           width: Math.min(54, Math.max(14, header.length + 4)),
         }));
-        sheet.addRows(rows);
-        sheet.autoFilter = { from: 'A1', to: String.fromCharCode(64 + headers.length) + Math.max(1, rows.length + 1) };
+        sheet.addRows(excelRows);
+        sheet.autoFilter = { from: 'A1', to: excelColumnName(excelHeaders.length) + Math.max(1, excelRows.length + 1) };
+        sheet.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
         const headerRow = sheet.getRow(1);
-        headerRow.height = 30;
+        headerRow.height = 34;
         headerRow.eachCell((cell) => {
           cell.font = { name: 'Vazirmatn', bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF075B3B' } };
@@ -7635,7 +7763,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
         });
         sheet.eachRow((row, rowNumber) => {
           if (rowNumber === 1) return;
-          row.height = 34;
+          row.height = 42;
           row.eachCell((cell) => {
             cell.font = { name: 'Vazirmatn', size: 10, color: { argb: 'FF172B22' } };
             cell.alignment = { horizontal: 'right', vertical: 'top', wrapText: true };
@@ -7645,15 +7773,15 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `bankresaneh-${Date.now()}.xlsx`;
-        a.click();
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = 'bankresaneh-' + Date.now() + '.xlsx';
+        anchor.click();
         window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
       onDownload();
-    } catch (e) {
-      console.error('Download error:', e);
+    } catch (error) {
+      setDownloadError(error instanceof Error ? error.message : 'ساخت فایل گزارش ناموفق بود');
     } finally {
       setDownloading(false);
     }
@@ -7661,8 +7789,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-content animate-modal-enter" style={{ maxWidth: '800px' }} onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
+      <div className="modal-content animate-modal-enter" style={{ maxWidth: '1100px' }} onClick={(e) => e.stopPropagation()}>
         <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(13, 124, 74,0.1)' }}>
           <h2 className="text-xl font-bold" style={{ color: '#f0fdf4' }}>
             {format === 'pdf' ? '📄 ' + t('export.previewPDF') : '📊 ' + t('export.previewExcel')}
@@ -7674,80 +7801,105 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
           </button>
         </div>
 
-        <div className="p-6">
-          {/* Summary */}
+        <div className="p-5">
           <div className="mb-4 p-4 rounded-xl" style={{ background: 'rgba(13, 124, 74,0.08)', border: '1px solid rgba(13, 124, 74,0.2)' }}>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
               <div>
                 <div className="text-sm" style={{ color: '#99f6e4' }}>{t('export.programCount')}</div>
                 <div className="text-2xl font-bold" style={{ color: '#54D9C0' }}>{shows.length.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US')}</div>
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm" style={{ color: '#99f6e4' }}>عنوان گزارش</div>
+                <div className="text-base font-bold" style={{ color: '#f0fdf4' }}>{reportTitle}</div>
+                <div className="text-xs" style={{ color: 'rgba(244,255,255,0.7)' }}>{reportSubtitle} — {reportOrganization}</div>
               </div>
               <div>
                 <div className="text-sm" style={{ color: '#99f6e4' }}>{t('export.format')}</div>
                 <div className="text-2xl font-bold" style={{ color: format === 'pdf' ? '#dc2626' : '#0d7c4a' }}>{format.toUpperCase()}</div>
               </div>
-              <div>
-                <div className="text-sm" style={{ color: '#99f6e4' }}>{t('export.date')}</div>
-                <div className="text-2xl font-bold" style={{ color: '#f0fdf4' }}>{new Date().toLocaleDateString(lang === 'fa' ? 'fa-IR' : 'en-US')}</div>
-              </div>
             </div>
           </div>
 
-          {/* PDF preview renders the exact authenticated PDF bytes that the Download button saves. */}
           {format === 'pdf' && (
-            <div className="mb-4 rounded-2xl overflow-hidden" style={{ border: '2px solid #0d7c4a', boxShadow: '0 8px 24px rgba(13, 124, 74, 0.15)' }}>
-              {previewUrl ? (
-                <iframe title="پیش‌نمایش واقعی گزارش PDF" src={previewUrl} style={{ width: '100%', height: 'min(72vh, 760px)', border: 0, background: '#fff' }} />
-              ) : (
-                <div className="p-8 text-center" style={{ background: '#f8faf9', color: '#0d7c4a' }}>
-                  {previewError ? previewError : 'در حال ساخت پیش‌نمایش واقعی PDF با لوگوها و متن ذخیره‌شده...'}
+            <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(13,124,74,0.25)', background: '#fff' }}>
+              {pdfPreviewLoading && (
+                <div className="p-12 text-center text-sm" style={{ color: '#166534' }}>
+                  در حال ساخت پیش‌نمایش از فایل PDF واقعی؛ این همان فایلی است که دانلود می‌شود…
                 </div>
+              )}
+              {pdfPreviewError && (
+                <div role="alert" className="p-5 text-sm" style={{ color: '#b91c1c', background: '#fef2f2' }}>
+                  {pdfPreviewError}
+                </div>
+              )}
+              {pdfReady && !pdfPreviewLoading && (
+                <iframe
+                  title="پیش‌نمایش واقعی PDF گزارش"
+                  src={pdfPreviewUrl}
+                  style={{ display: 'block', width: '100%', height: '68vh', border: 0, background: '#fff' }}
+                />
               )}
             </div>
           )}
 
-          {/* Excel preview */}
           {format === 'excel' && (
-            <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(0,0,0,0.1)' }}>
-              <div className="p-3 text-center" style={{ background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)', border: '1px solid rgba(255, 255, 255, 0.3)', color: 'white' }}>
-                <div className="text-lg font-bold">بانک رسانه — خروجی Excel</div>
-                <div className="text-xs opacity-80">{shows.length.toLocaleString('fa-IR')} برنامه</div>
+            <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(13,124,74,0.25)' }}>
+              <div className="p-3 flex items-center justify-between gap-3 flex-wrap" style={{ background: '#075B3B', color: '#fff' }}>
+                <div className="font-bold">پیش‌نمایش واقعی داده‌های فایل Excel</div>
+                <div className="text-xs">{excelRows.length.toLocaleString('fa-IR')} ردیف · {excelHeaders.length.toLocaleString('fa-IR')} ستون</div>
               </div>
-              <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
-                <table className="w-full" style={{ fontSize: '12px' }}>
-                  <thead style={{ position: 'sticky', top: 0, background: '#f5efe0', zIndex: 1 }}>
+              <div style={{ maxHeight: '55vh', overflow: 'auto', background: '#fff' }}>
+                <table style={{ minWidth: '1900px', width: '100%', borderCollapse: 'collapse', fontSize: '11px', color: '#172B22' }}>
+                  <thead style={{ position: 'sticky', top: 0, zIndex: 2, background: '#E8F5EE' }}>
                     <tr>
-                      <th className="text-right p-2 font-bold" style={{ color: '#0d7c4a' }}>#</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#0d7c4a' }}>نام</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#0d7c4a' }}>دسته</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#0d7c4a' }}>سبک</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#0d7c4a' }}>اندازه</th>
+                      {excelHeaders.map((header, index) => (
+                        <th key={index} className="p-2 text-right font-bold" style={{ border: '1px solid #DCE5DF', whiteSpace: 'nowrap' }}>{header}</th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {shows.slice(0, 50).map((s, i) => (
-                      <tr key={s.num} style={{ borderBottom: '1px solid rgba(0, 0, 0, 0.08)', background: i % 2 === 0 ? 'white' : '#f9f9f9' }}>
-                        <td className="p-2" style={{ color: '#4a5d52' }}>{(i + 1).toLocaleString('fa-IR')}</td>
-                        <td className="p-2 font-medium" style={{ color: '#1a2e1a', direction: 'ltr', textAlign: 'right' }}>{s.name}</td>
-                        <td className="p-2" style={{ color: '#4a5d52' }}>{s.category.replace(/^\d+\.\s*/, '').substring(0, 20)}</td>
-                        <td className="p-2" style={{ color: '#4a5d52' }}>{s.style}</td>
-                        <td className="p-2" style={{ color: '#4a5d52' }}>{s.size}</td>
+                    {visibleExcelRows.map((row, rowIndex) => (
+                      <tr key={excelPage * excelPageSize + rowIndex} style={{ background: rowIndex % 2 ? '#F8FAFC' : '#fff' }}>
+                        {row.map((value, columnIndex) => (
+                          <td key={columnIndex} className="p-2 align-top" style={{ border: '1px solid #E2E8F0', maxWidth: 280, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+                            {String(value ?? '—')}
+                          </td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+              <div className="p-3 flex items-center justify-between gap-3" style={{ background: '#F8FAFC', color: '#334155' }}>
+                <button
+                  onClick={() => setExcelPage((page) => Math.max(0, page - 1))}
+                  disabled={excelPage === 0}
+                  className="px-3 py-2 rounded-lg text-xs font-bold"
+                  style={{ background: excelPage === 0 ? '#E2E8F0' : '#D1FAE5', color: '#075B3B', opacity: excelPage === 0 ? 0.5 : 1 }}
+                >صفحه قبل</button>
+                <div className="text-xs">{'صفحه ' + (excelPage + 1).toLocaleString('fa-IR') + ' از ' + excelPageCount.toLocaleString('fa-IR') + ' — همهٔ ردیف‌ها در فایل خروجی هستند'}</div>
+                <button
+                  onClick={() => setExcelPage((page) => Math.min(excelPageCount - 1, page + 1))}
+                  disabled={excelPage >= excelPageCount - 1}
+                  className="px-3 py-2 rounded-lg text-xs font-bold"
+                  style={{ background: excelPage >= excelPageCount - 1 ? '#E2E8F0' : '#D1FAE5', color: '#075B3B', opacity: excelPage >= excelPageCount - 1 ? 0.5 : 1 }}
+                >صفحه بعد</button>
+              </div>
             </div>
           )}
 
-          {/* Download button */}
+          {downloadError && (
+            <p role="alert" className="mt-3 text-sm" style={{ color: '#fca5a5' }}>{downloadError}</p>
+          )}
+
           <div className="mt-6 flex gap-3">
             <button
               onClick={handleDownload}
-              disabled={downloading}
+              disabled={downloading || (format === 'pdf' && (pdfPreviewLoading || !pdfReady))}
               className="btn-enter-premium flex-1"
+              style={{ opacity: downloading || (format === 'pdf' && (pdfPreviewLoading || !pdfReady)) ? 0.5 : 1 }}
             >
-              {downloading ? t('common.loading') : `⬇ ${format === 'pdf' ? t('export.downloadPDF') : t('export.downloadExcel')}`}
+              {downloading ? t('common.loading') : '⬇ ' + (format === 'pdf' ? t('export.downloadPDF') : t('export.downloadExcel'))}
             </button>
             <button
               onClick={onClose}
@@ -7759,8 +7911,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
           </div>
           {format === 'pdf' && (
             <p className="mt-3 text-xs text-center" style={{ color: 'rgba(244, 255, 255, 0.7)', lineHeight: 1.7 }}>
-              گزارش شامل ۸ بخش است: صفحهٔ عنوان، فهرست مطالب، خلاصهٔ اجرایی، روش تحقیق، نمای آماری، تحلیل ژانرها، تحلیل دکور، و معرفی تفصیلی برنامه‌ها.<br />
-              {lang === 'fa' ? 'پس از کلیک روی دانلود، پنجره چاپ باز می‌شود — مقاس «A4» و «Save as PDF» را انتخاب کنید.' : 'After clicking download, the print dialog opens — select A4 size and "Save as PDF".'}
+              پیش‌نمایش بالا فایل PDF نهایی است؛ چیدمان، صفحات، متن‌ها و لوگوها دقیقاً از همان خروجی دانلودی نمایش داده می‌شوند.
             </p>
           )}
         </div>
