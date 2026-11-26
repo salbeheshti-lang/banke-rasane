@@ -118,9 +118,10 @@ if (commonsByName.size) {
     if (!response.ok) throw new Error('Commons API HTTP ' + response.status);
     const payload = await response.json();
     const pages = Object.values(payload?.query?.pages || {});
-    const byTitle = new Map(pages.map(page => [String(page.title || '').replace(/^File:/i, '').toLocaleLowerCase(), page]));
+    const normalizeFileTitle = value => String(value || '').replace(/^File:/i, '').replace(/_/g, ' ').trim().toLocaleLowerCase();
+    const byTitle = new Map(pages.map(page => [normalizeFileTitle(page.title), page]));
     for (const item of commonsByName.values()) {
-      const page = byTitle.get(item.fileName.toLocaleLowerCase());
+      const page = byTitle.get(normalizeFileTitle(item.fileName));
       const info = page?.imageinfo?.[0];
       if (!info) {
         for (const url of item.urls) failures.push({ url, error: 'Wikimedia Commons file metadata not found' });
