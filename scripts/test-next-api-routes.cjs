@@ -371,11 +371,19 @@ async function main() {
 
   const binaryPdf = await request(nextBase, '/api/export-pdf-file', {
     method: 'POST', token: adminToken,
-    body: { shows: [{ num: 1, name: 'برنامه آزمایشی', category: 'گفتگو', descriptionFa: 'متن فارسی برای آزمون PDF' }] },
+    body: { shows: [{
+      num: 990001, name: 'برنامه آزمایشی', category: 'گفتگو', source: 'آزمون CI',
+      descriptionFa: 'متن فارسی برای آزمون PDF', summary: 'خلاصه آزمون',
+      country: 'ایران', operationalCapacity: 'ظرفیت آزمون',
+      tags: ['آزمون'], videos: [], images: ['data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j8xkAAAAASUVORK5CYII='],
+      isFilm: false, decorIncluded: true,
+    }] },
   });
   assert(binaryPdf.status === 200 && binaryPdf.contentType.includes('application/pdf') &&
     Buffer.isBuffer(binaryPdf.data) && binaryPdf.data.subarray(0, 4).toString() === '%PDF',
     'PDF export returns a real binary PDF with a valid PDF signature');
+  assert(binaryPdf.data.includes(Buffer.from('/Subtype /Image')),
+    'PDF export embeds a real program-image thumbnail in the generated PDF');
 
   const importValidation = await request(nextBase, '/api/fetch-show-info', {
     method: 'POST', token: adminToken,
