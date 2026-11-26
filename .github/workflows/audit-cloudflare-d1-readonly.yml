@@ -68,10 +68,11 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           D1_DATABASE_ID: ${{ steps.d1.outputs.database_id }}
         run: |
+          payload=$(jq -nc --arg sql "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('shows', 'users', 'sessions') ORDER BY name;" '{sql: $sql}')
           tables=$(curl --fail --silent --show-error -X POST \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             -H "Content-Type: application/json" \
-            --data '{"sql":"SELECT name FROM sqlite_master WHERE type = ''table'' AND name IN (''shows'', ''users'', ''sessions'') ORDER BY name;"}' \
+            --data "$payload" \
             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$D1_DATABASE_ID/query")
           for table in $(echo "$tables" | jq -r '.result[].results[]?.name'); do
             response=$(curl --fail --silent --show-error -X POST \
