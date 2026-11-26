@@ -6817,12 +6817,11 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
     : undefined;
   const directVideoUrl = shows.length === 1
     ? (shows[0].videos || []).find((value) => {
-        // Accept clips exported by the in-browser editor (WebM/MP4 data URLs)
-        // as well as direct HTTPS links to .mp4 / .webm files.
-        if (typeof value === 'string' && /^data:video\/(mp4|webm|ogg)/i.test(value)) return true;
+        // Only FFmpeg-transcoded MP4 clips and direct HTTPS MP4 files can be published.
+        if (typeof value === 'string' && /^data:video\/mp4;base64,/i.test(value)) return true;
         try {
           const parsed = new URL(value);
-          return parsed.protocol === 'https:' && /\.(mp4|webm)$/i.test(parsed.pathname);
+          return parsed.protocol === 'https:' && !parsed.username && !parsed.password && /\.mp4$/i.test(parsed.pathname);
         } catch {
           return false;
         }
