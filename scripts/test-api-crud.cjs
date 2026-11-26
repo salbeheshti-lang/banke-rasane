@@ -97,7 +97,8 @@ async function main() {
       imdb: 'https://www.imdb.com/title/tt9876543/',
       wikipedia: '',
       videos: [],
-      images: [],
+      images: ['data:image/webp;base64,dGVzdA=='],
+      programLogo: 'data:image/webp;base64,dGVzdA==',
       tags: [],
       decorIncluded: false,
     };
@@ -105,6 +106,7 @@ async function main() {
       method: 'POST', token, body: JSON.stringify(original),
     });
     assert(created.status === 200 && created.data.num === num, 'new fixture show is created');
+    assert(created.data.programLogo === 'data:image/webp;base64,dGVzdA==', 'program logo is persisted and returned by show CRUD');
     const capacitySave = await request(`/api/shows/${num}`, { method: 'PUT', token, body: JSON.stringify({ operationalCapacity: 'ظرفیت نمونه برای آزمون' }) });
     assert(capacitySave.status === 200 && capacitySave.data.operationalCapacity === 'ظرفیت نمونه برای آزمون', 'operational capacity can be saved on a show');
     const capacityReload = await request('/api/shows/search?q=BankResaneh%20CRUD%20Integration%20Fixture', { token });

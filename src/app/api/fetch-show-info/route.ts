@@ -10,6 +10,9 @@ function decodeHtml(s: string): string {
 function cleanQuery(s: string): string {
   return (s||'').replace(/[?!]+$/,'').replace(/\(.*?\)/g,' ').replace(/[–—-]/g,' ').replace(/\s+/g,' ').trim();
 }
+function normalizeTitle(s: string): string {
+  return cleanQuery(s).toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim();
+}
 
 async function fetchImdbPoster(imdbId: string): Promise<string | null> {
   // OMDb sometimes returns a valid title record without a poster. Fall back to
@@ -62,7 +65,11 @@ async function fetchWikipediaShowImage(title: string): Promise<string | null> {
     if (!search) continue;
     const data = await search.json();
     const pages = Object.values(data?.query?.pages || {}) as any[];
+    const normalizedQuery = normalizeTitle(query);
     for (const page of pages) {
+      // Require a close title match; never attach the first vaguely related
+      // Wikipedia image to an unrelated programme with an ambiguous name.
+      if (normalizeTitle(String(page?.title || '')) !== normalizedQuery) continue;
       const candidate = page?.original?.source || page?.thumbnail?.source;
       if (typeof candidate !== 'string') continue;
       try {
@@ -83,6 +90,8 @@ async function fetchWikipediaShowImage(title: string): Promise<string | null> {
   const commonsData = await commons.json();
   const files = Object.values(commonsData?.query?.pages || {}) as any[];
   for (const file of files) {
+    const fileTitle = normalizeTitle(String(file?.title || '').replace(/^File:/i, '').replace(/\.[a-z0-9]+$/i, ''));
+    if (!fileTitle.includes(normalizeTitle(query))) continue;
     const candidate = file?.imageinfo?.[0]?.thumburl || file?.imageinfo?.[0]?.url;
     if (typeof candidate !== 'string') continue;
     try {
@@ -222,7 +231,7 @@ export async function POST(request: NextRequest) {
         if (record.Title) info.title = record.Title;
         if (record.Plot && record.Plot !== 'N/A') info.description = record.Plot;
         // Preserve IMDb/OMDb posters for other genres; decor needs real program/set imagery.
-        if (record.Poster && record.Poster !== 'N/A' && /^https:\/\//i.test(record.Poster)) info.image = record.Poster;
+        if (!isDecor && record.Poster && record.Poster !== 'N/A' && /^https:\/\//i.test(record.Poster)) info.image = record.Poster;
         if (record.imdbRating && record.imdbRating !== 'N/A') info.rating = record.imdbRating;
         if (record.Genre && record.Genre !== 'N/A') info.genres = record.Genre;
         if (record.Year && record.Year !== 'N/A') info.year = record.Year;
@@ -235,14 +244,19 @@ export async function POST(request: NextRequest) {
       // Prefer the poster belonging to the exact IMDb title ID. Do not
       // replace it with a loosely matched Wikipedia search result (which can
       // return an unrelated image for ambiguous titles such as "Top Gear").
-      if (!info.image && imdbMatch) {
+      if (!isDecor && !info.image && imdbMatch) {
         const fallbackPoster = await fetchImdbPoster(imdbMatch[1]);
         if (fallbackPoster) info.image = fallbackPoster;
       }
       // Only use Wikipedia/Wikimedia as a last resort when IMDb has no image.
-      if (!info.image && isDecor) {
-        const decorImage = await fetchWikipediaShowImage(info.title || String(showName || ''));
-        if (decorImage) info.image = decorImage;
+      if (!info.image && (isDecor || info.title || showName)) {
+        // In decor mode the user-supplied programme name is more reliable
+        // than an IMDb episode title; search for the programme/studio image.
+        const fallbackTitle = isDecor && showName
+          ? String(showName)
+          : (info.title || String(showName || ''));
+        const fallbackImage = await fetchWikipediaShowImage(fallbackTitle);
+        if (fallbackImage) info.image = fallbackImage;
       }
     }
 
@@ -271,6 +285,13 @@ export async function POST(request: NextRequest) {
           else if (d.thumbnail?.source) info.image = d.thumbnail.source;
           info.wikiUrl = `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(pageTitle.replace(/ /g, '_'))}`;
         }
+      }
+      if (!info.image && (isDecor || info.title || showName)) {
+        const fallbackTitle = isDecor && showName
+          ? String(showName)
+          : (info.title || pageTitle || String(showName || ''));
+        const fallbackImage = await fetchWikipediaShowImage(fallbackTitle);
+        if (fallbackImage) info.image = fallbackImage;
       }
     }
 
