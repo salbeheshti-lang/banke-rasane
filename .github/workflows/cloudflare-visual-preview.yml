@@ -1,9 +1,8 @@
 name: Visual-only Cloudflare Preview
 
+# Live Worker deployment is now owned by the main-branch Cloudflare Preview
+# workflow. Keep manual dispatch for one-off visual checks without racing it.
 on:
-  push:
-    branches:
-      - preview/visual-only
   workflow_dispatch:
 
 permissions:
@@ -52,8 +51,6 @@ jobs:
           --var "BANKRESANEH_ALLOWED_API_ORIGINS:https://bankresaneh-visual-preview.ginx11x5frrby9mvb.workers.dev"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          # The visual preview Worker lives in the original Workers account; D1 audit uses the separate D1 account ID.
-          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_WORKERS_ACCOUNT_ID || '128caa74c4d03e4cf84cd0d2b3f07bbf' }}
           BANKRESANEH_API_BASE: ${{ vars.BANKRESANEH_API_BASE || 'https://bankresaneh-preview-api.onrender.com' }}
 
       - name: Verify deployed branding, logos, and live archive API
