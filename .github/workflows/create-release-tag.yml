@@ -53,7 +53,7 @@ jobs:
               const passing = data.workflow_runs.some(run =>
                 run.head_sha === context.sha &&
                 run.event === workflow.event &&
-                (!workflow.matchName && workflow.id || run.name === workflow.name) &&
+                (!workflow.id || run.name === workflow.name) &&
                 run.status === 'completed' &&
                 run.conclusion === 'success'
               );
