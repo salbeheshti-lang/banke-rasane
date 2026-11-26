@@ -11,6 +11,15 @@ const API_BASE: Record<string, string> = {
   bale: 'https://tapi.bale.ai',
 };
 
+function isDirectMp4Url(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && !url.username && !url.password && /\\.mp4$/i.test(url.pathname);
+  } catch {
+    return false;
+  }
+}
+
 interface PublishBody {
   platform: 'telegram' | 'bale';
   token: string;
