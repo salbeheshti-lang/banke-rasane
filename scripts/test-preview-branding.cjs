@@ -11,7 +11,7 @@ const ASSETS = ['client-logo.png', 'client-logo-white.png', 'banke-rasane-logo.p
 const FEATURE_MARKERS = [
   'ظرفیت بهره‌برداری',
   'decorIncluded',
-  'data:video/mp4', // current editor exports authenticated FFmpeg-transcoded MP4, not browser MediaRecorder WebM
+  'ویدئو', // visible video-editor/publishing UI; server MP4 validation is covered by the API test suite
 
   'ویکی‌پدیا',
   'IMDb',
