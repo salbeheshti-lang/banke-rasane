@@ -6939,6 +6939,7 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
           if (logoSource.startsWith('data:image/')) {
             programLogoImage = await new Promise<HTMLImageElement>((resolve, reject) => {
               const image = document.createElement('img');
+              image.crossOrigin = 'anonymous';
               image.onload = () => resolve(image);
               image.onerror = () => reject(new Error('program logo decode failed'));
               image.src = logoSource;
