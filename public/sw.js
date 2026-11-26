@@ -1,12 +1,9 @@
-const CACHE_NAME = 'bankresaneh-shell-v2';
+const CACHE_NAME = 'bankresaneh-shell-v3';
 const OFFLINE_URL = '/offline.html';
-const STATIC_PREFIXES = ['/fonts/', '/icons/', '/_next/static/'];
-const STATIC_FILES = ['/favicon.ico', '/banke-rasane-logo.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
-    // Offline support is optional. A cache quota or edge response failure
-    // must never prevent the new worker from installing.
+    // Offline support is optional. Cache failures must never block installation.
     try {
       const cache = await caches.open(CACHE_NAME);
       const response = await fetch(OFFLINE_URL, { cache: 'reload' });
@@ -14,11 +11,11 @@ self.addEventListener('install', (event) => {
         try {
           await cache.put(OFFLINE_URL, response);
         } catch {
-          // Best-effort only; continue installing without an offline page.
+          // Best-effort only.
         }
       }
     } catch {
-      // Continue installation even when Cache Storage is unavailable.
+      // Continue installation when Cache Storage or the edge is unavailable.
     }
     await self.skipWaiting();
   })());
@@ -41,33 +38,22 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
-  if (request.method !== 'GET' || url.origin !== self.location.origin) return;
 
-  // Never cache API responses, login/session data, or private report content.
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/login') || url.pathname.includes('/settings/')) return;
+  // Only provide an offline fallback for top-level navigation. In particular,
+  // never intercept JS, CSS, fonts, images, API calls, or application data.
+  // Those requests must go directly through the browser's normal network stack
+  // so a failed edge transfer is not converted into an opaque Response.error().
+  if (
+    request.method !== 'GET' ||
+    url.origin !== self.location.origin ||
+    request.mode !== 'navigate'
+  ) return;
 
-  if (request.mode === 'navigate') {
-    event.respondWith(fetch(request).catch(async () => {
-      try {
-        return (await caches.match(OFFLINE_URL)) || Response.error();
-      } catch {
-        return Response.error();
-      }
-    }));
-    return;
-  }
-
-  if (STATIC_FILES.includes(url.pathname) || STATIC_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))) {
-    // Runtime asset caching is deliberately disabled on the preview. Some
-    // edge/browser combinations reject Cache.put() for streamed responses.
-    // Network delivery remains primary; a previously stored response is only
-    // used as a fallback when the network request itself fails.
-    event.respondWith(fetch(request).catch(async () => {
-      try {
-        return (await caches.match(request)) || Response.error();
-      } catch {
-        return Response.error();
-      }
-    }));
-  }
+  event.respondWith(fetch(request).catch(async () => {
+    try {
+      return (await caches.match(OFFLINE_URL)) || Response.error();
+    } catch {
+      return Response.error();
+    }
+  }));
 });
