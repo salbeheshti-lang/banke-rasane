@@ -29,7 +29,16 @@ self.addEventListener('fetch', (event) => {
       const cached = await cache.match(request);
       if (cached) return cached;
       const response = await fetch(request);
-      if (response.ok && response.type === 'basic') cache.put(request, response.clone());
+      if (response.ok && response.type === 'basic') {
+        // A failed cache write must never turn a successful network response into
+        // an unhandled rejection or prevent the page from loading.
+        try {
+          await cache.put(request, response.clone());
+        } catch (error) {
+          // Cache storage is best-effort (quota, interrupted streams, or edge
+          // network failures). The original response is still returned below.
+        }
+      }
       return response;
     }));
   }
