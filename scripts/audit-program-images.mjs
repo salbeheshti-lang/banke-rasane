@@ -1,11 +1,9 @@
 #!/usr/bin/env node
 /**
- * Audits the current seed's decor-program images.
- *
- * Checks exact record membership, HTTPS image reachability, image MIME,
- * Commons file metadata/license, and attribution-manifest coverage.
- * It deliberately does NOT claim that an image depicts the correct studio:
- * semantic matching remains a documented human visual-review requirement.
+ * Audits every seeded program image and separately reports decor coverage.
+ * It verifies live image delivery, Commons file/license metadata, and exact
+ * attribution-manifest coverage. Semantic program/set matching remains a
+ * human visual-review requirement and is never inferred from HTTP success.
  */
 import { readFileSync, appendFileSync } from 'node:fs';
 
@@ -26,10 +24,23 @@ function hasDecor(show) {
 }
 const decorShows = seed.filter(hasDecor);
 const candidates = [];
-for (const show of decorShows) {
+const legacyLocalPaths = [];
+const invalidReferences = [];
+for (const show of seed) {
   for (const raw of Array.isArray(show.images) ? show.images : []) {
-    if (typeof raw !== 'string' || !/^https:\/\//i.test(raw)) continue;
-    candidates.push({ num: Number(show.num), name: String(show.name || ''), url: raw });
+    if (typeof raw !== 'string') {
+      invalidReferences.push({ num: show.num, error: 'image reference is not a string' });
+      continue;
+    }
+    if (raw.startsWith('/program-images/')) {
+      legacyLocalPaths.push({ num: show.num, name: show.name, path: raw });
+      continue;
+    }
+    if (/^https:\/\//i.test(raw)) {
+      candidates.push({ num: Number(show.num), name: String(show.name || ''), decor: hasDecor(show), url: raw });
+      continue;
+    }
+    invalidReferences.push({ num: show.num, name: show.name, reference: raw });
   }
 }
 const uniqueUrls = [...new Set(candidates.map(item => item.url))];
@@ -41,9 +52,12 @@ const timeout = 15000;
 function commonsFileName(raw) {
   try {
     const url = new URL(raw);
-    if (!['upload.wikimedia.org', 'thumb.wikimedia.org'].includes(url.hostname.toLowerCase())) return null;
-    let name = decodeURIComponent(url.pathname.split('/').pop() || '');
-    name = name.replace(/^\d+px-/, '');
+    const host = url.hostname.toLowerCase();
+    if (!['upload.wikimedia.org', 'thumb.wikimedia.org'].includes(host)) return null;
+    const parts = url.pathname.split('/').filter(Boolean);
+    let name = host === 'thumb.wikimedia.org' ? parts.at(-2) : parts.at(-1);
+    if (host === 'upload.wikimedia.org' && parts.includes('thumb')) name = parts.at(-1);
+    name = decodeURIComponent(name || '').replace(/^\d+px-/, '');
     return name || null;
   } catch { return null; }
 }
@@ -56,7 +70,7 @@ function isReusableLicense(value) {
     !/All rights reserved|non.?free|fair use/i.test(value);
 }
 async function fetchWithTimeout(url, init = {}) {
-  return fetch(url, { ...init, signal: AbortSignal.timeout(timeout), headers: { 'User-Agent': 'BankResaneh-Image-Audit/1.0 (repository quality check)', ...(init.headers || {}) } });
+  return fetch(url, { ...init, signal: AbortSignal.timeout(timeout), headers: { 'User-Agent': 'BankResaneh-Image-Audit/1.1 (repository quality check)', ...(init.headers || {}) } });
 }
 async function checkUrl(raw) {
   let response;
@@ -91,14 +105,14 @@ async function checkUrl(raw) {
       if (!info) throw new Error('Commons file metadata not found');
       const ext = info.extmetadata || {};
       const short = metadataValue(ext.LicenseShortName);
-      const url = metadataValue(ext.LicenseUrl);
+      const licenseUrl = metadataValue(ext.LicenseUrl);
       const creator = metadataValue(ext.Artist || ext.Credit);
       if (!short || !isReusableLicense(short)) {
         failures.push({ url: raw, error: 'Commons reuse license is missing or not clearly reusable: ' + (short || 'unknown') });
       } else if (!credits.includes(raw) || !creator) {
         failures.push({ url: raw, error: 'Commons attribution manifest is incomplete (URL/creator missing)' });
       } else {
-        license = short + (url ? ' — ' + url : '');
+        license = short + (licenseUrl ? ' — ' + licenseUrl : '');
       }
     } catch (error) {
       failures.push({ url: raw, error: 'Commons metadata audit failed: ' + (error?.message || String(error)) });
@@ -120,13 +134,18 @@ await Promise.all(Array.from({ length: Math.min(concurrency, uniqueUrls.length) 
   }
 }));
 
+const decorImageRefs = candidates.filter(item => item.decor);
 const report = {
   seedRecords: seed.length,
   decorRecords: decorShows.length,
-  decorRecordsWithExternalImages: new Set(candidates.map(item => item.num)).size,
-  externalImageReferences: candidates.length,
-  uniqueExternalImageUrls: uniqueUrls.length,
+  recordsWithExternalImages: new Set(candidates.map(item => item.num)).size,
+  decorRecordsWithExternalImages: new Set(decorImageRefs.map(item => item.num)).size,
+  imageReferences: candidates.length,
+  decorImageReferences: decorImageRefs.length,
+  uniqueImageUrls: uniqueUrls.length,
   checkedImageUrls: checked.length,
+  legacyLocalImageReferences: legacyLocalPaths.length,
+  invalidImageReferences: invalidReferences.length,
   failures,
   warnings,
   semanticReviewRequired: true,
@@ -134,12 +153,16 @@ const report = {
 console.log(JSON.stringify(report, null, 2));
 if (process.env.GITHUB_STEP_SUMMARY) {
   appendFileSync(process.env.GITHUB_STEP_SUMMARY,
-    '\n## Decor image audit\n' +
+    '\n## Program image audit\n' +
     '- Seed records: ' + report.seedRecords + '\n' +
     '- Decor records: ' + report.decorRecords + '\n' +
+    '- Records with external images: ' + report.recordsWithExternalImages + '\n' +
     '- Decor records with external images: ' + report.decorRecordsWithExternalImages + '\n' +
-    '- Unique external image URLs checked: ' + report.checkedImageUrls + '/' + report.uniqueExternalImageUrls + '\n' +
+    '- Unique image URLs checked: ' + report.checkedImageUrls + '/' + report.uniqueImageUrls + '\n' +
+    '- Legacy local image references: ' + report.legacyLocalImageReferences + '\n' +
+    '- Invalid image references: ' + report.invalidImageReferences + '\n' +
     '- Audit failures: ' + failures.length + '\n' +
-    '- Manual visual/license review remains required: **yes**\n');
+    '- Human visual/semantic review still required: **yes**\n');
 }
-if (failures.length) process.exitCode = 1;
+if (!uniqueUrls.length) failures.push({ error: 'No external image URLs were audited; refusing a vacuous success.' });
+if (legacyLocalPaths.length || invalidReferences.length || failures.length) process.exitCode = 1;
