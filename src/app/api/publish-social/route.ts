@@ -108,8 +108,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: 'متن پست بیشتر از سقف ۴۰۹۶ نویسه است؛ متن را کوتاه کنید تا هیچ بخشی حذف نشود' }, { status: 400 });
     }
     const hasVideo = typeof body.videoUrl === 'string' && body.videoUrl.length > 0;
-    if (hasVideo && !isDirectMp4Url(body.videoUrl!)) {
-      return NextResponse.json({ ok: false, error: 'برای ارسال ویدئو، لینک مستقیم HTTPS به فایل MP4 لازم است؛ لینک صفحهٔ یوتیوب/آپارات قابل ارسال مستقیم نیست' }, { status: 400 });
+    // Early guard: accept either a data:video/ URL (clip from the in-browser
+    // editor) or a direct HTTPS .mp4/.webm URL. Reject page links (YouTube,
+    // Aparat, etc.) up front with a clear message. The deeper byte-level
+    // validation happens later via parseVideoDataUrl / isDirectVideoUrl.
+    if (hasVideo && !body.videoUrl!.startsWith('data:video/') && !isDirectVideoUrl(body.videoUrl!)) {
+      return NextResponse.json({ ok: false, error: 'ویدئو باید یک لینک مستقیم HTTPS به فایل MP4/WebM یا فایل ویدئویی ذخیره‌شده (data URL) باشد؛ لینک صفحهٔ یوتیوب/آپارات قابل ارسال مستقیم نیست' }, { status: 400 });
     }
     const hasImage = typeof imageUrl === 'string' && imageUrl.length > 0;
     let imageData: ReturnType<typeof parseImageDataUrl> = null;
@@ -148,27 +152,38 @@ export async function POST(request: NextRequest) {
     // video first (with the full caption), then the real program image.
     // This uses sendMediaGroup; it never splits the caption into a separate message.
     if (hasVideo && hasImage) {
+      // Parse the video early so we know whether it is an uploadable data URL
+      // (clip from the editor) or a remote HTTPS URL.
+      const videoData = body.videoUrl!.startsWith('data:video/') ? parseVideoDataUrl(body.videoUrl!) : null;
+      const videoRemote = !videoData && isDirectVideoUrl(body.videoUrl!) ? body.videoUrl : null;
+      const videoMediaRef = videoData ? 'attach://program_clip' : videoRemote;
+      const photoMediaRef = imageData ? 'attach://program_cover' : imageUrl;
       const media = [
-        { type: 'video', media: body.videoUrl, ...(caption ? { caption } : {}) },
-        { type: 'photo', media: imageData ? 'attach://program_cover' : imageUrl },
+        { type: 'video', media: videoMediaRef, ...(caption ? { caption } : {}) },
+        { type: 'photo', media: photoMediaRef },
       ];
       let tgRes: Response;
-      if (imageData) {
+      if (imageData || videoData) {
         const form = new FormData();
         form.set('chat_id', chatId);
         form.set('media', JSON.stringify(media));
-        form.set('program_cover', new Blob([imageData.bytes.buffer.slice(imageData.bytes.byteOffset, imageData.bytes.byteOffset + imageData.bytes.byteLength) as ArrayBuffer], { type: imageData.mime }), `program-cover.${imageData.extension}`);
+        if (videoData) {
+          form.set('program_clip', new Blob([videoData.bytes.buffer.slice(videoData.bytes.byteOffset, videoData.bytes.byteOffset + videoData.bytes.byteLength) as ArrayBuffer], { type: videoData.mime }), `program-clip.${videoData.extension}`);
+        }
+        if (imageData) {
+          form.set('program_cover', new Blob([imageData.bytes.buffer.slice(imageData.bytes.byteOffset, imageData.bytes.byteOffset + imageData.bytes.byteLength) as ArrayBuffer], { type: imageData.mime }), `program-cover.${imageData.extension}`);
+        }
         tgRes = await fetch(`${base}/bot${token}/sendMediaGroup`, {
           method: 'POST',
           body: form,
-          signal: AbortSignal.timeout(60000),
+          signal: AbortSignal.timeout(120000),
         });
       } else {
         tgRes = await fetch(`${base}/bot${token}/sendMediaGroup`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ chat_id: chatId, media }),
-          signal: AbortSignal.timeout(60000),
+          signal: AbortSignal.timeout(120000),
         });
       }
       const tgData = await tgRes.json().catch(() => ({}));
