@@ -24,13 +24,11 @@ jobs:
         shell: bash
         env:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CF_ACCOUNT: ${{ vars.CLOUDFLARE_WORKERS_ACCOUNT_ID || '128caa74c4d03e4cf84cd0d2b3f07bbf' }}
           API_BASE: ${{ vars.BANKRESANEH_API_BASE || 'https://bankresaneh-preview-api.onrender.com' }}
           API_ALLOWLIST: ${{ vars.BANKRESANEH_ALLOWED_API_ORIGINS || 'https://bankresaneh-preview-api.onrender.com' }}
         run: |
           missing=()
           [[ -n "$CF_TOKEN" ]] || missing+=("CLOUDFLARE_API_TOKEN (GitHub Secret)")
-          [[ -n "$CF_ACCOUNT" ]] || missing+=("CLOUDFLARE_ACCOUNT_ID (GitHub Variable)")
           [[ -n "$API_BASE" ]] || missing+=("BANKRESANEH_API_BASE (GitHub Variable)")
           [[ -n "$API_ALLOWLIST" ]] || missing+=("BANKRESANEH_ALLOWED_API_ORIGINS (GitHub Variable)")
           if [[ ${#missing[@]} -ne 0 ]]; then
@@ -70,19 +68,18 @@ jobs:
       - name: Deploy isolated preview Worker
         if: steps.config.outputs.ready == 'true'
         run: |
-          bunx wrangler deploy --name bankresaneh-preview \
+          bunx wrangler deploy --name bankresaneh-visual-preview \
             --var "BANKRESANEH_API_BASE:${BANKRESANEH_API_BASE}" \
             --var "BANKRESANEH_ALLOWED_API_ORIGINS:${BANKRESANEH_ALLOWED_API_ORIGINS}"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_WORKERS_ACCOUNT_ID || '128caa74c4d03e4cf84cd0d2b3f07bbf' }}
           BANKRESANEH_API_BASE: ${{ vars.BANKRESANEH_API_BASE || 'https://bankresaneh-preview-api.onrender.com' }}
           BANKRESANEH_ALLOWED_API_ORIGINS: ${{ vars.BANKRESANEH_ALLOWED_API_ORIGINS || 'https://bankresaneh-preview-api.onrender.com' }}
 
       - name: Verify live Cloudflare Preview and connected test API
         shell: bash
         env:
-          WORKER_URL: https://bankresaneh-preview.ginx11x5frrby9mvb.workers.dev
+          WORKER_URL: https://bankresaneh-visual-preview.ginx11x5frrby9mvb.workers.dev
           API_BASE: ${{ vars.BANKRESANEH_API_BASE || 'https://bankresaneh-preview-api.onrender.com' }}
         run: |
           set -euo pipefail
