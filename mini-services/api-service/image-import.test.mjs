@@ -119,3 +119,12 @@ test('resolves a Wikimedia Commons file page through the Commons imageinfo API',
   assert.ok(calls[0].includes('commons.wikimedia.org/w/api.php'));
   assert.match(result.body.dataUrl, /^data:image\/webp;base64,/);
 });
+
+test('sniffs valid image bytes when the source server sends application/octet-stream', async () => {
+  const result = await importImageFromUrl(
+    'https://upload.wikimedia.org/wikipedia/commons/octet-stream.png',
+    async () => new Response(png, { status: 200, headers: { 'content-type': 'application/octet-stream' } }),
+  );
+  assert.equal(result.status, 200);
+  assert.match(result.body.dataUrl, /^data:image\/webp;base64,/);
+});
