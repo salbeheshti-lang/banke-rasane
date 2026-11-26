@@ -189,11 +189,11 @@ export async function POST(request: NextRequest) {
       const videoDataUrl = body.videoUrl && body.videoUrl.startsWith('data:video/') ? parseVideoDataUrl(body.videoUrl) : null;
       const videoRemoteUrl = body.videoUrl && isDirectVideoUrl(body.videoUrl) ? body.videoUrl : null;
       if (!videoDataUrl && !videoRemoteUrl) {
-        return NextResponse.json({ ok: false, error: 'ویدئو باید یک لینک مستقیم HTTPS به فایل MP4/WebM یا یک فایل data URL معتبر باشد.' }, { status: 400 });
+        return NextResponse.json({ ok: false, error: 'ویدئو باید لینک مستقیم HTTPS به فایل MP4 یا خروجی MP4 ویرایشگر باشد.' }, { status: 400 });
       }
       let tgRes: Response;
       if (videoDataUrl) {
-        // Upload the clip bytes directly (supports WebM from the editor + MP4).
+        // Upload only the validated H.264/AAC MP4 bytes produced by FFmpeg.
         const form = new FormData();
         form.set('chat_id', chatId);
         form.set('video', new Blob([videoDataUrl.bytes.buffer.slice(videoDataUrl.bytes.byteOffset, videoDataUrl.bytes.byteOffset + videoDataUrl.bytes.byteLength) as ArrayBuffer], { type: videoDataUrl.mime }), `program-clip.${videoDataUrl.extension}`);
