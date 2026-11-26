@@ -1063,12 +1063,29 @@ function HomeInner() {
       setAuthLoading(false);
       return;
     }
+    // Never leave the green bootstrap screen spinning forever when an old
+    // session token points to an unavailable or slow preview API.
+    let timedOut = false;
+    const authTimeout = window.setTimeout(() => {
+      timedOut = true;
+      localStorage.removeItem('bankresaneh_token');
+      setCurrentUser(null);
+      setAuthLoading(false);
+    }, 8000);
+
     api.getCurrentUser()
-      .then((user) => setCurrentUser(user))
-      .catch(() => {
-        localStorage.removeItem('bankresaneh_token');
+      .then((user) => {
+        if (!timedOut) setCurrentUser(user);
       })
-      .finally(() => setAuthLoading(false));
+      .catch(() => {
+        if (!timedOut) localStorage.removeItem('bankresaneh_token');
+      })
+      .finally(() => {
+        window.clearTimeout(authTimeout);
+        if (!timedOut) setAuthLoading(false);
+      });
+
+    return () => window.clearTimeout(authTimeout);
   }, []);
 
   // Recompute the merged list whenever overrides change (e.g. after an edit).
