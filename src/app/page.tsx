@@ -7121,7 +7121,7 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
     ctx.textAlign = 'center';
 
     const loadImage = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
-      const image = new Image();
+      const image = document.createElement('img');
       image.crossOrigin = 'anonymous';
       image.onload = () => resolve(image);
       image.onerror = () => reject(new Error('image load failed'));
