@@ -23,14 +23,14 @@ interface PublishBody {
 function isDirectVideoUrl(value: string): boolean {
   try {
     const url = new URL(value);
-    return url.protocol === 'https:' && !url.username && !url.password && /\.(mp4|webm)$/i.test(url.pathname);
+    return url.protocol === 'https:' && !url.username && !url.password && /\.mp4$/i.test(url.pathname);
   } catch {
     return false;
   }
 }
 
 function parseImageDataUrl(value: string): { mime: string; bytes: Buffer; extension: string } | null {
-  const match = value.match(/^data:(image\/(?:jpeg|png|webp|gif|avif));base64,([A-Za-z0-9+/=\r\n]+)$/i);
+  const match = value.match(/^data:(image\/(?:jpeg|png));base64,([A-Za-z0-9+/=\r\n]+)$/i);
   if (!match) return null;
   const mime = match[1].toLowerCase();
   const bytes = Buffer.from(match[2], 'base64');
@@ -39,15 +39,15 @@ function parseImageDataUrl(value: string): { mime: string; bytes: Buffer; extens
   return { mime, bytes, extension };
 }
 
-// Accept video clips exported by the in-browser editor (WebM via MediaRecorder)
-// as well as MP4 data URLs. Telegram and Bale both accept WebM uploads.
+// Only server-transcoded MP4 data URLs are accepted for publication.
 function parseVideoDataUrl(value: string): { mime: string; bytes: Buffer; extension: string } | null {
-  const match = value.match(/^data:(video\/(?:mp4|webm|ogg));base64,([A-Za-z0-9+/=\r\n]+)$/i);
+  const match = value.match(/^data:(video\/mp4);base64,([A-Za-z0-9+/=\r\n]+)$/i);
   if (!match) return null;
   const mime = match[1].toLowerCase();
   const bytes = Buffer.from(match[2], 'base64');
-  if (!bytes.length || bytes.length > 50 * 1024 * 1024) return null;
-  const extension = mime === 'video/mp4' ? 'mp4' : mime === 'video/webm' ? 'webm' : 'ogv';
+  if (!bytes.length || bytes.length > 8 * 1024 * 1024) return null;
+  if (bytes.length < 12 || bytes.subarray(4, 8).toString('ascii') !== 'ftyp') return null;
+  const extension = 'mp4';
   return { mime, bytes, extension };
 }
 
@@ -133,24 +133,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (imageData) {
-      const sharp = (await import('sharp')).default;
-      const jpeg = await sharp(imageData.bytes).rotate().jpeg({ quality: 88 }).toBuffer();
-      if (!jpeg.length || jpeg.length > 5 * 1024 * 1024) {
-        return NextResponse.json({ ok: false, error: 'حجم تصویر برای ارسال به ربات بیش از حد مجاز است' }, { status: 413 });
-      }
-      imageData = { mime: 'image/jpeg', bytes: jpeg, extension: 'jpg' };
-    }
-
     const hasMedia = hasVideo || hasImage;
     if (hasMedia && rawText.length > 1024) {
       return NextResponse.json({ ok: false, error: 'سقف کپشن رسانه ۱۰۲۴ نویسه است؛ متن را در پیش‌نمایش کوتاه کنید تا هیچ بخشی بی‌صدا حذف نشود' }, { status: 400 });
     }
     const caption = rawText;
 
-    // When both real program video and image exist, publish one ordered album:
-    // video first (with the full caption), then the real program image.
-    // This uses sendMediaGroup; it never splits the caption into a separate message.
+    // When both real program video and image exist, publish one ordered album.
+    // The full caption is attached to the composed program-cover slide.
     if (hasVideo && hasImage) {
       // Parse the video early so we know whether it is an uploadable data URL
       // (clip from the editor) or a remote HTTPS URL.
@@ -159,8 +149,8 @@ export async function POST(request: NextRequest) {
       const videoMediaRef = videoData ? 'attach://program_clip' : videoRemote;
       const photoMediaRef = imageData ? 'attach://program_cover' : imageUrl;
       const media = [
-        { type: 'video', media: videoMediaRef, ...(caption ? { caption } : {}) },
-        { type: 'photo', media: photoMediaRef },
+        { type: 'video', media: videoMediaRef },
+        { type: 'photo', media: photoMediaRef, ...(caption ? { caption } : {}) }
       ];
       let tgRes: Response;
       if (imageData || videoData) {
