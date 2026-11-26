@@ -213,3 +213,5 @@ jobs:
               await browser.close();
             }
           '
+
+# Re-run Chromium login verification on the preview branch.
