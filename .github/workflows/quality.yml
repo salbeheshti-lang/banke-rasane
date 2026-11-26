@@ -27,6 +27,11 @@ jobs:
 
       - name: Test API video upload validation
         run: node --test mini-services/api-service/video-validation.test.mjs
+      - name: Test real WebM to MP4 transcoding
+        run: node --test mini-services/api-service/video-transcode.test.mjs
+      # These tests exercise the Sharp pipeline used by the desktop and Render API, not Cloudflare Workers.
+      - name: Test safe image import and WebP optimization
+        run: node --test mini-services/api-service/image-import.test.mjs
 
       - name: Test Electron main-frame navigation policy
         run: bun run test:electron-navigation

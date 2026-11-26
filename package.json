@@ -87,6 +87,7 @@
     "react-syntax-highlighter": "^15.6.1",
     "recharts": "^2.15.4",
     "sharp": "^0.34.3",
+    "semver": "^7.7.2",
     "sonner": "^2.0.6",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
@@ -97,7 +98,8 @@
     "zustand": "^5.0.6",
     "electron-updater": "^6.8.11",
     "exceljs": "^4.4.0",
-    "@digicole/pdfmake-rtl": "^2.1.2"
+    "@digicole/pdfmake-rtl": "^2.1.2",
+    "ffmpeg-static": "^5.2.0"
   },
   "devDependencies": {
     "@oven/bun-windows-x64": "1.4.4",
@@ -140,12 +142,49 @@
           "bankresaneh.sqlite-wal",
           "download-images.js",
           "download-all-images.bat",
-          "video-validation.mjs"
+          "video-validation.mjs",
+          "video-transcode.mjs",
+          "image-import.mjs"
         ]
       },
       {
         "from": "node_modules/@oven/bun-windows-x64",
         "to": "bun-runtime",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "node_modules/ffmpeg-static",
+        "to": "api-service/node_modules/ffmpeg-static",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "node_modules/sharp",
+        "to": "api-service/node_modules/sharp",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "node_modules/@img",
+        "to": "api-service/node_modules/@img",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "node_modules/detect-libc",
+        "to": "api-service/node_modules/detect-libc",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "node_modules/semver",
+        "to": "api-service/node_modules/semver",
         "filter": [
           "**/*"
         ]
@@ -172,5 +211,9 @@
       "releaseType": "release"
     },
     "artifactName": "BankResaneh-Setup.exe"
-  }
+  },
+  "trustedDependencies": [
+    "ffmpeg-static",
+    "sharp"
+  ]
 }

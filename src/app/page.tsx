@@ -37,6 +37,7 @@ interface TalkShow {
   isFilm?: boolean;
   tags?: string[];
   images?: string[];
+  programLogo?: string;
   videos?: string[];
   // Explicit user choice; undefined preserves legacy decor classification.
   decorIncluded?: boolean;
@@ -2714,7 +2715,7 @@ function UserProfileModal({ user, onClose, showToast }: {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
               تغییر عکس
-              <input type="file" accept="image/*" onChange={handleAvatarUpload} style={{ display: 'none' }} />
+              <input type="file" accept="image/*,.heic,.heif,.tif,.tiff,.bmp,.svg,.jxl,.jp2" onChange={handleAvatarUpload} style={{ display: 'none' }} />
             </label>
           )}
           {/* Name + role + username — overlaid ON the image */}
@@ -4930,8 +4931,9 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
   };
 
   const handleAutoFetch = async () => {
-    if (!fetchUrl) {
-      showToast(t('add.autoFetchNoUrl'));
+    const nameQuery = String(form.name || '').trim();
+    if (!String(fetchUrl || '').trim() && !nameQuery) {
+      showToast('برای دریافت خودکار، نام برنامه یا لینک IMDb/ویکی‌پدیا را وارد کنید.');
       return;
     }
     setFetching(true);
@@ -4950,7 +4952,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       const info = data.info || {};
       let importedImage = info.image;
       if (typeof importedImage === 'string' && /^https:\/\//i.test(importedImage)) {
-        const imageResponse = await fetch('/api/import-image', {
+        const imageResponse = await fetch(getApiUrl('api/import-image'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({ url: importedImage }),
@@ -5119,15 +5121,15 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
           <h4 className="font-bold mb-2" style={{ color: '#f0fdf4' }}>⚡ دریافت خودکار اطلاعات</h4>
           <p className="text-xs mb-3" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>
 {editingShow
-              ? 'لینک IMDb یا ویکی‌پدیا را وارد کنید تا فقط تصویر کاور دریافت و به تصاویر برنامه اضافه شود؛ سایر اطلاعات تغییر نمی‌کنند.'
-              : 'لینک IMDb یا ویکی‌پدیا برنامه را وارد کنید تا نام، توضیحات، تصویر و اطلاعات قابل‌استخراج برای تکمیل فرم دریافت شود.'}
+              ? 'نام برنامه را در فیلد نام وارد کنید یا لینک IMDb، ویکی‌پدیا یا ویکی‌مدیا را بدهید تا فقط تصویر دریافت و به تصاویر برنامه اضافه شود؛ سایر اطلاعات تغییر نمی‌کنند.'
+              : 'نام برنامه یا لینک IMDb، ویکی‌پدیا یا ویکی‌مدیا را وارد کنید تا اطلاعات و تصویر قابل‌استخراج برای تکمیل فرم دریافت شود.'}
           </p>
           <div className="flex gap-2">
             <input
               type="text"
               value={fetchUrl}
               onChange={(e) => setFetchUrl(e.target.value)}
-              placeholder="https://www.imdb.com/title/... یا https://fa.wikipedia.org/..."
+              placeholder="نام برنامه را بالا وارد کنید یا لینک IMDb / Wikipedia / Wikimedia Commons"
               style={{
                 flex: 1,
                 padding: '10px 16px',
@@ -5357,6 +5359,8 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
         <ImageGalleryEditor
           images={form.images || []}
           onChange={(imgs) => setForm({ ...form, images: imgs })}
+          programLogo={form.programLogo || ''}
+          onProgramLogoChange={(logo) => setForm({ ...form, programLogo: logo })}
           showToast={showToast}
         />
 
@@ -5461,9 +5465,11 @@ function FormSelect({ label, value, onChange, options }: {
 // IMAGE GALLERY EDITOR — up to 8 images per show
 // Supports both URL paste and file upload (base64 for offline storage)
 // ============================================
-function ImageGalleryEditor({ images, onChange, showToast }: {
+function ImageGalleryEditor({ images, onChange, programLogo, onProgramLogoChange, showToast }: {
   images: string[];
   onChange: (imgs: string[]) => void;
+  programLogo: string;
+  onProgramLogoChange: (logo: string) => void;
   showToast: (msg: string) => void;
 }) {
   const [urlInput, setUrlInput] = useState('');
@@ -5496,7 +5502,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
 
     setImportingUrl(true);
     try {
-      const response = await fetch('/api/import-image', {
+      const response = await fetch(getApiUrl('api/import-image'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ url: trimmed }),
@@ -5520,53 +5526,6 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
     }
   };
 
-  const compressImageFile = async (file: File): Promise<string> => {
-    if (!file.type.startsWith('image/')) throw new Error('فایل انتخاب‌شده تصویر نیست');
-    if (file.size > 25 * 1024 * 1024) throw new Error('حجم تصویر اولیه نباید بیشتر از ۲۵ مگابایت باشد');
-
-    // createImageBitmap applies EXIF orientation where supported. The scale
-    // calculation preserves the original aspect ratio; no stretching/cropping.
-    const bitmap = await createImageBitmap(file);
-    try {
-      const maxWidth = 1200;
-      const maxHeight = 1800;
-      const scale = Math.min(1, maxWidth / bitmap.width, maxHeight / bitmap.height);
-      const width = Math.max(1, Math.round(bitmap.width * scale));
-      const height = Math.max(1, Math.round(bitmap.height * scale));
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const context = canvas.getContext('2d');
-      if (!context) throw new Error('امکان پردازش تصویر وجود ندارد');
-      context.imageSmoothingEnabled = true;
-      context.imageSmoothingQuality = 'high';
-      context.drawImage(bitmap, 0, 0, width, height);
-
-      const encode = (type: string, quality: number) => new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('تبدیل تصویر ناموفق بود')), type, quality);
-      });
-      let output = await encode('image/webp', 0.84);
-      let mime = output.type === 'image/webp' ? 'image/webp' : 'image/jpeg';
-      if (output.size > 1.2 * 1024 * 1024) {
-        output = await encode(mime, 0.74);
-      }
-      if (output.size > 1.8 * 1024 * 1024) {
-        output = await encode(mime, 0.66);
-      }
-      if (output.size > 2.5 * 1024 * 1024) {
-        throw new Error('حجم تصویر پس از فشرده‌سازی هنوز زیاد است؛ تصویر کوچک‌تری انتخاب کنید');
-      }
-      return await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('خواندن تصویر ناموفق بود'));
-        reader.onerror = () => reject(new Error('خواندن تصویر ناموفق بود'));
-        reader.readAsDataURL(output);
-      });
-    } finally {
-      bitmap.close();
-    }
-  };
-
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -5577,24 +5536,37 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
       showToast(`فقط ${toAdd.length.toLocaleString('fa-IR')} تصویر اضافه می‌شود (حداکثر ${MAX_IMAGES.toLocaleString('fa-IR')})`);
     }
 
-    // Process sequentially so order is deterministic and memory use stays low.
+    // Process sequentially so the selected API backend optimizes each source
+    // format safely without relying on the browser's image decoder.
     for (const file of toAdd) {
       try {
-        const result = await compressImageFile(file);
+        const formData = new FormData();
+        formData.set('file', file, file.name);
+        const response = await fetch(getApiUrl('api/import-image'), {
+          method: 'POST',
+          headers: authHeaders(),
+          body: formData,
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || typeof result.dataUrl !== 'string') {
+          throw new Error(result.error || `پردازش تصویر ${file.name} ناموفق بود`);
+        }
         const current = imagesRef.current;
-        if (current.length < MAX_IMAGES && !current.includes(result)) {
-          onChange([...current, result]);
+        if (current.length < MAX_IMAGES && !current.includes(result.dataUrl)) {
+          onChange([...current, result.dataUrl]);
         }
       } catch (error) {
         showToast(error instanceof Error ? error.message : `خطا در پردازش تصویر: ${file.name}`);
       }
     }
-    showToast('تصاویر بهینه شدند؛ نسبت تصویر حفظ شده و حجم فایل کاهش یافته است.');
+    showToast('تصاویر در سرور انتخاب‌شده به WebP بهینه شدند؛ نسبت تصویر حفظ شده است.');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const removeImage = (idx: number) => {
+    const removed = images[idx];
     onChange(images.filter((_, i) => i !== idx));
+    if (programLogo && programLogo === removed) onProgramLogoChange('');
   };
 
   const moveImage = (idx: number, dir: 'left' | 'right') => {
@@ -5615,7 +5587,9 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
           </span>
         </h4>
         {images.length > 0 && (
-          <span className="text-xs" style={{ color: '#54D9C0' }}>تصویر اول = کاور</span>
+          <span className="text-xs" style={{ color: programLogo ? '#fbbf24' : '#54D9C0' }}>
+            {programLogo ? 'لوگوی برنامه انتخاب شده' : 'برای تعیین لوگوی برنامه، روی تصویر موردنظر بزنید'}
+          </span>
         )}
       </div>
 
@@ -5756,6 +5730,14 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
                   کاور
                 </span>
               )}
+              {programLogo === img && (
+                <span
+                  className="absolute bottom-1 right-1 text-[10px] px-2 py-1 rounded-md font-bold"
+                  style={{ background: '#f59e0b', color: '#1f2937' }}
+                >
+                  لوگوی برنامه
+                </span>
+              )}
               {/* Number badge */}
               <span
                 className="absolute top-1 left-1 text-xs px-1.5 py-0.5 rounded-md font-bold"
@@ -5782,6 +5764,14 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                   </svg>
+                </button>
+                <button
+                  onClick={() => onProgramLogoChange(programLogo === img ? '' : img)}
+                  className="px-2 py-1.5 rounded-lg text-[10px] font-bold"
+                  style={{ background: programLogo === img ? '#f59e0b' : 'rgba(255,255,255,0.9)', color: '#1a2e1a' }}
+                  title={programLogo === img ? 'حذف انتخاب لوگو' : 'انتخاب به‌عنوان لوگوی برنامه'}
+                >
+                  {programLogo === img ? '★ انتخاب شد' : '★ لوگو'}
                 </button>
                 <button
                   onClick={() => removeImage(idx)}
@@ -5837,7 +5827,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
 }
 
 // ============================================
-// LOCAL VIDEO CLIP EDITOR — browser-native trim/transcode, max 30 seconds
+// LOCAL VIDEO CLIP EDITOR — authenticated FFmpeg MP4 trim/transcode, max 30 seconds
 function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState('');
@@ -5873,7 +5863,7 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
     const acceptedMime = ['video/mp4', 'video/x-m4v', 'video/quicktime', 'video/webm'].includes(next.type);
     if (!acceptedContainer && !acceptedMime) {
       setFile(null); setPreviewUrl(''); setDuration(0); setStart(0); setEnd(0);
-      setError('این ظرف ویدیویی برای ویرایش مستقیم پشتیبانی نمی‌شود. فایل را به MP4 با کدک H.264 و صدای AAC یا WebM با VP8/VP9 تبدیل کنید؛ فایل‌های MKV و AVI را ابتدا تبدیل کنید.');
+      setError('این فایل در قالب شناخته‌شده ویدیویی نیست. فایل ویدیویی سالم با فرمت‌های رایج را انتخاب کنید.');
       if (inputRef.current) inputRef.current.value = '';
       return;
     }
@@ -6037,116 +6027,33 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
   };
 
   const exportClip = async () => {
-    const video = videoRef.current;
-    if (!video || !previewUrl || busy) return;
+    if (!file || !previewUrl || busy) return;
     const clipLength = end - start;
     if (!Number.isFinite(duration) || duration <= 0 || !(clipLength > 0) || clipLength > 30) {
       setError('مدت کلیپ باید بیشتر از صفر و حداکثر ۳۰ ثانیه باشد.');
       return;
     }
-    const captureStream = (video as HTMLVideoElement & { captureStream?: () => MediaStream }).captureStream;
-    if (typeof MediaRecorder === 'undefined' || typeof captureStream !== 'function') {
-      setError('پردازش ویدیو در این نسخه پشتیبانی نمی‌شود. لطفاً از نسخه دسکتاپ به‌روز استفاده کنید.');
-      return;
-    }
 
     setBusy(true);
     setError('');
-    let stream: MediaStream | null = null;
-    let recorder: MediaRecorder | null = null;
-    let stopTimer: number | undefined;
     try {
-      video.pause();
-      await new Promise<void>((resolve, reject) => {
-        const timeout = window.setTimeout(() => { cleanup(); reject(new Error('آماده‌سازی فریم ویدیو بیش از حد طول کشید.')); }, 12000);
-        const cleanup = () => {
-          window.clearTimeout(timeout);
-          video.removeEventListener('seeked', onSeeked);
-          video.removeEventListener('error', onError);
-        };
-        const onSeeked = () => { cleanup(); resolve(); };
-        const onError = () => { cleanup(); reject(new Error('خواندن فایل ویدیو ناموفق بود.')); };
-        video.addEventListener('seeked', onSeeked, { once: true });
-        video.addEventListener('error', onError, { once: true });
-        if (Math.abs(video.currentTime - start) < 0.02 && video.readyState >= 2) {
-          cleanup();
-          resolve();
-        } else {
-          video.currentTime = start;
-        }
+      const form = new FormData();
+      form.set('file', file, file.name);
+      form.set('start', String(start));
+      form.set('end', String(end));
+      const response = await fetch(getApiUrl('api/video/transcode'), {
+        method: 'POST',
+        headers: authHeaders(),
+        body: form,
       });
-
-      stream = captureStream.call(video);
-      if (!stream.getVideoTracks().length) throw new Error('جریان تصویر از فایل ساخته نشد؛ فایل را دوباره بارگذاری کنید.');
-      const mimeType = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
-        .find(type => MediaRecorder.isTypeSupported(type));
-      if (!mimeType) throw new Error('کدک خروجی WebM در این سیستم پشتیبانی نمی‌شود.');
-      recorder = new MediaRecorder(stream, {
-        mimeType,
-        videoBitsPerSecond: 900000,
-        audioBitsPerSecond: 96000,
-      });
-      const chunks: BlobPart[] = [];
-      const finished = new Promise<Blob>((resolve, reject) => {
-        recorder!.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
-        recorder!.onerror = () => reject(new Error('پردازش ویدیو با خطا متوقف شد.'));
-        recorder!.onstop = () => resolve(new Blob(chunks, { type: mimeType }));
-      });
-
-      const stopped = new Promise<void>((resolve, reject) => {
-        let settled = false;
-        const finish = (err?: Error) => {
-          if (settled) return;
-          settled = true;
-          if (stopTimer) window.clearTimeout(stopTimer);
-          video.removeEventListener('timeupdate', checkEnd);
-          if (err) reject(err); else resolve();
-        };
-        const stop = () => {
-          video.pause();
-          if (recorder && recorder.state !== 'inactive') recorder.stop();
-          finish();
-        };
-        const checkEnd = () => {
-          if (video.currentTime >= end || video.ended) stop();
-        };
-        video.addEventListener('timeupdate', checkEnd);
-        stopTimer = window.setTimeout(() => {
-          // Do not silently save a truncated clip when decoding stalls or playback is throttled.
-          if (video.currentTime < end - 0.25) {
-            video.pause();
-            if (recorder && recorder.state !== 'inactive') recorder.stop();
-            finish(new Error('پردازش پیش از رسیدن به نقطه پایان متوقف شد؛ فایل را دوباره انتخاب یا بازه کوتاه‌تری تعیین کنید.'));
-            return;
-          }
-          stop();
-        }, Math.ceil(clipLength * 1000) + 2500);
-        video.play().then(() => {
-          if (video.currentTime >= end) stop();
-        }).catch(() => finish(new Error('پخش ویدیو برای پردازش آغاز نشد.')));
-      });
-
-      recorder.start(200);
-      await stopped;
-      const blob = await finished;
-      if (!blob.size) throw new Error('فایل خروجی خالی است؛ دوباره تلاش کنید.');
-      if (blob.size > 8 * 1024 * 1024) throw new Error('حجم خروجی بیش از ۸ مگابایت شد. بازه کوتاه‌تری انتخاب کنید.');
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result));
-        reader.onerror = () => reject(new Error('ذخیره فایل پردازش‌شده ناموفق بود.'));
-        reader.readAsDataURL(blob);
-      });
-      setExportedUrl(dataUrl);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'پردازش ویدیو ناموفق بود.');
-    } finally {
-      if (stopTimer) window.clearTimeout(stopTimer);
-      if (recorder && recorder.state !== 'inactive') {
-        try { recorder.stop(); } catch {}
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || typeof result.dataUrl !== 'string' || !result.dataUrl.startsWith('data:video/mp4;base64,')) {
+        throw new Error(result.error || 'تبدیل ویدیو به MP4 ناموفق بود.');
       }
-      if (stream) stream.getTracks().forEach(track => track.stop());
-      if (videoRef.current) videoRef.current.pause();
+      setExportedUrl(result.dataUrl);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'پردازش ویدیو ناموفق بود.');
+    } finally {
       setBusy(false);
     }
   };
@@ -6155,7 +6062,7 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
     <div className="p-3 rounded-xl mb-3" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)' }}>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <strong className="text-sm" style={{ color: '#d1fae5' }}>✂️ ویرایش ویدیو از سیستم (حداکثر ۳۰ ثانیه)</strong>
-        <p className="w-full text-[11px]" style={{ color: 'rgba(209,250,229,.78)' }}>فرمت پیشنهادی: MP4 با H.264 و AAC یا WebM با VP8/VP9. فایل‌های HEVC/H.265، MKV و AVI ممکن است در موتور ویدیویی ویندوز رمزگشایی نشوند؛ در صورت خطا، فقط تغییر پسوند کافی نیست و باید تبدیل واقعی انجام شود.</p>
+        <p className="w-full text-[11px]" style={{ color: 'rgba(209,250,229,.78)' }}>برای پیش‌نمایش، ورودی باید MP4 با H.264/AAC یا WebM با VP8/VP9 باشد؛ خروجی نهایی همیشه MP4 با H.264/AAC است.</p>
         <label className="px-3 py-2 rounded-lg text-xs font-bold cursor-pointer" style={{ background: '#0d7c4a', color: 'white' }}>
           انتخاب فایل ویدیو
           <input ref={inputRef} type="file" accept="video/mp4,video/webm,video/quicktime,.mp4,.m4v,.mov,.webm" onChange={e => chooseFile(e.target.files?.[0] || null)} style={{ display: 'none' }} />
@@ -6276,7 +6183,7 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
             </button>
             <button type="button" onClick={resetEditor} disabled={busy} className="px-3 py-2 rounded-lg text-xs" style={{ background: 'rgba(255,255,255,.12)', color: '#d1fae5' }}>انصراف</button>
           </div>
-          <p className="text-[11px]" style={{ color: 'rgba(209,250,229,.75)' }}>خروجی WebM با حفظ نسبت تصویر و صدای اصلی ساخته می‌شود؛ فایل اصلی تغییر نمی‌کند. حجم ورودی حداکثر ۲۰۰ مگابایت و خروجی حداکثر ۸ مگابایت است. پشتیبانی از فرمت ورودی به کدک‌های نصب‌شده در مرورگر وابسته است.</p>
+          <p className="text-[11px]" style={{ color: 'rgba(209,250,229,.75)' }}>خروجی عمودی MP4 با نسبت ۹:۱۶، کدک H.264 و صدای AAC ساخته می‌شود؛ تصویر اصلی بدون کشیدگی در مرکز می‌ماند و پس‌زمینهٔ محو از همان ویدئو قاب را پر می‌کند. فایل اصلی تغییر نمی‌کند. حجم ورودی حداکثر ۲۰۰ مگابایت و خروجی حداکثر ۸ مگابایت است.</p>
         </div>
       )}
       {exportedUrl && (
@@ -6288,7 +6195,7 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
           <video src={exportedUrl} controls playsInline preload="metadata" style={{ width: '100%', maxHeight: 260, borderRadius: 10, background: '#000', objectFit: 'contain' }} />
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => { onAdd(exportedUrl); resetEditor(); }} className="px-4 py-2 rounded-lg text-sm font-bold" style={{ background: '#0d7c4a', color: 'white' }}>تأیید و افزودن خروجی به برنامه</button>
-            <a href={exportedUrl} download="bankresaneh-edited-clip.webm" className="px-4 py-2 rounded-lg text-sm" style={{ background: 'rgba(255,255,255,.12)', color: '#d1fae5' }}>دانلود فایل خروجی</a>
+            <a href={exportedUrl} download="bankresaneh-edited-clip.mp4" className="px-4 py-2 rounded-lg text-sm" style={{ background: 'rgba(255,255,255,.12)', color: '#d1fae5' }}>دانلود فایل خروجی</a>
             <button type="button" onClick={() => setExportedUrl('')} className="px-4 py-2 rounded-lg text-sm" style={{ color: '#fca5a5' }}>حذف پیش‌نمایش</button>
           </div>
         </div>
@@ -6910,12 +6817,11 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
     : undefined;
   const directVideoUrl = shows.length === 1
     ? (shows[0].videos || []).find((value) => {
-        // Accept clips exported by the in-browser editor (WebM/MP4 data URLs)
-        // as well as direct HTTPS links to .mp4 / .webm files.
-        if (typeof value === 'string' && /^data:video\/(mp4|webm|ogg)/i.test(value)) return true;
+        // Only FFmpeg-transcoded MP4 clips and direct HTTPS MP4 files can be published.
+        if (typeof value === 'string' && /^data:video\/mp4;base64,/i.test(value)) return true;
         try {
           const parsed = new URL(value);
-          return parsed.protocol === 'https:' && /\.(mp4|webm)$/i.test(parsed.pathname);
+          return parsed.protocol === 'https:' && !parsed.username && !parsed.password && /\.mp4$/i.test(parsed.pathname);
         } catch {
           return false;
         }
@@ -6960,6 +6866,221 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
           reader.readAsDataURL(imageBlob);
         });
       }
+      // Normalize approved external image URLs through the selected API backend.
+      // This avoids asking Bale to fetch a temporary or unsupported image format.
+      if (publishImageUrl && /^https:\/\//i.test(publishImageUrl)) {
+        try {
+          const normalizedResponse = await fetch(getApiUrl('api/import-image'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+            body: JSON.stringify({ url: publishImageUrl }),
+          });
+          const normalized = await normalizedResponse.json().catch(() => ({}));
+          if (normalizedResponse.ok && typeof normalized.dataUrl === 'string') {
+            publishImageUrl = normalized.dataUrl;
+          }
+        } catch {
+          // If a legacy external host is not in the safe image allowlist,
+          // retain its HTTPS URL and let Bale fetch it directly.
+        }
+      }
+      // Compose a real vertical 9:16 cover for the video/photo album.
+      // The program image is preferred; if it is missing, use the first MP4 frame.
+      let coverMedia: HTMLImageElement | HTMLVideoElement | null = null;
+      if (publishImageUrl) {
+        try {
+          coverMedia = await new Promise<HTMLImageElement>((resolve, reject) => {
+            const image = document.createElement('img');
+            image.crossOrigin = 'anonymous';
+            image.onload = () => resolve(image);
+            image.onerror = () => reject(new Error('تصویر برای آماده‌سازی انتشار قابل خواندن نیست'));
+            image.src = publishImageUrl!;
+          });
+        } catch {
+          coverMedia = null;
+        }
+      }
+
+      let coverVideo: HTMLVideoElement | null = null;
+      if (!coverMedia && directVideoUrl) {
+        coverVideo = document.createElement('video');
+        coverVideo.muted = true;
+        coverVideo.playsInline = true;
+        coverVideo.preload = 'auto';
+        coverVideo.crossOrigin = 'anonymous';
+        try {
+          await new Promise<void>((resolve, reject) => {
+            const timer = window.setTimeout(() => reject(new Error('video cover timeout')), 9000);
+            coverVideo!.onloadeddata = () => { window.clearTimeout(timer); resolve(); };
+            coverVideo!.onerror = () => { window.clearTimeout(timer); reject(new Error('video cover decode failed')); };
+            coverVideo!.src = directVideoUrl!;
+            coverVideo!.load();
+          });
+          if (coverVideo.videoWidth > 0 && coverVideo.videoHeight > 0) coverMedia = coverVideo;
+        } catch {
+          coverMedia = null;
+        }
+      }
+
+      let programLogoImage: HTMLImageElement | null = null;
+      const selectedProgramLogo = typeof shows[0]?.programLogo === 'string' ? shows[0].programLogo : '';
+      if (selectedProgramLogo) {
+        try {
+          let logoSource = selectedProgramLogo;
+          if (/^https:\/\//i.test(logoSource)) {
+            const logoResponse = await fetch(getApiUrl('api/import-image'), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...authHeaders() },
+              body: JSON.stringify({ url: logoSource }),
+            });
+            const logoResult = await logoResponse.json().catch(() => ({}));
+            if (logoResponse.ok && typeof logoResult.dataUrl === 'string') logoSource = logoResult.dataUrl;
+          }
+          if (logoSource.startsWith('data:image/')) {
+            programLogoImage = await new Promise<HTMLImageElement>((resolve, reject) => {
+              const image = document.createElement('img');
+              image.crossOrigin = 'anonymous';
+              image.onload = () => resolve(image);
+              image.onerror = () => reject(new Error('program logo decode failed'));
+              image.src = logoSource;
+            });
+          }
+        } catch {
+          programLogoImage = null;
+        }
+      }
+      let organizationLogoImage: HTMLImageElement | null = null;
+      try {
+        organizationLogoImage = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const image = document.createElement('img');
+          image.onload = () => resolve(image);
+          image.onerror = () => reject(new Error('organization logo decode failed'));
+          image.src = CLIENT_BRANDING.logoColorPath;
+        });
+      } catch {
+        organizationLogoImage = null;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 1080;
+      canvas.height = 1920;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('امکان آماده‌سازی تصویر عمودی برای انتشار وجود ندارد');
+      context.direction = 'rtl';
+      context.textAlign = 'center';
+
+      const background = context.createLinearGradient(0, 0, 1080, 1920);
+      background.addColorStop(0, '#08291e');
+      background.addColorStop(0.5, '#0d7c4a');
+      background.addColorStop(1, '#061a17');
+      context.fillStyle = background;
+      context.fillRect(0, 0, 1080, 1920);
+
+      // Cover image / first video frame.
+      context.save();
+      context.beginPath();
+      context.roundRect(64, 260, 952, 1010, 56);
+      context.clip();
+      if (coverMedia) {
+        const sw = 'videoWidth' in coverMedia ? coverMedia.videoWidth : coverMedia.naturalWidth;
+        const sh = 'videoHeight' in coverMedia ? coverMedia.videoHeight : coverMedia.naturalHeight;
+        if (sw > 0 && sh > 0) {
+          const scale = Math.max(952 / sw, 1010 / sh);
+          const cropWidth = 952 / scale;
+          const cropHeight = 1010 / scale;
+          context.drawImage(coverMedia, (sw - cropWidth) / 2, (sh - cropHeight) / 2, cropWidth, cropHeight, 64, 260, 952, 1010);
+        }
+      } else {
+        const coverGradient = context.createLinearGradient(64, 260, 1016, 1270);
+        coverGradient.addColorStop(0, 'rgba(26, 165, 115, 0.88)');
+        coverGradient.addColorStop(1, 'rgba(3, 27, 31, 0.98)');
+        context.fillStyle = coverGradient;
+        context.fillRect(64, 260, 952, 1010);
+      }
+      const overlay = context.createLinearGradient(0, 760, 0, 1270);
+      overlay.addColorStop(0, 'rgba(0,0,0,0)');
+      overlay.addColorStop(1, 'rgba(0,0,0,0.58)');
+      context.fillStyle = overlay;
+      context.fillRect(64, 260, 952, 1010);
+      context.restore();
+
+      // Brand, title, description, and category.
+      context.fillStyle = '#f0fdf4';
+      context.font = 'bold 42px Vazirmatn, sans-serif';
+      context.fillText('بانک رسانه', 540, 145);
+      context.fillStyle = 'rgba(240,253,244,0.78)';
+      context.font = '25px Vazirmatn, sans-serif';
+      context.fillText('آرشیو تخصصی برنامه‌های تلویزیونی', 540, 205);
+
+      context.fillStyle = 'rgba(3, 23, 19, 0.84)';
+      context.beginPath();
+      context.roundRect(64, 1310, 952, 490, 46);
+      context.fill();
+      context.strokeStyle = 'rgba(167,243,208,0.35)';
+      context.lineWidth = 2;
+      context.stroke();
+
+      const wrap = (value: string, font: string, maxWidth: number, maxLines: number) => {
+        context.font = font;
+        const words = String(value || '').replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
+        const lines: string[] = [];
+        let line = '';
+        for (const word of words) {
+          const next = line ? line + ' ' + word : word;
+          if (line && context.measureText(next).width > maxWidth) {
+            lines.push(line);
+            line = word;
+            if (lines.length >= maxLines) break;
+          } else line = next;
+        }
+        if (line && lines.length < maxLines) lines.push(line);
+        return lines;
+      };
+      const title = String(shows[0]?.name || 'برنامه منتخب');
+      const titleLines = wrap(title, 'bold 58px Vazirmatn, sans-serif', 830, 2);
+      context.fillStyle = '#ffffff';
+      titleLines.forEach((line, index) => context.fillText(line, 540, 1415 + index * 70));
+
+      const description = String(shows[0]?.descriptionFa || shows[0]?.summary || postText || '');
+      const descriptionLines = wrap(description, '29px Vazirmatn, sans-serif', 830, 3);
+      const descriptionY = 1415 + titleLines.length * 70 + 35;
+      context.fillStyle = 'rgba(240,253,244,0.88)';
+      descriptionLines.forEach((line, index) => context.fillText(line, 540, descriptionY + index * 43));
+
+      const category = String(shows[0]?.category || 'تاک‌شو').replace(/^\d+\.\s*/, '').split('|')[0];
+      context.fillStyle = 'rgba(16,185,129,0.22)';
+      context.beginPath();
+      context.roundRect(330, 1710, 420, 56, 28);
+      context.fill();
+      context.fillStyle = '#d1fae5';
+      context.font = 'bold 25px Vazirmatn, sans-serif';
+      context.fillText(category, 540, 1747);
+
+      // Program and organization marks sit on a white footer rail.
+      const logos = [
+        { image: programLogoImage, side: 'left' as const },
+        { image: organizationLogoImage, side: 'right' as const },
+      ].filter((item): item is { image: HTMLImageElement; side: 'left' | 'right' } => Boolean(item.image));
+      if (logos.length) {
+        context.fillStyle = 'rgba(255,255,255,0.96)';
+        context.beginPath();
+        context.roundRect(64, 1815, 952, 78, 28);
+        context.fill();
+        const badgeWidth = 260;
+        const badgeHeight = 58;
+        for (const item of logos) {
+          const x = item.side === 'left' ? 110 : 710;
+          const scale = Math.min(badgeWidth / item.image.naturalWidth, badgeHeight / item.image.naturalHeight);
+          const width = Math.max(1, item.image.naturalWidth * scale);
+          const height = Math.max(1, item.image.naturalHeight * scale);
+          context.drawImage(item.image, x + (badgeWidth - width) / 2, 1825 + (badgeHeight - height) / 2, width, height);
+        }
+      }
+      publishImageUrl = canvas.toDataURL('image/jpeg', 0.88);
+      if (coverVideo) {
+        coverVideo.removeAttribute('src');
+        coverVideo.load();
+      }
       const res = await fetch('/api/publish-social', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
@@ -6989,108 +7110,203 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
   const handlePublish = async () => {
     if (!selectedPlatform) return;
 
-    // Generate a social card image using canvas
+    // Build a real 9:16 social cover (1080x1920). The MP4 editor exports the
+    // companion video in 720x1280, so the image and video share the same ratio.
     const canvas = document.createElement('canvas');
     canvas.width = 1080;
-    canvas.height = 1080;
+    canvas.height = 1920;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
-    // Background gradient
-    const grad = ctx.createLinearGradient(0, 0, 1080, 1080);
-    grad.addColorStop(0, '#10b981');
-    grad.addColorStop(0.6, '#0d7c4a');
-    grad.addColorStop(1, '#0a1f14');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 1080, 1080);
-
-    // Decorative circles
-    ctx.fillStyle = 'rgba(13, 124, 74, 0.15)';
-    ctx.beginPath();
-    ctx.arc(900, 200, 300, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(200, 900, 250, 0, Math.PI * 2);
-    ctx.fill();
-
-    // "بانک رسانه" branding
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-    ctx.font = 'bold 32px Vazirmatn, sans-serif';
+    ctx.direction = 'rtl';
     ctx.textAlign = 'center';
-    ctx.fillText('بانک رسانه', 540, 100);
 
-    // Show name(s)
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 56px Vazirmatn, sans-serif';
-    if (shows.length === 1) {
-      const name = shows[0].name;
-      ctx.fillText(name.length > 25 ? name.substring(0, 23) + '...' : name, 540, 250);
-    } else {
-      ctx.fillText(`${shows.length} برنامهٔ منتخب`, 540, 250);
-    }
+    const loadImage = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = document.createElement('img');
+      image.crossOrigin = 'anonymous';
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error('image load failed'));
+      image.src = src;
+    });
+    const drawCover = (image: CanvasImageSource, x: number, y: number, width: number, height: number) => {
+      const source = image as HTMLImageElement | HTMLVideoElement;
+      const sw = 'videoWidth' in source ? source.videoWidth : source.naturalWidth;
+      const sh = 'videoHeight' in source ? source.videoHeight : source.naturalHeight;
+      if (!sw || !sh) return;
+      const scale = Math.max(width / sw, height / sh);
+      const cropWidth = width / scale;
+      const cropHeight = height / scale;
+      const sx = (sw - cropWidth) / 2;
+      const sy = (sh - cropHeight) / 2;
+      ctx.drawImage(image, sx, sy, cropWidth, cropHeight, x, y, width, height);
+    };
+    const wrapText = (raw: string, font: string, maxWidth: number, maxLines: number) => {
+      ctx.font = font;
+      const words = String(raw || '').replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
+      const lines: string[] = [];
+      let line = '';
+      for (const word of words) {
+        const candidate = line ? line + ' ' + word : word;
+        if (line && ctx.measureText(candidate).width > maxWidth) {
+          lines.push(line);
+          line = word;
+          if (lines.length >= maxLines) break;
+        } else {
+          line = candidate;
+        }
+      }
+      if (line && lines.length < maxLines) lines.push(line);
+      return lines;
+    };
 
-    // Description
-    ctx.font = '36px Vazirmatn, sans-serif';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-    if (shows.length === 1) {
-      const desc = shows[0].descriptionFa;
-      const lines = desc.match(/.{1,40}/g) || [];
-      lines.slice(0, 4).forEach((line, i) => {
-        ctx.fillText(line, 540, 350 + i * 50);
-      });
-    } else {
-      shows.slice(0, 5).forEach((s, i) => {
-        ctx.fillText(`• ${s.name}`, 540, 350 + i * 50);
-      });
-      if (shows.length > 5) {
-        ctx.fillText(`و ${shows.length - 5} برنامهٔ دیگر...`, 540, 350 + 5 * 50);
+    // Deep green liquid-glass background.
+    const background = ctx.createLinearGradient(0, 0, 1080, 1920);
+    background.addColorStop(0, '#08291e');
+    background.addColorStop(0.48, '#0d7c4a');
+    background.addColorStop(1, '#061a17');
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, 1080, 1920);
+    ctx.fillStyle = 'rgba(72, 220, 166, 0.10)';
+    ctx.beginPath(); ctx.arc(980, 300, 360, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(15, 90, 105, 0.18)';
+    ctx.beginPath(); ctx.arc(80, 1460, 420, 0, Math.PI * 2); ctx.fill();
+
+    // Real program artwork is preferred; if it cannot be decoded, try the
+    // first frame of the exported MP4 and retain the designed background.
+    let coverDrawn = false;
+    const firstShow = shows[0] as any;
+    const imageList = Array.isArray(firstShow?.images) ? firstShow.images : [];
+    const coverSource = (typeof firstShow?.programLogo === 'string' && firstShow.programLogo)
+      || imageList.find((value: unknown) => typeof value === 'string' && value.length > 0);
+    if (typeof coverSource === 'string') {
+      try {
+        const image = await loadImage(coverSource);
+        ctx.save();
+        ctx.beginPath(); ctx.roundRect(64, 300, 952, 870, 56); ctx.clip();
+        drawCover(image, 64, 300, 952, 870);
+        ctx.fillStyle = 'rgba(2, 18, 14, 0.30)';
+        ctx.fillRect(0, 0, 952, 870);
+        ctx.restore();
+        coverDrawn = true;
+      } catch {
+        // Try the actual video frame below.
       }
     }
+    if (!coverDrawn && typeof directVideoUrl === 'string' && directVideoUrl) {
+      const video = document.createElement('video');
+      video.muted = true;
+      video.playsInline = true;
+      video.preload = 'auto';
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const timer = window.setTimeout(() => reject(new Error('video preview timeout')), 9000);
+          video.onloadeddata = () => { window.clearTimeout(timer); resolve(); };
+          video.onerror = () => { window.clearTimeout(timer); reject(new Error('video preview decode failed')); };
+          video.src = directVideoUrl;
+          video.load();
+        });
+        if (video.videoWidth > 0 && video.videoHeight > 0) {
+          ctx.save();
+          ctx.beginPath(); ctx.roundRect(64, 300, 952, 870, 56); ctx.clip();
+          drawCover(video, 64, 300, 952, 870);
+          ctx.fillStyle = 'rgba(2, 18, 14, 0.26)';
+          ctx.fillRect(0, 0, 952, 870);
+          ctx.restore();
+          coverDrawn = true;
+        }
+      } catch {
+        // The branded background remains a valid cover if video decoding fails.
+      } finally {
+        video.removeAttribute('src');
+        video.load();
+      }
+    }
+    if (!coverDrawn) {
+      ctx.save();
+      ctx.beginPath(); ctx.roundRect(64, 300, 952, 870, 56); ctx.clip();
+      const fallback = ctx.createLinearGradient(64, 300, 1016, 1170);
+      fallback.addColorStop(0, 'rgba(24, 150, 105, 0.75)');
+      fallback.addColorStop(1, 'rgba(4, 29, 31, 0.96)');
+      ctx.fillStyle = fallback;
+      ctx.fillRect(64, 300, 952, 870);
+      ctx.restore();
+    }
 
-    // Category badge
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-    ctx.beginPath();
-    ctx.roundRect(340, 700, 400, 60, 30);
-    ctx.fill();
-    ctx.fillStyle = 'white';
+    // Brand header and logo.
+    try {
+      const logo = await loadImage('/banke-rasane-logo.png');
+      const scale = Math.min(220 / logo.naturalWidth, 112 / logo.naturalHeight);
+      const width = logo.naturalWidth * scale;
+      const height = logo.naturalHeight * scale;
+      ctx.drawImage(logo, (1080 - width) / 2, 70, width, height);
+    } catch {
+      ctx.fillStyle = '#f0fdf4';
+      ctx.font = 'bold 44px Vazirmatn, sans-serif';
+      ctx.fillText('بانک رسانه', 540, 140);
+    }
+    ctx.fillStyle = 'rgba(240, 253, 244, 0.78)';
+    ctx.font = '26px Vazirmatn, sans-serif';
+    ctx.fillText('آرشیو تخصصی برنامه‌های تلویزیونی', 540, 230);
+
+    // Dark glass text panel.
+    ctx.fillStyle = 'rgba(3, 23, 19, 0.78)';
+    ctx.beginPath(); ctx.roundRect(64, 1210, 952, 560, 48); ctx.fill();
+    ctx.strokeStyle = 'rgba(167, 243, 208, 0.28)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 64px Vazirmatn, sans-serif';
+    const heading = shows.length === 1 ? String(shows[0]?.name || 'برنامه منتخب') : 'برنامه‌های منتخب';
+    const titleLines = wrapText(heading, 'bold 64px Vazirmatn, sans-serif', 850, 2);
+    titleLines.forEach((line, index) => ctx.fillText(line, 540, 1310 + index * 78));
+
+    ctx.fillStyle = 'rgba(240, 253, 244, 0.88)';
+    const description = shows.length === 1
+      ? String(shows[0]?.descriptionFa || shows[0]?.summary || '')
+      : shows.slice(0, 4).map((show: any) => show.name).join(' • ');
+    const descriptionLines = wrapText(description || postText, '30px Vazirmatn, sans-serif', 840, 4);
+    const descriptionY = 1310 + titleLines.length * 78 + 45;
+    descriptionLines.forEach((line, index) => ctx.fillText(line, 540, descriptionY + index * 44));
+
+    // Genre chip.
+    const category = String(shows[0]?.category || 'تاک‌شو').replace(/^\d+\.\s*/, '').split('|')[0];
+    ctx.fillStyle = 'rgba(16, 185, 129, 0.22)';
+    ctx.beginPath(); ctx.roundRect(280, 1680, 520, 62, 31); ctx.fill();
+    ctx.strokeStyle = 'rgba(167, 243, 208, 0.45)';
+    ctx.stroke();
+    ctx.fillStyle = '#d1fae5';
     ctx.font = 'bold 28px Vazirmatn, sans-serif';
-    const cat = shows[0]?.category?.replace(/^\d+\.\s*/, '') || 'تاک‌شو';
-    ctx.fillText(cat, 540, 740);
+    ctx.fillText(category, 540, 1721);
 
-    // Convert canvas to blob
+    ctx.fillStyle = 'rgba(240, 253, 244, 0.65)';
+    ctx.font = '24px Vazirmatn, sans-serif';
+    ctx.fillText('بانک رسانه  •  BankResaneh', 540, 1840);
+
     canvas.toBlob(async (blob) => {
-      if (!blob) return;
-      const file = new File([blob], 'banke-rasane-card.png', { type: 'image/png' });
+      if (!blob) {
+        setSendResult({ ok: false, msg: 'ساخت تصویر عمودی ناموفق بود؛ دوباره تلاش کنید.' });
+        return;
+      }
+      const file = new File([blob], 'banke-rasane-vertical-post.png', { type: 'image/png' });
 
-      // Try Web Share API first (native share dialog on mobile)
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
-          await navigator.share({
-            title: 'بانک رسانه',
-            text: postText,
-            files: [file],
-          });
+          await navigator.share({ title: 'بانک رسانه', text: postText, files: [file] });
           onConfirm(selectedPlatform);
           return;
-        } catch (e) {
-          // User cancelled or error — fall through to fallback
+        } catch {
+          // User cancelled or the platform share sheet is unavailable.
         }
       }
 
-      // Fallback: download image, copy text, and open platform share URL
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'banke-rasane-card.png';
+      a.download = 'banke-rasane-vertical-post.png';
       a.click();
-      URL.revokeObjectURL(url);
+      window.setTimeout(() => URL.revokeObjectURL(url), 30000);
 
-      // Copy text to clipboard
-      try {
-        await navigator.clipboard.writeText(postText);
-      } catch {}
-
-      // Open platform-specific share URL
+      try { await navigator.clipboard.writeText(postText); } catch {}
       const platformUrls: Record<string, string> = {
         'تلگرام': `https://t.me/share/url?url=${encodeURIComponent(shows[0]?.youtube || 'https://github.com/salbeheshti-lang/banke-rasane')}&text=${encodeURIComponent(postText)}`,
         'بله': 'https://ble.ir/',
@@ -7100,11 +7316,8 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
         'اینستاگرام': 'https://www.instagram.com/',
       };
       const shareUrl = platformUrls[selectedPlatform];
-      if (shareUrl) {
-        window.open(shareUrl, '_blank');
-      }
-
-      onConfirm(selectedPlatform + ' — تصویر دانلود شد، متن کپی شد، پلتفرم باز شد');
+      if (shareUrl) window.open(shareUrl, '_blank');
+      onConfirm(selectedPlatform + ' — تصویر عمودی دانلود شد، متن کپی شد، پلتفرم باز شد');
     }, 'image/png');
   };
 
@@ -7527,105 +7740,233 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
   const { t, lang } = useLang();
   useEscapeKey(onClose);
   const [downloading, setDownloading] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState('');
-  const [previewError, setPreviewError] = useState('');
+  const [downloadError, setDownloadError] = useState('');
+  const [pdfPreviewBlob, setPdfPreviewBlob] = useState<Blob | null>(null);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState('');
+  const [pdfPreviewError, setPdfPreviewError] = useState('');
+  const [pdfPreviewKey, setPdfPreviewKey] = useState('');
+  const pdfObjectUrlRef = useRef<string | null>(null);
+  const [savedReportSettings, setSavedReportSettings] = useState<{ title?: string; subtitle?: string; organization?: string } | null>(null);
+  const [excelPage, setExcelPage] = useState(0);
+
+  const fallbackTitle = t('reports.report1Title');
+  const fallbackSubtitle = t('app.tagline');
+  const reportTitle = title || savedReportSettings?.title || fallbackTitle;
+  const reportSubtitle = subtitle || savedReportSettings?.subtitle || fallbackSubtitle;
+  const reportOrganization = organization || savedReportSettings?.organization || 'بانک رسانه';
+  const previewKey = useMemo(
+    () => JSON.stringify({ shows, title, subtitle, organization, fallbackTitle, fallbackSubtitle }),
+    [shows, title, subtitle, organization, fallbackTitle, fallbackSubtitle],
+  );
+  const pdfReady = format === 'pdf' && !!pdfPreviewBlob && !!pdfPreviewUrl && pdfPreviewKey === previewKey;
+  const pdfPreviewLoading = format === 'pdf' && !pdfReady && !pdfPreviewError;
+
+  const makePdfThumbnail = async (blob: Blob): Promise<string | null> => {
+    const objectUrl = URL.createObjectURL(blob);
+    try {
+      const image = new window.Image();
+      await new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error('تصویر برنامه قابل خواندن نیست'));
+        image.src = objectUrl;
+      });
+      if (!image.naturalWidth || !image.naturalHeight) return null;
+      const scale = Math.min(1, 96 / image.naturalWidth, 96 / image.naturalHeight);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const context = canvas.getContext('2d');
+      if (!context) return null;
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL('image/jpeg', 0.76);
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
+  };
+
+  const preparePdfShows = async (sourceShows: TalkShow[], signal: AbortSignal): Promise<TalkShow[]> => {
+    const prepared = sourceShows.slice();
+    const candidates = sourceShows.slice(0, 200);
+    for (let offset = 0; offset < candidates.length; offset += 6) {
+      const batch = candidates.slice(offset, offset + 6);
+      await Promise.all(batch.map(async (show, batchIndex) => {
+        const targetIndex = offset + batchIndex;
+        try {
+          const inlineImage = (show.images || []).find((image) => image.startsWith('data:image/'));
+          let imageBlob: Blob | null = null;
+          if (inlineImage) {
+            const response = await fetch(inlineImage, { signal });
+            if (response.ok) imageBlob = await response.blob();
+          } else if (show.imageSource) {
+            const imageUrl = getApiUrl('api/image/' + show.num + '?v=' + encodeURIComponent(show.imageSource));
+            const response = await fetch(imageUrl, { cache: 'no-store', signal });
+            if (response.ok) imageBlob = await response.blob();
+          }
+          if (imageBlob) {
+            const thumbnail = await makePdfThumbnail(imageBlob);
+            if (thumbnail) prepared[targetIndex] = { ...show, images: [thumbnail] };
+          }
+        } catch {
+          // A missing image must not prevent the complete text report from being generated.
+        }
+      }));
+      if (signal.aborted) break;
+    }
+    return prepared;
+  };
+
   useEffect(() => {
     if (format !== 'pdf') return;
-    let cancelled = false;
-    let objectUrl = '';
+
+    const controller = new AbortController();
     (async () => {
       try {
+        let saved: { title?: string; subtitle?: string; organization?: string } = {};
+        const settingsResponse = await fetch('/api/settings/report', {
+          headers: authHeaders(),
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+        if (settingsResponse.ok) {
+          saved = await settingsResponse.json();
+          if (!controller.signal.aborted) setSavedReportSettings(saved);
+        }
+        if (!controller.signal.aborted) {
+          setPdfPreviewBlob(null);
+          setPdfPreviewUrl('');
+          setPdfPreviewError('');
+        }
+
+        const effectiveTitle = title || saved.title || fallbackTitle;
+        const effectiveSubtitle = subtitle || saved.subtitle || fallbackSubtitle;
+        const effectiveOrganization = organization || saved.organization || 'بانک رسانه';
+        const preparedShows = await preparePdfShows(shows, controller.signal);
         const response = await fetch('/api/export-pdf-file', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders() },
-          body: JSON.stringify({ shows, title, subtitle, organization }),
+          body: JSON.stringify({
+            shows: preparedShows,
+            title: effectiveTitle,
+            subtitle: effectiveSubtitle,
+            organization: effectiveOrganization,
+          }),
+          signal: controller.signal,
         });
         if (!response.ok) {
           const error = await response.json().catch(() => ({}));
           throw new Error(error.error || 'ساخت پیش‌نمایش PDF ناموفق بود');
         }
         const blob = await response.blob();
-        if (blob.type !== 'application/pdf' || blob.size < 8) throw new Error('پیش‌نمایش PDF معتبر نیست');
-        objectUrl = URL.createObjectURL(blob);
-        if (!cancelled) setPreviewUrl(objectUrl);
+        if (blob.type !== 'application/pdf' || blob.size < 8) {
+          throw new Error('فایل PDF معتبر برای پیش‌نمایش دریافت نشد');
+        }
+        const objectUrl = URL.createObjectURL(blob);
+        if (!controller.signal.aborted) {
+          if (pdfObjectUrlRef.current) URL.revokeObjectURL(pdfObjectUrlRef.current);
+          pdfObjectUrlRef.current = objectUrl;
+          setPdfPreviewBlob(blob);
+          setPdfPreviewUrl(objectUrl);
+          setPdfPreviewKey(previewKey);
+        } else {
+          URL.revokeObjectURL(objectUrl);
+        }
       } catch (error) {
-        if (!cancelled) setPreviewError(error instanceof Error ? error.message : 'ساخت پیش‌نمایش PDF ناموفق بود');
+        if (!controller.signal.aborted) {
+          setPdfPreviewError(error instanceof Error ? error.message : 'ساخت پیش‌نمایش PDF ناموفق بود');
+        }
       }
     })();
-    return () => {
-      cancelled = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [format, shows, title, subtitle, organization]);
 
-  // Resolve the effective report metadata — caller-provided overrides win,
-  // otherwise we fall back to the canonical defaults used by the API.
-  const reportTitle = title || t('reports.report1Title');
-  const reportSubtitle = subtitle || t('app.tagline');
+    return () => {
+      controller.abort();
+    };
+  }, [format, shows, title, subtitle, organization, fallbackTitle, fallbackSubtitle, previewKey]);
+
+  useEffect(() => () => {
+    if (pdfObjectUrlRef.current) URL.revokeObjectURL(pdfObjectUrlRef.current);
+  }, []);
+
+  const excelHeaders = [
+    'ردیف', 'شماره برنامه', 'نام برنامه', 'ژانر', 'کشور', 'منبع', 'اندازه', 'تماشاگر',
+    'سبک', 'جلوه‌ها', 'چیدمان', 'عناصر', 'مصالح', 'رنگ‌ها', 'نورپردازی',
+    'ظرفیت بهره‌برداری', 'خلاصه', 'توضیحات فارسی', 'برچسب‌ها', 'لینک یوتیوب',
+    'IMDb', 'ویکی‌پدیا', 'متن انتشار', 'تصاویر', 'ویدئوها', 'فیلم', 'در ژانر دکور',
+  ];
+  const excelRows = shows.map((s, index) => [
+    index + 1,
+    s.num ?? '',
+    s.name || '',
+    (s.category || '').replace(/^\d+\.\s*/, ''),
+    s.country || '',
+    s.source || '',
+    s.size || '',
+    s.viewers || '',
+    s.style || '',
+    s.effects || '',
+    s.layout || '',
+    s.elements || '',
+    s.materials || '',
+    s.colors || '',
+    s.lighting || '',
+    s.operationalCapacity || '',
+    s.summary || '',
+    s.descriptionFa || '',
+    (s.tags || []).join('، '),
+    s.youtube || '',
+    s.imdb || '',
+    s.wikipedia || '',
+    s.socialPost || '',
+    (s.images || []).map((image) => image.startsWith('data:') ? 'تصویر ذخیره‌شده' : image).join(' | ') || (s.imageSource ? 'تصویر ذخیره‌شده (' + s.imageSource + ')' : ''),
+    (s.videos || []).join(' | '),
+    s.isFilm ? 'بله' : 'خیر',
+    s.decorIncluded === undefined ? 'نامشخص' : s.decorIncluded ? 'بله' : 'خیر',
+  ]);
+  const excelPageSize = 20;
+  const excelPageCount = Math.max(1, Math.ceil(excelRows.length / excelPageSize));
+  const visibleExcelRows = excelRows.slice(excelPage * excelPageSize, (excelPage + 1) * excelPageSize);
+  const excelColumnName = (number: number) => {
+    let value = number;
+    let name = '';
+    while (value > 0) {
+      const remainder = (value - 1) % 26;
+      name = String.fromCharCode(65 + remainder) + name;
+      value = Math.floor((value - 1) / 26);
+    }
+    return name;
+  };
 
   const handleDownload = async () => {
     setDownloading(true);
+    setDownloadError('');
     try {
       if (format === 'pdf') {
-        // Call API to generate professional PDF report — pass through any
-        // caller-provided overrides so the rendered PDF matches the preview.
-        const res = await fetch('/api/export-pdf-file', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...authHeaders() },
-          body: JSON.stringify({ shows, title, subtitle, organization }),
-        });
-        if (!res.ok) {
-          const error = await res.json().catch(() => ({}));
-          throw new Error(error.error || 'ساخت فایل PDF ناموفق بود');
-        }
-        const blob = await res.blob();
-        if (blob.type !== 'application/pdf' || blob.size < 8) {
-          throw new Error('فایل PDF معتبر از سرور دریافت نشد');
-        }
-        const url = URL.createObjectURL(blob);
+        if (!pdfReady || !pdfPreviewBlob) throw new Error('پیش‌نمایش واقعی PDF هنوز برای همین انتخاب آماده نشده است');
+        const url = URL.createObjectURL(pdfPreviewBlob);
         const anchor = document.createElement('a');
         anchor.href = url;
-        anchor.download = `bankresaneh-report-${Date.now()}.pdf`;
+        anchor.download = 'bankresaneh-report-' + Date.now() + '.pdf';
         anchor.click();
         window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       } else {
-        // Excel: generate proper XLSX using SheetJS-style XML
-        const headers = ['شماره', 'نام برنامه', 'دسته‌بندی', 'منبع', 'اندازه', 'تماشاگر', 'سبک', 'جلوه‌ها', 'چیدمان', 'عناصر', 'متریال', 'رنگ‌آمیزی', 'نورپردازی', 'توضیحات'];
-        const rows = shows.map((s, i) => [
-          i + 1,
-          s.name,
-          (s.category || '').replace(/^\d+\.\s*/, ''),
-          s.source || '',
-          s.size || '',
-          s.viewers || '',
-          s.style || '',
-          s.effects || '',
-          s.layout || '',
-          s.elements || '',
-          s.materials || '',
-          s.colors || '',
-          s.lighting || '',
-          (s.descriptionFa || s.summary || '').substring(0, 500),
-        ]);
-        // Build a standards-compliant OOXML workbook (not HTML disguised as .xls).
         const ExcelJS = await import('exceljs');
         const workbook = new ExcelJS.Workbook();
         workbook.creator = 'بانک رسانه';
         workbook.subject = 'آرشیو تخصصی برنامه‌های تلویزیونی';
-        workbook.title = 'گزارش آرشیو بانک رسانه';
+        workbook.title = 'گزارش کامل آرشیو بانک رسانه';
         workbook.created = new Date();
         const sheet = workbook.addWorksheet('آرشیو برنامه‌ها', {
           views: [{ state: 'frozen', ySplit: 1, rightToLeft: true }],
         });
-        sheet.columns = headers.map((header, index) => ({
+        sheet.columns = excelHeaders.map((header, index) => ({
           header,
           key: 'column' + index,
           width: Math.min(54, Math.max(14, header.length + 4)),
         }));
-        sheet.addRows(rows);
-        sheet.autoFilter = { from: 'A1', to: String.fromCharCode(64 + headers.length) + Math.max(1, rows.length + 1) };
+        sheet.addRows(excelRows);
+        sheet.autoFilter = { from: 'A1', to: excelColumnName(excelHeaders.length) + Math.max(1, excelRows.length + 1) };
+        sheet.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
         const headerRow = sheet.getRow(1);
-        headerRow.height = 30;
+        headerRow.height = 34;
         headerRow.eachCell((cell) => {
           cell.font = { name: 'Vazirmatn', bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF075B3B' } };
@@ -7634,7 +7975,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
         });
         sheet.eachRow((row, rowNumber) => {
           if (rowNumber === 1) return;
-          row.height = 34;
+          row.height = 42;
           row.eachCell((cell) => {
             cell.font = { name: 'Vazirmatn', size: 10, color: { argb: 'FF172B22' } };
             cell.alignment = { horizontal: 'right', vertical: 'top', wrapText: true };
@@ -7644,15 +7985,15 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `bankresaneh-${Date.now()}.xlsx`;
-        a.click();
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = 'bankresaneh-' + Date.now() + '.xlsx';
+        anchor.click();
         window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
       onDownload();
-    } catch (e) {
-      console.error('Download error:', e);
+    } catch (error) {
+      setDownloadError(error instanceof Error ? error.message : 'ساخت فایل گزارش ناموفق بود');
     } finally {
       setDownloading(false);
     }
@@ -7660,8 +8001,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-content animate-modal-enter" style={{ maxWidth: '800px' }} onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
+      <div className="modal-content animate-modal-enter" style={{ maxWidth: '1100px' }} onClick={(e) => e.stopPropagation()}>
         <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(13, 124, 74,0.1)' }}>
           <h2 className="text-xl font-bold" style={{ color: '#f0fdf4' }}>
             {format === 'pdf' ? '📄 ' + t('export.previewPDF') : '📊 ' + t('export.previewExcel')}
@@ -7673,80 +8013,105 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
           </button>
         </div>
 
-        <div className="p-6">
-          {/* Summary */}
+        <div className="p-5">
           <div className="mb-4 p-4 rounded-xl" style={{ background: 'rgba(13, 124, 74,0.08)', border: '1px solid rgba(13, 124, 74,0.2)' }}>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
               <div>
                 <div className="text-sm" style={{ color: '#99f6e4' }}>{t('export.programCount')}</div>
                 <div className="text-2xl font-bold" style={{ color: '#54D9C0' }}>{shows.length.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US')}</div>
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm" style={{ color: '#99f6e4' }}>عنوان گزارش</div>
+                <div className="text-base font-bold" style={{ color: '#f0fdf4' }}>{reportTitle}</div>
+                <div className="text-xs" style={{ color: 'rgba(244,255,255,0.7)' }}>{reportSubtitle} — {reportOrganization}</div>
               </div>
               <div>
                 <div className="text-sm" style={{ color: '#99f6e4' }}>{t('export.format')}</div>
                 <div className="text-2xl font-bold" style={{ color: format === 'pdf' ? '#dc2626' : '#0d7c4a' }}>{format.toUpperCase()}</div>
               </div>
-              <div>
-                <div className="text-sm" style={{ color: '#99f6e4' }}>{t('export.date')}</div>
-                <div className="text-2xl font-bold" style={{ color: '#f0fdf4' }}>{new Date().toLocaleDateString(lang === 'fa' ? 'fa-IR' : 'en-US')}</div>
-              </div>
             </div>
           </div>
 
-          {/* PDF preview renders the exact authenticated PDF bytes that the Download button saves. */}
           {format === 'pdf' && (
-            <div className="mb-4 rounded-2xl overflow-hidden" style={{ border: '2px solid #0d7c4a', boxShadow: '0 8px 24px rgba(13, 124, 74, 0.15)' }}>
-              {previewUrl ? (
-                <iframe title="پیش‌نمایش واقعی گزارش PDF" src={previewUrl} style={{ width: '100%', height: 'min(72vh, 760px)', border: 0, background: '#fff' }} />
-              ) : (
-                <div className="p-8 text-center" style={{ background: '#f8faf9', color: '#0d7c4a' }}>
-                  {previewError ? previewError : 'در حال ساخت پیش‌نمایش واقعی PDF با لوگوها و متن ذخیره‌شده...'}
+            <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(13,124,74,0.25)', background: '#fff' }}>
+              {pdfPreviewLoading && (
+                <div className="p-12 text-center text-sm" style={{ color: '#166534' }}>
+                  در حال ساخت پیش‌نمایش از فایل PDF واقعی؛ این همان فایلی است که دانلود می‌شود…
                 </div>
+              )}
+              {pdfPreviewError && (
+                <div role="alert" className="p-5 text-sm" style={{ color: '#b91c1c', background: '#fef2f2' }}>
+                  {pdfPreviewError}
+                </div>
+              )}
+              {pdfReady && !pdfPreviewLoading && (
+                <iframe
+                  title="پیش‌نمایش واقعی PDF گزارش"
+                  src={pdfPreviewUrl}
+                  style={{ display: 'block', width: '100%', height: '68vh', border: 0, background: '#fff' }}
+                />
               )}
             </div>
           )}
 
-          {/* Excel preview */}
           {format === 'excel' && (
-            <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(0,0,0,0.1)' }}>
-              <div className="p-3 text-center" style={{ background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)', border: '1px solid rgba(255, 255, 255, 0.3)', color: 'white' }}>
-                <div className="text-lg font-bold">بانک رسانه — خروجی Excel</div>
-                <div className="text-xs opacity-80">{shows.length.toLocaleString('fa-IR')} برنامه</div>
+            <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(13,124,74,0.25)' }}>
+              <div className="p-3 flex items-center justify-between gap-3 flex-wrap" style={{ background: '#075B3B', color: '#fff' }}>
+                <div className="font-bold">پیش‌نمایش واقعی داده‌های فایل Excel</div>
+                <div className="text-xs">{excelRows.length.toLocaleString('fa-IR')} ردیف · {excelHeaders.length.toLocaleString('fa-IR')} ستون</div>
               </div>
-              <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
-                <table className="w-full" style={{ fontSize: '12px' }}>
-                  <thead style={{ position: 'sticky', top: 0, background: '#f5efe0', zIndex: 1 }}>
+              <div style={{ maxHeight: '55vh', overflow: 'auto', background: '#fff' }}>
+                <table style={{ minWidth: '1900px', width: '100%', borderCollapse: 'collapse', fontSize: '11px', color: '#172B22' }}>
+                  <thead style={{ position: 'sticky', top: 0, zIndex: 2, background: '#E8F5EE' }}>
                     <tr>
-                      <th className="text-right p-2 font-bold" style={{ color: '#0d7c4a' }}>#</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#0d7c4a' }}>نام</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#0d7c4a' }}>دسته</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#0d7c4a' }}>سبک</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#0d7c4a' }}>اندازه</th>
+                      {excelHeaders.map((header, index) => (
+                        <th key={index} className="p-2 text-right font-bold" style={{ border: '1px solid #DCE5DF', whiteSpace: 'nowrap' }}>{header}</th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {shows.slice(0, 50).map((s, i) => (
-                      <tr key={s.num} style={{ borderBottom: '1px solid rgba(0, 0, 0, 0.08)', background: i % 2 === 0 ? 'white' : '#f9f9f9' }}>
-                        <td className="p-2" style={{ color: '#4a5d52' }}>{(i + 1).toLocaleString('fa-IR')}</td>
-                        <td className="p-2 font-medium" style={{ color: '#1a2e1a', direction: 'ltr', textAlign: 'right' }}>{s.name}</td>
-                        <td className="p-2" style={{ color: '#4a5d52' }}>{s.category.replace(/^\d+\.\s*/, '').substring(0, 20)}</td>
-                        <td className="p-2" style={{ color: '#4a5d52' }}>{s.style}</td>
-                        <td className="p-2" style={{ color: '#4a5d52' }}>{s.size}</td>
+                    {visibleExcelRows.map((row, rowIndex) => (
+                      <tr key={excelPage * excelPageSize + rowIndex} style={{ background: rowIndex % 2 ? '#F8FAFC' : '#fff' }}>
+                        {row.map((value, columnIndex) => (
+                          <td key={columnIndex} className="p-2 align-top" style={{ border: '1px solid #E2E8F0', maxWidth: 280, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+                            {String(value ?? '—')}
+                          </td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+              <div className="p-3 flex items-center justify-between gap-3" style={{ background: '#F8FAFC', color: '#334155' }}>
+                <button
+                  onClick={() => setExcelPage((page) => Math.max(0, page - 1))}
+                  disabled={excelPage === 0}
+                  className="px-3 py-2 rounded-lg text-xs font-bold"
+                  style={{ background: excelPage === 0 ? '#E2E8F0' : '#D1FAE5', color: '#075B3B', opacity: excelPage === 0 ? 0.5 : 1 }}
+                >صفحه قبل</button>
+                <div className="text-xs">{'صفحه ' + (excelPage + 1).toLocaleString('fa-IR') + ' از ' + excelPageCount.toLocaleString('fa-IR') + ' — همهٔ ردیف‌ها در فایل خروجی هستند'}</div>
+                <button
+                  onClick={() => setExcelPage((page) => Math.min(excelPageCount - 1, page + 1))}
+                  disabled={excelPage >= excelPageCount - 1}
+                  className="px-3 py-2 rounded-lg text-xs font-bold"
+                  style={{ background: excelPage >= excelPageCount - 1 ? '#E2E8F0' : '#D1FAE5', color: '#075B3B', opacity: excelPage >= excelPageCount - 1 ? 0.5 : 1 }}
+                >صفحه بعد</button>
+              </div>
             </div>
           )}
 
-          {/* Download button */}
+          {downloadError && (
+            <p role="alert" className="mt-3 text-sm" style={{ color: '#fca5a5' }}>{downloadError}</p>
+          )}
+
           <div className="mt-6 flex gap-3">
             <button
               onClick={handleDownload}
-              disabled={downloading}
+              disabled={downloading || (format === 'pdf' && (pdfPreviewLoading || !pdfReady))}
               className="btn-enter-premium flex-1"
+              style={{ opacity: downloading || (format === 'pdf' && (pdfPreviewLoading || !pdfReady)) ? 0.5 : 1 }}
             >
-              {downloading ? t('common.loading') : `⬇ ${format === 'pdf' ? t('export.downloadPDF') : t('export.downloadExcel')}`}
+              {downloading ? t('common.loading') : '⬇ ' + (format === 'pdf' ? t('export.downloadPDF') : t('export.downloadExcel'))}
             </button>
             <button
               onClick={onClose}
@@ -7758,8 +8123,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
           </div>
           {format === 'pdf' && (
             <p className="mt-3 text-xs text-center" style={{ color: 'rgba(244, 255, 255, 0.7)', lineHeight: 1.7 }}>
-              گزارش شامل ۸ بخش است: صفحهٔ عنوان، فهرست مطالب، خلاصهٔ اجرایی، روش تحقیق، نمای آماری، تحلیل ژانرها، تحلیل دکور، و معرفی تفصیلی برنامه‌ها.<br />
-              {lang === 'fa' ? 'پس از کلیک روی دانلود، پنجره چاپ باز می‌شود — مقاس «A4» و «Save as PDF» را انتخاب کنید.' : 'After clicking download, the print dialog opens — select A4 size and "Save as PDF".'}
+              پیش‌نمایش بالا فایل PDF نهایی است؛ چیدمان، صفحات، متن‌ها و لوگوها دقیقاً از همان خروجی دانلودی نمایش داده می‌شوند.
             </p>
           )}
         </div>

@@ -2,6 +2,8 @@
 
 # Decor-program image research status
 
+> **Current automated snapshot — 26 November 2026.** The 1,302-record seed now contains 21 licensed Wikimedia image references across 21 program records (20 unique source files; #816 intentionally reuses #39). The audit checked all 20 unique Commons files against the live Commons API, confirmed reusable license metadata and creator attribution, and found no broken/missing media metadata, missing credits, legacy `/program-images/` paths, or invalid image references. Of these, 19 image-bearing records are currently eligible for the app's Decor filter; two travel-format records remain excluded from that genre by the existing app rules. **This is a technical/source audit, not proof of visual identity**: a human still needs to inspect that each photo is the correct program/studio and remains appropriate for the current record.
+
 Scope: the 1,161 records selected by the app's `hasDecor` filter in `src/app/page.tsx`.
 This is a first-pass research log, not a declaration that a program has no image anywhere.
 Programs without a verified image remain eligible for later re-checks. Do not substitute a logo,
