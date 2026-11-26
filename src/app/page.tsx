@@ -7262,7 +7262,7 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
 
     ctx.fillStyle = 'rgba(240, 253, 244, 0.88)';
     const description = shows.length === 1
-      ? String(shows[0]?.descriptionFa || shows[0]?.summary || shows[0]?.description || '')
+      ? String(shows[0]?.descriptionFa || shows[0]?.summary || '')
       : shows.slice(0, 4).map((show: any) => show.name).join(' • ');
     const descriptionLines = wrapText(description || postText, '30px Vazirmatn, sans-serif', 840, 4);
     const descriptionY = 1310 + titleLines.length * 78 + 45;
