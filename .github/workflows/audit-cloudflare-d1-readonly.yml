@@ -20,25 +20,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Resolve the D1 account and database from the deployed Worker config
+      - name: Resolve the configured D1 database ID
         id: d1-config
-        env:
-          OVERRIDE_D1_ACCOUNT_ID: ${{ vars.CLOUDFLARE_D1_ACCOUNT_ID }}
         run: |
-          configured_account=$(sed -n 's/^[[:space:]]*account_id[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' worker/wrangler.toml | head -n 1)
           configured_database=$(sed -n 's/^[[:space:]]*database_id[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' worker/wrangler.toml | head -n 1)
-          account_id="${OVERRIDE_D1_ACCOUNT_ID:-$configured_account}"
-          if [[ ! "$account_id" =~ ^[a-f0-9]{32}$ ]]; then
-            echo "::error::D1 account ID is missing or invalid. Configure CLOUDFLARE_D1_ACCOUNT_ID or worker/wrangler.toml."
-            exit 1
-          fi
+          configured_account=$(sed -n 's/^[[:space:]]*account_id[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' worker/wrangler.toml | head -n 1)
           if [[ ! "$configured_database" =~ ^[0-9a-f-]{36}$ ]]; then
             echo "::error::D1 database ID is missing or invalid in worker/wrangler.toml."
             exit 1
           fi
-          echo "account_id=$account_id" >> "$GITHUB_OUTPUT"
+          if [[ ! "$configured_account" =~ ^[a-f0-9]{32}$ ]]; then
+            echo "::error::D1 account ID is missing or invalid in worker/wrangler.toml."
+            exit 1
+          fi
+          echo "account_id=$configured_account" >> "$GITHUB_OUTPUT"
           echo "database_id=$configured_database" >> "$GITHUB_OUTPUT"
-          echo "Resolved configured D1 database: $configured_database"
+          echo "Resolved configured D1 database ID: $configured_database"
 
       - name: Verify the Cloudflare API token itself
         env:
@@ -57,40 +54,52 @@ jobs:
           fi
           echo "Cloudflare API token is valid; token value was not printed."
 
-      - name: Verify Cloudflare D1 read credentials without exposing the token
+      - name: Locate the configured D1 database across the authorized accounts
+        id: find-d1
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          D1_ACCOUNT_ID: ${{ steps.d1-config.outputs.account_id }}
           D1_DATABASE_ID: ${{ steps.d1-config.outputs.database_id }}
+          CONFIGURED_ACCOUNT_ID: ${{ steps.d1-config.outputs.account_id }}
+          D1_ACCOUNT_OVERRIDE: ${{ vars.CLOUDFLARE_D1_ACCOUNT_ID }}
+          WORKER_ACCOUNT_ID: 128caa74c4d03e4cf84cd0d2b3f07bbf
         run: |
-          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::CLOUDFLARE_API_TOKEN is not configured"; exit 1; }
-          raw=$(curl --silent --show-error -w '\n%{http_code}' \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/accounts/$D1_ACCOUNT_ID/d1/database")
-          http_code=$(printf '%s\n' "$raw" | tail -n 1)
-          response=$(printf '%s\n' "$raw" | sed '$d')
-          if [[ "$http_code" != "200" ]] || [[ "$(echo "$response" | jq -r '.success // false')" != "true" ]]; then
-            if [[ "$http_code" == "403" ]]; then
-              echo "::error::The token is valid but lacks D1 Read access to account $D1_ACCOUNT_ID, or its account scope excludes this account."
-            elif [[ "$http_code" == "401" ]]; then
-              echo "::error::Cloudflare rejected the token for D1 access (HTTP 401); replace the GitHub secret with a valid token scoped to account $D1_ACCOUNT_ID and D1 Read."
+          candidates=("$CONFIGURED_ACCOUNT_ID" "$WORKER_ACCOUNT_ID")
+          if [[ -n "$D1_ACCOUNT_OVERRIDE" ]]; then candidates=("$D1_ACCOUNT_OVERRIDE" "$CONFIGURED_ACCOUNT_ID" "$WORKER_ACCOUNT_ID"); fi
+          found=""
+          seen=" "
+          for account_id in "${candidates[@]}"; do
+            [[ "$account_id" =~ ^[a-f0-9]{32}$ ]] || continue
+            [[ "$seen" == *" $account_id "* ]] && continue
+            seen="$seen$account_id "
+            raw=$(curl --silent --show-error -w '\n%{http_code}' \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              "https://api.cloudflare.com/client/v4/accounts/$account_id/d1/database")
+            http_code=$(printf '%s\n' "$raw" | tail -n 1)
+            response=$(printf '%s\n' "$raw" | sed '$d')
+            if [[ "$http_code" == "200" ]] && [[ "$(echo "$response" | jq -r '.success // false')" == "true" ]]; then
+              echo "$response" | jq -r '.result[] | "D1 database: \(.name) (\(.uuid))"'
+              if echo "$response" | jq -e --arg id "$D1_DATABASE_ID" '.result[]? | select(.uuid == $id)' >/dev/null; then
+                found="$account_id"
+                break
+              fi
             else
-              echo "::error::Cloudflare D1 list request failed for configured account $D1_ACCOUNT_ID (HTTP $http_code)."
+              echo "D1 list for account $account_id returned HTTP $http_code."
+              echo "$response" | jq -r '.errors[]? | "Cloudflare error \(.code): \(.message)"' || true
             fi
-            echo "$response" | jq -r '.errors[]? | "Cloudflare error \(.code): \(.message)"' || true
+          done
+          if [[ -z "$found" ]]; then
+            echo "::error::The configured D1 database ID was not found in either the account configured in worker/wrangler.toml or the known Worker account. Confirm the database's actual account and that the token has Account D1 Read access to it."
             exit 1
           fi
-          if ! echo "$response" | jq -e --arg id "$D1_DATABASE_ID" '.result[]? | select(.uuid == $id)' >/dev/null; then
-            echo "::error::The configured D1 database ID was not found in the D1 account from worker/wrangler.toml."
-            exit 1
-          fi
-          echo "D1 credentials and configured database access verified."
+          echo "account_id=$found" >> "$GITHUB_OUTPUT"
+          echo "database_id=$D1_DATABASE_ID" >> "$GITHUB_OUTPUT"
+          echo "Configured D1 database found in account $found."
 
       - name: Read table names and schema only
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          D1_ACCOUNT_ID: ${{ steps.d1-config.outputs.account_id }}
-          D1_DATABASE_ID: ${{ steps.d1-config.outputs.database_id }}
+          D1_ACCOUNT_ID: ${{ steps.find-d1.outputs.account_id }}
+          D1_DATABASE_ID: ${{ steps.find-d1.outputs.database_id }}
         run: |
           payload=$(jq -nc --arg sql "SELECT name, sql FROM sqlite_master WHERE type = 'table' ORDER BY name;" '{sql: $sql}')
           raw=$(curl --silent --show-error -w '\n%{http_code}' -X POST \
@@ -101,7 +110,7 @@ jobs:
           http_code=$(printf '%s\n' "$raw" | tail -n 1)
           response=$(printf '%s\n' "$raw" | sed '$d')
           if [[ "$http_code" != "200" ]] || [[ "$(echo "$response" | jq -r '.success // false')" != "true" ]]; then
-            echo "::error::D1 schema query failed (HTTP $http_code)."
+            echo "::error::D1 schema query failed (HTTP $http_code); confirm the token has D1 Read access."
             echo "$response" | jq -r '.errors[]? | "Cloudflare error \(.code): \(.message)"' || true
             exit 1
           fi
@@ -110,8 +119,8 @@ jobs:
       - name: Read aggregate row counts only
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          D1_ACCOUNT_ID: ${{ steps.d1-config.outputs.account_id }}
-          D1_DATABASE_ID: ${{ steps.d1-config.outputs.database_id }}
+          D1_ACCOUNT_ID: ${{ steps.find-d1.outputs.account_id }}
+          D1_DATABASE_ID: ${{ steps.find-d1.outputs.database_id }}
         run: |
           for table in shows users sessions; do
             payload=$(jq -nc --arg table "$table" '{sql: "SELECT COUNT(*) AS row_count FROM " + $table + ";"}')
