@@ -1083,12 +1083,20 @@ function HomeInner() {
       setAuthLoading(false);
       return;
     }
-    api.getCurrentUser()
+    // A sleeping/free preview API or a stalled network must never leave the
+    // entire application behind the auth splash forever. Bound this bootstrap
+    // request; on timeout, fall back to the normal login screen.
+    const controller = new AbortController();
+    const authTimeout = window.setTimeout(() => controller.abort(), 15000);
+    api.getCurrentUser(controller.signal)
       .then((user) => setCurrentUser(user))
       .catch(() => {
         localStorage.removeItem('bankresaneh_token');
       })
-      .finally(() => setAuthLoading(false));
+      .finally(() => {
+        window.clearTimeout(authTimeout);
+        setAuthLoading(false);
+      });
   }, []);
 
   // Recompute the merged list whenever overrides change (e.g. after an edit).
