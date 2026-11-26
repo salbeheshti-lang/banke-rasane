@@ -250,9 +250,18 @@ export const api = {
     );
   },
   async getUsers() { const data = await request<{ users: User[] }>(getApiUrl('api/users')); return data.users || []; },
-  async getCurrentUser(): Promise<User | null> {
+  async getCurrentUser(signal?: AbortSignal): Promise<User | null> {
     if (typeof window === 'undefined' || !localStorage.getItem(TOKEN_KEY)) return null;
-    try { return await request<User>(getApiUrl('api/auth/me')); } catch { return null; }
+    try {
+      const response = await fetch(getApiUrl('api/auth/me'), {
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        signal,
+      });
+      if (!response.ok) return null;
+      return await response.json() as User;
+    } catch {
+      return null;
+    }
   },
   async updateUser(id: number, data: any) { return request(getApiUrl('api/users?id=' + encodeURIComponent(id)), { method: 'PUT', body: JSON.stringify(data) }); },
   async deleteUser(id: number) { return request(getApiUrl('api/users?id=' + encodeURIComponent(id)), { method: 'DELETE' }); },
