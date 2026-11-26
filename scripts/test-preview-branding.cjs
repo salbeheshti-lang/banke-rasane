@@ -11,7 +11,8 @@ const ASSETS = ['client-logo.png', 'client-logo-white.png', 'banke-rasane-logo.p
 const FEATURE_MARKERS = [
   'ظرفیت بهره‌برداری',
   'decorIncluded',
-  'MediaRecorder',
+  'data:video/mp4', // current editor exports authenticated FFmpeg-transcoded MP4, not browser MediaRecorder WebM
+
   'ویکی‌پدیا',
   'IMDb',
 ];
