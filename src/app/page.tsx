@@ -4931,8 +4931,9 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
   };
 
   const handleAutoFetch = async () => {
-    if (!fetchUrl) {
-      showToast(t('add.autoFetchNoUrl'));
+    const nameQuery = String(form.name || '').trim();
+    if (!String(fetchUrl || '').trim() && !nameQuery) {
+      showToast('برای دریافت خودکار، نام برنامه یا لینک IMDb/ویکی‌پدیا را وارد کنید.');
       return;
     }
     setFetching(true);
