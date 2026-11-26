@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, feat/media-excel-preview-stability-2026-11-26]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -16,8 +16,5 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4.4
-      - name: Audit seed images, source availability, and attribution
+      - name: Audit all seeded image files, reuse licenses, and attribution
         run: node scripts/audit-program-images.mjs
