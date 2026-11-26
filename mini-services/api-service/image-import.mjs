@@ -7,6 +7,7 @@ const ALLOWED_IMAGE_HOSTS = new Set([
   'm.media-amazon.com',
   'images-na.ssl-images-amazon.com',
   'upload.wikimedia.org',
+  'thumb.wikimedia.org',
   'images.unsplash.com',
   'i.imgur.com',
   'cdn.pixabay.com',
@@ -46,6 +47,33 @@ function decodeHtml(value) {
 
 async function resolvePageImageUrl(pageUrl, fetchImpl) {
   const host = pageUrl.hostname.toLowerCase();
+  if (host === 'commons.wikimedia.org') {
+    let fileTitle = '';
+    if (pageUrl.pathname.startsWith('/wiki/')) {
+      try {
+        fileTitle = decodeURIComponent(pageUrl.pathname.slice('/wiki/'.length).split('/')[0]).replace(/_/g, ' ');
+      } catch {
+        return null;
+      }
+    } else {
+      fileTitle = pageUrl.searchParams.get('title') || '';
+    }
+    if (!/^File:/i.test(fileTitle.trim())) return null;
+    const apiUrl = new URL('https://commons.wikimedia.org/w/api.php');
+    apiUrl.search = new URLSearchParams({
+      action: 'query', format: 'json', prop: 'imageinfo', iiprop: 'url',
+      iiurlwidth: '1600', titles: fileTitle.trim(),
+    }).toString();
+    const response = await fetchImpl(apiUrl.href, {
+      headers: { 'User-Agent': 'BankResaneh/2.0 (image import)', Accept: 'application/json' },
+      signal: AbortSignal.timeout(12_000),
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    const page = Object.values(data?.query?.pages || {})[0];
+    const candidate = page?.imageinfo?.[0]?.thumburl || page?.imageinfo?.[0]?.url;
+    return typeof candidate === 'string' ? isAllowedImageUrl(candidate) : null;
+  }
   if (host === 'wikipedia.org' || host.endsWith('.wikipedia.org')) {
     const firstLabel = host.split('.')[0];
     const lang = host === 'wikipedia.org' || firstLabel === 'www' || firstLabel === 'm' ? 'en' : firstLabel;
@@ -172,17 +200,18 @@ export async function importImageFromUrl(rawUrl, fetchImpl = fetch) {
     }
     const host = pageUrl.hostname.toLowerCase();
     const isWikipediaPage = host === 'wikipedia.org' || host.endsWith('.wikipedia.org');
+    const isCommonsPage = host === 'commons.wikimedia.org';
     const isImdbPage = host === 'imdb.com' || host === 'www.imdb.com' || host === 'm.imdb.com';
-    if (!isWikipediaPage && !isImdbPage) {
-      return failure(400, 'دامنهٔ این لینک برای دریافت امن تصویر پشتیبانی نمی‌شود؛ صفحهٔ ویکی‌پدیا یا IMDb را وارد کنید');
+    if (!isWikipediaPage && !isCommonsPage && !isImdbPage) {
+      return failure(400, 'دامنهٔ این لینک برای دریافت امن تصویر پشتیبانی نمی‌شود؛ صفحهٔ ویکی‌پدیا، ویکی‌مدیا یا IMDb را وارد کنید');
     }
     try {
       target = await resolvePageImageUrl(pageUrl, fetchImpl);
     } catch (error) {
-      return failure(502, 'استخراج تصویر از صفحهٔ ویکی‌پدیا یا IMDb ناموفق بود؛ صفحه را بررسی کنید و دوباره تلاش کنید');
+      return failure(502, 'استخراج تصویر از صفحهٔ ویکی‌پدیا، ویکی‌مدیا یا IMDb ناموفق بود؛ صفحه را بررسی کنید و دوباره تلاش کنید');
     }
     if (!target) {
-      return failure(404, 'از این صفحه تصویر قابل دریافت پیدا نشد؛ لینک صفحهٔ دقیق یا لینک مستقیم تصویر را وارد کنید.');
+      return failure(404, 'از این صفحه تصویر قابل دریافت پیدا نشد؛ لینک صفحهٔ دقیق فایل یا لینک مستقیم تصویر را وارد کنید.');
     }
   }
 
