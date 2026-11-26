@@ -34,7 +34,7 @@ jobs:
           [[ -n "$API_BASE" ]] || missing+=("BANKRESANEH_API_BASE (GitHub Variable)")
           [[ -n "$API_ALLOWLIST" ]] || missing+=("BANKRESANEH_ALLOWED_API_ORIGINS (GitHub Variable)")
           if [[ ${#missing[@]} -ne 0 ]]; then
-            printf '::error::Missing required live-preview configuration: %s\\n' "${missing[@]}"
+            printf '::error::Missing required live-preview configuration: %s\n' "${missing[@]}"
             exit 1
           fi
           echo "ready=true" >> "$GITHUB_OUTPUT"
