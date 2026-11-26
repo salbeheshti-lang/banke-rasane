@@ -12,7 +12,7 @@ jobs:
       - name: Verify D1 token and locate the existing database
         env:
           CF_D1_TOKEN: ${{ secrets.CLOUDFLARE_D1_API_TOKEN }}
-          CF_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CONFIGURED_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         shell: bash
         run: |
           set -euo pipefail
@@ -20,33 +20,40 @@ jobs:
             echo "::error::GitHub secret CLOUDFLARE_D1_API_TOKEN is missing or empty."
             exit 1
           fi
-          if [[ -z "$CF_ACCOUNT_ID" ]]; then
-            echo "::error::GitHub variable CLOUDFLARE_ACCOUNT_ID is missing or empty."
-            exit 1
-          fi
-          curl --fail --silent --show-error \
-            -H "Authorization: Bearer $CF_D1_TOKEN" \
-            -H "Content-Type: application/json" \
-            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/d1/database" \
-            -o /tmp/d1-databases.json
-          node <<'NODE'
+          # Cloudflare account IDs are 32-character hex strings. The repository
+          # variable currently contains a UUID, so also test the two account IDs
+          # recorded in the earlier D1 setup history. Read-only enumeration only.
+          candidates=("$CONFIGURED_ACCOUNT_ID" "34fe29bd9259dcb2c47fd320f40b2eac" "128caa74c4d03e4cf84cd0d2b3f07bbf")
+          for account in "${candidates[@]}"; do
+            [[ "$account" =~ ^[a-fA-F0-9]{32}$ ]] || continue
+            status=$(curl --silent --show-error -o /tmp/d1-databases.json -w '%{http_code}' \
+              -H "Authorization: Bearer $CF_D1_TOKEN" \
+              -H "Content-Type: application/json" \
+              "https://api.cloudflare.com/client/v4/accounts/$account/d1/database")
+            if [[ "$status" != "200" ]]; then
+              echo "D1 listing not available for candidate account (HTTP $status); trying next."
+              continue
+            fi
+            node - "$account" <<'NODE'
           const fs = require('node:fs');
+          const account = process.argv[2];
           const payload = JSON.parse(fs.readFileSync('/tmp/d1-databases.json', 'utf8'));
-          if (!payload.success) {
-            console.error('Cloudflare rejected D1 access:', JSON.stringify(payload.errors || []));
-            process.exit(1);
-          }
+          if (!payload.success) process.exit(3);
           const dbs = payload.result || [];
           const target = dbs.find(db => db.name === 'banke-rasane-db');
           if (!target) {
-            console.error('D1 access works, but banke-rasane-db was not found in the configured account.');
-            console.log('Visible database names:', dbs.map(db => db.name).join(', ') || '(none)');
-            process.exit(2);
+            console.log('Account is accessible, but banke-rasane-db is not listed here.');
+            process.exit(4);
           }
           console.log('Existing D1 database located successfully.');
           console.log('Database name:', target.name);
           console.log('Database UUID:', target.uuid);
-          console.log('Account ID:', process.env.CF_ACCOUNT_ID);
+          console.log('Account ID:', account);
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,
-            '## Existing D1 database found\n- Name: `' + target.name + '`\n- UUID: `' + target.uuid + '`\n- Account ID: `' + process.env.CF_ACCOUNT_ID + '`\n');
+            '## Existing D1 database found\n- Name: `' + target.name + '`\n- UUID: `' + target.uuid + '`\n- Account ID: `' + account + '`\n');
           NODE
+            result=$?
+            if [[ "$result" -eq 0 ]]; then exit 0; fi
+          done
+          echo "::error::Could not locate banke-rasane-db. Check that the token is scoped to the account containing that database and has Account D1 Read."
+          exit 1
