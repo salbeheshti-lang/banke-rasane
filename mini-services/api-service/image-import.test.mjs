@@ -87,3 +87,18 @@ test('rejects arbitrary source hosts before making a network request', async () 
   assert.equal(result.status, 400);
   assert.equal(called, false);
 });
+
+test('rejects oversized streamed images even when Content-Length is absent', async () => {
+  const body = new ReadableStream({
+    start(controller) {
+      const chunk = new Uint8Array(5 * 1024 * 1024);
+      for (let index = 0; index < 6; index++) controller.enqueue(chunk);
+      controller.close();
+    },
+  });
+  const result = await importImageFromUrl(
+    'https://upload.wikimedia.org/wikipedia/commons/oversized.png',
+    async () => new Response(body, { status: 200, headers: { 'content-type': 'image/png' } }),
+  );
+  assert.equal(result.status, 413);
+});
