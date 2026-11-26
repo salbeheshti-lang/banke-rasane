@@ -93,7 +93,7 @@ jobs:
 
           # Discover the actual CSS chunk referenced by the deployed HTML,
           # then download and validate CSS and both local font binaries.
-          node -e "const fs=require('fs');const html=fs.readFileSync('/tmp/bankresaneh-preview-root.html','utf8');const css=[...html.matchAll(/href=[\\\"']([^\\\"']*\\/_next\\/static\\/css\\/[^\\\"']+\\.css)[\\\"']/g)].map(x=>x[1]);if(!css.length)throw Error('No compiled CSS asset found in live HTML');fs.writeFileSync('/tmp/bankresaneh-css-urls.txt',[...new Set(css)].join('\\n'));"
+          node -e "const fs=require('fs');const html=fs.readFileSync('/tmp/bankresaneh-preview-root.html','utf8');const css=[...html.matchAll(/_next\/static\/css\/[^\"' ]+\.css/g)].map(x=>x[0]);if(!css.length)throw Error('No compiled CSS asset found in live HTML');fs.writeFileSync('/tmp/bankresaneh-css-urls.txt',[...new Set(css)].join('\n'));"
           while IFS= read -r asset; do
             [[ -n "$asset" ]] || continue
             case "$asset" in http*) asset_url="$asset" ;; /*) asset_url="$WORKER_URL$asset" ;; *) asset_url="$WORKER_URL/$asset" ;; esac
