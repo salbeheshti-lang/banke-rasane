@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: 'متن پست بیشتر از سقف ۴۰۹۶ نویسه است؛ متن را کوتاه کنید تا هیچ بخشی حذف نشود' }, { status: 400 });
     }
     const hasVideo = typeof body.videoUrl === 'string' && body.videoUrl.length > 0;
-    if (hasVideo && !isDirectMp4Url(body.videoUrl!)) {
+    if (hasVideo && !isDirectVideoUrl(body.videoUrl!)) {
       return NextResponse.json({ ok: false, error: 'برای ارسال ویدئو، لینک مستقیم HTTPS به فایل MP4 لازم است؛ لینک صفحهٔ یوتیوب/آپارات قابل ارسال مستقیم نیست' }, { status: 400 });
     }
     const hasImage = typeof imageUrl === 'string' && imageUrl.length > 0;
