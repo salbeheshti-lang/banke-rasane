@@ -79,7 +79,7 @@ jobs:
       - name: Verify live Cloudflare Preview and connected test API
         shell: bash
         env:
-          WORKER_URL: https://bankresaneh-visual-preview.ginx11x5frrby9mvb.workers.dev
+          WORKER_URL: https://bankresaneh-visual-preview.bankresaneh.workers.dev
           API_BASE: ${{ vars.BANKRESANEH_API_BASE || 'https://bankresaneh-preview-api.onrender.com' }}
         run: |
           set -euo pipefail
