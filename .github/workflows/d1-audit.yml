@@ -1,0 +1,52 @@
+name: Audit existing Cloudflare D1
+on:
+  push:
+    branches:
+      - ops/d1-audit-check
+permissions:
+  contents: read
+jobs:
+  inspect-existing-d1:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify D1 token and locate the existing database
+        env:
+          CF_D1_TOKEN: ${{ secrets.CLOUDFLARE_D1_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$CF_D1_TOKEN" ]]; then
+            echo "::error::GitHub secret CLOUDFLARE_D1_API_TOKEN is missing or empty."
+            exit 1
+          fi
+          if [[ -z "$CF_ACCOUNT_ID" ]]; then
+            echo "::error::GitHub variable CLOUDFLARE_ACCOUNT_ID is missing or empty."
+            exit 1
+          fi
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $CF_D1_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/d1/database" \
+            -o /tmp/d1-databases.json
+          node <<'NODE'
+          const fs = require('node:fs');
+          const payload = JSON.parse(fs.readFileSync('/tmp/d1-databases.json', 'utf8'));
+          if (!payload.success) {
+            console.error('Cloudflare rejected D1 access:', JSON.stringify(payload.errors || []));
+            process.exit(1);
+          }
+          const dbs = payload.result || [];
+          const target = dbs.find(db => db.name === 'banke-rasane-db');
+          if (!target) {
+            console.error('D1 access works, but banke-rasane-db was not found in the configured account.');
+            console.log('Visible database names:', dbs.map(db => db.name).join(', ') || '(none)');
+            process.exit(2);
+          }
+          console.log('Existing D1 database located successfully.');
+          console.log('Database name:', target.name);
+          console.log('Database UUID:', target.uuid);
+          console.log('Account ID:', process.env.CF_ACCOUNT_ID);
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+            '## Existing D1 database found\n- Name: `' + target.name + '`\n- UUID: `' + target.uuid + '`\n- Account ID: `' + process.env.CF_ACCOUNT_ID + '`\n');
+          NODE
