@@ -49,6 +49,28 @@ async function fetchImdbPoster(imdbId: string): Promise<string | null> {
   return null;
 }
 
+async function fetchCommonsFileImage(fileTitle: string): Promise<string | null> {
+  const title = String(fileTitle || '').trim();
+  if (!/^File:/i.test(title)) return null;
+  const response = await fetchRetry(
+    'https://commons.wikimedia.org/w/api.php?action=query&prop=imageinfo&iiprop=url&iiurlwidth=1200&format=json&titles=' + encodeURIComponent(title),
+    { headers: { 'User-Agent': UA, 'Accept': 'application/json' } },
+    1,
+  );
+  if (!response) return null;
+  const data = await response.json();
+  const page = Object.values(data?.query?.pages || {})[0] as any;
+  const candidate = page?.imageinfo?.[0]?.thumburl || page?.imageinfo?.[0]?.url;
+  if (typeof candidate !== 'string') return null;
+  try {
+    const image = new URL(candidate);
+    if (image.protocol === 'https:' && (image.hostname === 'upload.wikimedia.org' || image.hostname === 'thumb.wikimedia.org')) return image.href;
+  } catch {
+    // Ignore malformed Commons image URLs.
+  }
+  return null;
+}
+
 async function fetchWikipediaShowImage(title: string): Promise<string | null> {
   const query = cleanQuery(title);
   if (!query) return null;
@@ -146,7 +168,10 @@ export async function POST(request: NextRequest) {
         const r = await fetchRetry(`https://www.omdbapi.com/?s=${encodeURIComponent(nameQuery)}&apikey=${encodeURIComponent(OMDB_API_KEY)}`, {}, 1);
         if (r) {
           const d = await r.json();
-          const first = Array.isArray(d.Search) ? d.Search[0] : null;
+          const normalizedQuery = normalizeTitle(nameQuery);
+          const first = Array.isArray(d.Search)
+            ? d.Search.find((candidate: any) => normalizeTitle(String(candidate?.Title || '')) === normalizedQuery)
+            : null;
           if (first?.imdbID) {
             const dr = await fetchRetry(`https://www.omdbapi.com/?i=${encodeURIComponent(first.imdbID)}&apikey=${encodeURIComponent(OMDB_API_KEY)}&plot=full`, {}, 1);
             if (dr) {
@@ -172,7 +197,8 @@ export async function POST(request: NextRequest) {
             const sr = await fetchRetry(`https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srnamespace=0&srlimit=3&format=json&srsearch=${encodeURIComponent(nameQuery)}`, { headers: { 'User-Agent': UA } }, 1);
             if (!sr) continue;
             const sd = await sr.json();
-            const pageTitle = sd?.query?.search?.[0]?.title;
+            const exactPage = (sd?.query?.search || []).find((candidate: any) => normalizeTitle(String(candidate?.title || '')) === normalizeTitle(nameQuery));
+            const pageTitle = exactPage?.title;
             if (!pageTitle) continue;
             const r = await fetchRetry(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(pageTitle)}`, { headers: { 'User-Agent': UA } }, 1);
             if (!r) continue;
@@ -207,7 +233,23 @@ export async function POST(request: NextRequest) {
     const host = parsed.hostname.toLowerCase();
     const isImdb = host === 'imdb.com' || host.endsWith('.imdb.com');
     const isWikipedia = host === 'wikipedia.org' || host.endsWith('.wikipedia.org');
-    if (!isImdb && !isWikipedia) return NextResponse.json({ error: 'فعلاً فقط لینک IMDb و ویکی‌پدیا پشتیبانی می‌شود' }, { status: 400 });
+    const isCommons = host === 'commons.wikimedia.org';
+    if (!isImdb && !isWikipedia && !isCommons) return NextResponse.json({ error: 'فعلاً فقط لینک IMDb، ویکی‌پدیا و صفحهٔ فایل ویکی‌مدیا پشتیبانی می‌شود' }, { status: 400 });
+
+    if (isCommons) {
+      let fileTitle = parsed.searchParams.get('title') || '';
+      if (!fileTitle && parsed.pathname.startsWith('/wiki/')) {
+        try { fileTitle = decodeURIComponent(parsed.pathname.slice('/wiki/'.length).split('/')[0]).replace(/_/g, ' '); }
+        catch { return NextResponse.json({ error: 'عنوان فایل ویکی‌مدیا معتبر نیست' }, { status: 400 }); }
+      }
+      if (!/^File:/i.test(fileTitle.trim())) {
+        return NextResponse.json({ error: 'لینک باید به صفحهٔ File در ویکی‌مدیا اشاره کند' }, { status: 400 });
+      }
+      const image = await fetchCommonsFileImage(fileTitle);
+      if (!image) return NextResponse.json({ error: 'تصویر این فایل در ویکی‌مدیا قابل دریافت نیست' }, { status: 404 });
+      info.image = image;
+      return NextResponse.json({ info });
+    }
 
     if (isImdb) {
       const imdbMatch = parsed.pathname.match(/(?:^|\/)title\/(tt\d+)/i) || parsed.href.match(/\b(tt\d+)\b/i);
