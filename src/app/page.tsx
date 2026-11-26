@@ -6991,108 +6991,203 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
   const handlePublish = async () => {
     if (!selectedPlatform) return;
 
-    // Generate a social card image using canvas
+    // Build a real 9:16 social cover (1080x1920). The MP4 editor exports the
+    // companion video in 720x1280, so the image and video share the same ratio.
     const canvas = document.createElement('canvas');
     canvas.width = 1080;
-    canvas.height = 1080;
+    canvas.height = 1920;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
-    // Background gradient
-    const grad = ctx.createLinearGradient(0, 0, 1080, 1080);
-    grad.addColorStop(0, '#10b981');
-    grad.addColorStop(0.6, '#0d7c4a');
-    grad.addColorStop(1, '#0a1f14');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 1080, 1080);
-
-    // Decorative circles
-    ctx.fillStyle = 'rgba(13, 124, 74, 0.15)';
-    ctx.beginPath();
-    ctx.arc(900, 200, 300, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(200, 900, 250, 0, Math.PI * 2);
-    ctx.fill();
-
-    // "بانک رسانه" branding
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-    ctx.font = 'bold 32px Vazirmatn, sans-serif';
+    ctx.direction = 'rtl';
     ctx.textAlign = 'center';
-    ctx.fillText('بانک رسانه', 540, 100);
 
-    // Show name(s)
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 56px Vazirmatn, sans-serif';
-    if (shows.length === 1) {
-      const name = shows[0].name;
-      ctx.fillText(name.length > 25 ? name.substring(0, 23) + '...' : name, 540, 250);
-    } else {
-      ctx.fillText(`${shows.length} برنامهٔ منتخب`, 540, 250);
-    }
+    const loadImage = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      image.crossOrigin = 'anonymous';
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error('image load failed'));
+      image.src = src;
+    });
+    const drawCover = (image: CanvasImageSource, width: number, height: number) => {
+      const source = image as HTMLImageElement | HTMLVideoElement;
+      const sw = 'videoWidth' in source ? source.videoWidth : source.naturalWidth;
+      const sh = 'videoHeight' in source ? source.videoHeight : source.naturalHeight;
+      if (!sw || !sh) return;
+      const scale = Math.max(width / sw, height / sh);
+      const cropWidth = width / scale;
+      const cropHeight = height / scale;
+      const sx = (sw - cropWidth) / 2;
+      const sy = (sh - cropHeight) / 2;
+      ctx.drawImage(image, sx, sy, cropWidth, cropHeight, 0, 0, width, height);
+    };
+    const wrapText = (raw: string, font: string, maxWidth: number, maxLines: number) => {
+      ctx.font = font;
+      const words = String(raw || '').replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
+      const lines: string[] = [];
+      let line = '';
+      for (const word of words) {
+        const candidate = line ? line + ' ' + word : word;
+        if (line && ctx.measureText(candidate).width > maxWidth) {
+          lines.push(line);
+          line = word;
+          if (lines.length >= maxLines) break;
+        } else {
+          line = candidate;
+        }
+      }
+      if (line && lines.length < maxLines) lines.push(line);
+      return lines;
+    };
 
-    // Description
-    ctx.font = '36px Vazirmatn, sans-serif';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-    if (shows.length === 1) {
-      const desc = shows[0].descriptionFa;
-      const lines = desc.match(/.{1,40}/g) || [];
-      lines.slice(0, 4).forEach((line, i) => {
-        ctx.fillText(line, 540, 350 + i * 50);
-      });
-    } else {
-      shows.slice(0, 5).forEach((s, i) => {
-        ctx.fillText(`• ${s.name}`, 540, 350 + i * 50);
-      });
-      if (shows.length > 5) {
-        ctx.fillText(`و ${shows.length - 5} برنامهٔ دیگر...`, 540, 350 + 5 * 50);
+    // Deep green liquid-glass background.
+    const background = ctx.createLinearGradient(0, 0, 1080, 1920);
+    background.addColorStop(0, '#08291e');
+    background.addColorStop(0.48, '#0d7c4a');
+    background.addColorStop(1, '#061a17');
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, 1080, 1920);
+    ctx.fillStyle = 'rgba(72, 220, 166, 0.10)';
+    ctx.beginPath(); ctx.arc(980, 300, 360, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(15, 90, 105, 0.18)';
+    ctx.beginPath(); ctx.arc(80, 1460, 420, 0, Math.PI * 2); ctx.fill();
+
+    // Real program artwork is preferred; if it cannot be decoded, try the
+    // first frame of the exported MP4 and retain the designed background.
+    let coverDrawn = false;
+    const firstShow = shows[0] as any;
+    const imageList = Array.isArray(firstShow?.images) ? firstShow.images : [];
+    const coverSource = (typeof firstShow?.programLogo === 'string' && firstShow.programLogo)
+      || imageList.find((value: unknown) => typeof value === 'string' && value.length > 0);
+    if (typeof coverSource === 'string') {
+      try {
+        const image = await loadImage(coverSource);
+        ctx.save();
+        ctx.beginPath(); ctx.roundRect(64, 300, 952, 870, 56); ctx.clip();
+        drawCover(image, 952, 870);
+        ctx.fillStyle = 'rgba(2, 18, 14, 0.30)';
+        ctx.fillRect(0, 0, 952, 870);
+        ctx.restore();
+        coverDrawn = true;
+      } catch {
+        // Try the actual video frame below.
       }
     }
+    if (!coverDrawn && typeof directVideoUrl === 'string' && directVideoUrl) {
+      const video = document.createElement('video');
+      video.muted = true;
+      video.playsInline = true;
+      video.preload = 'auto';
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const timer = window.setTimeout(() => reject(new Error('video preview timeout')), 9000);
+          video.onloadeddata = () => { window.clearTimeout(timer); resolve(); };
+          video.onerror = () => { window.clearTimeout(timer); reject(new Error('video preview decode failed')); };
+          video.src = directVideoUrl;
+          video.load();
+        });
+        if (video.videoWidth > 0 && video.videoHeight > 0) {
+          ctx.save();
+          ctx.beginPath(); ctx.roundRect(64, 300, 952, 870, 56); ctx.clip();
+          drawCover(video, 952, 870);
+          ctx.fillStyle = 'rgba(2, 18, 14, 0.26)';
+          ctx.fillRect(0, 0, 952, 870);
+          ctx.restore();
+          coverDrawn = true;
+        }
+      } catch {
+        // The branded background remains a valid cover if video decoding fails.
+      } finally {
+        video.removeAttribute('src');
+        video.load();
+      }
+    }
+    if (!coverDrawn) {
+      ctx.save();
+      ctx.beginPath(); ctx.roundRect(64, 300, 952, 870, 56); ctx.clip();
+      const fallback = ctx.createLinearGradient(64, 300, 1016, 1170);
+      fallback.addColorStop(0, 'rgba(24, 150, 105, 0.75)');
+      fallback.addColorStop(1, 'rgba(4, 29, 31, 0.96)');
+      ctx.fillStyle = fallback;
+      ctx.fillRect(64, 300, 952, 870);
+      ctx.restore();
+    }
 
-    // Category badge
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-    ctx.beginPath();
-    ctx.roundRect(340, 700, 400, 60, 30);
-    ctx.fill();
-    ctx.fillStyle = 'white';
+    // Brand header and logo.
+    try {
+      const logo = await loadImage('/banke-rasane-logo.png');
+      const scale = Math.min(220 / logo.naturalWidth, 112 / logo.naturalHeight);
+      const width = logo.naturalWidth * scale;
+      const height = logo.naturalHeight * scale;
+      ctx.drawImage(logo, (1080 - width) / 2, 70, width, height);
+    } catch {
+      ctx.fillStyle = '#f0fdf4';
+      ctx.font = 'bold 44px Vazirmatn, sans-serif';
+      ctx.fillText('بانک رسانه', 540, 140);
+    }
+    ctx.fillStyle = 'rgba(240, 253, 244, 0.78)';
+    ctx.font = '26px Vazirmatn, sans-serif';
+    ctx.fillText('آرشیو تخصصی برنامه‌های تلویزیونی', 540, 230);
+
+    // Dark glass text panel.
+    ctx.fillStyle = 'rgba(3, 23, 19, 0.78)';
+    ctx.beginPath(); ctx.roundRect(64, 1210, 952, 560, 48); ctx.fill();
+    ctx.strokeStyle = 'rgba(167, 243, 208, 0.28)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 64px Vazirmatn, sans-serif';
+    const heading = shows.length === 1 ? String(shows[0]?.name || 'برنامه منتخب') : 'برنامه‌های منتخب';
+    const titleLines = wrapText(heading, 'bold 64px Vazirmatn, sans-serif', 850, 2);
+    titleLines.forEach((line, index) => ctx.fillText(line, 540, 1310 + index * 78));
+
+    ctx.fillStyle = 'rgba(240, 253, 244, 0.88)';
+    const description = shows.length === 1
+      ? String(shows[0]?.descriptionFa || shows[0]?.summary || shows[0]?.description || '')
+      : shows.slice(0, 4).map((show: any) => show.name).join(' • ');
+    const descriptionLines = wrapText(description || postText, '32px Vazirmatn, sans-serif', 840, 5);
+    const descriptionY = 1310 + titleLines.length * 78 + 45;
+    descriptionLines.forEach((line, index) => ctx.fillText(line, 540, descriptionY + index * 52));
+
+    // Genre chip.
+    const category = String(shows[0]?.category || 'تاک‌شو').replace(/^\d+\.\s*/, '').split('|')[0];
+    ctx.fillStyle = 'rgba(16, 185, 129, 0.22)';
+    ctx.beginPath(); ctx.roundRect(280, 1680, 520, 62, 31); ctx.fill();
+    ctx.strokeStyle = 'rgba(167, 243, 208, 0.45)';
+    ctx.stroke();
+    ctx.fillStyle = '#d1fae5';
     ctx.font = 'bold 28px Vazirmatn, sans-serif';
-    const cat = shows[0]?.category?.replace(/^\d+\.\s*/, '') || 'تاک‌شو';
-    ctx.fillText(cat, 540, 740);
+    ctx.fillText(category, 540, 1721);
 
-    // Convert canvas to blob
+    ctx.fillStyle = 'rgba(240, 253, 244, 0.65)';
+    ctx.font = '24px Vazirmatn, sans-serif';
+    ctx.fillText('بانک رسانه  •  BankResaneh', 540, 1840);
+
     canvas.toBlob(async (blob) => {
-      if (!blob) return;
-      const file = new File([blob], 'banke-rasane-card.png', { type: 'image/png' });
+      if (!blob) {
+        setSendResult({ ok: false, msg: 'ساخت تصویر عمودی ناموفق بود؛ دوباره تلاش کنید.' });
+        return;
+      }
+      const file = new File([blob], 'banke-rasane-vertical-post.png', { type: 'image/png' });
 
-      // Try Web Share API first (native share dialog on mobile)
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
-          await navigator.share({
-            title: 'بانک رسانه',
-            text: postText,
-            files: [file],
-          });
+          await navigator.share({ title: 'بانک رسانه', text: postText, files: [file] });
           onConfirm(selectedPlatform);
           return;
-        } catch (e) {
-          // User cancelled or error — fall through to fallback
+        } catch {
+          // User cancelled or the platform share sheet is unavailable.
         }
       }
 
-      // Fallback: download image, copy text, and open platform share URL
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'banke-rasane-card.png';
+      a.download = 'banke-rasane-vertical-post.png';
       a.click();
-      URL.revokeObjectURL(url);
+      window.setTimeout(() => URL.revokeObjectURL(url), 30000);
 
-      // Copy text to clipboard
-      try {
-        await navigator.clipboard.writeText(postText);
-      } catch {}
-
-      // Open platform-specific share URL
+      try { await navigator.clipboard.writeText(postText); } catch {}
       const platformUrls: Record<string, string> = {
         'تلگرام': `https://t.me/share/url?url=${encodeURIComponent(shows[0]?.youtube || 'https://github.com/salbeheshti-lang/banke-rasane')}&text=${encodeURIComponent(postText)}`,
         'بله': 'https://ble.ir/',
@@ -7102,11 +7197,8 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
         'اینستاگرام': 'https://www.instagram.com/',
       };
       const shareUrl = platformUrls[selectedPlatform];
-      if (shareUrl) {
-        window.open(shareUrl, '_blank');
-      }
-
-      onConfirm(selectedPlatform + ' — تصویر دانلود شد، متن کپی شد، پلتفرم باز شد');
+      if (shareUrl) window.open(shareUrl, '_blank');
+      onConfirm(selectedPlatform + ' — تصویر عمودی دانلود شد، متن کپی شد، پلتفرم باز شد');
     }, 'image/png');
   };
 
