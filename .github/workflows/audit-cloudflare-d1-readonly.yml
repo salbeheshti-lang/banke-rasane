@@ -7,129 +7,90 @@ permissions:
   contents: read
 
 jobs:
-  inspect-live-d1:
+  inspect-test-d1:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Resolve configured D1 database
-        id: d1-config
-        run: |
-          configured_database=$(sed -n 's/^[[:space:]]*database_id[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' worker/wrangler.toml | head -n 1)
-          configured_account=$(sed -n 's/^[[:space:]]*account_id[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' worker/wrangler.toml | head -n 1)
-          if [[ ! "$configured_database" =~ ^[0-9a-f-]{36}$ || ! "$configured_account" =~ ^[a-f0-9]{32}$ ]]; then
-            echo "::error::D1 database/account ID is missing or invalid in worker/wrangler.toml."
-            exit 1
-          fi
-          echo "account_id=$configured_account" >> "$GITHUB_OUTPUT"
-          echo "database_id=$configured_database" >> "$GITHUB_OUTPUT"
-
-      - name: Verify Cloudflare token
+      - name: Verify Cloudflare credentials
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::CLOUDFLARE_API_TOKEN is not configured"; exit 1; }
-          raw=$(curl --silent --show-error -w '\n%{http_code}' \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/user/tokens/verify")
-          http_code=$(printf '%s\n' "$raw" | tail -n 1)
-          response=$(printf '%s\n' "$raw" | sed '$d')
-          if [[ "$http_code" != "200" ]] || [[ "$(echo "$response" | jq -r '.success // false')" != "true" ]]; then
-            echo "::error::Cloudflare rejected CLOUDFLARE_API_TOKEN (HTTP $http_code). Replace the GitHub Actions secret with a valid, unexpired token."
-            echo "$response" | jq -r '.errors[]? | "Cloudflare error \(.code): \(.message)"' || true
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::CLOUDFLARE_ACCOUNT_ID is not configured"; exit 1; }
+          raw=$(curl --silent --show-error -w '\\n%{http_code}' -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" https://api.cloudflare.com/client/v4/user/tokens/verify)
+          code=$(printf '%s\\n' "$raw" | tail -n 1)
+          body=$(printf '%s\\n' "$raw" | sed '$d')
+          if [[ "$code" != "200" ]] || [[ "$(echo "$body" | jq -r '.success // false')" != "true" ]]; then
+            echo "::error::Cloudflare token verification failed (HTTP $code)."
             exit 1
           fi
-          echo "Cloudflare API token is valid; its value is not printed."
+          echo "Cloudflare token verified; secret value was not printed."
 
-      - name: Locate the configured D1 database in the authorized account
-        id: find-d1
+      - name: Locate isolated test database
+        id: d1
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          D1_DATABASE_ID: ${{ steps.d1-config.outputs.database_id }}
-          CONFIGURED_ACCOUNT_ID: ${{ steps.d1-config.outputs.account_id }}
-          D1_ACCOUNT_OVERRIDE: ${{ vars.CLOUDFLARE_D1_ACCOUNT_ID }}
-          WORKER_ACCOUNT_ID: 128caa74c4d03e4cf84cd0d2b3f07bbf
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          found=""
-          for account_id in "$D1_ACCOUNT_OVERRIDE" "$CONFIGURED_ACCOUNT_ID" "$WORKER_ACCOUNT_ID"; do
-            [[ -n "$account_id" ]] || continue
-            [[ "$account_id" =~ ^[a-f0-9]{32}$ ]] || { echo "Skipping invalid account ID value."; continue; }
-            echo "Checking D1 access in account $account_id..."
-            raw=$(curl --silent --show-error -w '\n%{http_code}' \
-              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-              "https://api.cloudflare.com/client/v4/accounts/$account_id/d1/database")
-            http_code=$(printf '%s\n' "$raw" | tail -n 1)
-            response=$(printf '%s\n' "$raw" | sed '$d')
-            if [[ "$http_code" == "200" ]] && [[ "$(echo "$response" | jq -r '.success // false')" == "true" ]]; then
-              echo "$response" | jq -r '.result[]? | "D1 database: \(.name) (\(.uuid))"'
-              if echo "$response" | jq -e --arg id "$D1_DATABASE_ID" '.result[]? | select(.uuid == $id)' >/dev/null; then
-                found="$account_id"
-                break
-              fi
-            else
-              echo "D1 list for account $account_id returned HTTP $http_code."
-              echo "$response" | jq -r '.errors[]? | "Cloudflare error \(.code): \(.message)"' || true
-            fi
-          done
-          if [[ -z "$found" ]]; then
-            echo "::error::The configured D1 database was not found in an account accessible to this token. Grant Account D1 Read to the account in worker/wrangler.toml (currently $CONFIGURED_ACCOUNT_ID); do not share the token in chat."
+          raw=$(curl --silent --show-error -w '\\n%{http_code}' -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database")
+          code=$(printf '%s\\n' "$raw" | tail -n 1)
+          body=$(printf '%s\\n' "$raw" | sed '$d')
+          if [[ "$code" != "200" ]] || [[ "$(echo "$body" | jq -r '.success // false')" != "true" ]]; then
+            echo "::error::Cannot list D1 databases in the configured account (HTTP $code). Check Account > D1 > Read."
+            echo "$body" | jq -r '.errors[]?.message' || true
             exit 1
           fi
-          echo "account_id=$found" >> "$GITHUB_OUTPUT"
-          echo "database_id=$D1_DATABASE_ID" >> "$GITHUB_OUTPUT"
+          database_id=$(echo "$body" | jq -r '.result[]? | select(.name == "bankresaneh-test") | .uuid' | head -n 1)
+          if [[ -z "$database_id" || "$database_id" == "null" ]]; then
+            echo "::error::bankresaneh-test was not found in the configured Cloudflare account."
+            exit 1
+          fi
+          echo "database_id=$database_id" >> "$GITHUB_OUTPUT"
+          echo "Confirmed isolated target: bankresaneh-test"
 
       - name: Read schema and table names only
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          D1_ACCOUNT_ID: ${{ steps.find-d1.outputs.account_id }}
-          D1_DATABASE_ID: ${{ steps.find-d1.outputs.database_id }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          D1_DATABASE_ID: ${{ steps.d1.outputs.database_id }}
         run: |
           payload=$(jq -nc --arg sql "SELECT name, sql FROM sqlite_master WHERE type = 'table' ORDER BY name;" '{sql: $sql}')
-          raw=$(curl --silent --show-error -w '\n%{http_code}' -X POST \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            -H "Content-Type: application/json" \
-            --data "$payload" \
-            "https://api.cloudflare.com/client/v4/accounts/$D1_ACCOUNT_ID/d1/database/$D1_DATABASE_ID/query")
-          http_code=$(printf '%s\n' "$raw" | tail -n 1)
-          response=$(printf '%s\n' "$raw" | sed '$d')
-          if [[ "$http_code" != "200" ]] || [[ "$(echo "$response" | jq -r '.success // false')" != "true" ]]; then
-            echo "::error::D1 schema query failed (HTTP $http_code); confirm Account D1 Read permission."
-            echo "$response" | jq -r '.errors[]? | "Cloudflare error \(.code): \(.message)"' || true
+          raw=$(curl --silent --show-error -w '\\n%{http_code}' -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" --data "$payload" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$D1_DATABASE_ID/query")
+          code=$(printf '%s\\n' "$raw" | tail -n 1)
+          body=$(printf '%s\\n' "$raw" | sed '$d')
+          if [[ "$code" != "200" ]] || [[ "$(echo "$body" | jq -r '.success // false')" != "true" ]]; then
+            echo "::error::Read-only D1 schema query failed (HTTP $code)."
+            echo "$body" | jq -r '.errors[]?.message' || true
             exit 1
           fi
-          echo "$response" | jq -r '.result[].results[] | [.name, .sql] | @tsv'
+          echo "$body" | jq -r '.result[].results[]? | [.name, .sql] | @tsv'
 
-      - name: Read aggregate row counts only
+      - name: Read aggregate counts for known application tables
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          D1_ACCOUNT_ID: ${{ steps.find-d1.outputs.account_id }}
-          D1_DATABASE_ID: ${{ steps.find-d1.outputs.database_id }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          D1_DATABASE_ID: ${{ steps.d1.outputs.database_id }}
         run: |
           for table in shows users sessions; do
-            payload=$(jq -nc --arg table "$table" '{sql: "SELECT COUNT(*) AS row_count FROM " + $table + ";"}')
-            raw=$(curl --silent --show-error -w '\n%{http_code}' -X POST \
-              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-              -H "Content-Type: application/json" \
-              --data "$payload" \
-              "https://api.cloudflare.com/client/v4/accounts/$D1_ACCOUNT_ID/d1/database/$D1_DATABASE_ID/query")
-            http_code=$(printf '%s\n' "$raw" | tail -n 1)
-            response=$(printf '%s\n' "$raw" | sed '$d')
-            if [[ "$http_code" != "200" ]] || [[ "$(echo "$response" | jq -r '.success // false')" != "true" ]]; then
-              echo "::error::D1 aggregate query failed for table $table (HTTP $http_code)."
-              echo "$response" | jq -r '.errors[]? | "Cloudflare error \(.code): \(.message)"' || true
-              exit 1
+            payload=$(jq -nc --arg sql "SELECT COUNT(*) AS row_count FROM \\"$table\\";" '{sql: $sql}')
+            raw=$(curl --silent --show-error -w '\\n%{http_code}' -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" --data "$payload" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$D1_DATABASE_ID/query")
+            code=$(printf '%s\\n' "$raw" | tail -n 1)
+            body=$(printf '%s\\n' "$raw" | sed '$d')
+            if [[ "$code" != "200" ]] || [[ "$(echo "$body" | jq -r '.success // false')" != "true" ]]; then
+              echo "Table $table: not present or not queryable (HTTP $code)."
+            else
+              echo "$table: $(echo "$body" | jq -r '.result[0].results[0].row_count // "0"')"
             fi
-            echo "$table: $(echo "$response" | jq -r '.result[0].results[0].row_count // "query-failed"')"
           done
 
       - name: Record read-only safety boundary
         if: always()
         run: |
           {
-            echo "## Legacy D1 audit scope"
-            echo "- Manual, read-only audit; SELECT queries only."
-            echo "- No personal user data or show content queried."
-            echo "- No writes, migrations, deletes, or deployment performed."
+            echo "## D1 audit scope"
+            echo "- Manual read-only audit of bankresaneh-test only."
+            echo "- Only schema metadata and aggregate counts were queried."
+            echo "- No personal data or show content was read."
+            echo "- No writes, migrations, deletes, or deployments were performed."
           } >> "$GITHUB_STEP_SUMMARY"
