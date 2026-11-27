@@ -7814,10 +7814,10 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
     // Keep the request payload small: archive rows may carry large base64 images.
     // Only the first 24 rows are eligible for thumbnails; strip image payloads
     // from every remaining row while retaining all text and metadata.
-    const prepared = sourceShows.map((show, index) => ({
+    const prepared = sourceShows.map((show) => ({
       ...show,
       programLogo: undefined, // Not used in the archive PDF and may be a large inline image.
-      images: index < 24 ? show.images : [],
+      images: [], // Only compact thumbnails created below are sent to the PDF endpoint.
     }));
     const candidates = sourceShows.slice(0, 24);
     for (let offset = 0; offset < candidates.length; offset += 6) {
