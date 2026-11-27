@@ -3,7 +3,7 @@
  * through Chromium DevTools Protocol and exercise the actual packaged UI.
  */
 const { chromium, expect } = require('@playwright/test');
-const { spawnSync } = require('node:child_process');
+const { spawn, spawnSync, execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -53,7 +53,25 @@ async function run() {
   let token;
   let fixtureCreated = false;
   let videoDir;
+  let child;
   try {
+    const executable = path.resolve(process.env.BANKRESANEH_EXE || process.argv[2] || path.resolve(__dirname, '..', 'release', 'win-unpacked', 'BankResaneh.exe'));
+    child = spawn(executable, ['--disable-gpu', '--no-sandbox', '--remote-debugging-port=9229'], {
+      stdio: 'ignore',
+      windowsHide: false,
+      env: { ...process.env, ELECTRON_DISABLE_SECURITY_WARNINGS: 'true' },
+    });
+    child.on('error', error => process.stderr.write('Electron spawn error: ' + error.message + '\\n'));
+    const startupDeadline = Date.now() + 90_000;
+    let uiReady = false;
+    let apiReady = false;
+    while (Date.now() < startupDeadline && (!uiReady || !apiReady)) {
+      if (child.exitCode !== null) throw new Error('Installed Electron exited during startup with code ' + child.exitCode);
+      if (!uiReady) { try { const response = await fetch('http://127.0.0.1:3000/'); uiReady = response.ok; } catch {} }
+      if (!apiReady) { try { const response = await fetch(API + '/api/health'); if (response.ok) { const health = await response.json(); apiReady = Number(health.showsCount) > 0; } } catch {} }
+      if (!uiReady || !apiReady) await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    if (!uiReady || !apiReady) throw new Error('Installed Electron UI/API did not become ready before acceptance testing.');
     const firstLogin = await apiRequest('/api/auth/login', 'POST', {
       username: 'admin',
       password: ADMIN_PASSWORD,
@@ -216,6 +234,10 @@ async function run() {
     }
     if (browser) {
       try { await browser.close(); } catch {}
+    }
+    if (child?.pid) {
+      try { execFileSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore', timeout: 10_000 }); }
+      catch (error) { process.stderr.write('Could not stop installed Electron process tree: ' + error.message + '\\n'); try { child.kill(); } catch {} }
     }
   }
 }
