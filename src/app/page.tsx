@@ -931,6 +931,9 @@ function HomeInner() {
     return () => window.removeEventListener('resize', check);
   }, []);
   const [talkShows, setTalkShows] = useState<TalkShow[]>([]);
+  const [archiveLoading, setArchiveLoading] = useState(false);
+  const [archiveError, setArchiveError] = useState('');
+  const [archiveReloadKey, setArchiveReloadKey] = useState(0);
   // Base archive data loaded from the authenticated shared API.
   const [baseShows, setBaseShows] = useState<TalkShow[]>([]);
   // Recovery-only local overrides retained solely for safe migration of legacy browser edits.
@@ -1010,6 +1013,8 @@ function HomeInner() {
   useEffect(() => {
     if (!currentUser) return;
     let cancelled = false;
+    setArchiveLoading(true);
+    setArchiveError('');
     (async () => {
       const saved = loadOverrides();
       const remaining: Overrides = { added: [], edited: {}, deleted: [] };
@@ -1054,16 +1059,22 @@ function HomeInner() {
         setBaseShows(data);
         setOverrides(remaining);
         setTalkShows(applyOverrides(data, remaining));
+        setArchiveLoading(false);
+        setArchiveError(data.length === 0 ? 'سرور پاسخ داد اما آرشیو خالی است؛ داده‌های اولیه باید در API بارگذاری شوند.' : '');
         if (hasLegacyChanges && !migrationComplete) {
           console.warn('[migration] some legacy changes remain in local recovery storage');
         }
       } catch (error) {
         console.error('[shows] failed to load shared archive:', error);
-        if (!cancelled) showToast('دریافت آرشیو از سرور ناموفق بود؛ اتصال سرور را بررسی کنید');
+        if (!cancelled) {
+          setArchiveError(error instanceof Error ? error.message : 'اتصال به سرویس آرشیو ناموفق بود');
+          showToast('دریافت آرشیو ناموفق بود؛ از دکمه تلاش مجدد استفاده کنید');
+          setArchiveLoading(false);
+        }
       }
     })();
     return () => { cancelled = true; };
-  }, [currentUser?.id, currentUser?.role]);
+  }, [currentUser?.id, currentUser?.role, archiveReloadKey]);
 
   // On Electron desktop, require a fresh sign-in once per application launch.
   // sessionStorage survives in-app reloads but is cleared when the app process exits.
@@ -1326,7 +1337,9 @@ function HomeInner() {
         genres={genres}
       />
 
-      <main key={currentView} className={`animate-view-enter ${isMobile ? 'p-4 pt-24 pb-28' : 'p-8 pt-28'}`}>
+      <main key={currentView} className={`app-content animate-view-enter ${isMobile ? 'p-4 pt-24 pb-28' : 'p-8 pt-28'}`}>
+        {archiveLoading && talkShows.length === 0 && <div role="status" className="max-w-3xl mx-auto mb-5 rounded-xl p-4 text-center" style={{ color: '#f0fdf4', background: 'rgba(0,65,48,.78)', border: '1px solid rgba(167,243,208,.35)' }}>در حال اتصال به سرور و دریافت آرشیو برنامه‌ها…</div>}
+        {!!archiveError && <div role="alert" className="max-w-3xl mx-auto mb-5 rounded-xl p-4" style={{ color: '#fff', background: 'rgba(127,29,29,.78)', border: '1px solid rgba(252,165,165,.55)' }}><p className="font-bold mb-2">بارگذاری آرشیو با مشکل روبه‌رو شد</p><p className="text-sm mb-3" dir="auto">{archiveError}</p><button type="button" disabled={archiveLoading} onClick={() => setArchiveReloadKey(value => value + 1)} className="rounded-lg px-5 py-2 font-bold" style={{ color: '#052e24', background: '#a7f3d0', minHeight: 48 }}>{archiveLoading ? 'در حال تلاش…' : 'تلاش مجدد برای دریافت برنامه‌ها'}</button></div>}
         {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} onEditGenre={handleEditGenre} onDeleteGenre={handleDeleteGenre} onShowClick={setSelectedShow} />}
         {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={(s) => { setEditingShow(s); setPresetGenre(null); setPresetCategory(undefined); navigate('add'); }} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={(s) => { setEditingShow(s); setPresetGenre(null); setPresetCategory(undefined); navigate('add'); }} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
