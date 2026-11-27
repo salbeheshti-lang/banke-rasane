@@ -121,9 +121,9 @@ test('authenticated app shell, edit persistence, real PDF preview, and video tri
   expect(pdfBytes.byteLength).toBeGreaterThan(1_000);
   await expect(page.locator('iframe[title="پیش‌نمایش واقعی PDF گزارش"]')).toBeVisible({ timeout: 30_000 });
 
-  await page.locator('.modal-backdrop').getByRole('button').first().click();
+  // The details modal remains mounted underneath the PDF preview; close the topmost export modal.
+  await page.locator('.modal-backdrop').last().getByRole('button').first().click();
   await expect(page.locator('iframe[title="پیش‌نمایش واقعی PDF گزارش"]')).toHaveCount(0);
-  await page.getByRole('heading', { name: editedName, exact: true }).click();
   await page.getByRole('button', { name: /ویرایش/ }).click();
   await expect(page.getByRole('heading', { name: 'ویرایش برنامه' })).toBeVisible();
 
