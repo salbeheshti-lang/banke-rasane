@@ -950,6 +950,10 @@ function HomeInner() {
 
   const [editingShow, setEditingShow] = useState<TalkShow | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  }, []);
   const [publishShows, setPublishShows] = useState<TalkShow[] | null>(null);
   const [showBotConfig, setShowBotConfig] = useState(false);
   const [exportPreview, setExportPreview] = useState<{
@@ -1119,10 +1123,6 @@ function HomeInner() {
     }
   }, [baseShows, overrides]);
 
-  const showToast = useCallback((msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  }, []);
 
   // Persist a new set of overrides to state + localStorage in one place.
   const commitOverrides = (next: Overrides) => {
