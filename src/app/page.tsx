@@ -1804,17 +1804,17 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               <span style={{ color: '#54D9C0', fontSize: '11px', marginTop: '2px' }}>
                 {t('app.title')} — {totalShows?.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US') || '0'} {t('dashboard.programs')} {t('dashboard.stripTitle').includes('ژانر') ? 'در' : 'in'} {totalGenres?.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US') || '0'} {t('drawer.genres')}
               </span>
-              <span className="flex items-center gap-1.5" style={{ marginTop: '4px', opacity: 0.95 }} title={CLIENT_BRANDING.organizationFa}>
-                <span style={{ color: 'rgba(167, 243, 208, 0.9)', fontSize: '10px', fontWeight: 700, lineHeight: 1.2 }}>{CLIENT_BRANDING.organizationFa}</span>
-                <img src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={32} height={32} style={{ opacity: 0.95, objectFit: 'contain' }} />
-              </span>
+              <div title={CLIENT_BRANDING.organizationFa} style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', opacity: 0.98 }}>
+                <img src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={30} height={30} style={{ opacity: 1, objectFit: 'contain', display: 'block' }} />
+                <span style={{ color: 'rgba(167, 243, 208, 0.96)', fontSize: '10px', fontWeight: 700, lineHeight: 1.35, textAlign: 'center', whiteSpace: 'normal' }}>{CLIENT_BRANDING.organizationFa}</span>
+              </div>
             </div>
           )}
           {/* Mobile: compact organization name + logo next to the main logo */}
           {isMobile && (
-            <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
-              <img src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={26} height={26} style={{ opacity: 0.95, objectFit: 'contain' }} />
-              <span style={{ color: 'rgba(167, 243, 208, 0.85)', fontSize: '8.5px', fontWeight: 700, lineHeight: 1.1, whiteSpace: 'nowrap' }}>{CLIENT_BRANDING.organizationFa}</span>
+            <div data-testid="header-organization-brand" className="flex flex-col items-center justify-center" style={{ flexShrink: 0, gap: '2px', maxWidth: '112px' }}>
+              <img src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={25} height={25} style={{ opacity: 1, objectFit: 'contain', display: 'block' }} />
+              <span style={{ color: 'rgba(167, 243, 208, 0.96)', fontSize: '8px', fontWeight: 700, lineHeight: 1.2, whiteSpace: 'normal', textAlign: 'center' }}>{CLIENT_BRANDING.organizationFa}</span>
             </div>
           )}
         </div>
