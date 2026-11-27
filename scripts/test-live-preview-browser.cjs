@@ -19,6 +19,8 @@ let browser;
     await context.addInitScript(() => {
       localStorage.removeItem('bankresaneh_token');
       localStorage.removeItem('server_url');
+      localStorage.removeItem('bankresaneh_lang');
+      localStorage.removeItem('bankresaneh_theme');
     });
     const page = await context.newPage();
     page.setDefaultTimeout(20_000);
@@ -118,6 +120,30 @@ let browser;
     assert.equal(desktopLayout.organizationNameBelowLogo, true, 'Official organization name must be below the logo on desktop');
     await desktopPage.screenshot({ path: path.join(artifactDir, 'preview-browser-desktop.png'), fullPage: true });
     await desktopContext.close();
+
+    // Returning users may have English saved in localStorage. Verify that this
+    // preference is applied after hydration instead of changing the first
+    // client render and causing React #418 on the deployed Worker.
+    const languageContext = await browser.newContext({
+      serviceWorkers: 'block',
+      viewport: { width: 1280, height: 800 },
+    });
+    await languageContext.addInitScript(() => {
+      localStorage.setItem('bankresaneh_lang', 'en');
+      localStorage.removeItem('bankresaneh_token');
+      localStorage.removeItem('server_url');
+    });
+    const languagePage = await languageContext.newPage();
+    languagePage.setDefaultTimeout(20_000);
+    languagePage.on('pageerror', error => diagnostics.pageErrors.push({
+      viewport: 'saved-language', message: error.message, stack: error.stack,
+    }));
+    const languageResponse = await languagePage.goto(baseURL + '/', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    assert.ok(languageResponse && languageResponse.ok(), 'Saved-language login navigation must return HTTP 2xx');
+    await languagePage.locator('#login-username').waitFor({ state: 'visible', timeout: 30_000 });
+    await languagePage.waitForFunction(() => document.documentElement.lang === 'en', { timeout: 10_000 });
+    assert.equal(await languagePage.locator('#login-username').isVisible(), true, 'Login form must remain interactive with saved English preference');
+    await languageContext.close();
 
     diagnostics.runtime = await page.evaluate(() => ({
       title: document.title,
