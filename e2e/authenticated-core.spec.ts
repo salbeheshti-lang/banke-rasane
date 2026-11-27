@@ -80,8 +80,9 @@ test('authenticated app shell, edit persistence, real PDF preview, and video tri
   await expect(appFooter.getByText('مانیتورینگ مرکز طرح و برنامه سیما')).toBeVisible();
 
   await page.getByRole('button', { name: 'برنامه‌ها', exact: true }).click();
-  await expect(page.getByText(FIXTURE_NAME, { exact: true })).toBeVisible({ timeout: 30_000 });
-  await page.getByText(FIXTURE_NAME, { exact: true }).first().click();
+  const fixtureHeading = page.getByRole('heading', { name: FIXTURE_NAME, exact: true });
+  await expect(fixtureHeading).toBeVisible({ timeout: 30_000 });
+  await fixtureHeading.click();
   await page.getByRole('button', { name: /ویرایش/ }).click();
   await expect(page.getByRole('heading', { name: 'ویرایش برنامه' })).toBeVisible();
 
@@ -91,7 +92,8 @@ test('authenticated app shell, edit persistence, real PDF preview, and video tri
   const editedName = FIXTURE_NAME + ' — ویرایش‌شده';
   await nameInput.fill(editedName);
   await page.getByRole('button', { name: /بروزرسانی/ }).click();
-  await expect(page.getByText(editedName, { exact: true })).toBeVisible({ timeout: 30_000 });
+  const editedHeading = page.getByRole('heading', { name: editedName, exact: true });
+  await expect(editedHeading).toBeVisible({ timeout: 30_000 });
 
   const persistedEdit = await request.get(
     API + '/api/shows/search?q=' + encodeURIComponent(editedName),
@@ -104,7 +106,7 @@ test('authenticated app shell, edit persistence, real PDF preview, and video tri
 
   // The same UI action must return a genuine binary PDF, not HTML or a
   // placeholder iframe. Check the response bytes and the rendered preview.
-  await page.getByText(editedName, { exact: true }).first().click();
+  await editedHeading.click();
   const pdfResponsePromise = page.waitForResponse(
     response => response.url().includes('/api/export-pdf-file') && response.request().method() === 'POST',
     { timeout: 90_000 },
@@ -119,7 +121,7 @@ test('authenticated app shell, edit persistence, real PDF preview, and video tri
   await expect(page.locator('iframe[title="پیش‌نمایش واقعی PDF گزارش"]')).toBeVisible({ timeout: 30_000 });
 
   await page.keyboard.press('Escape');
-  await page.getByText(editedName, { exact: true }).first().click();
+  await page.getByRole('heading', { name: editedName, exact: true }).click();
   await page.getByRole('button', { name: /ویرایش/ }).click();
   await expect(page.getByRole('heading', { name: 'ویرایش برنامه' })).toBeVisible();
 
@@ -145,7 +147,6 @@ test('authenticated app shell, edit persistence, real PDF preview, and video tri
     });
     let frame = 0;
     const draw = window.setInterval(() => {
-      if (!context) return;
       context.fillStyle = 'rgb(' + (40 + frame * 7 % 180) + ',90,130)';
       context.fillRect(0, 0, canvas.width, canvas.height);
       context.fillStyle = '#ffffff';
@@ -189,7 +190,7 @@ test('authenticated app shell, edit persistence, real PDF preview, and video tri
   await expect(page.getByText('پیش‌نمایش خروجی نهایی')).toBeVisible({ timeout: 30_000 });
   await page.getByRole('button', { name: 'تأیید و افزودن خروجی به برنامه' }).click();
   await page.getByRole('button', { name: /بروزرسانی/ }).click();
-  await expect(page.getByText(editedName, { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('heading', { name: editedName, exact: true })).toBeVisible({ timeout: 30_000 });
 
   const persistedVideo = await request.get(
     API + '/api/shows/search?q=' + encodeURIComponent(editedName),
