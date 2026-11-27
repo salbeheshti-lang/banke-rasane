@@ -13,7 +13,7 @@ let browser;
 (async () => {
   try {
     browser = await chromium.launch({ headless: true });
-    const context = await browser.newContext({ serviceWorkers: 'block' });
+    const context = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
     // Always test a first-visit user. A stale localStorage token must not hide
     // the login screen behind an auth request to a sleeping free API.
     await context.addInitScript(() => {
@@ -44,6 +44,20 @@ let browser;
     await username.waitFor({ state: 'visible', timeout: 10_000 });
     await password.waitFor({ state: 'visible', timeout: 10_000 });
     await page.getByRole('button', { name: /ورود/ }).waitFor({ state: 'visible', timeout: 10_000 });
+
+    // The live deployment must include the organization mark and exact official identity,
+    // not merely the BankResaneh product logo.
+    const organizationLogo = page.locator('footer img[alt="مانیتورینگ مرکز طرح و برنامه سیما"]');
+    await organizationLogo.waitFor({ state: 'visible', timeout: 10_000 });
+    assert.match(await organizationLogo.getAttribute('src'), /client-logo-white\.png$/, 'Login must render the official organization logo');
+    assert.ok((await page.locator('footer').innerText()).includes('مانیتورینگ مرکز طرح و برنامه سیما'), 'Login footer must show the exact organization identity');
+    const mobileLayout = await page.evaluate(() => ({
+      viewportWidth: window.innerWidth,
+      documentWidth: document.documentElement.scrollWidth,
+      organizationLogoVisible: (() => { const el = document.querySelector('footer img[alt="مانیتورینگ مرکز طرح و برنامه سیما"]'); return !!el && el.getBoundingClientRect().width > 0; })(),
+    }));
+    assert.equal(mobileLayout.documentWidth, mobileLayout.viewportWidth, 'Mobile login must not overflow horizontally');
+    assert.equal(mobileLayout.organizationLogoVisible, true, 'Organization logo must remain visible on mobile login');
 
     // Prove React hydration and controlled input events, without submitting
     // credentials or touching the authentication endpoint.

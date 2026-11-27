@@ -2360,16 +2360,17 @@ function MobileBottomNav({
         </div>
       )}
 
-      <nav className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3">
+      <nav data-testid="mobile-bottom-nav" aria-label="پیمایش اصلی موبایل" className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
         <div
           className="flex items-center justify-around no-scrollbar"
           style={{
-            /* Mobile nav: SAME as header */
-            background: 'linear-gradient(90deg, rgba(5, 80, 65, 0.82) 0%, rgba(0, 95, 75, 0.78) 50%, rgba(8, 110, 90, 0.75) 100%)',
-            backdropFilter: 'blur(24px) saturate(135%)',
-            WebkitBackdropFilter: 'blur(24px) saturate(135%)',
+            /* Explicit Liquid Glass dock: translucent surface, bright rim and deep blur. */
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(19,116,100,0.66) 42%, rgba(3,55,48,0.78) 100%)',
+            backdropFilter: 'blur(32px) saturate(185%)',
+            WebkitBackdropFilter: 'blur(32px) saturate(185%)',
+            border: '1px solid rgba(255,255,255,0.34)',
             borderRadius: '30px',
-            boxShadow: '0 4px 18px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.12)',
+            boxShadow: '0 10px 34px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.42), inset 0 -1px 0 rgba(0,0,0,0.12)',
             padding: '8px',
           }}
         >

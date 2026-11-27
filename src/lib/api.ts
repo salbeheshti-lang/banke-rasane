@@ -13,11 +13,15 @@ function configuredHostedApiBase(): string {
 }
 
 function defaultApiBase(): string {
+  // Hosted Cloudflare preview must call its same-origin Worker proxy. Never
+  // expose the Render origin to browsers or let stale build-time API settings
+  // bypass the authenticated proxy/CORS boundary.
+  if (isHostedPreview()) return typeof window !== 'undefined' ? window.location.origin : '';
+
   const configured = configuredHostedApiBase();
   if (configured) return configured;
 
   if (typeof window !== 'undefined') {
-    if (isHostedPreview()) return 'https://bankresaneh-preview-api.onrender.com';
     const currentPort = window.location.port;
     const currentHost = window.location.hostname;
     if (currentPort === '81' || currentPort === '' || currentPort === '443' || currentHost.includes('space-z.ai')) return window.location.origin;
