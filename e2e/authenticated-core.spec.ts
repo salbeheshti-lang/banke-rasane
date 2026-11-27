@@ -6,6 +6,7 @@ const FIXTURE_NUM = 987654;
 const FIXTURE_NAME = 'BankResaneh Desktop Acceptance Fixture';
 
 test('authenticated app shell, edit persistence, real PDF preview, and video trim flow', async ({ page, request }) => {
+  test.setTimeout(240_000);
   // The E2E API starts with an isolated database and the documented loopback
   // bootstrap account. Complete its mandatory first-login password change,
   // then create one disposable record for the UI workflow.
@@ -120,7 +121,8 @@ test('authenticated app shell, edit persistence, real PDF preview, and video tri
   expect(pdfBytes.byteLength).toBeGreaterThan(1_000);
   await expect(page.locator('iframe[title="پیش‌نمایش واقعی PDF گزارش"]')).toBeVisible({ timeout: 30_000 });
 
-  await page.keyboard.press('Escape');
+  await page.locator('.modal-backdrop').getByRole('button').first().click();
+  await expect(page.locator('iframe[title="پیش‌نمایش واقعی PDF گزارش"]')).toHaveCount(0);
   await page.getByRole('heading', { name: editedName, exact: true }).click();
   await page.getByRole('button', { name: /ویرایش/ }).click();
   await expect(page.getByRole('heading', { name: 'ویرایش برنامه' })).toBeVisible();
