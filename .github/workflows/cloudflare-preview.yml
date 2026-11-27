@@ -7,6 +7,7 @@ on:
       - cloudflare/full-preview
       - fix/audit-hardening-5.4.5
       - preview/release-ready-2026-11-27
+      - fix/preview-mobile-menu-auth-archive-2026-11-27
       - fix/preview-iran-desktop-ui-2026-11-27
   workflow_dispatch:
 
@@ -68,6 +69,16 @@ jobs:
           BANKRESANEH_API_BASE: http://127.0.0.1:3002
           BANKRESANEH_ALLOWED_API_ORIGINS: http://127.0.0.1:3002
 
+      - name: Verify preview API archive before deployment
+        shell: bash
+        env:
+          API_BASE: ${{ vars.BANKRESANEH_API_BASE || 'https://bankresaneh-preview-api.onrender.com' }}
+        run: |
+          set -euo pipefail
+          API_BASE="${API_BASE%/}"
+          curl --fail --silent --show-error --retry 3 --retry-all-errors "$API_BASE/api/health" -o /tmp/bankresaneh-predeploy-health.json
+          node -e "const h=JSON.parse(require('fs').readFileSync('/tmp/bankresaneh-predeploy-health.json','utf8'));if(h.status!=='ok'||!Number.isFinite(h.showsCount)||h.showsCount<1302)throw Error('Preview API archive incomplete: expected at least 1302 shows, received '+h.showsCount);console.log('Preview API archive verified: '+h.showsCount+' shows.');"
+
       - name: Deploy isolated preview Worker
         if: steps.config.outputs.ready == 'true'
         run: |
@@ -115,7 +126,7 @@ jobs:
 
           curl --fail --silent --show-error --retry 3 --retry-all-errors -D /tmp/bankresaneh-api-headers.txt -H "Origin: $WORKER_URL" "$API_BASE/api/health" -o /tmp/bankresaneh-api-health.json
           grep -Fqi "access-control-allow-origin: $WORKER_URL" /tmp/bankresaneh-api-headers.txt
-          node -e "const h=JSON.parse(require('fs').readFileSync('/tmp/bankresaneh-api-health.json','utf8'));if(h.status!=='ok'||!Number.isFinite(h.showsCount)||h.showsCount<1)process.exit(1);console.log('Live test API ready: '+h.showsCount+' shows; CORS verified.');"
+          node -e "const h=JSON.parse(require('fs').readFileSync('/tmp/bankresaneh-api-health.json','utf8'));if(h.status!=='ok'||!Number.isFinite(h.showsCount)||h.showsCount<1302)throw Error('Live test API archive incomplete: expected at least 1302 shows, received '+h.showsCount);console.log('Live test API ready: '+h.showsCount+' shows; CORS verified.');"
           {
             echo "## Live Cloudflare Preview passed"
             echo "- Worker root, manifest, service worker, offline page, compiled CSS and both font binaries transferred successfully."
