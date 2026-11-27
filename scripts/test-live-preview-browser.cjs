@@ -51,13 +51,19 @@ let browser;
     await organizationLogo.waitFor({ state: 'visible', timeout: 10_000 });
     assert.match(await organizationLogo.getAttribute('src'), /client-logo-white\.png$/, 'Login must render the official organization logo');
     assert.ok((await page.locator('footer').innerText()).includes('مانیتورینگ مرکز طرح و برنامه سیما'), 'Login footer must show the exact organization identity');
-    const mobileLayout = await page.evaluate(() => ({
-      viewportWidth: window.innerWidth,
-      documentWidth: document.documentElement.scrollWidth,
-      organizationLogoVisible: (() => { const el = document.querySelector('footer img[alt="مانیتورینگ مرکز طرح و برنامه سیما"]'); return !!el && el.getBoundingClientRect().width > 0; })(),
-    }));
+    const mobileLayout = await page.evaluate(() => {
+      const logo = document.querySelector('footer img[alt="مانیتورینگ مرکز طرح و برنامه سیما"]');
+      const text = [...document.querySelectorAll('footer span')].find(el => el.textContent?.includes('مانیتورینگ مرکز طرح و برنامه سیما'));
+      return {
+        viewportWidth: window.innerWidth,
+        documentWidth: document.documentElement.scrollWidth,
+        organizationLogoVisible: !!logo && logo.getBoundingClientRect().width > 0,
+        organizationNameBelowLogo: !!logo && !!text && text.getBoundingClientRect().top >= logo.getBoundingClientRect().bottom - 2,
+      };
+    });
     assert.equal(mobileLayout.documentWidth, mobileLayout.viewportWidth, 'Mobile login must not overflow horizontally');
     assert.equal(mobileLayout.organizationLogoVisible, true, 'Organization logo must remain visible on mobile login');
+    assert.equal(mobileLayout.organizationNameBelowLogo, true, 'Official organization name must be directly below its logo');
 
     // Prove React hydration and controlled input events, without submitting
     // credentials or touching the authentication endpoint.
@@ -69,6 +75,49 @@ let browser;
     assert.equal(await password.getAttribute('type'), 'text', 'Show-password control must update React state');
     await page.getByRole('button', { name: /پنهان کردن رمز/ }).click();
     assert.equal(await password.getAttribute('type'), 'password', 'Hide-password control must update React state');
+
+    // Desktop is a separate required target, not inferred from the mobile test.
+    const desktopContext = await browser.newContext({
+      serviceWorkers: 'block',
+      viewport: { width: 1440, height: 900 },
+      deviceScaleFactor: 1,
+    });
+    await desktopContext.addInitScript(() => {
+      localStorage.removeItem('bankresaneh_token');
+      localStorage.removeItem('server_url');
+    });
+    const desktopPage = await desktopContext.newPage();
+    desktopPage.setDefaultTimeout(20_000);
+    desktopPage.on('requestfailed', request => diagnostics.failedRequests.push({
+      url: request.url(), error: request.failure()?.errorText || 'request failed',
+    }));
+    desktopPage.on('response', response => {
+      if (response.status() >= 400) diagnostics.badResponses.push({ url: response.url(), status: response.status() });
+    });
+    desktopPage.on('console', message => {
+      if (message.type() === 'error') diagnostics.consoleErrors.push(message.text());
+    });
+    desktopPage.on('pageerror', error => diagnostics.pageErrors.push(error.message));
+    const desktopResponse = await desktopPage.goto(baseURL + '/', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    assert.ok(desktopResponse && desktopResponse.ok(), 'Desktop Worker root navigation must return HTTP 2xx');
+    await desktopPage.getByText('در حال بارگذاری...', { exact: true }).waitFor({ state: 'detached', timeout: 25_000 });
+    await desktopPage.locator('#login-username').waitFor({ state: 'visible', timeout: 10_000 });
+    await desktopPage.locator('#login-password').waitFor({ state: 'visible', timeout: 10_000 });
+    const desktopLayout = await desktopPage.evaluate(() => {
+      const logo = document.querySelector('footer img[alt="مانیتورینگ مرکز طرح و برنامه سیما"]');
+      const text = [...document.querySelectorAll('footer span')].find(el => el.textContent?.includes('مانیتورینگ مرکز طرح و برنامه سیما'));
+      return {
+        viewportWidth: window.innerWidth,
+        documentWidth: document.documentElement.scrollWidth,
+        logoVisible: !!logo && logo.getBoundingClientRect().width > 0,
+        organizationNameBelowLogo: !!logo && !!text && text.getBoundingClientRect().top >= logo.getBoundingClientRect().bottom - 2,
+      };
+    });
+    assert.equal(desktopLayout.documentWidth, desktopLayout.viewportWidth, 'Desktop login must not overflow horizontally');
+    assert.equal(desktopLayout.logoVisible, true, 'Organization logo must be visible on desktop');
+    assert.equal(desktopLayout.organizationNameBelowLogo, true, 'Official organization name must be below the logo on desktop');
+    await desktopPage.screenshot({ path: path.join(artifactDir, 'preview-browser-desktop.png'), fullPage: true });
+    await desktopContext.close();
 
     diagnostics.runtime = await page.evaluate(() => ({
       title: document.title,
