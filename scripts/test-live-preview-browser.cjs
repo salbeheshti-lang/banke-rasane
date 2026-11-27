@@ -31,7 +31,7 @@ let browser;
     page.on('console', message => {
       if (message.type() === 'error') diagnostics.consoleErrors.push(message.text());
     });
-    page.on('pageerror', error => diagnostics.pageErrors.push(error.message));
+    page.on('pageerror', error => diagnostics.pageErrors.push({ viewport: 'mobile', message: error.message, stack: error.stack }));
 
     const response = await page.goto(baseURL + '/', { waitUntil: 'domcontentloaded', timeout: 90_000 });
     assert.ok(response && response.ok(), 'Live Worker root navigation must return HTTP 2xx');
@@ -97,7 +97,7 @@ let browser;
     desktopPage.on('console', message => {
       if (message.type() === 'error') diagnostics.consoleErrors.push(message.text());
     });
-    desktopPage.on('pageerror', error => diagnostics.pageErrors.push(error.message));
+    desktopPage.on('pageerror', error => diagnostics.pageErrors.push({ viewport: 'desktop', message: error.message, stack: error.stack }));
     const desktopResponse = await desktopPage.goto(baseURL + '/', { waitUntil: 'domcontentloaded', timeout: 90_000 });
     assert.ok(desktopResponse && desktopResponse.ok(), 'Desktop Worker root navigation must return HTTP 2xx');
     await desktopPage.getByText('در حال بارگذاری...', { exact: true }).waitFor({ state: 'detached', timeout: 25_000 });
