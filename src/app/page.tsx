@@ -7814,7 +7814,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
     // Keep the request payload small: archive rows may carry large base64 images.
     // Only the first 24 rows are eligible for thumbnails; strip image payloads
     // from every remaining row while retaining all text and metadata.
-    const prepared = sourceShows.map((show) => ({
+    const prepared: TalkShow[] = sourceShows.map((show) => ({
       ...show,
       programLogo: undefined, // Not used in the archive PDF and may be a large inline image.
       images: [], // Only compact thumbnails created below are sent to the PDF endpoint.
