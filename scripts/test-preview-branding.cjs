@@ -54,7 +54,12 @@ async function localCheck() {
   const compiledChunks = jsFiles.map(file => fs.readFileSync(file, 'utf8'));
   assertBranding(compiledChunks, 'Local Cloudflare build');
   assertFeatures(compiledChunks, 'Local Cloudflare build');
-  console.log('PASS local build contains exact branding, required capacity/decor/video/import UI, and all three logo assets.');
+  const cssFiles = walk(path.join(assetRoot, '_next', 'static', 'css')).filter(file => file.endsWith('.css'));
+  assert(cssFiles.length > 0, 'No compiled CSS assets found');
+  const compiledCss = cssFiles.map(file => fs.readFileSync(file, 'utf8')).join('\\n');
+  assert(compiledCss.includes('-webkit-touch-callout'), 'Mobile long-press callout must remain enabled for text fields');
+  assert(compiledCss.includes('user-select:text') || compiledCss.includes('user-select: text'), 'Mobile text fields must remain selectable');
+  console.log('PASS local build contains exact branding, required capacity/decor/video/import UI, mobile navigation, touch text selection, and all three logo assets.');
 }
 
 function cacheBusted(url, attempt) {
