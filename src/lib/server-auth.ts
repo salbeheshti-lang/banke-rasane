@@ -21,8 +21,25 @@
 //   }
 
 import type { NextRequest } from 'next/server';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 
-const DEFAULT_API_BASE = process.env.BANKRESANEH_API_BASE || 'http://127.0.0.1:3002';
+type RuntimeApiEnv = {
+  BANKRESANEH_API_BASE?: string;
+  BANKRESANEH_ALLOWED_API_ORIGINS?: string;
+};
+
+/**
+ * Cloudflare Worker vars are request/runtime bindings. Resolve them at request
+ * time instead of freezing process.env at module initialization; retain the
+ * process.env fallback for local Next.js and Electron development.
+ */
+function getRuntimeApiEnv(): RuntimeApiEnv {
+  try {
+    return getCloudflareContext().env as RuntimeApiEnv;
+  } catch {
+    return process.env as RuntimeApiEnv;
+  }
+}
 
 /**
  * Resolve the API origin selected by the client without turning this route
@@ -31,7 +48,14 @@ const DEFAULT_API_BASE = process.env.BANKRESANEH_API_BASE || 'http://127.0.0.1:3
  * in BANKRESANEH_ALLOWED_API_ORIGINS (comma-separated HTTPS origins).
  */
 export function getApiBaseForRequest(req: NextRequest): string | null {
-  const configured = new URL(DEFAULT_API_BASE);
+  const runtimeEnv = getRuntimeApiEnv();
+  const configuredBase = (runtimeEnv.BANKRESANEH_API_BASE || process.env.BANKRESANEH_API_BASE || 'http://127.0.0.1:3002').trim();
+  let configured: URL;
+  try {
+    configured = new URL(configuredBase);
+  } catch {
+    return null;
+  }
   const requested = req.headers.get('x-bankresaneh-api-base');
   if (!requested) return configured.origin;
 
@@ -50,7 +74,7 @@ export function getApiBaseForRequest(req: NextRequest): string | null {
   if (candidate.origin === req.nextUrl.origin) return configured.origin;
   if (candidate.origin === configured.origin) return configured.origin;
 
-  const allowed = (process.env.BANKRESANEH_ALLOWED_API_ORIGINS || '')
+  const allowed = (runtimeEnv.BANKRESANEH_ALLOWED_API_ORIGINS || process.env.BANKRESANEH_ALLOWED_API_ORIGINS || '')
     .split(',')
     .map(value => value.trim())
     .filter(Boolean)
