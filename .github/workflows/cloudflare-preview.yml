@@ -6,6 +6,7 @@ on:
       - main
       - fix/audit-hardening-5.4.5
       - preview/release-ready-2026-11-27
+      - fix/preview-iran-desktop-ui-2026-11-27
   workflow_dispatch:
 
 permissions:
