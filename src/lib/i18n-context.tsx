@@ -31,23 +31,24 @@ interface LangContextValue {
 const LangContext = createContext<LangContextValue | null>(null);
 
 export function LangProvider({ children }: { children: ReactNode }) {
-  // Default to Farsi (the app's primary language).
-  // Use lazy initializer so localStorage is read once on the client
-  // without needing a setState-in-effect (which triggers cascading renders).
-  const [lang, setLangState] = useState<Lang>(() => {
-    if (typeof window === 'undefined') return 'fa';
+  // Keep the first render identical on server and client. Reading localStorage
+  // in a lazy initializer causes a hydration mismatch for returning users whose
+  // saved language is English while the server has no access to that preference.
+  const [lang, setLangState] = useState<Lang>('fa');
+
+  // Resolve the saved preference after hydration. The no-flash head script sets
+  // html lang/dir early; this effect then brings React state into sync safely.
+  useEffect(() => {
+    let resolved: Lang = lang;
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved === 'fa' || saved === 'en') return saved;
+      if (saved === 'fa' || saved === 'en') resolved = saved;
     } catch {}
-    return 'fa';
-  });
-
-  // Apply lang/dir to <html> whenever lang changes.
-  useEffect(() => {
-    if (typeof document === 'undefined') return;
-    document.documentElement.setAttribute('lang', htmlLang(lang));
-    document.documentElement.setAttribute('dir', dirFor(lang));
+    if (resolved !== lang) Promise.resolve().then(() => setLangState(resolved));
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('lang', htmlLang(resolved));
+      document.documentElement.setAttribute('dir', dirFor(resolved));
+    }
   }, [lang]);
 
   const setLang = useCallback((l: Lang) => {

@@ -300,9 +300,10 @@ async function main() {
 
   // Admin success paths for local Next.js features; external services are not contacted.
   const unsafeImageSource = await request(nextBase, '/api/import-image', {
-    method: 'POST', token: adminToken, body: { url: 'https://example.com/untrusted.jpg' },
+    method: 'POST', token: adminToken, body: { url: 'not-a-url' },
   });
-  assert(unsafeImageSource.status === 410 && String(unsafeImageSource.data?.error || '').includes('/api/import-image'), 'legacy Next.js image-import route directs clients to the selected Bun API service');
+  assert(unsafeImageSource.status === 400 && /لینک.*معتبر/.test(String(unsafeImageSource.data?.error || '')),
+    'Next.js image-import route forwards authenticated requests to the selected Bun API service and returns its validation response');
 
   const translateValidation = await request(nextBase, '/api/translate', {
     method: 'POST', token: adminToken, body: { fields: {} },
@@ -338,6 +339,15 @@ async function main() {
   });
   assert(editorLogin.status === 200, 'manager/editor can authenticate');
   const editorToken = editorLogin.data.token;
+  const profileUpdated = await request(nextBase, '/api/profile', {
+    method: 'PUT', token: editorToken,
+    body: { username: 'route_manager_renamed', name: 'Updated Route Manager' },
+  });
+  assert(profileUpdated.status === 200 && profileUpdated.data.username === 'route_manager_renamed',
+    'authenticated manager can update their own username through the selected API backend');
+  const profileRead = await request(nextBase, '/api/profile', { token: editorToken });
+  assert(profileRead.status === 200 && profileRead.data.username === 'route_manager_renamed',
+    'updated profile username persists and is returned by the authenticated profile route');
   const editorReportSaved = await request(nextBase, '/api/settings/report', {
     method: 'POST', token: editorToken,
     body: { title: 'Manager report', subtitle: 'Manager route test', organization: 'BankResaneh Manager' },

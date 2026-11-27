@@ -5133,7 +5133,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
               ? 'نام برنامه را در فیلد نام وارد کنید یا لینک IMDb، ویکی‌پدیا یا ویکی‌مدیا را بدهید تا فقط تصویر دریافت و به تصاویر برنامه اضافه شود؛ سایر اطلاعات تغییر نمی‌کنند.'
               : 'نام برنامه یا لینک IMDb، ویکی‌پدیا یا ویکی‌مدیا را وارد کنید تا اطلاعات و تصویر قابل‌استخراج برای تکمیل فرم دریافت شود.'}
           </p>
-          <div className="flex gap-2">
+          <div className="flex gap-2 auto-fetch-row">
             <input
               type="text"
               value={fetchUrl}
@@ -5153,10 +5153,11 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
               }}
             />
             <button
+              type="button"
               onClick={handleAutoFetch}
               disabled={fetching}
-              className="btn-enter-premium"
-              style={{ padding: '10px 24px', fontSize: '14px', whiteSpace: 'nowrap' }}
+              className="btn-enter-premium auto-fetch-button"
+              style={{ padding: '10px 24px', fontSize: '14px', whiteSpace: 'nowrap', minHeight: '48px', fontWeight: 800, boxShadow: '0 4px 16px rgba(16,185,129,0.35)', border: '1px solid rgba(167,243,208,0.75)' }}
             >
               {fetching ? '⏳ در حال دریافت...' : '⚡ دریافت'}
             </button>
@@ -7795,7 +7796,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
 
   const preparePdfShows = async (sourceShows: TalkShow[], signal: AbortSignal): Promise<TalkShow[]> => {
     const prepared = sourceShows.slice();
-    const candidates = sourceShows.slice(0, 200);
+    const candidates = sourceShows.slice(0, 24);
     for (let offset = 0; offset < candidates.length; offset += 6) {
       const batch = candidates.slice(offset, offset + 6);
       await Promise.all(batch.map(async (show, batchIndex) => {
@@ -7828,6 +7829,11 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
     if (format !== 'pdf') return;
 
     const controller = new AbortController();
+    let timedOut = false;
+    const timeoutId = window.setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 55_000);
     (async () => {
       try {
         let saved: { title?: string; subtitle?: string; organization?: string } = {};
@@ -7880,13 +7886,18 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
           URL.revokeObjectURL(objectUrl);
         }
       } catch (error) {
-        if (!controller.signal.aborted) {
-          setPdfPreviewError(error instanceof Error ? error.message : 'ساخت پیش‌نمایش PDF ناموفق بود');
+        if (!controller.signal.aborted || timedOut) {
+          setPdfPreviewError(timedOut
+            ? 'ساخت پیش‌نمایش PDF بیش از ۵۵ ثانیه طول کشید. اتصال API یا حجم تصاویر را بررسی کنید و دوباره تلاش کنید.'
+            : error instanceof Error ? error.message : 'ساخت پیش‌نمایش PDF ناموفق بود');
         }
+      } finally {
+        window.clearTimeout(timeoutId);
       }
     })();
 
     return () => {
+      window.clearTimeout(timeoutId);
       controller.abort();
     };
   }, [format, shows, title, subtitle, organization, fallbackTitle, fallbackSubtitle, previewKey]);
@@ -8637,24 +8648,16 @@ function ProfileTab({ currentUser, showToast }: { currentUser: User; showToast: 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch(getApiUrl('api/profile'), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('bankresaneh_token')}` },
-        body: JSON.stringify({ username, name, phone, jobTitle, deputy, avatar }),
-      });
-      if (res.ok) {
-        const savedProfile = await res.clone().json();
-        localStorage.setItem('bankresaneh_user', JSON.stringify(savedProfile));
-        showToast(t('settings.profile.saved'));
-        setEditing(false);
-        window.location.reload();
-      } else {
-        showToast('خطا در بروزرسانی');
-      }
-    } catch {
-      showToast('خطا در ارتباط با سرور');
+      const savedProfile = await api.updateProfile({ username: username.trim(), name, phone, jobTitle, deputy, avatar });
+      localStorage.setItem('bankresaneh_user', JSON.stringify(savedProfile));
+      showToast(t('settings.profile.saved'));
+      setEditing(false);
+      window.location.reload();
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'ذخیره پروفایل ناموفق بود');
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -8797,7 +8800,7 @@ function ProfileTab({ currentUser, showToast }: { currentUser: User; showToast: 
               {saving ? 'در حال ذخیره...' : '✓ ذخیره'}
             </button>
             <button
-              onClick={() => { setEditing(false); setName(currentUser.name || ''); setPhone(currentUser.phone || ''); setJobTitle(currentUser.jobTitle || ''); setDeputy(currentUser.deputy || ''); setAvatar(currentUser.avatar || ''); }}
+              onClick={() => { setEditing(false); setUsername(currentUser.username || ''); setName(currentUser.name || ''); setPhone(currentUser.phone || ''); setJobTitle(currentUser.jobTitle || ''); setDeputy(currentUser.deputy || ''); setAvatar(currentUser.avatar || ''); }}
               style={{
                 flex: 1, padding: '12px', borderRadius: '14px',
                 background: 'rgba(255, 255, 255, 0.1)',

@@ -57,32 +57,39 @@ export function BrandFooter({ variant = 'dark', withBottomNav = false }: { varia
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '0.55rem',
+            width: 'min(100%, 340px)',
+            gap: '0.35rem',
             textAlign: 'center',
           }}
         >
           <Image
             src={CLIENT_BRANDING.logoWhitePath}
             alt={CLIENT_BRANDING.organizationFa}
-            width={60}
-            height={60}
+            width={88}
+            height={88}
             priority
             style={{
-              width: 'clamp(42px, 5vw, 58px)',
-              height: 'clamp(42px, 5vw, 58px)',
+              display: 'block',
+              width: 'clamp(64px, 7vw, 82px)',
+              height: 'clamp(64px, 7vw, 82px)',
               objectFit: 'contain',
-              opacity: 0.96,
+              opacity: 1,
+              margin: '0 auto',
             }}
           />
           <span
             style={{
-              color: 'rgba(226, 255, 244, 0.9)',
-              fontSize: 'clamp(0.72rem, 1.05vw, 0.875rem)',
-              fontWeight: 600,
-              lineHeight: 1.6,
+              display: 'block',
+              width: '100%',
+              color: '#ecfff7',
+              fontSize: 'clamp(0.82rem, 1.1vw, 0.98rem)',
+              fontWeight: 700,
+              lineHeight: 1.8,
               letterSpacing: '0',
               whiteSpace: 'normal',
               textWrap: 'balance',
+              textAlign: 'center',
+              textShadow: '0 1px 8px rgba(0,0,0,0.45)',
             }}
           >
             {CLIENT_BRANDING.organizationFa}
@@ -126,55 +133,44 @@ export function BrandFooter({ variant = 'dark', withBottomNav = false }: { varia
           }}
         />
 
-        {/* Organization identity: show only the official organization name
-            beside its logo. Never prepend a commissioning/attribution label. */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <div
+        {/* Organization identity: the official name sits directly below its logo. */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.28rem',
+            minWidth: isCompact ? '112px' : '180px',
+          }}
+        >
+          <Image
+            src={isLight ? CLIENT_BRANDING.logoColorPath : CLIENT_BRANDING.logoWhitePath}
+            alt={CLIENT_BRANDING.organizationFa}
+            width={isCompact ? 34 : 48}
+            height={isCompact ? 34 : 48}
+            style={{
+              display: 'block',
+              opacity: isLight ? 1 : 1,
+              objectFit: 'contain',
+            }}
+          />
+          <span
             className="footer-client-text"
             style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-end',
-              lineHeight: 1.2,
-              textAlign: 'left',
-              maxWidth: isCompact ? '112px' : 'none',
+              display: 'block',
+              color: textColor,
+              fontSize: isCompact ? '0.62rem' : '0.76rem',
+              fontWeight: 700,
+              lineHeight: 1.65,
+              textAlign: 'center',
+              whiteSpace: 'normal',
+              textWrap: 'balance',
+              maxWidth: isCompact ? '132px' : '220px',
             }}
           >
-            <span
-              style={{
-                color: subTextColor,
-                fontSize: isCompact ? '0.56rem' : '0.74rem',
-                fontWeight: 700,
-                marginTop: 0,
-              }}
-            >
-              {t('footer.clientOrg')}
-            </span>
-          </div>
-          {/* Client logo — true transparency, no backing box. On the dark
-              theme we use the white knockout variant (client-logo-white.png)
-              so the mark stays readable directly on the dark footer; on the
-              light theme the original navy transparent PNG is used. Dimensions
-              follow the logo's native ~square aspect ratio. */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <Image
-              src={isLight ? CLIENT_BRANDING.logoColorPath : CLIENT_BRANDING.logoWhitePath}
-              alt={CLIENT_BRANDING.organizationFa}
-              width={isCompact ? 27 : 39}
-              height={isCompact ? 28 : 40}
-              style={{
-                opacity: isLight ? 1 : 0.92,
-                objectFit: 'contain',
-              }}
-            />
-          </div>
+            {CLIENT_BRANDING.organizationFa}
+          </span>
         </div>
       </div>
       )}
