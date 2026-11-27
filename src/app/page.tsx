@@ -1119,10 +1119,10 @@ function HomeInner() {
     }
   }, [baseShows, overrides]);
 
-  function showToast(msg: string) {
+  const showToast = useCallback((msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
-  }
+  }, []);
 
   // Persist a new set of overrides to state + localStorage in one place.
   const commitOverrides = (next: Overrides) => {
