@@ -44,7 +44,7 @@ export function LangProvider({ children }: { children: ReactNode }) {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved === 'fa' || saved === 'en') resolved = saved;
     } catch {}
-    if (resolved !== lang) setLangState(resolved);
+    if (resolved !== lang) Promise.resolve().then(() => setLangState(resolved));
     if (typeof document !== 'undefined') {
       document.documentElement.setAttribute('lang', htmlLang(resolved));
       document.documentElement.setAttribute('dir', dirFor(resolved));
