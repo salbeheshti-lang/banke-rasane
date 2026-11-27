@@ -1013,8 +1013,9 @@ function HomeInner() {
   useEffect(() => {
     if (!currentUser) return;
     let cancelled = false;
-    setArchiveLoading(true);
-    setArchiveError('');
+    Promise.resolve().then(() => {
+      if (!cancelled) { setArchiveLoading(true); setArchiveError(''); }
+    });
     (async () => {
       const saved = loadOverrides();
       const remaining: Overrides = { added: [], edited: {}, deleted: [] };
