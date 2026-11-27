@@ -49,7 +49,7 @@ let browser;
     // not merely the BankResaneh product logo.
     const organizationLogo = page.locator('footer img[alt="مانیتورینگ مرکز طرح و برنامه سیما"]');
     await organizationLogo.waitFor({ state: 'visible', timeout: 10_000 });
-    assert.match(await organizationLogo.getAttribute('src'), /client-logo-white\\.png$/, 'Login must render the official organization logo');
+    assert.match(await organizationLogo.getAttribute('src'), /client-logo-white\.png$/, 'Login must render the official organization logo');
     assert.ok((await page.locator('footer').innerText()).includes('مانیتورینگ مرکز طرح و برنامه سیما'), 'Login footer must show the exact organization identity');
     const mobileLayout = await page.evaluate(() => ({
       viewportWidth: window.innerWidth,
