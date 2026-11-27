@@ -189,6 +189,23 @@ addColumnIfMissing('users', 'is_active', 'INTEGER NOT NULL DEFAULT 1');
 addColumnIfMissing('users', 'is_super_admin', 'INTEGER NOT NULL DEFAULT 0');
 addColumnIfMissing('users', 'permissions', "TEXT NOT NULL DEFAULT ''");
 
+// User suggestions and messages to the administration.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS user_suggestions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    username TEXT NOT NULL DEFAULT '',
+    message TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'پیشنهاد',
+    status TEXT NOT NULL DEFAULT 'new',
+    admin_note TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL DEFAULT 0,
+    updated_at INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX IF NOT EXISTS idx_user_suggestions_created ON user_suggestions(created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_user_suggestions_status ON user_suggestions(status, created_at DESC);
+`);
+
 // Activity log table — records who did what, when.
 db.exec(`
   CREATE TABLE IF NOT EXISTS activity_log (
@@ -2074,6 +2091,47 @@ const server = Bun.serve({
       db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id);
       db.prepare('DELETE FROM users WHERE id = ?').run(id);
       logActivity(admin, 'delete_user', 'user', id, `Deleted user "${target.username}"`);
+      return json({ success: true }, req);
+    }
+
+    // ----- User suggestions: any signed-in user may submit; only admins may review/update. -----
+    if (pathname === '/api/suggestions' && method === 'POST') {
+      const user = requireUser(req);
+      if (!user) return json({ error: 'برای ثبت پیشنهاد ابتدا وارد حساب شوید' }, 401, req);
+      let body;
+      try { body = await req.json(); } catch { return json({ error: 'متن پیام معتبر نیست' }, 400, req); }
+      const message = String(body?.message || '').trim();
+      const category = String(body?.category || 'پیشنهاد').trim().slice(0, 40) || 'پیشنهاد';
+      if (message.length < 8) return json({ error: 'متن پیام باید حداقل ۸ نویسه باشد' }, 400, req);
+      if (message.length > 5000) return json({ error: 'متن پیام نباید بیشتر از ۵۰۰۰ نویسه باشد' }, 400, req);
+      const now = nowSec();
+      const result = db.prepare(`INSERT INTO user_suggestions (user_id, username, message, category, status, created_at, updated_at) VALUES (?, ?, ?, ?, 'new', ?, ?)`)
+        .run(user.id, user.username, message, category, now, now);
+      logActivity(user, 'submit_suggestion', 'suggestion', result.lastInsertRowid, category);
+      return json({ success: true, id: Number(result.lastInsertRowid), message: 'پیام شما برای مدیر ثبت شد' }, req);
+    }
+    if (pathname === '/api/suggestions' && method === 'GET') {
+      const admin = requirePermission(req, 'manage_users');
+      if (!admin) return permissionFailure(req, 'فقط مدیر یا ادمین می‌تواند پیام‌های کاربران را ببیند');
+      const requestedLimit = parseInt(url.searchParams.get('limit') || '100', 10);
+      const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(requestedLimit, 200)) : 100;
+      const rows = db.prepare('SELECT id, user_id AS userId, username, message, category, status, admin_note AS adminNote, created_at AS createdAt, updated_at AS updatedAt FROM user_suggestions ORDER BY created_at DESC LIMIT ?').all(limit);
+      return json({ suggestions: rows }, req);
+    }
+    if (pathname === '/api/suggestions' && method === 'PUT') {
+      const admin = requirePermission(req, 'manage_users');
+      if (!admin) return permissionFailure(req, 'فقط مدیر یا ادمین می‌تواند وضعیت پیام را تغییر دهد');
+      const id = Number(url.searchParams.get('id'));
+      if (!Number.isSafeInteger(id) || id < 1) return json({ error: 'شناسه پیام معتبر نیست' }, 400, req);
+      let body;
+      try { body = await req.json(); } catch { return json({ error: 'اطلاعات نامعتبر است' }, 400, req); }
+      const status = String(body?.status || 'new');
+      const allowed = new Set(['new', 'reviewing', 'resolved', 'rejected']);
+      if (!allowed.has(status)) return json({ error: 'وضعیت انتخاب‌شده معتبر نیست' }, 400, req);
+      const adminNote = String(body?.adminNote || '').trim().slice(0, 2000);
+      const result = db.prepare('UPDATE user_suggestions SET status = ?, admin_note = ?, updated_at = ? WHERE id = ?').run(status, adminNote, nowSec(), id);
+      if (!result.changes) return json({ error: 'پیام پیدا نشد' }, 404, req);
+      logActivity(admin, 'review_suggestion', 'suggestion', id, status);
       return json({ success: true }, req);
     }
 
