@@ -219,6 +219,21 @@ button, a, [role="button"], input, textarea, select, label {
 }
 button:not(:disabled), a, [role="button"] {
   -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+.app-content button:not([data-compact="true"]),
+.app-content [role="button"]:not([aria-disabled="true"]) {
+  min-height: 42px;
+}
+.app-content button[aria-label],
+.app-content [role="button"][aria-label] {
+  min-width: 42px;
+}
+.app-content button:focus-visible,
+.app-content [role="button"]:focus-visible,
+.app-content a:focus-visible {
+  outline: 3px solid rgba(110, 231, 183, 0.95);
+  outline-offset: 2px;
 }
 .auto-fetch-button {
   min-width: 112px;
