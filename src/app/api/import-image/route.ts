@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   if (contentType) headers.set('content-type', contentType);
 
   try {
-    const upstream = await fetch(apiBase.replace(/\\/+$/, '') + '/api/import-image', {
+    const upstream = await fetch(new URL('/api/import-image', apiBase).toString(), {
       method: 'POST',
       headers,
       body: await request.arrayBuffer(),
