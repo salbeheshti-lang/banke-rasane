@@ -3,7 +3,7 @@ name: Render Preview Browser Verification
 on:
   push:
     branches:
-      - fix/preview-iran-desktop-ui-2026-11-27
+      - fix/preview-mobile-menu-auth-archive-2026-11-27
   workflow_dispatch:
 
 permissions:
