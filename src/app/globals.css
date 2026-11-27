@@ -205,6 +205,14 @@
 
 * { box-sizing: border-box; }
 
+/* Keep native long-press selection, copy and paste available in editable controls,
+   especially on mobile Safari/Chrome. Do not apply user-select:none globally. */
+input, textarea, [contenteditable="true"], [role="textbox"] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
 html, body {
   padding: 0;
   margin: 0;
