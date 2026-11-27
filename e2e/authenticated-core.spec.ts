@@ -9,20 +9,36 @@ test('authenticated app shell, edit persistence, real PDF preview, and video tri
   // The E2E API starts with an isolated database and the documented loopback
   // bootstrap account. Complete its mandatory first-login password change,
   // then create one disposable record for the UI workflow.
-  const firstLogin = await request.post(API + '/api/auth/login', {
-    data: { username: 'admin', password: 'admin' },
+  // Make retries safe: the first attempt may have changed the bootstrap password
+  // or created the fixture before a later browser assertion failed.
+  let loginPassword = ADMIN_PASSWORD;
+  let firstLogin = await request.post(API + '/api/auth/login', {
+    data: { username: 'admin', password: loginPassword },
   });
+  if (!firstLogin.ok()) {
+    loginPassword = 'admin';
+    firstLogin = await request.post(API + '/api/auth/login', {
+      data: { username: 'admin', password: loginPassword },
+    });
+  }
   expect(firstLogin.status()).toBe(200);
   const firstLoginData = await firstLogin.json();
   expect(firstLoginData.token).toBeTruthy();
 
-  const changedPassword = await request.put(API + '/api/auth/change-password', {
-    headers: { Authorization: 'Bearer ' + firstLoginData.token },
-    data: { oldPassword: 'admin', newPassword: ADMIN_PASSWORD },
-  });
-  expect(changedPassword.status()).toBe(200);
-  const token = (await changedPassword.json()).token;
+  let token = firstLoginData.token;
+  if (loginPassword === 'admin') {
+    const changedPassword = await request.put(API + '/api/auth/change-password', {
+      headers: { Authorization: 'Bearer ' + token },
+      data: { oldPassword: 'admin', newPassword: ADMIN_PASSWORD },
+    });
+    expect(changedPassword.status()).toBe(200);
+    token = (await changedPassword.json()).token;
+  }
   expect(token).toBeTruthy();
+
+  await request.delete(API + '/api/shows?num=' + FIXTURE_NUM, {
+    headers: { Authorization: 'Bearer ' + token },
+  });
 
   const created = await request.post(API + '/api/shows', {
     headers: { Authorization: 'Bearer ' + token },
@@ -49,6 +65,7 @@ test('authenticated app shell, edit persistence, real PDF preview, and video tri
 
   // Branding must be present in the authenticated shell, not only on login.
   const appFooter = page.locator('[data-testid="app-brand-footer"]');
+  await expect(appFooter).toHaveCount(1);
   await expect(appFooter).toBeVisible({ timeout: 30_000 });
   await expect(appFooter.getByRole('img', { name: 'مانیتورینگ مرکز طرح و برنامه سیما' })).toBeVisible();
   await expect(page.locator('header img[alt="مانیتورینگ مرکز طرح و برنامه سیما"]')).toBeVisible();
