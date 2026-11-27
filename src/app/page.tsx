@@ -918,7 +918,7 @@ function HomeInner() {
   // The toggle button calls toggleLang() which switches fa ↔ en and updates
   // <html lang/dir> + persists to localStorage.
   const { lang, toggleLang, t } = useLang();
-  const [currentView, setCurrentView] = useState<'dashboard' | 'programs' | 'genre' | 'reports' | 'add'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'programs' | 'genre' | 'reports' | 'add' | 'suggestions'>('dashboard');
   const [selectedGenre, setSelectedGenre] = useState<Genre | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
@@ -1179,7 +1179,7 @@ function HomeInner() {
 
   const canGoBack = viewStack.length > 0;
 
-  const handleNavigate = (v: 'dashboard' | 'programs' | 'reports' | 'add') => {
+  const handleNavigate = (v: 'dashboard' | 'programs' | 'reports' | 'add' | 'suggestions') => {
     navigate(v, null);
   };
 
@@ -1331,6 +1331,7 @@ function HomeInner() {
         {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={(s) => { setEditingShow(s); setPresetGenre(null); setPresetCategory(undefined); navigate('add'); }} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={(s) => { setEditingShow(s); setPresetGenre(null); setPresetCategory(undefined); navigate('add'); }} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} canManageSettings={hasPermission('manage_settings') || isAdmin} onExport={(shows, format, meta) => setExportPreview({ shows, format, ...meta })} />}
+        {currentView === 'suggestions' && currentUser && <SuggestionsView currentUser={currentUser} showToast={showToast} />}
         {currentView === 'add' && canEdit && <AddEditView key={editingShow?.num ?? 'new'} talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setPresetCategory(undefined); setPresetGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} presetCategory={presetCategory} presetGenre={presetGenre} genres={genres} canManageCapacity={isAdmin} />}
         {currentView === 'add' && !canEdit && (
           <div className="premium-glass p-8 text-center">
@@ -1950,7 +1951,7 @@ function DrawerMenu({
   open: boolean;
   onClose: () => void;
   currentView: string;
-  onNavigate: (v: 'dashboard' | 'programs' | 'reports' | 'add') => void;
+  onNavigate: (v: 'dashboard' | 'programs' | 'reports' | 'add' | 'suggestions') => void;
   onGenreSelect: (g: Genre) => void;
   onLogout: () => void;
   onOpenSettings: () => void;
@@ -1968,6 +1969,7 @@ function DrawerMenu({
     { key: 'programs', label: t('view.programs'), icon: 'grid', desc: t('view.programs.desc') + ' — ' + (talkShows.length).toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US') + ' ' + t('dashboard.programs') },
     { key: 'add', label: t('view.add'), icon: 'plus', desc: t('view.add.desc') },
     { key: 'reports', label: t('view.reports'), icon: 'reports', desc: t('view.reports.desc') },
+    { key: 'suggestions', label: 'پیام به مدیر', icon: 'mail', desc: isAdmin ? 'مشاهده و پیگیری پیشنهادهای کاربران' : 'ارسال پیشنهاد و پیام به مدیر یا ادمین' },
   ] as const;
 
   // Don't render anything if not open — keeps DOM clean
@@ -2273,7 +2275,7 @@ function MobileBottomNav({
   genres = GENRES,
 }: {
   currentView: string;
-  onNavigate: (v: 'dashboard' | 'programs' | 'reports' | 'add') => void;
+  onNavigate: (v: 'dashboard' | 'programs' | 'reports' | 'add' | 'suggestions') => void;
   onGenreSelect: (g: Genre) => void;
   onLogout: () => void;
   onOpenDrawer: () => void;
@@ -8148,6 +8150,81 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ============================================
+// USER SUGGESTIONS — submit for all users, inbox for administrators
+// ============================================
+function SuggestionsView({ currentUser, showToast }: { currentUser: User; showToast: (msg: string) => void }) {
+  const isAdmin = currentUser.role === 'admin' || currentUser.isSuperAdmin === true;
+  const [message, setMessage] = useState('');
+  const [category, setCategory] = useState('پیشنهاد');
+  const [sending, setSending] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [items, setItems] = useState<Array<{ id: number; username: string; message: string; category: string; status: string; adminNote: string; createdAt: number }>>([]);
+  const [notes, setNotes] = useState<Record<number, string>>({});
+  const [savingId, setSavingId] = useState<number | null>(null);
+  const statusLabels: Record<string, string> = { new: 'جدید', reviewing: 'در حال بررسی', resolved: 'رسیدگی شد', rejected: 'رد شد' };
+  const load = async () => {
+    if (!isAdmin) return;
+    setLoading(true);
+    try {
+      const result = await api.getSuggestions(150);
+      setItems(result.suggestions || []);
+      setNotes(Object.fromEntries((result.suggestions || []).map(item => [item.id, item.adminNote || ''])));
+    } catch (error) { showToast(error instanceof Error ? error.message : 'دریافت پیام‌ها ناموفق بود'); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { void load(); }, [isAdmin]);
+  const submit = async () => {
+    if (message.trim().length < 8) { showToast('متن پیام را کامل‌تر بنویسید (حداقل ۸ نویسه)'); return; }
+    setSending(true);
+    try {
+      const result = await api.submitSuggestion({ message: message.trim(), category });
+      setMessage('');
+      showToast(result.message || 'پیام برای مدیر ثبت شد');
+      if (isAdmin) await load();
+    } catch (error) { showToast(error instanceof Error ? error.message : 'ثبت پیام ناموفق بود'); }
+    finally { setSending(false); }
+  };
+  const update = async (item: typeof items[number], status: string) => {
+    setSavingId(item.id);
+    try {
+      await api.updateSuggestion(item.id, { status, adminNote: notes[item.id] || '' });
+      setItems(prev => prev.map(row => row.id === item.id ? { ...row, status, adminNote: notes[item.id] || '' } : row));
+      showToast('وضعیت پیام ذخیره شد');
+    } catch (error) { showToast(error instanceof Error ? error.message : 'ذخیره تغییرات ناموفق بود'); }
+    finally { setSavingId(null); }
+  };
+  return (
+    <div className="max-w-5xl mx-auto space-y-5">
+      <section className="premium-glass rounded-2xl p-5 sm:p-7">
+        <div className="flex items-center gap-3 mb-2"><span className="text-2xl">✉️</span><h2 className="text-xl font-extrabold" style={{ color: '#f0fdf4' }}>پیام و پیشنهاد به مدیر</h2></div>
+        <p className="text-sm mb-5" style={{ color: '#c8f7e8', lineHeight: 1.9 }}>پیشنهاد، گزارش مشکل یا درخواست خود را مستقیم برای مدیر یا ادمین بفرستید. پیام در سامانه ثبت می‌شود تا قابل پیگیری باشد.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-3 mb-3">
+          <select value={category} onChange={e => setCategory(e.target.value)} className="rounded-xl px-3 py-3" style={{ color: '#f0fdf4', background: 'rgba(0,45,37,.55)', border: '1px solid rgba(255,255,255,.25)', minHeight: 48 }}>
+            <option value="پیشنهاد">پیشنهاد قابلیت</option><option value="گزارش مشکل">گزارش مشکل</option><option value="درخواست">درخواست</option><option value="سایر">سایر</option>
+          </select>
+          <textarea value={message} onChange={e => setMessage(e.target.value)} rows={4} maxLength={5000} placeholder="پیام خود را اینجا بنویسید…" className="w-full rounded-xl p-3" style={{ color: '#f0fdf4', background: 'rgba(0,45,37,.55)', border: '1px solid rgba(255,255,255,.25)', minHeight: 112 }} />
+        </div>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <span className="text-xs" style={{ color: '#b6e8d7' }}>{message.length.toLocaleString('fa-IR')} / ۵۰۰۰</span>
+          <button type="button" disabled={sending || message.trim().length < 8} onClick={() => void submit()} className="rounded-xl px-6 py-3 font-bold disabled:opacity-50" style={{ color: '#052e24', background: '#6ee7b7', minHeight: 48 }}>{sending ? 'در حال ارسال…' : 'ارسال پیام به مدیر'}</button>
+        </div>
+      </section>
+      {isAdmin && <section className="premium-glass rounded-2xl p-5 sm:p-7">
+        <div className="flex items-center justify-between gap-3 mb-4"><h3 className="font-extrabold text-lg" style={{ color: '#f0fdf4' }}>صندوق پیام کاربران ({items.length.toLocaleString('fa-IR')})</h3><button type="button" onClick={() => void load()} disabled={loading} className="rounded-lg px-4 py-2 font-bold" style={{ background: 'rgba(255,255,255,.16)', color: '#fff', minHeight: 42 }}>{loading ? 'در حال دریافت…' : 'به‌روزرسانی'}</button></div>
+        {loading && <p style={{ color: '#d1fae5' }}>در حال دریافت پیام‌ها…</p>}
+        {!loading && items.length === 0 && <p className="text-sm" style={{ color: '#c8f7e8' }}>هنوز پیامی ثبت نشده است.</p>}
+        <div className="space-y-4">{items.map(item => <article key={item.id} className="rounded-xl p-4" style={{ background: 'rgba(0,35,30,.42)', border: '1px solid rgba(255,255,255,.16)' }}>
+          <div className="flex items-center justify-between gap-2 flex-wrap mb-2"><strong style={{ color: '#fff' }}>{item.category} — {item.username}</strong><span className="text-xs" style={{ color: '#a7f3d0' }}>#{item.id} · {statusLabels[item.status] || item.status}</span></div>
+          <p className="whitespace-pre-wrap text-sm" style={{ color: '#f0fdf4', lineHeight: 1.9 }}>{item.message}</p>
+          <textarea value={notes[item.id] || ''} onChange={e => setNotes(prev => ({ ...prev, [item.id]: e.target.value }))} rows={2} placeholder="یادداشت مدیر (اختیاری)" className="w-full rounded-lg p-2 mt-3" style={{ color: '#fff', background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.2)' }} />
+          <div className="flex flex-wrap gap-2 mt-3">{(['new','reviewing','resolved','rejected'] as const).map(status => <button key={status} type="button" disabled={savingId === item.id || item.status === status} onClick={() => void update(item, status)} className="rounded-lg px-3 py-2 text-xs font-bold disabled:opacity-40" style={{ background: status === 'resolved' ? 'rgba(16,185,129,.35)' : 'rgba(255,255,255,.12)', color: '#fff', minHeight: 40 }}>{savingId === item.id ? '…' : statusLabels[status]}</button>)}</div>
+        </article>)}</div>
+      </section>}
     </div>
   );
 }
