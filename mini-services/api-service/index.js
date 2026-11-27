@@ -15,6 +15,8 @@ import { promisify } from 'node:util';
 import { readFileSync, writeFileSync, renameSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { validateShowVideos } from './video-validation.mjs';
+import { transcodeVideoToMp4, VIDEO_TRANSCODE_LIMITS } from './video-transcode.mjs';
+import { importImageFromUrl, optimizeImageBuffer } from './image-import.mjs';
 
 const PORT = parseInt(process.env.PORT || '3002', 10);
 // Bind to loopback by default. Public/server deployments must opt in explicitly.
@@ -128,7 +130,8 @@ db.exec(`
     wikipedia    TEXT NOT NULL DEFAULT '',
     socialPost   TEXT NOT NULL DEFAULT '',
     images       TEXT NOT NULL DEFAULT '[]',
-    videos       TEXT NOT NULL DEFAULT '[]'
+    videos       TEXT NOT NULL DEFAULT '[]',
+    program_logo_index INTEGER NOT NULL DEFAULT -1
   );
 `);
 
@@ -246,6 +249,7 @@ addColumnIfMissing('shows', 'tags', "TEXT NOT NULL DEFAULT '[]'");
 addColumnIfMissing('shows', 'country', "TEXT NOT NULL DEFAULT ''");
 addColumnIfMissing('shows', 'decor_included', 'INTEGER');
 addColumnIfMissing('shows', 'operational_capacity', "TEXT NOT NULL DEFAULT ''");
+addColumnIfMissing('shows', 'program_logo_index', 'INTEGER NOT NULL DEFAULT -1');
 
 // Full-text search index for the archive. Triggers keep it in sync with show edits.
 let showsFtsAvailable = false;
@@ -379,8 +383,12 @@ function publicUser(u, viewer) {
     isSuperAdmin: !!u.is_super_admin,
     permissions: Array.from(perms),
   };
-  // Phone visible only to admins (or self)
-  if (viewer && (viewer.role === 'admin' || viewer.id === u.id)) base.phone = u.phone || '';
+  // Users can always see their own phone. Other users' phone numbers are
+  // visible only to admins explicitly granted this permission by super admin.
+  if (viewer && (viewer.id === u.id ||
+      (viewer.role === 'admin' && hasPermission(viewer, 'view_user_phone')))) {
+    base.phone = u.phone || '';
+  }
   return base;
 }
 
@@ -407,7 +415,7 @@ function rowToShow(r) {
     colors: fa(r.colors), lighting: fa(r.lighting), summary: fa(r.summary),
     descriptionFa: fa(r.descriptionFa), operationalCapacity: fa(r.operational_capacity || ''), youtube: r.youtube, imdb: r.imdb,
     wikipedia: r.wikipedia, socialPost: fa(r.socialPost), country: fa(r.country || ''),
-    images, videos, tags, decorIncluded: r.decor_included == null ? undefined : !!r.decor_included,
+    images, videos, tags, programLogo: Number.isInteger(r.program_logo_index) && r.program_logo_index >= 0 ? (images[r.program_logo_index] || '') : '', decorIncluded: r.decor_included == null ? undefined : !!r.decor_included,
     isFilm: !!(r.is_film),
     // Expose the image source so the frontend can:
     //   1. know whether a BLOB image exists (non-empty string)
@@ -420,7 +428,7 @@ const SHOW_COLUMNS = [
   'num', 'name', 'category', 'source', 'size', 'viewers', 'style', 'effects', 'layout',
   'elements', 'materials', 'colors', 'lighting', 'summary', 'descriptionFa', 'operational_capacity',
   'youtube', 'imdb', 'wikipedia', 'socialPost', 'images', 'videos', 'tags',
-  'is_film', 'country', 'decor_included',
+  'is_film', 'country', 'decor_included', 'program_logo_index',
 ];
 function showToValues(s) {
   return [
@@ -433,6 +441,7 @@ function showToValues(s) {
     JSON.stringify(Array.isArray(s.tags) ? s.tags : []),
     s.isFilm ? 1 : 0, s.country || '',
     s.decorIncluded === undefined ? null : (s.decorIncluded ? 1 : 0),
+    Array.isArray(s.images) && typeof s.programLogo === 'string' ? s.images.indexOf(s.programLogo) : -1,
   ];
 }
 
@@ -528,6 +537,7 @@ const ALL_PERMISSIONS = {
   manage_genres:    ['admin'],           // add/edit/delete custom genres
   manage_settings:  ['admin'],           // change server URL, report settings
   view_activity:    ['admin'],           // view activity log
+  view_user_phone:  ['admin'],           // view users' phone numbers (explicitly granted by super admin)
   export_reports:   ['admin', 'editor'], // export PDF/Excel
 };
 
@@ -553,7 +563,7 @@ function getUserPermissions(user) {
   }
   
   // No custom permissions — use role-based defaults.
-  if (user.role === 'admin') return new Set(Object.keys(ALL_PERMISSIONS));
+  if (user.role === 'admin') return new Set(Object.keys(ALL_PERMISSIONS).filter(p => p !== 'view_user_phone'));
   if (user.role === 'editor') return new Set(['add_shows', 'edit_shows', 'export_reports']);
   return new Set();
 }
@@ -999,9 +1009,10 @@ try {
 // Bun server
 // ---------------------------------------------------------------------------
 const server = Bun.serve({
-  // A bounded JSON body protects the local service from unbounded uploads.
-  // The 64 MiB ceiling accommodates up to 40 MiB of decoded local clips (base64 overhead included).
-  maxRequestBodySize: 64 * 1024 * 1024,
+  // Bound every request globally while allowing the documented 200 MiB video
+  // input plus multipart framing. Individual image/video routes enforce tighter
+  // per-file limits after parsing; this ceiling also protects chunked requests.
+  maxRequestBodySize: 220 * 1024 * 1024,
   port: PORT,
   // Default to loopback (127.0.0.1) for security: the API service owns auth,
   // sessions, and the database, so it must not be exposed to the network by
@@ -1385,6 +1396,91 @@ const server = Bun.serve({
       });
     }
 
+    // ----- Authenticated safe image import (Wikipedia/IMDb/direct image URL) -----
+    if (pathname === '/api/import-image' && method === 'POST') {
+      const user = requirePermission(req, 'add_shows') || requirePermission(req, 'edit_shows');
+      if (!user) return permissionFailure(req, 'دسترسی غیرمجاز — نیاز به دسترسی افزودن یا ویرایش برنامه');
+      const contentType = (req.headers.get('content-type') || '').toLowerCase();
+      if (contentType.includes('multipart/form-data')) {
+        const declaredUploadBytes = Number(req.headers.get('content-length') || 0);
+        if (declaredUploadBytes > 26 * 1024 * 1024) return json({ error: 'حجم درخواست تصویر بیشتر از حد مجاز است' }, 413, req);
+        let form;
+        try { form = await req.formData(); } catch { return json({ error: 'فرم بارگذاری تصویر نامعتبر است' }, 400, req); }
+        const file = form.get('file');
+        if (!file || typeof file.arrayBuffer !== 'function' || typeof file.size !== 'number') {
+          return json({ error: 'فایل تصویر انتخاب نشده است' }, 400, req);
+        }
+        const extension = String(file.name || '').split('.').pop()?.toLowerCase() || '';
+        const supportedExtensions = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'tif', 'tiff', 'bmp', 'svg', 'heic', 'heif', 'jp2', 'jxl']);
+        if (!(String(file.type || '').toLowerCase().startsWith('image/') || supportedExtensions.has(extension))) {
+          return json({ error: 'نوع فایل تصویر پشتیبانی نمی‌شود' }, 415, req);
+        }
+        if (file.size < 1 || file.size > 25 * 1024 * 1024) {
+          return json({ error: 'حجم تصویر اولیه باید حداکثر ۲۵ مگابایت باشد' }, 413, req);
+        }
+        try {
+          const output = await optimizeImageBuffer(Buffer.from(await file.arrayBuffer()));
+          logActivity(user, 'import_image_upload', 'image', String(file.name || 'uploaded image').slice(0, 120),
+            'Optimized to WebP (' + output.length + ' bytes)');
+          return json({ dataUrl: 'data:image/webp;base64,' + output.toString('base64'), size: output.length }, 200, req);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : '';
+          if (message.includes('2 MiB')) return json({ error: 'حجم تصویر پس از بهینه‌سازی هنوز زیاد است' }, 413, req);
+          return json({ error: 'فایل تصویر معتبر یا قابل پردازش نیست؛ فرمت را بررسی کنید' }, 415, req);
+        }
+      }
+      let body;
+      try { body = await req.json(); } catch { return json({ error: 'درخواست تصویر نامعتبر است' }, 400, req); }
+      const result = await importImageFromUrl(body?.url);
+      return json(result.body, result.status, req);
+    }
+
+    // ----- Authenticated server-side video trim and MP4 transcode -----
+    if (pathname === '/api/video/transcode' && method === 'POST') {
+      const user = requirePermission(req, 'edit_shows');
+      if (!user) return permissionFailure(req, 'شما اجازه ویرایش و پردازش ویدیو را ندارید');
+      const declaredUploadBytes = Number(req.headers.get('content-length') || 0);
+      if (declaredUploadBytes > 210 * 1024 * 1024) return json({ error: 'حجم درخواست ویدئو بیشتر از حد مجاز است' }, 413, req);
+      let form;
+      try { form = await req.formData(); } catch { return json({ error: 'فرم بارگذاری ویدیو نامعتبر است' }, 400, req); }
+      const file = form.get('file');
+      if (!file || typeof file.arrayBuffer !== 'function' || typeof file.size !== 'number') {
+        return json({ error: 'فایل ویدیو انتخاب نشده است' }, 400, req);
+      }
+      const extension = String(file.name || '').split('.').pop()?.toLowerCase() || '';
+      const supportedExtensions = new Set(['mp4', 'm4v', 'mov', 'webm', 'mkv', 'avi', 'mpeg', 'mpg', '3gp', 'ts', 'flv', 'wmv']);
+      if (!(String(file.type || '').toLowerCase().startsWith('video/') || supportedExtensions.has(extension))) {
+        return json({ error: 'نوع فایل ویدیو پشتیبانی نمی‌شود' }, 415, req);
+      }
+      if (file.size < 1 || file.size > VIDEO_TRANSCODE_LIMITS.maxInputBytes) {
+        return json({ error: 'حجم فایل ورودی باید حداکثر ۲۰۰ مگابایت باشد' }, 413, req);
+      }
+      const startSeconds = Number(form.get('start'));
+      const endSeconds = Number(form.get('end'));
+      if (!Number.isFinite(startSeconds) || !Number.isFinite(endSeconds) ||
+          startSeconds < 0 || endSeconds <= startSeconds ||
+          endSeconds - startSeconds > VIDEO_TRANSCODE_LIMITS.maxClipSeconds) {
+        return json({ error: 'بازه برش باید معتبر و حداکثر ۳۰ ثانیه باشد' }, 400, req);
+      }
+      try {
+        const output = await transcodeVideoToMp4(file, startSeconds, endSeconds);
+        logActivity(user, 'transcode_video', 'video', String(file.name || 'uploaded video').slice(0, 120),
+          'Created H.264/AAC MP4 clip (' + (endSeconds - startSeconds).toFixed(1) + ' seconds)');
+        return json({
+          dataUrl: 'data:video/mp4;base64,' + output.toString('base64'),
+          mime: 'video/mp4',
+          size: output.length,
+          duration: Number((endSeconds - startSeconds).toFixed(3)),
+        }, 200, req);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Video conversion failed';
+        if (message.includes('larger than 8 MiB')) return json({ error: 'حجم خروجی MP4 بیشتر از ۸ مگابایت است؛ بازه کوتاه‌تری انتخاب کنید' }, 413, req);
+        if (message.includes('180-second')) return json({ error: 'پردازش ویدیو بیش از سه دقیقه طول کشید؛ فایل سبک‌تر یا بازه کوتاه‌تری انتخاب کنید' }, 504, req);
+        console.error('[video-transcode] conversion failed:', message.slice(0, 1400));
+        return json({ error: 'تبدیل ویدیو به MP4 ناموفق بود؛ سلامت فایل و پشتیبانی کدک ورودی را بررسی کنید' }, 422, req);
+      }
+    }
+
     // ----- Fetch image from Wikipedia ONLY (exact show decor photos) -----
     // Per user requirement: do NOT use IMDb/OMDb (returns movie posters, not decor).
     // Search Wikipedia for the EXACT show name, prefer TV series/program pages,
@@ -1596,17 +1692,31 @@ const server = Bun.serve({
       if (!user) return json({ error: 'Unauthorized' }, 401, req);
       let body;
       try { body = await req.json(); } catch { return json({ error: 'invalid body' }, 400, req); }
-      const updated = db.prepare(`
-        UPDATE users SET name = ?, job_title = ?, deputy = ?, avatar = ?, phone = ?
-        WHERE id = ?
-      `).run(
-        body.name ?? user.name,
-        body.jobTitle ?? user.job_title,
-        body.deputy ?? user.deputy,
-        body.avatar ?? user.avatar,
-        body.phone ?? user.phone,
-        user.id
-      );
+      const nextUsername = String(body.username ?? user.username).trim();
+      if (!nextUsername) return json({ error: 'نام کاربری نمی‌تواند خالی باشد' }, 400, req);
+      const duplicateUsername = getUserByUsername(nextUsername);
+      if (duplicateUsername && duplicateUsername.id !== user.id) {
+        return json({ error: 'این نام کاربری قبلاً استفاده شده است' }, 409, req);
+      }
+      try {
+        db.prepare(`
+          UPDATE users SET username = ?, name = ?, job_title = ?, deputy = ?, avatar = ?, phone = ?
+          WHERE id = ?
+        `).run(
+          nextUsername,
+          body.name ?? user.name,
+          body.jobTitle ?? user.job_title,
+          body.deputy ?? user.deputy,
+          body.avatar ?? user.avatar,
+          body.phone ?? user.phone,
+          user.id
+        );
+      } catch (error) {
+        if (String(error?.message || '').includes('UNIQUE constraint failed: users.username')) {
+          return json({ error: 'این نام کاربری قبلاً استفاده شده است' }, 409, req);
+        }
+        throw error;
+      }
       return json(publicUser(getUserById(user.id), user), req);
     }
 
@@ -1841,14 +1951,25 @@ const server = Bun.serve({
       }
       const username = String(body?.username || '').trim();
       const password = String(body?.password || '');
+      const phone = String(body?.phone || '').trim();
       if (!username || !password) return json({ error: 'نام کاربری و رمز عبور را وارد کنید' }, 400, req);
+      if (!phone) return json({ error: 'شماره همراه الزامی است' }, 400, req);
       if (password.length < 8) return json({ error: 'رمز عبور باید حداقل ۸ کاراکتر باشد' }, 400, req);
       const existing = getUserByUsername(username);
       if (existing) return json({ error: 'نام کاربری تکراری' }, 409, req);
       const passwordHash = await hashPassword(password);
-      const result = db.prepare('INSERT INTO users (username, password_hash, role, name, job_title, deputy, phone) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
-        username, passwordHash, role, body.name || '', body.jobTitle || '', body.deputy || '', body.phone || ''
-      );
+      let result;
+      try {
+        result = db.prepare('INSERT INTO users (username, password_hash, role, name, job_title, deputy, phone) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
+          username, passwordHash, role, body.name || '', body.jobTitle || '', body.deputy || '', phone
+        );
+      } catch (error) {
+        // The UNIQUE index is the final guard against concurrent duplicate creates.
+        if (String(error?.message || '').includes('UNIQUE constraint failed: users.username')) {
+          return json({ error: 'نام کاربری تکراری' }, 409, req);
+        }
+        throw error;
+      }
       logActivity(admin, 'create_user', 'user', result.lastInsertRowid, `Created user "${username}" with role "${role}"`);
       return json(publicUser(getUserById(result.lastInsertRowid), admin), req);
     }
@@ -2086,56 +2207,6 @@ const server = Bun.serve({
         onlineCount: onlineUsers.length,
       }, req);
     }
-
-    // ----- Persistent per-user translation rate limit -----
-    // The Next.js translation handler delegates this atomic counter to the
-    // API-owned SQLite database so the same policy works on desktop and
-    // Cloudflare without bundling a local SQLite/Prisma engine into Workers.
-    if (pathname === '/api/translation/rate-limit' && method === 'POST') {
-      const user = requireUser(req);
-      if (!user || user.must_change_password) {
-        return json({ error: 'Unauthorized' }, 401, req);
-      }
-      if (!hasPermission(user, 'add_shows') && !hasPermission(user, 'edit_shows')) {
-        return json({ error: 'Forbidden' }, 403, req);
-      }
-
-      const userId = String(user.id);
-      const now = Date.now();
-      const resetAt = now + 60_000;
-      const maxRequests = 10;
-
-      db.exec(`CREATE TABLE IF NOT EXISTS translation_rate_buckets (
-        user_id TEXT PRIMARY KEY,
-        request_count INTEGER NOT NULL DEFAULT 0,
-        reset_at INTEGER NOT NULL
-      )`);
-
-      db.prepare('INSERT OR IGNORE INTO translation_rate_buckets (user_id, request_count, reset_at) VALUES (?, 0, ?)')
-        .run(userId, resetAt);
-
-      // Single-statement increments are atomic in SQLite. The conditional
-      // reset also has a compare-and-set predicate, so concurrent requests
-      // cannot each reset an expired bucket and bypass the limit.
-      let result = db.prepare('UPDATE translation_rate_buckets SET request_count = request_count + 1 WHERE user_id = ? AND request_count < ? AND reset_at > ?')
-        .run(userId, maxRequests, now);
-      if (result.changes === 1) return json({ ok: true }, req);
-
-      result = db.prepare('UPDATE translation_rate_buckets SET request_count = 1, reset_at = ? WHERE user_id = ? AND reset_at <= ?')
-        .run(resetAt, userId, now);
-      if (result.changes === 1) return json({ ok: true }, req);
-
-      // Another request may have performed the expired-window reset between
-      // the first increment and the compare-and-set reset above.
-      result = db.prepare('UPDATE translation_rate_buckets SET request_count = request_count + 1 WHERE user_id = ? AND request_count < ? AND reset_at > ?')
-        .run(userId, maxRequests, now);
-      if (result.changes === 1) return json({ ok: true }, req);
-
-      const bucket = db.prepare('SELECT reset_at FROM translation_rate_buckets WHERE user_id = ?').get(userId);
-      const retryAfter = Math.max(1, Math.ceil(((bucket?.reset_at || resetAt) - now) / 1000));
-      return json({ ok: false, retryAfter }, req);
-    }
-
 
     return json({ error: 'Not Found', path: pathname }, 404, req);
   },

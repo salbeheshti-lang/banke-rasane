@@ -8,6 +8,8 @@ RUN bun install --production
 
 COPY mini-services/api-service/index.js ./index.js
 COPY mini-services/api-service/video-validation.mjs ./video-validation.mjs
+COPY mini-services/api-service/video-transcode.mjs ./video-transcode.mjs
+COPY mini-services/api-service/image-import.mjs ./image-import.mjs
 COPY public/talk-shows-data.json ./talk-shows-data.json
 
 # Render must be able to reach the Bun server from outside the container.
