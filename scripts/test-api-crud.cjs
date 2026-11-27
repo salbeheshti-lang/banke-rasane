@@ -228,6 +228,18 @@ async function main() {
     });
     assert(viewerLogin.status === 200 && !!viewerLogin.data.token, 'viewer can authenticate to read shared genre attachments');
     const viewerToken = viewerLogin.data.token;
+    const viewerSuggestion = await request('/api/suggestions', {
+      method: 'POST', token: viewerToken,
+      body: JSON.stringify({ category: 'پیشنهاد', message: 'پیشنهاد ثبت‌شده از حساب بیننده برای مدیر' }),
+    });
+    assert(viewerSuggestion.status === 200 && viewerSuggestion.data.success,
+      'viewer role can submit a suggestion to the administrator');
+    const viewerInbox = await request('/api/suggestions', { token: viewerToken });
+    assert(viewerInbox.status === 403, 'viewer cannot read the administrator suggestion inbox');
+    const viewerUpdate = await request('/api/suggestions?id=' + viewerSuggestion.data.id, {
+      method: 'PUT', token: viewerToken, body: JSON.stringify({ status: 'resolved' }),
+    });
+    assert(viewerUpdate.status === 403, 'viewer cannot modify suggestion status or administrator notes');
 
     const genreInfo = await request('/api/genres/decor/file', { token: viewerToken });
     assert(genreInfo.status === 200 && genreInfo.data.name === 'decor-reference.pdf',
