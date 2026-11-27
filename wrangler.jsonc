@@ -1,12 +1,17 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "bankresaneh-web",
+  "name": "bankresaneh-visual-preview",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-11-14",
   "compatibility_flags": ["nodejs_compat", "nodejs_compat_populate_process_env"],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
+  },
+  "workers_dev": true,
+  "preview_urls": true,
+  "vars": {
+    "BANKRESANEH_API_BASE": "https://bankresaneh-preview-api.onrender.com"
   },
   "observability": {
     "enabled": true
