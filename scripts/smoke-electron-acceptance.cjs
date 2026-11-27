@@ -1,3 +1,4 @@
+/* eslint @typescript-eslint/no-require-imports: off, @typescript-eslint/no-unused-expressions: off */
 /* Full acceptance test against the installed Windows Electron app.
  * The caller launches the executable separately so this script can attach
  * through Chromium DevTools Protocol and exercise the actual packaged UI.
