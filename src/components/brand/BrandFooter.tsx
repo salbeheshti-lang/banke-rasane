@@ -97,12 +97,11 @@ export function BrandFooter({ variant = 'dark', withBottomNav = false }: { varia
         </div>
       ) : (
       <div
+        className="flex flex-col sm:flex-row items-center justify-between"
+        data-testid="app-brand-footer"
         style={{
           maxWidth: '1400px',
           margin: '0 auto',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
           gap: '0.75rem',
           flexWrap: 'wrap',
         }}
@@ -125,9 +124,9 @@ export function BrandFooter({ variant = 'dark', withBottomNav = false }: { varia
 
         {/* Center divider */}
         <div
+          className="w-10 h-px sm:w-px sm:h-7"
+          aria-hidden="true"
           style={{
-            width: '1px',
-            height: isCompact ? '20px' : '28px',
             background: dividerColor,
             flexShrink: 0,
           }}
