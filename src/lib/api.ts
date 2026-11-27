@@ -271,6 +271,15 @@ export const api = {
   async updateUser(id: number, data: any) { return request(getApiUrl('api/users?id=' + encodeURIComponent(id)), { method: 'PUT', body: JSON.stringify(data) }); },
   async deleteUser(id: number) { return request(getApiUrl('api/users?id=' + encodeURIComponent(id)), { method: 'DELETE' }); },
   async createUser(data: any) { return request(getApiUrl('api/users'), { method: 'POST', body: JSON.stringify(data) }); },
+  async submitSuggestion(data: { message: string; category?: string }) {
+    return request<{ success: boolean; id: number; message: string }>(getApiUrl('api/suggestions'), { method: 'POST', body: JSON.stringify(data) });
+  },
+  async getSuggestions(limit = 100) {
+    return request<{ suggestions: Array<{ id: number; userId: number; username: string; message: string; category: string; status: string; adminNote: string; createdAt: number; updatedAt: number }> }>(getApiUrl('api/suggestions?limit=' + limit));
+  },
+  async updateSuggestion(id: number, data: { status: string; adminNote?: string }) {
+    return request<{ success: boolean }>(getApiUrl('api/suggestions?id=' + encodeURIComponent(id)), { method: 'PUT', body: JSON.stringify(data) });
+  },
   async getActivity(limit?: number) {
     const url = getApiUrl('api/activity') + (limit ? '?limit=' + limit : '');
     const data = await request<{ logs: any[] }>(url);

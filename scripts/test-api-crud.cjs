@@ -89,6 +89,26 @@ async function main() {
     assert(change.status === 200 && !!change.data.token, 'first-login password change unlocks admin permissions');
     const token = change.data.token;
 
+    const suggestion = await request('/api/suggestions', {
+      method: 'POST', token,
+      body: JSON.stringify({ category: 'گزارش مشکل', message: 'آزمون ثبت پیام برای مدیر از حساب کاربر' }),
+    });
+    assert(suggestion.status === 200 && suggestion.data.success && suggestion.data.id > 0,
+      'authenticated user can submit a suggestion to the administrator');
+    const suggestionInbox = await request('/api/suggestions?limit=10', { token });
+    const inboxItem = suggestionInbox.data.suggestions?.find(item => item.id === suggestion.data.id);
+    assert(suggestionInbox.status === 200 && inboxItem?.message === 'آزمون ثبت پیام برای مدیر از حساب کاربر',
+      'administrator can read the submitted suggestion in the inbox');
+    const suggestionUpdated = await request('/api/suggestions?id=' + suggestion.data.id, {
+      method: 'PUT', token,
+      body: JSON.stringify({ status: 'reviewing', adminNote: 'در حال بررسی' }),
+    });
+    assert(suggestionUpdated.status === 200, 'administrator can update suggestion status and private note');
+    const suggestionReloaded = await request('/api/suggestions?limit=10', { token });
+    const reloadedItem = suggestionReloaded.data.suggestions?.find(item => item.id === suggestion.data.id);
+    assert(reloadedItem?.status === 'reviewing' && reloadedItem?.adminNote === 'در حال بررسی',
+      'suggestion status and administrator note persist after reload');
+
     const num = 900001;
     const original = {
       num,
@@ -208,6 +228,18 @@ async function main() {
     });
     assert(viewerLogin.status === 200 && !!viewerLogin.data.token, 'viewer can authenticate to read shared genre attachments');
     const viewerToken = viewerLogin.data.token;
+    const viewerSuggestion = await request('/api/suggestions', {
+      method: 'POST', token: viewerToken,
+      body: JSON.stringify({ category: 'پیشنهاد', message: 'پیشنهاد ثبت‌شده از حساب بیننده برای مدیر' }),
+    });
+    assert(viewerSuggestion.status === 200 && viewerSuggestion.data.success,
+      'viewer role can submit a suggestion to the administrator');
+    const viewerInbox = await request('/api/suggestions', { token: viewerToken });
+    assert(viewerInbox.status === 403, 'viewer cannot read the administrator suggestion inbox');
+    const viewerUpdate = await request('/api/suggestions?id=' + viewerSuggestion.data.id, {
+      method: 'PUT', token: viewerToken, body: JSON.stringify({ status: 'resolved' }),
+    });
+    assert(viewerUpdate.status === 403, 'viewer cannot modify suggestion status or administrator notes');
 
     const genreInfo = await request('/api/genres/decor/file', { token: viewerToken });
     assert(genreInfo.status === 200 && genreInfo.data.name === 'decor-reference.pdf',

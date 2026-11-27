@@ -26,7 +26,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         {children}
-        <script dangerouslySetInnerHTML={{ __html: `if ('serviceWorker' in navigator && location.protocol !== 'file:') { window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {})); }` }} />
+        <script dangerouslySetInnerHTML={{ __html: `if ('serviceWorker' in navigator && location.protocol !== 'file:') { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' }).then(registration => registration.update()).catch(() => {}); }); }` }} />
       </body>
     </html>
   );

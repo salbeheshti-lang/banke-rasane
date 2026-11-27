@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
     // The image column is bounded for very large reports to keep PDF generation
     // predictable; all textual rows and metadata remain complete.
     const showImageMap = new Map<number, string>();
-    const imageCandidates = shows.slice(0, 40);
+    const imageCandidates = shows.slice(0, 24);
     if (imageCandidates.some(show => (show.images || []).some(image => image.startsWith('data:image/')) || !!show.imageSource)) {
       for (let offset = 0; offset < imageCandidates.length; offset += 6) {
         const batch = imageCandidates.slice(offset, offset + 6);

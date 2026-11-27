@@ -222,12 +222,29 @@ button:not(:disabled), a, [role="button"] {
   cursor: pointer;
 }
 .app-content button:not([data-compact="true"]),
-.app-content [role="button"]:not([aria-disabled="true"]) {
-  min-height: 42px;
+.app-content [role="button"]:not([aria-disabled="true"]),
+.app-content a[role="button"] {
+  min-height: 46px;
+  touch-action: manipulation;
 }
 .app-content button[aria-label],
 .app-content [role="button"][aria-label] {
-  min-width: 42px;
+  min-width: 46px;
+}
+.app-content button:not(:disabled),
+.app-content [role="button"]:not([aria-disabled="true"]),
+.app-content a {
+  pointer-events: auto;
+}
+@media (max-width: 767px) {
+  .app-content button:not([data-compact="true"]),
+  .app-content [role="button"]:not([aria-disabled="true"]) {
+    min-height: 48px;
+  }
+  .app-content button[aria-label],
+  .app-content [role="button"][aria-label] {
+    min-width: 48px;
+  }
 }
 .app-content button:focus-visible,
 .app-content [role="button"]:focus-visible,
