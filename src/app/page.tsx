@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { api, setApiBase, getApiBase, getApiUrl, User, authHeaders } from '@/lib/api';
 import { useTheme } from '@/hooks/use-theme';
@@ -8183,7 +8183,7 @@ function SuggestionsView({ currentUser, showToast }: { currentUser: User; showTo
   const [notes, setNotes] = useState<Record<number, string>>({});
   const [savingId, setSavingId] = useState<number | null>(null);
   const statusLabels: Record<string, string> = { new: 'جدید', reviewing: 'در حال بررسی', resolved: 'رسیدگی شد', rejected: 'رد شد' };
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!isAdmin) return;
     setLoading(true);
     try {
@@ -8192,8 +8192,8 @@ function SuggestionsView({ currentUser, showToast }: { currentUser: User; showTo
       setNotes(Object.fromEntries((result.suggestions || []).map(item => [item.id, item.adminNote || ''])));
     } catch (error) { showToast(error instanceof Error ? error.message : 'دریافت پیام‌ها ناموفق بود'); }
     finally { setLoading(false); }
-  };
-  useEffect(() => { void load(); }, [isAdmin]);
+  }, [isAdmin, showToast]);
+  useEffect(() => { Promise.resolve().then(() => { void load(); }); }, [load]);
   const submit = async () => {
     if (message.trim().length < 8) { showToast('متن پیام را کامل‌تر بنویسید (حداقل ۸ نویسه)'); return; }
     setSending(true);
