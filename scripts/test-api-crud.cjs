@@ -89,6 +89,26 @@ async function main() {
     assert(change.status === 200 && !!change.data.token, 'first-login password change unlocks admin permissions');
     const token = change.data.token;
 
+    const suggestion = await request('/api/suggestions', {
+      method: 'POST', token,
+      body: JSON.stringify({ category: 'گزارش مشکل', message: 'آزمون ثبت پیام برای مدیر از حساب کاربر' }),
+    });
+    assert(suggestion.status === 200 && suggestion.data.success && suggestion.data.id > 0,
+      'authenticated user can submit a suggestion to the administrator');
+    const suggestionInbox = await request('/api/suggestions?limit=10', { token });
+    const inboxItem = suggestionInbox.data.suggestions?.find(item => item.id === suggestion.data.id);
+    assert(suggestionInbox.status === 200 && inboxItem?.message === 'آزمون ثبت پیام برای مدیر از حساب کاربر',
+      'administrator can read the submitted suggestion in the inbox');
+    const suggestionUpdated = await request('/api/suggestions?id=' + suggestion.data.id, {
+      method: 'PUT', token,
+      body: JSON.stringify({ status: 'reviewing', adminNote: 'در حال بررسی' }),
+    });
+    assert(suggestionUpdated.status === 200, 'administrator can update suggestion status and private note');
+    const suggestionReloaded = await request('/api/suggestions?limit=10', { token });
+    const reloadedItem = suggestionReloaded.data.suggestions?.find(item => item.id === suggestion.data.id);
+    assert(reloadedItem?.status === 'reviewing' && reloadedItem?.adminNote === 'در حال بررسی',
+      'suggestion status and administrator note persist after reload');
+
     const num = 900001;
     const original = {
       num,
