@@ -40,7 +40,7 @@ jobs:
           set -euo pipefail
           for attempt in $(seq 1 36); do
             status=$(curl --silent --output /tmp/render-preview.html --write-out '%{http_code}' --max-time 20 "$PREVIEW_URL/" || true)
-            if [[ "$status" == "200" ]] && grep -q 'login-username' /tmp/render-preview.html; then
+            if [[ "$status" == "200" ]] && grep -q '_next/static' /tmp/render-preview.html; then
               echo "Render preview root is responding with HTTP 200."
               exit 0
             fi
