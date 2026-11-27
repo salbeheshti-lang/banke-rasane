@@ -45,6 +45,13 @@ let browser;
     await password.waitFor({ state: 'visible', timeout: 10_000 });
     await page.getByRole('button', { name: /ورود/ }).waitFor({ state: 'visible', timeout: 10_000 });
 
+    // The live deployment must include the organization mark and exact official identity,
+    // not merely the BankResaneh product logo.
+    const organizationLogo = page.locator('footer img[alt="مانیتورینگ مرکز طرح و برنامه سیما"]');
+    await organizationLogo.waitFor({ state: 'visible', timeout: 10_000 });
+    assert.match(await organizationLogo.getAttribute('src'), /client-logo-white\\.png$/, 'Login must render the official organization logo');
+    assert.ok((await page.locator('footer').innerText()).includes('مانیتورینگ مرکز طرح و برنامه سیما'), 'Login footer must show the exact organization identity');
+
     // Prove React hydration and controlled input events, without submitting
     // credentials or touching the authentication endpoint.
     await username.fill('preview-interaction-check');
