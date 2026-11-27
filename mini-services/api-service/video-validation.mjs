@@ -50,10 +50,14 @@ export function validateShowVideos(videos, previousVideos = []) {
       continue;
     }
 
-    if (reference.length > MAX_VIDEO_REFERENCE_LENGTH) {
-      return { valid: false, error: 'نشانی ویدیوی جدید بیش از حد طولانی است.' };
+    // Base64 video data URLs are governed by the decoded clip-byte limits
+    // below, not by the shorter limit intended for ordinary hosted URLs.
+    if (!reference.startsWith('data:')) {
+      if (reference.length > MAX_VIDEO_REFERENCE_LENGTH) {
+        return { valid: false, error: 'نشانی ویدیوی جدید بیش از حد طولانی است.' };
+      }
+      continue;
     }
-    if (!reference.startsWith('data:')) continue;
 
     const clip = parseDataVideo(reference);
     if (!clip) {
