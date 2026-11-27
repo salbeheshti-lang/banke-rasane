@@ -1,4 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import ffmpegPath from 'ffmpeg-static';
 
 const API = 'http://127.0.0.1:3002';
 const ADMIN_PASSWORD = 'SmokeTest!2026';
@@ -127,55 +132,27 @@ test('authenticated app shell, edit persistence, real PDF preview, and video tri
   await page.getByRole('button', { name: /ویرایش/ }).click();
   await expect(page.getByRole('heading', { name: 'ویرایش برنامه' })).toBeVisible();
 
-  // Generate a short, standards-compliant WebM in Chromium itself. The
-  // product UI must decode it, build the filmstrip, transcode through the
-  // packaged API's ffmpeg route, preview MP4, and persist the accepted clip.
-  const generated = await page.evaluate(async () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 160;
-    canvas.height = 90;
-    const context = canvas.getContext('2d');
-    if (!context || typeof MediaRecorder === 'undefined' || typeof canvas.captureStream !== 'function') {
-      throw new Error('Browser does not support the required MediaRecorder test fixture.');
-    }
-    const mimeType = ['video/webm;codecs=vp8', 'video/webm'].find(type => MediaRecorder.isTypeSupported(type));
-    if (!mimeType) throw new Error('No supported WebM recording codec is available.');
-    const stream = canvas.captureStream(12);
-    const recorder = new MediaRecorder(stream, { mimeType });
-    const chunks: BlobPart[] = [];
-    const finished = new Promise<Blob>(resolve => {
-      recorder.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
-      recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType }));
-    });
-    let frame = 0;
-    const draw = window.setInterval(() => {
-      context.fillStyle = 'rgb(' + (40 + frame * 7 % 180) + ',90,130)';
-      context.fillRect(0, 0, canvas.width, canvas.height);
-      context.fillStyle = '#ffffff';
-      context.font = '20px sans-serif';
-      context.fillText('BankResaneh ' + frame, 12, 48);
-      frame++;
-    }, 80);
-    recorder.start(100);
-    await new Promise(resolve => window.setTimeout(resolve, 2_400));
-    window.clearInterval(draw);
-    recorder.stop();
-    const blob = await finished;
-    stream.getTracks().forEach(track => track.stop());
-    const base64 = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
-      reader.onerror = () => reject(new Error('Could not encode WebM test fixture.'));
-      reader.readAsDataURL(blob);
-    });
-    return { base64, mimeType, size: blob.size };
-  });
-  expect(generated.size).toBeGreaterThan(1_000);
+  // Generate a finite-duration, browser-decodable WebM with the same FFmpeg
+  // binary used by the API. MediaRecorder WebM blobs may omit duration metadata,
+  // which correctly leaves the editor's trim action disabled.
+  if (!ffmpegPath) throw new Error('ffmpeg-static did not provide a platform binary.');
+  const videoDir = mkdtempSync(join(tmpdir(), 'bankresaneh-e2e-video-'));
+  const videoPath = join(videoDir, 'bankresaneh-e2e-clip.webm');
+  const generated = spawnSync(ffmpegPath, [
+    '-hide_banner', '-loglevel', 'error', '-y',
+    '-f', 'lavfi', '-i', 'testsrc2=size=320x240:rate=24:duration=2',
+    '-an', '-c:v', 'libvpx', '-deadline', 'realtime', '-cpu-used', '8',
+    '-f', 'webm', videoPath,
+  ], { encoding: 'utf8', timeout: 60_000 });
+  expect(generated.status).toBe(0);
+  const videoBuffer = readFileSync(videoPath);
+  expect(videoBuffer.length).toBeGreaterThan(1_000);
   await page.locator('input[type="file"][accept*="video/mp4"]').setInputFiles({
     name: 'bankresaneh-e2e-clip.webm',
     mimeType: 'video/webm',
-    buffer: Buffer.from(generated.base64, 'base64'),
+    buffer: videoBuffer,
   });
+  rmSync(videoDir, { recursive: true, force: true });
   await expect(page.getByText(/مدت اصلی/)).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText(/نوار فریم‌های ویدیو/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'پردازش و پیش‌نمایش' })).toBeEnabled({ timeout: 30_000 });
