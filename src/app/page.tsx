@@ -1367,6 +1367,9 @@ function HomeInner() {
         />
       )}
 
+      {/* Shared organization footer on every authenticated page. Reserve space above the fixed mobile dock. */}
+      <BrandFooter withBottomNav={isMobile} />
+
       {/* Show details modal — pass talkShows so the modal can compute related programs */}
       {selectedShow && (
         <ShowDetailsModal
