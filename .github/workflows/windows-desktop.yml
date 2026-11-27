@@ -16,7 +16,8 @@ concurrency:
 
 jobs:
   build-windows:
-    if: vars.ENABLE_WINDOWS_BUILDS == 'true'
+    # Always verify the canonical Preview branch; keep the opt-in gate for other branches.
+    if: vars.ENABLE_WINDOWS_BUILDS == 'true' || github.ref == 'refs/heads/fix/preview-mobile-menu-auth-archive-2026-11-27'
     runs-on: windows-latest
     timeout-minutes: 60
     steps:
