@@ -196,17 +196,22 @@ jobs:
               const page = await browser.newPage();
               const failures = [];
               const staticFailures = [];
+              const isStaticAsset = value => {
+                const path = new URL(value).pathname.toLowerCase();
+                return (path.includes("/_next/static/") && (path.endsWith(".js") || path.endsWith(".css"))) ||
+                  (path.startsWith("/fonts/") && (path.endsWith(".woff") || path.endsWith(".woff2") || path.endsWith(".ttf")));
+              };
               page.on("pageerror", error => failures.push("pageerror: " + error.message));
               page.on("console", message => {
                 if (message.type() === "error") failures.push("console: " + message.text());
               });
               page.on("requestfailed", request => {
-                if (/_next\\/static\\/.*\\.(?:js|css)(?:\\?|$)|\\/fonts\\/.*\\.(?:woff2?|ttf)(?:\\?|$)/i.test(request.url())) {
+                if (isStaticAsset(request.url())) {
                   staticFailures.push(request.url() + " => " + (request.failure()?.errorText || "request failed"));
                 }
               });
               page.on("response", response => {
-                if (response.status() >= 400 && /_next\\/static\\/.*\\.(?:js|css)(?:\\?|$)|\\/fonts\\/.*\\.(?:woff2?|ttf)(?:\\?|$)/i.test(response.url())) {
+                if (response.status() >= 400 && isStaticAsset(response.url())) {
                   staticFailures.push(response.url() + " => HTTP " + response.status());
                 }
               });
@@ -221,10 +226,14 @@ jobs:
                 throw new Error("Browser errors: " + failures.join(" | ") + "; static asset transfer errors: " + staticFailures.join(" | "));
               }
               const resources = await page.evaluate(() => performance.getEntriesByType("resource")
-                .filter(entry => /_next\\/static\\/.*\\.(?:js|css)(?:\\?|$)|\\/fonts\\/.*\\.(?:woff2?|ttf)(?:\\?|$)/i.test(entry.name))
-                .map(entry => ({ url: entry.name, bytes: entry.transferSize, duration: Math.round(entry.duration) })));
-              if (!resources.some(item => /\\.js(?:\\?|$)/i.test(item.url))) throw new Error("No JavaScript bundle was transferred in Chromium.");
-              if (!resources.some(item => /\\.woff2?(?:\\?|$)/i.test(item.url))) throw new Error("No local font was transferred in Chromium.");
+                .filter(entry => {
+                  const path = new URL(entry.name).pathname.toLowerCase();
+                  return (path.includes("/_next/static/") && (path.endsWith(".js") || path.endsWith(".css"))) ||
+                    (path.startsWith("/fonts/") && (path.endsWith(".woff") || path.endsWith(".woff2") || path.endsWith(".ttf")));
+                })
+                .map(entry => ({ url: entry.name, bytes: entry.transferSize, duration: Math.round(entry.duration) }));
+              if (!resources.some(item => item.url.toLowerCase().endsWith(".js"))) throw new Error("No JavaScript bundle was transferred in Chromium.");
+              if (!resources.some(item => item.url.toLowerCase().endsWith(".woff") || item.url.toLowerCase().endsWith(".woff2"))) throw new Error("No local font was transferred in Chromium.");
               console.log("PASS: Chromium rendered login and transferred all JS/CSS/font resources: " + JSON.stringify(resources));
               await page.evaluate(() => localStorage.setItem("bankresaneh_token", "stale-preview-smoke-token"));
               await page.reload({ waitUntil: "domcontentloaded", timeout: 45000 });
