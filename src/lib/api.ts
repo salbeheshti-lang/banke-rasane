@@ -3,9 +3,10 @@
 const TOKEN_KEY = 'bankresaneh_token';
 
 function isHostedPreview(): boolean {
-  return typeof window !== 'undefined'
-    && window.location.hostname.endsWith('.workers.dev')
-    && /bankresaneh-(?:visual-)?preview/i.test(window.location.hostname);
+  if (typeof window === 'undefined') return false;
+  const hostname = window.location.hostname.toLowerCase();
+  const isPreviewHost = hostname.endsWith('.workers.dev') || hostname.endsWith('.onrender.com');
+  return isPreviewHost && /bankresaneh-(?:visual-)?preview/i.test(hostname);
 }
 
 function configuredHostedApiBase(): string {
