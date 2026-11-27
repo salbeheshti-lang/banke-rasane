@@ -105,6 +105,14 @@ jobs:
           curl --fail --silent --show-error --retry 3 --retry-all-errors "$WORKER_URL/sw.js" -o /tmp/bankresaneh-preview-sw.js
           curl --fail --silent --show-error --retry 3 --retry-all-errors "$WORKER_URL/offline.html" -o /tmp/bankresaneh-preview-offline.html
 
+          # Exercise the API reverse proxy on the deployed Worker itself.
+          # A healthy Render origin alone does not prove that browser requests
+          # routed through /api/* can reach it.
+          curl --fail --silent --show-error --retry 3 --retry-all-errors "$WORKER_URL/api/health" -o /tmp/bankresaneh-worker-api-health.json
+          node -e "const h=JSON.parse(require('fs').readFileSync('/tmp/bankresaneh-worker-api-health.json','utf8'));if(h.status!=='ok'||!Number.isFinite(h.showsCount)||h.showsCount<1302)throw Error('Worker API proxy archive mismatch: '+JSON.stringify(h));console.log('Worker API proxy returned '+h.showsCount+' archive records.');"
+          proxy_auth_status=$(curl --silent --output /tmp/bankresaneh-worker-api-auth.json --write-out '%{http_code}' --max-time 30 "$WORKER_URL/api/shows?page=1&limit=1")
+          [[ "$proxy_auth_status" == "401" ]] || { echo "::error::Worker API proxy must forward protected archive requests and return 401 without a token (got $proxy_auth_status)."; cat /tmp/bankresaneh-worker-api-auth.json; exit 1; }
+
           # Discover the actual CSS chunk referenced by the deployed HTML,
           # then download and validate CSS and both local font binaries.
           node -e "const fs=require('fs');const html=fs.readFileSync('/tmp/bankresaneh-preview-root.html','utf8');const css=[...html.matchAll(/_next\/static\/css\/[A-Za-z0-9._-]+\.css/g)].map(x=>x[0]);if(!css.length)throw Error('No compiled CSS asset found in live HTML');fs.writeFileSync('/tmp/bankresaneh-css-urls.txt',[...new Set(css)].join('\n'));"
