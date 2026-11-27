@@ -3,12 +3,7 @@ name: Cloudflare Preview
 on:
   push:
     branches:
-      - main
-      - cloudflare/full-preview
-      - fix/audit-hardening-5.4.5
-      - preview/release-ready-2026-11-27
       - fix/preview-mobile-menu-auth-archive-2026-11-27
-      - fix/preview-iran-desktop-ui-2026-11-27
   workflow_dispatch:
 
 permissions:
@@ -20,6 +15,8 @@ concurrency:
 
 jobs:
   validate-and-deploy-preview:
+    # Manual dispatch is also restricted to the single canonical preview branch.
+    if: github.ref == 'refs/heads/fix/preview-mobile-menu-auth-archive-2026-11-27'
     runs-on: ubuntu-latest
     timeout-minutes: 50
     steps:
