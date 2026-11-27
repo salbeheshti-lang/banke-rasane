@@ -1746,6 +1746,8 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
       >
         {/* Hamburger button — 3 lines — opens the drawer from the right */}
         <button
+          type="button"
+          data-testid="top-hamburger"
           onClick={onMenuClick}
           aria-label={t('nav.openMenu')}
           className="flex flex-col justify-center items-center p-2.5 transition-all"
