@@ -57,32 +57,39 @@ export function BrandFooter({ variant = 'dark', withBottomNav = false }: { varia
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '0.55rem',
+            width: 'min(100%, 340px)',
+            gap: '0.35rem',
             textAlign: 'center',
           }}
         >
           <Image
             src={CLIENT_BRANDING.logoWhitePath}
             alt={CLIENT_BRANDING.organizationFa}
-            width={60}
-            height={60}
+            width={88}
+            height={88}
             priority
             style={{
-              width: 'clamp(42px, 5vw, 58px)',
-              height: 'clamp(42px, 5vw, 58px)',
+              display: 'block',
+              width: 'clamp(64px, 7vw, 82px)',
+              height: 'clamp(64px, 7vw, 82px)',
               objectFit: 'contain',
-              opacity: 0.96,
+              opacity: 1,
+              margin: '0 auto',
             }}
           />
           <span
             style={{
-              color: 'rgba(226, 255, 244, 0.9)',
-              fontSize: 'clamp(0.72rem, 1.05vw, 0.875rem)',
-              fontWeight: 600,
-              lineHeight: 1.6,
+              display: 'block',
+              width: '100%',
+              color: '#ecfff7',
+              fontSize: 'clamp(0.82rem, 1.1vw, 0.98rem)',
+              fontWeight: 700,
+              lineHeight: 1.8,
               letterSpacing: '0',
               whiteSpace: 'normal',
               textWrap: 'balance',
+              textAlign: 'center',
+              textShadow: '0 1px 8px rgba(0,0,0,0.45)',
             }}
           >
             {CLIENT_BRANDING.organizationFa}
