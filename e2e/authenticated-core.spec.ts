@@ -168,7 +168,14 @@ test('authenticated app shell, edit persistence, real PDF preview, and video tri
   expect(transcodeData.dataUrl).toMatch(/^data:video\/mp4;base64,/);
   await expect(page.getByText('پیش‌نمایش خروجی نهایی')).toBeVisible({ timeout: 30_000 });
   await page.getByRole('button', { name: 'تأیید و افزودن خروجی به برنامه' }).click();
+  const videoUpdateResponsePromise = page.waitForResponse(
+    response => response.url().includes('/api/shows/' + FIXTURE_NUM) && response.request().method() === 'PUT',
+    { timeout: 60_000 },
+  );
   await page.getByRole('button', { name: /بروزرسانی/ }).click();
+  const videoUpdateResponse = await videoUpdateResponsePromise;
+  const videoUpdateBody = await videoUpdateResponse.text();
+  expect(videoUpdateResponse.status(), videoUpdateBody).toBe(200);
   await expect(page.getByRole('heading', { name: editedName, exact: true })).toBeVisible({ timeout: 30_000 });
 
   const persistedVideo = await request.get(
