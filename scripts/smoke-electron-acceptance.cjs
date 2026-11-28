@@ -177,6 +177,11 @@ async function run() {
     await page.getByRole('button', { name: /بروزرسانی/ }).click();
     const editResponse = await editResponsePromise;
     if (editResponse.status() !== 200) throw new Error('Installed app edit failed: HTTP ' + editResponse.status() + ' ' + await editResponse.text());
+    // AddEditView unmounts ProgramsView; restore the search after navigation
+    // because the archive initially renders only its first 60 cards.
+    const archiveSearchAfterEdit = page.getByTestId('archive-search-input');
+    await expect(archiveSearchAfterEdit).toBeVisible({ timeout: 30_000 });
+    await archiveSearchAfterEdit.fill(editedName);
     const editedHeading = page.getByRole('heading', { name: editedName, exact: true });
     await expect(editedHeading).toBeVisible({ timeout: 30_000 });
 
