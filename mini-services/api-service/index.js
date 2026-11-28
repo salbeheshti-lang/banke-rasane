@@ -616,7 +616,10 @@ function requireUser(req) {
 }
 function requireRole(req, roles) {
   const user = requireUser(req);
-  if (!user || user.must_change_password || !roles.includes(user.role)) return null;
+  // A forced password rotation must not lock users out of read-only archive
+  // access. All write/administrative endpoints use requirePermission(), which
+  // continues to enforce must_change_password until the password is changed.
+  if (!user || !roles.includes(user.role)) return null;
   return user;
 }
 
