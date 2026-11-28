@@ -21,8 +21,33 @@
 //   }
 
 import type { NextRequest } from 'next/server';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 
-const DEFAULT_API_BASE = process.env.BANKRESANEH_API_BASE || 'http://127.0.0.1:3002';
+// On Cloudflare Workers, BANKRESANEH_API_BASE is a runtime binding (not
+// available via process.env at build time). Read it from the Cloudflare
+// request context when available; fall back to process.env for local dev
+// and Electron. This mirrors the pattern used in api/[...path]/route.ts.
+//
+// IMPORTANT: this must be called per-request (not at module load) because
+// getCloudflareContext() only works inside a request handler on Workers.
+function resolveApiBase(): string {
+  try {
+    const env = getCloudflareContext().env as { BANKRESANEH_API_BASE?: string };
+    const v = env?.BANKRESANEH_API_BASE?.trim();
+    if (v) return v;
+  } catch {
+    // Not in Cloudflare Workers runtime — fall through to process.env.
+  }
+  return process.env.BANKRESANEH_API_BASE || 'http://127.0.0.1:3002';
+}
+
+function resolveAllowedOrigins(): string {
+  try {
+    const env = getCloudflareContext().env as { BANKRESANEH_ALLOWED_API_ORIGINS?: string };
+    if (env?.BANKRESANEH_ALLOWED_API_ORIGINS) return env.BANKRESANEH_ALLOWED_API_ORIGINS;
+  } catch { /* not in Workers runtime */ }
+  return process.env.BANKRESANEH_ALLOWED_API_ORIGINS || '';
+}
 
 /**
  * Resolve the API origin selected by the client without turning this route
@@ -31,7 +56,9 @@ const DEFAULT_API_BASE = process.env.BANKRESANEH_API_BASE || 'http://127.0.0.1:3
  * in BANKRESANEH_ALLOWED_API_ORIGINS (comma-separated HTTPS origins).
  */
 export function getApiBaseForRequest(req: NextRequest): string | null {
-  const configured = new URL(DEFAULT_API_BASE);
+  // Resolve per-request so Cloudflare runtime bindings are available.
+  const base = resolveApiBase();
+  const configured = new URL(base);
   const requested = req.headers.get('x-bankresaneh-api-base');
   if (!requested) return configured.origin;
 
@@ -50,7 +77,8 @@ export function getApiBaseForRequest(req: NextRequest): string | null {
   if (candidate.origin === req.nextUrl.origin) return configured.origin;
   if (candidate.origin === configured.origin) return configured.origin;
 
-  const allowed = (process.env.BANKRESANEH_ALLOWED_API_ORIGINS || '')
+  // On Cloudflare, BANKRESANEH_ALLOWED_API_ORIGINS is also a runtime binding.
+  const allowed = resolveAllowedOrigins()
     .split(',')
     .map(value => value.trim())
     .filter(Boolean)
