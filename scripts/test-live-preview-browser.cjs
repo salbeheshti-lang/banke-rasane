@@ -145,6 +145,52 @@ let browser;
     assert.equal(await languagePage.locator('#login-username').isVisible(), true, 'Login form must remain interactive with saved English preference');
     await languageContext.close();
 
+    // Exercise the real authenticated archive path when preview credentials
+    // are configured as repository secrets. Never guess or brute-force a login.
+    const previewUsername = process.env.PREVIEW_ADMIN_USERNAME;
+    const previewPassword = process.env.PREVIEW_ADMIN_PASSWORD;
+    if (previewUsername && previewPassword) {
+      const loginResponse = await fetch(baseURL + '/api/auth/login', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ username: previewUsername, password: previewPassword }),
+      });
+      const loginData = await loginResponse.json().catch(() => ({}));
+      assert.equal(loginResponse.status, 200, 'Preview admin login must succeed before archive acceptance');
+      assert.ok(loginData.token, 'Preview login must return a session token');
+      const archiveHeaders = { authorization: 'Bearer ' + loginData.token };
+      let totalShows = 0;
+      let totalPages = 1;
+      const loadedNumbers = new Set();
+      for (let archivePage = 1; archivePage <= totalPages; archivePage += 1) {
+        const response = await fetch(baseURL + '/api/shows?page=' + archivePage + '&limit=500', { headers: archiveHeaders });
+        assert.equal(response.status, 200, 'Authenticated preview archive page ' + archivePage + ' must return HTTP 200');
+        const payload = await response.json();
+        assert.ok(Array.isArray(payload.shows), 'Archive page must contain a shows array');
+        payload.shows.forEach(show => loadedNumbers.add(Number(show.num)));
+        totalShows = Number(payload.pagination?.total);
+        totalPages = Number(payload.pagination?.totalPages) || 1;
+        assert.ok(archivePage <= 10, 'Archive pagination exceeded the safety limit');
+      }
+      assert.equal(loadedNumbers.size, totalShows, 'Archive pages must contain unique program records');
+      assert.equal(totalShows, Number(process.env.PREVIEW_EXPECTED_SHOWS || 1302), 'Preview archive must contain the expected number of programs');
+      await page.evaluate(token => localStorage.setItem('bankresaneh_token', token), loginData.token);
+      const authenticatedResponses = [];
+      page.on('response', response => {
+        if (response.url().includes('/api/shows?page=')) authenticatedResponses.push(response.status());
+      });
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await page.getByText('در حال بارگذاری...', { exact: true }).waitFor({ state: 'detached', timeout: 30_000 });
+      await page.locator('#login-username').waitFor({ state: 'detached', timeout: 10_000 });
+      await page.getByRole('alert').waitFor({ state: 'detached', timeout: 30_000 });
+      assert.ok(authenticatedResponses.length >= totalPages, 'Authenticated UI must request every archive page');
+      assert.deepEqual(authenticatedResponses.filter(status => status !== 200), [], 'Authenticated UI archive requests must all succeed');
+      diagnostics.authenticatedArchive = { result: 'PASS', totalShows, totalPages, uniqueProgramNumbers: loadedNumbers.size, uiPageResponses: authenticatedResponses };
+    } else {
+      diagnostics.authenticatedArchive = { result: 'NOT_RUN', reason: 'Set PREVIEW_ADMIN_USERNAME and PREVIEW_ADMIN_PASSWORD GitHub Actions secrets to verify the authenticated archive in the live preview.' };
+      console.warn('Authenticated archive acceptance NOT RUN: preview admin secrets are not configured.');
+    }
+
     diagnostics.runtime = await page.evaluate(() => ({
       title: document.title,
       readyState: document.readyState,
