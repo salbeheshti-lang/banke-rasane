@@ -1814,13 +1814,28 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               </span>
             </div>
           )}
-          {/* Mobile: compact organization badge — small logo + tiny text,
-              kept narrow so it never crowds the theme/language toggles.
-              Text wraps to 2 lines so the full org name is always visible. */}
+          {/* Mobile: organization logo in a translucent "chip" — gives the
+              logo a visible background for contrast and reads as a distinct
+              unit rather than a cramped logo+text blob. Text is omitted here
+              (it lives in the drawer + footer) so the logo stays legible. */}
           {isMobile && (
-            <div className="flex items-center" style={{ flexShrink: 1, minWidth: 0, gap: '3px' }}>
-              <img src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={20} height={20} style={{ opacity: 0.92, objectFit: 'contain', flexShrink: 0 }} />
-              <span style={{ color: 'rgba(167, 243, 208, 0.8)', fontSize: '7px', fontWeight: 700, lineHeight: 1.15, maxWidth: '88px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{CLIENT_BRANDING.organizationFa}</span>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                padding: '4px 8px',
+                borderRadius: '12px',
+                background: 'rgba(255, 255, 255, 0.12)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                border: '1px solid rgba(255, 255, 255, 0.18)',
+                gap: '5px',
+              }}
+              title={CLIENT_BRANDING.organizationFa}
+            >
+              <img src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={26} height={26} style={{ opacity: 0.95, objectFit: 'contain' }} />
             </div>
           )}
         </div>
@@ -1902,28 +1917,10 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               {!isMobile && <span>{t('nav.backShort')}</span>}
             </button>
           ) : isMobile ? (
-            /* Mobile: small connection-status dot only (the old app.title badge
-               box was redundant next to the main logo and crowded the header). */
-            <span
-              className="flex items-center justify-center"
-              style={{
-                minWidth: '36px',
-                minHeight: '36px',
-              }}
-              title={t('app.connected')}
-              aria-label={t('app.connected')}
-            >
-              <span
-                className="rounded-full"
-                style={{
-                  width: '8px',
-                  height: '8px',
-                  backgroundColor: '#10b981',
-                  boxShadow: '0 0 8px #10b981',
-                  animation: 'pulse 2s ease-in-out infinite',
-                }}
-              />
-            </span>
+            /* Mobile: connection status is implicit (the app loaded = connected).
+               The old 36px dot container wasted space and looked like a stray
+               "big dot". Removed in favor of a cleaner header. */
+            null
           ) : (
             <div
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl"
