@@ -105,20 +105,20 @@ export function BrandFooter({ variant = 'dark', withBottomNav = false }: { varia
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '0.75rem',
+          gap: withBottomNav ? '0.4rem' : '0.75rem',
           flexWrap: 'wrap',
         }}
       >
         {/* Right side (RTL start): BankResaneh mark */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: withBottomNav ? '0.35rem' : '0.5rem' }}>
           <Image
             src="/banke-rasane-logo.png"
             alt={t('app.title')}
-            width={isCompact ? 90 : 110}
-            height={isCompact ? 24 : 30}
+            width={withBottomNav ? 84 : (isCompact ? 90 : 110)}
+            height={withBottomNav ? 22 : (isCompact ? 24 : 30)}
             style={{ filter: isLight ? 'none' : 'brightness(1.1) saturate(1.1)' }}
           />
-          {!isCompact && (
+          {!isCompact && !withBottomNav && (
             <span style={{ color: subTextColor, fontSize: '0.7rem', fontWeight: 500 }}>
               {t('footer.copyright').replace('{year}', currentYear)}
             </span>
@@ -129,7 +129,7 @@ export function BrandFooter({ variant = 'dark', withBottomNav = false }: { varia
         <div
           style={{
             width: '1px',
-            height: isCompact ? '20px' : '28px',
+            height: withBottomNav ? '18px' : (isCompact ? '20px' : '28px'),
             background: dividerColor,
             flexShrink: 0,
           }}
@@ -142,15 +142,15 @@ export function BrandFooter({ variant = 'dark', withBottomNav = false }: { varia
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '0.28rem',
-            minWidth: isCompact ? '112px' : '180px',
+            gap: withBottomNav ? '0.15rem' : '0.28rem',
+            minWidth: withBottomNav ? '90px' : (isCompact ? '112px' : '180px'),
           }}
         >
           <Image
             src={isLight ? CLIENT_BRANDING.logoColorPath : CLIENT_BRANDING.logoWhitePath}
             alt={CLIENT_BRANDING.organizationFa}
-            width={isCompact ? 34 : 48}
-            height={isCompact ? 34 : 48}
+            width={withBottomNav ? 26 : (isCompact ? 34 : 48)}
+            height={withBottomNav ? 26 : (isCompact ? 34 : 48)}
             style={{
               display: 'block',
               opacity: isLight ? 1 : 1,
@@ -162,13 +162,13 @@ export function BrandFooter({ variant = 'dark', withBottomNav = false }: { varia
             style={{
               display: 'block',
               color: textColor,
-              fontSize: isCompact ? '0.62rem' : '0.76rem',
+              fontSize: withBottomNav ? '0.58rem' : (isCompact ? '0.62rem' : '0.76rem'),
               fontWeight: 700,
-              lineHeight: 1.65,
+              lineHeight: withBottomNav ? 1.4 : 1.65,
               textAlign: 'center',
               whiteSpace: 'normal',
               textWrap: 'balance',
-              maxWidth: isCompact ? '132px' : '220px',
+              maxWidth: withBottomNav ? '110px' : (isCompact ? '132px' : '220px'),
             }}
           >
             {CLIENT_BRANDING.organizationFa}
