@@ -2572,7 +2572,7 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
           </div>
           {featuredShows.length > 1 && (
             <div className="featured-dots">
-              {featuredShows.map((_, i) => (<button key={i} className={`featured-dot ${i === currentIdx ? 'active' : ''}`} onClick={() => scrollToCard(i)} aria-label={`برنامه ${i + 1}`} />))}
+              {featuredShows.map((_, i) => (<button key={i} data-compact="true" className={`featured-dot ${i === currentIdx ? 'active' : ''}`} onClick={() => scrollToCard(i)} aria-label={`برنامه ${i + 1}`} />))}
             </div>
           )}
         </>
@@ -2883,9 +2883,9 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
 
   // Donut chart geometry — 200×200 SVG, 16 segments max for readability
   const DONUT_SIZE = 200;
-  const DONUT_STROKE = 14;
-  const DONUT_R = (DONUT_SIZE - DONUT_STROKE) / 2;          // 93
-  const DONUT_CIRC = 2 * Math.PI * DONUT_R;                  // ~584.3
+  const DONUT_STROKE = 26;
+  const DONUT_R = (DONUT_SIZE - DONUT_STROKE) / 2;          // 87
+  const DONUT_CIRC = 2 * Math.PI * DONUT_R;                  // ~546.6
   const DONUT_CENTER = DONUT_SIZE / 2;                       // 100
   // Default: top 4 genres — initialize once with useState lazy initializer
   const [selectedGenreIds, setSelectedGenreIds] = useState<string[]>(() => {
@@ -2996,9 +2996,9 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                         fill="none"
                         stroke={seg.color}
                         strokeWidth={DONUT_STROKE}
-                        strokeDasharray={`${Math.max(seg.dash - 2, 0)} ${DONUT_CIRC}`}
+                        strokeDasharray={`${Math.max(seg.dash - 1.5, 0)} ${DONUT_CIRC}`}
                         strokeDashoffset={seg.offset}
-                        strokeLinecap="butt"
+                        strokeLinecap="round"
                         style={{
                           transition: 'stroke-dasharray 0.6s ease, stroke-dashoffset 0.6s ease',
                           /* No drop-shadow glow on donut segments */
