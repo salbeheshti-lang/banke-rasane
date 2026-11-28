@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   validateShowVideos,
   MAX_VIDEO_CLIP_BYTES,
+  MAX_VIDEO_REFERENCE_LENGTH,
 } from './video-validation.mjs';
 
 const dataVideo = (bytes, mime = 'video/webm') => {
@@ -22,6 +23,12 @@ test('accepts a valid local WebM clip within the 8 MiB limit', () => {
   const result = validateShowVideos([dataVideo(1024)]);
   assert.equal(result.valid, true);
   assert.equal(result.localClipCount, 1);
+});
+
+test('accepts a valid Base64 video data URL longer than the hosted-link limit', () => {
+  const clip = dataVideo(8 * 1024);
+  assert.ok(clip.length > MAX_VIDEO_REFERENCE_LENGTH);
+  assert.equal(validateShowVideos([clip]).valid, true);
 });
 
 test('rejects malformed or non-base64 data video references', () => {
