@@ -1814,10 +1814,13 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               </span>
             </div>
           )}
-          {/* Mobile: organization logo in a translucent "chip" — gives the
-              logo a visible background for contrast and reads as a distinct
-              unit rather than a cramped logo+text blob. Text is omitted here
-              (it lives in the drawer + footer) so the logo stays legible. */}
+          {/* Mobile: organization logo was here — moved to the toggle group
+              on the left so it sits next to EN/moon at the same size. */}
+        </div>
+
+        {/* Left: theme + language toggles + org logo (mobile), then back button (when there is history), else status badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '8px', minWidth: '44px', justifyContent: 'flex-end' }}>
+          {/* Mobile: organization logo chip — same height/style as EN/moon toggles */}
           {isMobile && (
             <div
               style={{
@@ -1825,23 +1828,19 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
-                padding: '4px 8px',
-                borderRadius: '12px',
+                width: '32px',
+                height: '32px',
+                borderRadius: '10px',
                 background: 'rgba(255, 255, 255, 0.12)',
                 backdropFilter: 'blur(8px)',
                 WebkitBackdropFilter: 'blur(8px)',
                 border: '1px solid rgba(255, 255, 255, 0.18)',
-                gap: '5px',
               }}
               title={CLIENT_BRANDING.organizationFa}
             >
-              <img src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={26} height={26} style={{ opacity: 0.95, objectFit: 'contain' }} />
+              <img src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={20} height={20} style={{ opacity: 0.95, objectFit: 'contain' }} />
             </div>
           )}
-        </div>
-
-        {/* Left: theme + language toggles, then back button (when there is history), else status badge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '8px', minWidth: '44px', justifyContent: 'flex-end' }}>
           {/* Language toggle — FA/EN */}
           <button
             onClick={onToggleLang}
@@ -2884,9 +2883,9 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
 
   // Donut chart geometry — 200×200 SVG, 16 segments max for readability
   const DONUT_SIZE = 200;
-  const DONUT_STROKE = 26;
-  const DONUT_R = (DONUT_SIZE - DONUT_STROKE) / 2;          // 87
-  const DONUT_CIRC = 2 * Math.PI * DONUT_R;                  // ~546.6
+  const DONUT_STROKE = 14;
+  const DONUT_R = (DONUT_SIZE - DONUT_STROKE) / 2;          // 93
+  const DONUT_CIRC = 2 * Math.PI * DONUT_R;                  // ~584.3
   const DONUT_CENTER = DONUT_SIZE / 2;                       // 100
   // Default: top 4 genres — initialize once with useState lazy initializer
   const [selectedGenreIds, setSelectedGenreIds] = useState<string[]>(() => {
@@ -2997,9 +2996,9 @@ function Dashboard({ onGenreClick, talkShows, uploadedCount, onAdd, canEdit, isA
                         fill="none"
                         stroke={seg.color}
                         strokeWidth={DONUT_STROKE}
-                        strokeDasharray={`${Math.max(seg.dash - 1.5, 0)} ${DONUT_CIRC}`}
+                        strokeDasharray={`${Math.max(seg.dash - 2, 0)} ${DONUT_CIRC}`}
                         strokeDashoffset={seg.offset}
-                        strokeLinecap="round"
+                        strokeLinecap="butt"
                         style={{
                           transition: 'stroke-dasharray 0.6s ease, stroke-dashoffset 0.6s ease',
                           /* No drop-shadow glow on donut segments */
