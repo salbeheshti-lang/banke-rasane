@@ -1776,16 +1776,19 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
           </svg>
         </button>
 
-        {/* Center: logo + title */}
+        {/* Logo + title block. On mobile the logo sits right next to the
+            hamburger (flex-start in RTL = right side) instead of being
+            centered, so the brand mark and menu read as one grouped unit.
+            The organization badge returns with a compact layout. */}
         <div
-          className="flex items-center gap-3 flex-1 min-w-0"
-          style={{ justifyContent: 'center' }}
+          className="flex items-center flex-1 min-w-0"
+          style={{ gap: isMobile ? '6px' : '12px', justifyContent: isMobile ? 'flex-start' : 'center' }}
         >
           <Image
             src="/banke-rasane-logo.png"
             alt={t('app.title')}
-            width={isMobile ? 88 : 160}
-            height={isMobile ? 24 : 42}
+            width={isMobile ? 84 : 160}
+            height={isMobile ? 23 : 42}
             priority
             style={{
               /* Brighter, clearer logo — brighter shadow + slight brightness boost */
@@ -1811,12 +1814,13 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               </span>
             </div>
           )}
-          {/* Mobile: organization name hidden — logo alone is enough; the
-              org badge + text was crowding the header and causing overlap. */}
+          {/* Mobile: compact organization badge — small logo + tiny text,
+              kept narrow so it never crowds the theme/language toggles.
+              Text wraps to 2 lines so the full org name is always visible. */}
           {isMobile && (
-            <div className="flex items-center gap-1" style={{ flexShrink: 0, display: 'none' }}>
-              <img src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={26} height={26} style={{ opacity: 0.95, objectFit: 'contain' }} />
-              <span style={{ color: 'rgba(167, 243, 208, 0.85)', fontSize: '8.5px', fontWeight: 700, lineHeight: 1.1, whiteSpace: 'nowrap' }}>{CLIENT_BRANDING.organizationFa}</span>
+            <div className="flex items-center" style={{ flexShrink: 1, minWidth: 0, gap: '3px' }}>
+              <img src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={20} height={20} style={{ opacity: 0.92, objectFit: 'contain', flexShrink: 0 }} />
+              <span style={{ color: 'rgba(167, 243, 208, 0.8)', fontSize: '7px', fontWeight: 700, lineHeight: 1.15, maxWidth: '88px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{CLIENT_BRANDING.organizationFa}</span>
             </div>
           )}
         </div>
