@@ -158,7 +158,7 @@ async function run() {
     await page.getByRole('button', { name: 'برنامه‌ها', exact: true }).click();
     // Search the paginated archive; a newly created fixture is not guaranteed
     // to be among the first 60 cards rendered by the initial archive view.
-    const archiveSearch = page.locator('input[type="text"][placeholder*="جستجوی برنامه"]').first();
+    const archiveSearch = page.getByTestId('archive-search-input');
     await expect(archiveSearch).toBeVisible({ timeout: 30_000 });
     await archiveSearch.fill(FIXTURE_NAME);
     const fixtureHeading = page.getByRole('heading', { name: FIXTURE_NAME, exact: true });
@@ -177,6 +177,11 @@ async function run() {
     await page.getByRole('button', { name: /بروزرسانی/ }).click();
     const editResponse = await editResponsePromise;
     if (editResponse.status() !== 200) throw new Error('Installed app edit failed: HTTP ' + editResponse.status() + ' ' + await editResponse.text());
+    // AddEditView unmounts ProgramsView; restore the search after navigation
+    // because the archive initially renders only its first 60 cards.
+    const archiveSearchAfterEdit = page.getByTestId('archive-search-input');
+    await expect(archiveSearchAfterEdit).toBeVisible({ timeout: 30_000 });
+    await archiveSearchAfterEdit.fill(editedName);
     const editedHeading = page.getByRole('heading', { name: editedName, exact: true });
     await expect(editedHeading).toBeVisible({ timeout: 30_000 });
 
