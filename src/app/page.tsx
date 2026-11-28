@@ -1338,7 +1338,7 @@ function HomeInner() {
         genres={genres}
       />
 
-      <main key={currentView} className={`app-content animate-view-enter ${isMobile ? 'p-4 pt-24 pb-28' : 'p-8 pt-28'}`}>
+      <main key={currentView} className={`app-content animate-view-enter ${isMobile ? 'p-4 pt-24 pb-52' : 'p-8 pt-28'}`}>
         {archiveLoading && talkShows.length === 0 && <div role="status" className="max-w-3xl mx-auto mb-5 rounded-xl p-4 text-center" style={{ color: '#f0fdf4', background: 'rgba(0,65,48,.78)', border: '1px solid rgba(167,243,208,.35)' }}>در حال اتصال به سرور و دریافت آرشیو برنامه‌ها…</div>}
         {!!archiveError && <div role="alert" className="max-w-3xl mx-auto mb-5 rounded-xl p-4" style={{ color: '#fff', background: 'rgba(127,29,29,.78)', border: '1px solid rgba(252,165,165,.55)' }}><p className="font-bold mb-2">بارگذاری آرشیو با مشکل روبه‌رو شد</p><p className="text-sm mb-3" dir="auto">{archiveError}</p><button type="button" disabled={archiveLoading} onClick={() => setArchiveReloadKey(value => value + 1)} className="rounded-lg px-5 py-2 font-bold" style={{ color: '#052e24', background: '#a7f3d0', minHeight: 48 }}>{archiveLoading ? 'در حال تلاش…' : 'تلاش مجدد برای دریافت برنامه‌ها'}</button></div>}
         {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} onEditGenre={handleEditGenre} onDeleteGenre={handleDeleteGenre} onShowClick={setSelectedShow} />}
@@ -1354,6 +1354,8 @@ function HomeInner() {
           </div>
         )}
       </main>
+
+      <BrandFooter withBottomNav={isMobile} />
 
       {isMobile && (
         <MobileBottomNav
@@ -1469,7 +1471,6 @@ function HomeInner() {
           {toast}
         </div>
       )}
-      <BrandFooter withBottomNav={isMobile} />
     </div>
   );
 }
@@ -1739,9 +1740,9 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
       <div
         className="flex items-center justify-between"
         style={{
-          padding: isMobile ? '12px 16px' : '14px 28px',
+          padding: isMobile ? '10px 12px' : '14px 28px',
           minHeight: '64px',
-          gap: '12px',
+          gap: isMobile ? '6px' : '12px',
         }}
       >
         {/* Hamburger button — 3 lines — opens the drawer from the right */}
@@ -1756,8 +1757,10 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
             color: '#5eead4',
             borderRadius: '14px',
             boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12), 0 2px 10px rgba(0, 30, 25, 0.15)',
-            minWidth: '44px',
-            minHeight: '44px',
+            minWidth: isMobile ? '38px' : '44px',
+            minHeight: isMobile ? '38px' : '44px',
+            padding: isMobile ? '8px' : '10px',
+            flexShrink: 0,
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = 'rgba(45, 212, 191, 0.2)';
@@ -1781,8 +1784,8 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
           <Image
             src="/banke-rasane-logo.png"
             alt={t('app.title')}
-            width={isMobile ? 110 : 160}
-            height={isMobile ? 30 : 42}
+            width={isMobile ? 88 : 160}
+            height={isMobile ? 24 : 42}
             priority
             style={{
               /* Brighter, clearer logo — brighter shadow + slight brightness boost */
@@ -1808,9 +1811,10 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               </span>
             </div>
           )}
-          {/* Mobile: compact organization name + logo next to the main logo */}
+          {/* Mobile: organization name hidden — logo alone is enough; the
+              org badge + text was crowding the header and causing overlap. */}
           {isMobile && (
-            <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
+            <div className="flex items-center gap-1" style={{ flexShrink: 0, display: 'none' }}>
               <img src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={26} height={26} style={{ opacity: 0.95, objectFit: 'contain' }} />
               <span style={{ color: 'rgba(167, 243, 208, 0.85)', fontSize: '8.5px', fontWeight: 700, lineHeight: 1.1, whiteSpace: 'nowrap' }}>{CLIENT_BRANDING.organizationFa}</span>
             </div>
@@ -1818,7 +1822,7 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
         </div>
 
         {/* Left: theme + language toggles, then back button (when there is history), else status badge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '44px', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '8px', minWidth: '44px', justifyContent: 'flex-end' }}>
           {/* Language toggle — FA/EN */}
           <button
             onClick={onToggleLang}
@@ -1830,10 +1834,10 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               border: '1px solid rgba(45, 212, 191, 0.25)',
               color: '#5eead4',
               borderRadius: '10px',
-              minWidth: '36px',
-              minHeight: '36px',
+              minWidth: isMobile ? '32px' : '36px',
+              minHeight: isMobile ? '32px' : '36px',
               fontWeight: 800,
-              fontSize: '12px',
+              fontSize: isMobile ? '11px' : '12px',
               padding: '0 8px',
             }}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(45, 212, 191, 0.2)'; }}
@@ -1853,8 +1857,8 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               border: '1px solid rgba(45, 212, 191, 0.25)',
               color: '#5eead4',
               borderRadius: '10px',
-              minWidth: '36px',
-              minHeight: '36px',
+              minWidth: isMobile ? '32px' : '36px',
+              minHeight: isMobile ? '32px' : '36px',
             }}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(45, 212, 191, 0.2)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(45, 212, 191, 0.1)'; }}
@@ -2376,7 +2380,7 @@ function MobileBottomNav({
         </div>
       )}
 
-      <nav data-testid="mobile-bottom-nav" aria-label="پیمایش اصلی موبایل" className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
+      <nav data-testid="mobile-bottom-nav" aria-label="پیمایش اصلی موبایل" className="fixed bottom-0 left-0 right-0 z-50 px-3 pb-3" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
         <div
           className="flex items-center justify-around no-scrollbar"
           style={{
