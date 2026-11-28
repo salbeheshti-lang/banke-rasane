@@ -16,6 +16,9 @@ const FEATURE_MARKERS = [
   'ویکی‌پدیا',
   'IMDb',
   'mobile-bottom-nav',
+  'top-hamburger',
+  'header-organization-brand',
+  'app-brand-footer',
   'auto-fetch-button',
   'client-logo-white.png',
 ];
