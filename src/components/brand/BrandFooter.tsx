@@ -38,14 +38,16 @@ export function BrandFooter({ variant = 'dark', withBottomNav = false }: { varia
       dir="rtl"
       style={{
         marginTop: 'auto',
+        marginBottom: withBottomNav ? '110px' : '0',
         width: '100%',
         background: isLogin ? 'transparent' : bg,
         borderTop: isLogin ? 'none' : `1px solid ${borderColor}`,
         backdropFilter: isLogin ? 'none' : 'blur(8px)',
         WebkitBackdropFilter: isLogin ? 'none' : 'blur(8px)',
         padding: isLogin ? '1rem 1rem calc(1rem + env(safe-area-inset-bottom))' : isCompact ? '0.6rem 1rem' : '0.9rem 1.25rem',
-        zIndex: 30,
-        paddingBottom: isLogin ? 'calc(1rem + env(safe-area-inset-bottom))' : withBottomNav ? 'calc(84px + env(safe-area-inset-bottom))' : 'max(0.6rem, env(safe-area-inset-bottom))',
+        zIndex: 20,
+        position: 'relative',
+        paddingBottom: isLogin ? 'calc(1rem + env(safe-area-inset-bottom))' : withBottomNav ? '0.9rem' : 'max(0.6rem, env(safe-area-inset-bottom))',
       }}
     >
       {isLogin ? (
