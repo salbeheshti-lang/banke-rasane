@@ -175,17 +175,20 @@ let browser;
       assert.equal(loadedNumbers.size, totalShows, 'Archive pages must contain unique program records');
       assert.equal(totalShows, Number(process.env.PREVIEW_EXPECTED_SHOWS || 1302), 'Preview archive must contain the expected number of programs');
       await page.evaluate(token => localStorage.setItem('bankresaneh_token', token), loginData.token);
-      const authenticatedResponses = [];
-      page.on('response', response => {
-        if (response.url().includes('/api/shows?page=')) authenticatedResponses.push(response.status());
-      });
+      const uiPageResponses = Array.from({ length: totalPages }, (_, index) =>
+        page.waitForResponse(response => {
+          const url = new URL(response.url());
+          return url.pathname === '/api/shows' && url.searchParams.get('page') === String(index + 1)
+            && url.searchParams.get('limit') === '500';
+        }, { timeout: 45_000 })
+      );
       await page.reload({ waitUntil: 'domcontentloaded' });
       await page.getByText('در حال بارگذاری...', { exact: true }).waitFor({ state: 'detached', timeout: 30_000 });
       await page.locator('#login-username').waitFor({ state: 'detached', timeout: 10_000 });
+      const uiResponses = await Promise.all(uiPageResponses);
+      assert.deepEqual(uiResponses.map(response => response.status()), Array(totalPages).fill(200), 'Authenticated UI archive requests must all succeed');
       await page.getByRole('alert').waitFor({ state: 'detached', timeout: 30_000 });
-      assert.ok(authenticatedResponses.length >= totalPages, 'Authenticated UI must request every archive page');
-      assert.deepEqual(authenticatedResponses.filter(status => status !== 200), [], 'Authenticated UI archive requests must all succeed');
-      diagnostics.authenticatedArchive = { result: 'PASS', totalShows, totalPages, uniqueProgramNumbers: loadedNumbers.size, uiPageResponses: authenticatedResponses };
+      diagnostics.authenticatedArchive = { result: 'PASS', totalShows, totalPages, uniqueProgramNumbers: loadedNumbers.size, uiPageResponses: uiResponses.map(response => response.status()) };
     } else {
       diagnostics.authenticatedArchive = { result: 'NOT_RUN', reason: 'Set PREVIEW_ADMIN_USERNAME and PREVIEW_ADMIN_PASSWORD GitHub Actions secrets to verify the authenticated archive in the live preview.' };
       console.warn('Authenticated archive acceptance NOT RUN: preview admin secrets are not configured.');
