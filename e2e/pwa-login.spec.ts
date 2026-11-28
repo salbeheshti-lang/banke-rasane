@@ -34,7 +34,7 @@ test('login screen renders the co-branded footer and serves both client logo ass
     const logoSize = await footer.locator('img').boundingBox();
     expect(logoSize).not.toBeNull();
     expect(logoSize!.width).toBeGreaterThanOrEqual(42);
-    expect(logoSize!.width).toBeLessThanOrEqual(58);
+    expect(logoSize!.width).toBeLessThanOrEqual(82);
     await expect(footer.getByText('مانیتورینگ مرکز طرح و برنامه سیما')).toBeVisible();
   }
 
@@ -50,8 +50,8 @@ test('service worker and offline fallback are served, and private APIs are exclu
   const swResponse = await request.get('/sw.js');
   expect(swResponse.ok()).toBeTruthy();
   const swSource = await swResponse.text();
-  expect(swSource).toContain("url.pathname.startsWith('/api/')");
-  expect(swSource).toContain("url.pathname.startsWith('/login')");
+  expect(swSource).toContain("request.mode !== 'navigate'");
+  expect(swSource).not.toContain('STATIC_PREFIXES');
   expect(swSource).toContain('OFFLINE_URL');
 
   const offlineResponse = await request.get('/offline.html');

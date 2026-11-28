@@ -3,7 +3,12 @@ name: Cloudflare Preview
 on:
   push:
     branches:
+      - main
+      - preview/visual-only
+      - cloudflare/full-preview
       - fix/audit-hardening-5.4.5
+      - preview/release-ready-2026-11-27
+      - fix/preview-iran-desktop-ui-2026-11-27
   workflow_dispatch:
 
 permissions:
@@ -23,28 +28,19 @@ jobs:
         shell: bash
         env:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CF_ACCOUNT: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-          API_BASE: ${{ vars.BANKRESANEH_API_BASE }}
-          API_ALLOWLIST: ${{ vars.BANKRESANEH_ALLOWED_API_ORIGINS }}
+          API_BASE: ${{ vars.BANKRESANEH_API_BASE || 'https://bankresaneh-preview-api.onrender.com' }}
+          API_ALLOWLIST: ${{ vars.BANKRESANEH_ALLOWED_API_ORIGINS || 'https://bankresaneh-preview-api.onrender.com' }}
         run: |
           missing=()
           [[ -n "$CF_TOKEN" ]] || missing+=("CLOUDFLARE_API_TOKEN (GitHub Secret)")
-          [[ -n "$CF_ACCOUNT" ]] || missing+=("CLOUDFLARE_ACCOUNT_ID (GitHub Variable)")
           [[ -n "$API_BASE" ]] || missing+=("BANKRESANEH_API_BASE (GitHub Variable)")
           [[ -n "$API_ALLOWLIST" ]] || missing+=("BANKRESANEH_ALLOWED_API_ORIGINS (GitHub Variable)")
-          if [[ ${#missing[@]} -eq 0 ]]; then
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-            echo "Cloudflare deployment credentials and API endpoint variables are present." >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-            {
-              echo "## Preview deployment is not ready"
-              echo "The build and local Worker smoke test will still run. Live deployment is withheld because these settings are missing:"
-              for item in "${missing[@]}"; do echo "- $item"; done
-              echo ""
-              echo "No secret values are printed."
-            } >> "$GITHUB_STEP_SUMMARY"
+          if [[ ${#missing[@]} -ne 0 ]]; then
+            printf '::error::Missing required live-preview configuration: %s\n' "${missing[@]}"
+            exit 1
           fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+          echo "Cloudflare credentials and the isolated preview API endpoint are configured." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -61,6 +57,10 @@ jobs:
         run: bun run cloudflare:build
         env:
           DATABASE_URL: file:./db/custom.db
+          NEXT_PUBLIC_BANKRESANEH_API_BASE: ${{ vars.BANKRESANEH_API_BASE || 'https://bankresaneh-preview-api.onrender.com' }}
+
+      - name: Verify exact organization branding and required UI features in the build
+        run: node scripts/test-preview-branding.cjs
 
       - name: Test local Cloudflare Worker preview
         run: bun run test:cloudflare-preview
@@ -72,16 +72,71 @@ jobs:
       - name: Deploy isolated preview Worker
         if: steps.config.outputs.ready == 'true'
         run: |
-          bunx wrangler deploy --name bankresaneh-preview \
+          bunx wrangler deploy --name bankresaneh-visual-preview \
             --var "BANKRESANEH_API_BASE:${BANKRESANEH_API_BASE}" \
             --var "BANKRESANEH_ALLOWED_API_ORIGINS:${BANKRESANEH_ALLOWED_API_ORIGINS}"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-          BANKRESANEH_API_BASE: ${{ vars.BANKRESANEH_API_BASE }}
-          BANKRESANEH_ALLOWED_API_ORIGINS: ${{ vars.BANKRESANEH_ALLOWED_API_ORIGINS }}
+          BANKRESANEH_API_BASE: ${{ vars.BANKRESANEH_API_BASE || 'https://bankresaneh-preview-api.onrender.com' }}
+          BANKRESANEH_ALLOWED_API_ORIGINS: ${{ vars.BANKRESANEH_ALLOWED_API_ORIGINS || 'https://bankresaneh-preview-api.onrender.com' }}
 
-      - name: Record live deployment status
-        if: always() && steps.config.outputs.ready != 'true'
+      - name: Verify live Cloudflare Preview, static asset transfer, and connected test API
+        shell: bash
+        env:
+          WORKER_URL: https://bankresaneh-visual-preview.bankresaneh.workers.dev
+          API_BASE: ${{ vars.BANKRESANEH_API_BASE || 'https://bankresaneh-preview-api.onrender.com' }}
         run: |
-          echo "Local Cloudflare build and smoke test completed. No public preview URL was created because the persistent API service has not yet been configured." >> "$GITHUB_STEP_SUMMARY"
+          set -euo pipefail
+          API_BASE="${API_BASE%/}"
+          node scripts/test-preview-branding.cjs --url "$WORKER_URL"
+          curl --fail --silent --show-error --retry 3 --retry-all-errors "$WORKER_URL/" -o /tmp/bankresaneh-preview-root.html
+          curl --fail --silent --show-error --retry 3 --retry-all-errors "$WORKER_URL/manifest.webmanifest" -o /tmp/bankresaneh-preview-manifest.json
+          node -e "const m=JSON.parse(require('fs').readFileSync('/tmp/bankresaneh-preview-manifest.json','utf8'));if(m.name!=='بانک رسانه'||m.display!=='standalone')process.exit(1);"
+          curl --fail --silent --show-error --retry 3 --retry-all-errors "$WORKER_URL/sw.js" -o /tmp/bankresaneh-preview-sw.js
+          curl --fail --silent --show-error --retry 3 --retry-all-errors "$WORKER_URL/offline.html" -o /tmp/bankresaneh-preview-offline.html
+
+          # Discover the actual CSS chunk referenced by the deployed HTML,
+          # then download and validate CSS and both local font binaries.
+          node -e "const fs=require('fs');const html=fs.readFileSync('/tmp/bankresaneh-preview-root.html','utf8');const css=[...html.matchAll(/_next\/static\/css\/[A-Za-z0-9._-]+\.css/g)].map(x=>x[0]);if(!css.length)throw Error('No compiled CSS asset found in live HTML');fs.writeFileSync('/tmp/bankresaneh-css-urls.txt',[...new Set(css)].join('\n'));"
+          while IFS= read -r asset; do
+            [[ -n "$asset" ]] || continue
+            case "$asset" in http*) asset_url="$asset" ;; /*) asset_url="$WORKER_URL$asset" ;; *) asset_url="$WORKER_URL/$asset" ;; esac
+            curl --fail --silent --show-error --retry 3 --retry-all-errors "$asset_url" -o /tmp/bankresaneh-preview.css
+            test -s /tmp/bankresaneh-preview.css
+            grep -q 'font-family' /tmp/bankresaneh-preview.css
+          done < /tmp/bankresaneh-css-urls.txt
+
+          for font in Vazirmatn-Regular.woff2 Vazirmatn-Bold.woff2; do
+            curl --fail --silent --show-error --retry 3 --retry-all-errors "$WORKER_URL/fonts/$font" -o "/tmp/$font"
+            test -s "/tmp/$font"
+            size=$(wc -c < "/tmp/$font")
+            [[ "$size" -gt 1000 ]] || { echo "::error::Font asset is unexpectedly small: $font ($size bytes)"; exit 1; }
+            echo "Verified $font transfer: $size bytes"
+          done
+
+          curl --fail --silent --show-error --retry 3 --retry-all-errors -D /tmp/bankresaneh-api-headers.txt -H "Origin: $WORKER_URL" "$API_BASE/api/health" -o /tmp/bankresaneh-api-health.json
+          grep -Fqi "access-control-allow-origin: $WORKER_URL" /tmp/bankresaneh-api-headers.txt
+          node -e "const h=JSON.parse(require('fs').readFileSync('/tmp/bankresaneh-api-health.json','utf8'));if(h.status!=='ok'||!Number.isFinite(h.showsCount)||h.showsCount<1)process.exit(1);console.log('Live test API ready: '+h.showsCount+' shows; CORS verified.');"
+          {
+            echo "## Live Cloudflare Preview passed"
+            echo "- Worker root, manifest, service worker, offline page, compiled CSS and both font binaries transferred successfully."
+            echo "- Connected Render test API health and exact Worker CORS origin are verified."
+            echo "- Archive records: $(node -e "const h=JSON.parse(require('fs').readFileSync('/tmp/bankresaneh-api-health.json','utf8'));process.stdout.write(String(h.showsCount))")."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Install Chromium for live preview browser verification
+        run: bunx playwright install --with-deps chromium
+
+      - name: Verify live preview in a real Chromium browser
+        run: node scripts/test-live-preview-browser.cjs
+        env:
+          WORKER_URL: https://bankresaneh-visual-preview.bankresaneh.workers.dev
+
+      - name: Upload live browser diagnostics and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bankresaneh-live-preview-browser-diagnostics
+          path: artifacts/live-preview/
+          if-no-files-found: warn
+          retention-days: 14

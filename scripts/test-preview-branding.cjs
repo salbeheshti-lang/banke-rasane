@@ -11,10 +11,13 @@ const ASSETS = ['client-logo.png', 'client-logo-white.png', 'banke-rasane-logo.p
 const FEATURE_MARKERS = [
   'ظرفیت بهره‌برداری',
   'decorIncluded',
-  'ویدئو', // visible video-editor/publishing UI; server MP4 validation is covered by the API test suite
+  'ویدئو', // visible video-editor UI marker; MP4 validation is covered by API tests
 
   'ویکی‌پدیا',
   'IMDb',
+  'mobile-bottom-nav',
+  'auto-fetch-button',
+  'client-logo-white.png',
 ];
 
 function walk(dir) {
@@ -52,7 +55,12 @@ async function localCheck() {
   const compiledChunks = jsFiles.map(file => fs.readFileSync(file, 'utf8'));
   assertBranding(compiledChunks, 'Local Cloudflare build');
   assertFeatures(compiledChunks, 'Local Cloudflare build');
-  console.log('PASS local build contains exact branding, required capacity/decor/video/import UI, and all three logo assets.');
+  const cssFiles = walk(path.join(assetRoot, '_next', 'static', 'css')).filter(file => file.endsWith('.css'));
+  assert(cssFiles.length > 0, 'No compiled CSS assets found');
+  const compiledCss = cssFiles.map(file => fs.readFileSync(file, 'utf8')).join('\\n');
+  assert(compiledCss.includes('-webkit-touch-callout'), 'Mobile long-press callout must remain enabled for text fields');
+  assert(compiledCss.includes('user-select:text') || compiledCss.includes('user-select: text'), 'Mobile text fields must remain selectable');
+  console.log('PASS local build contains exact branding, required capacity/decor/video/import UI, mobile navigation, touch text selection, and all three logo assets.');
 }
 
 function cacheBusted(url, attempt) {

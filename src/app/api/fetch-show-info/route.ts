@@ -10,6 +10,9 @@ function decodeHtml(s: string): string {
 function cleanQuery(s: string): string {
   return (s||'').replace(/[?!]+$/,'').replace(/\(.*?\)/g,' ').replace(/[–—-]/g,' ').replace(/\s+/g,' ').trim();
 }
+function normalizeTitle(s: string): string {
+  return cleanQuery(s).toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim();
+}
 
 async function fetchImdbPoster(imdbId: string): Promise<string | null> {
   // OMDb sometimes returns a valid title record without a poster. Fall back to
@@ -46,6 +49,28 @@ async function fetchImdbPoster(imdbId: string): Promise<string | null> {
   return null;
 }
 
+async function fetchCommonsFileImage(fileTitle: string): Promise<string | null> {
+  const title = String(fileTitle || '').trim();
+  if (!/^File:/i.test(title)) return null;
+  const response = await fetchRetry(
+    'https://commons.wikimedia.org/w/api.php?action=query&prop=imageinfo&iiprop=url&iiurlwidth=1200&format=json&titles=' + encodeURIComponent(title),
+    { headers: { 'User-Agent': UA, 'Accept': 'application/json' } },
+    1,
+  );
+  if (!response) return null;
+  const data = await response.json();
+  const page = Object.values(data?.query?.pages || {})[0] as any;
+  const candidate = page?.imageinfo?.[0]?.thumburl || page?.imageinfo?.[0]?.url;
+  if (typeof candidate !== 'string') return null;
+  try {
+    const image = new URL(candidate);
+    if (image.protocol === 'https:' && (image.hostname === 'upload.wikimedia.org' || image.hostname === 'thumb.wikimedia.org')) return image.href;
+  } catch {
+    // Ignore malformed Commons image URLs.
+  }
+  return null;
+}
+
 async function fetchWikipediaShowImage(title: string): Promise<string | null> {
   const query = cleanQuery(title);
   if (!query) return null;
@@ -62,7 +87,11 @@ async function fetchWikipediaShowImage(title: string): Promise<string | null> {
     if (!search) continue;
     const data = await search.json();
     const pages = Object.values(data?.query?.pages || {}) as any[];
+    const normalizedQuery = normalizeTitle(query);
     for (const page of pages) {
+      // Require a close title match; never attach the first vaguely related
+      // Wikipedia image to an unrelated programme with an ambiguous name.
+      if (normalizeTitle(String(page?.title || '')) !== normalizedQuery) continue;
       const candidate = page?.original?.source || page?.thumbnail?.source;
       if (typeof candidate !== 'string') continue;
       try {
@@ -83,6 +112,8 @@ async function fetchWikipediaShowImage(title: string): Promise<string | null> {
   const commonsData = await commons.json();
   const files = Object.values(commonsData?.query?.pages || {}) as any[];
   for (const file of files) {
+    const fileTitle = normalizeTitle(String(file?.title || '').replace(/^File:/i, '').replace(/\.[a-z0-9]+$/i, ''));
+    if (!fileTitle.includes(normalizeTitle(query))) continue;
     const candidate = file?.imageinfo?.[0]?.thumburl || file?.imageinfo?.[0]?.url;
     if (typeof candidate !== 'string') continue;
     try {
@@ -137,7 +168,10 @@ export async function POST(request: NextRequest) {
         const r = await fetchRetry(`https://www.omdbapi.com/?s=${encodeURIComponent(nameQuery)}&apikey=${encodeURIComponent(OMDB_API_KEY)}`, {}, 1);
         if (r) {
           const d = await r.json();
-          const first = Array.isArray(d.Search) ? d.Search[0] : null;
+          const normalizedQuery = normalizeTitle(nameQuery);
+          const first = Array.isArray(d.Search)
+            ? d.Search.find((candidate: any) => normalizeTitle(String(candidate?.Title || '')) === normalizedQuery)
+            : null;
           if (first?.imdbID) {
             const dr = await fetchRetry(`https://www.omdbapi.com/?i=${encodeURIComponent(first.imdbID)}&apikey=${encodeURIComponent(OMDB_API_KEY)}&plot=full`, {}, 1);
             if (dr) {
@@ -163,7 +197,8 @@ export async function POST(request: NextRequest) {
             const sr = await fetchRetry(`https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srnamespace=0&srlimit=3&format=json&srsearch=${encodeURIComponent(nameQuery)}`, { headers: { 'User-Agent': UA } }, 1);
             if (!sr) continue;
             const sd = await sr.json();
-            const pageTitle = sd?.query?.search?.[0]?.title;
+            const exactPage = (sd?.query?.search || []).find((candidate: any) => normalizeTitle(String(candidate?.title || '')) === normalizeTitle(nameQuery));
+            const pageTitle = exactPage?.title;
             if (!pageTitle) continue;
             const r = await fetchRetry(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(pageTitle)}`, { headers: { 'User-Agent': UA } }, 1);
             if (!r) continue;
@@ -194,11 +229,27 @@ export async function POST(request: NextRequest) {
     // ── URL mode (existing behavior) ───────────────────────────────────
     let parsed: URL;
     try { parsed = new URL(url); } catch { return NextResponse.json({ error: 'لینک معتبر نیست' }, { status: 400 }); }
-    if (parsed.protocol !== 'https:') return NextResponse.json({ error: 'فقط لینک HTTPS پذیرفته می‌شود' }, { status: 400 });
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password || (parsed.port && parsed.port !== '443')) return NextResponse.json({ error: 'فقط لینک HTTPS معتبر و بدون اطلاعات ورود پذیرفته می‌شود' }, { status: 400 });
     const host = parsed.hostname.toLowerCase();
     const isImdb = host === 'imdb.com' || host.endsWith('.imdb.com');
     const isWikipedia = host === 'wikipedia.org' || host.endsWith('.wikipedia.org');
-    if (!isImdb && !isWikipedia) return NextResponse.json({ error: 'فعلاً فقط لینک IMDb و ویکی‌پدیا پشتیبانی می‌شود' }, { status: 400 });
+    const isCommons = host === 'commons.wikimedia.org';
+    if (!isImdb && !isWikipedia && !isCommons) return NextResponse.json({ error: 'فعلاً فقط لینک IMDb، ویکی‌پدیا و صفحهٔ فایل ویکی‌مدیا پشتیبانی می‌شود' }, { status: 400 });
+
+    if (isCommons) {
+      let fileTitle = parsed.searchParams.get('title') || '';
+      if (!fileTitle && parsed.pathname.startsWith('/wiki/')) {
+        try { fileTitle = decodeURIComponent(parsed.pathname.slice('/wiki/'.length).split('/')[0]).replace(/_/g, ' '); }
+        catch { return NextResponse.json({ error: 'عنوان فایل ویکی‌مدیا معتبر نیست' }, { status: 400 }); }
+      }
+      if (!/^File:/i.test(fileTitle.trim())) {
+        return NextResponse.json({ error: 'لینک باید به صفحهٔ File در ویکی‌مدیا اشاره کند' }, { status: 400 });
+      }
+      const image = await fetchCommonsFileImage(fileTitle);
+      if (!image) return NextResponse.json({ error: 'تصویر این فایل در ویکی‌مدیا قابل دریافت نیست' }, { status: 404 });
+      info.image = image;
+      return NextResponse.json({ info });
+    }
 
     if (isImdb) {
       const imdbMatch = parsed.pathname.match(/(?:^|\/)title\/(tt\d+)/i) || parsed.href.match(/\b(tt\d+)\b/i);
@@ -222,7 +273,7 @@ export async function POST(request: NextRequest) {
         if (record.Title) info.title = record.Title;
         if (record.Plot && record.Plot !== 'N/A') info.description = record.Plot;
         // Preserve IMDb/OMDb posters for other genres; decor needs real program/set imagery.
-        if (record.Poster && record.Poster !== 'N/A' && /^https:\/\//i.test(record.Poster)) info.image = record.Poster;
+        if (!isDecor && record.Poster && record.Poster !== 'N/A' && /^https:\/\//i.test(record.Poster)) info.image = record.Poster;
         if (record.imdbRating && record.imdbRating !== 'N/A') info.rating = record.imdbRating;
         if (record.Genre && record.Genre !== 'N/A') info.genres = record.Genre;
         if (record.Year && record.Year !== 'N/A') info.year = record.Year;
@@ -235,14 +286,19 @@ export async function POST(request: NextRequest) {
       // Prefer the poster belonging to the exact IMDb title ID. Do not
       // replace it with a loosely matched Wikipedia search result (which can
       // return an unrelated image for ambiguous titles such as "Top Gear").
-      if (!info.image && imdbMatch) {
+      if (!isDecor && !info.image && imdbMatch) {
         const fallbackPoster = await fetchImdbPoster(imdbMatch[1]);
         if (fallbackPoster) info.image = fallbackPoster;
       }
       // Only use Wikipedia/Wikimedia as a last resort when IMDb has no image.
-      if (!info.image && isDecor) {
-        const decorImage = await fetchWikipediaShowImage(info.title || String(showName || ''));
-        if (decorImage) info.image = decorImage;
+      if (!info.image && (isDecor || info.title || showName)) {
+        // In decor mode the user-supplied programme name is more reliable
+        // than an IMDb episode title; search for the programme/studio image.
+        const fallbackTitle = isDecor && showName
+          ? String(showName)
+          : (info.title || String(showName || ''));
+        const fallbackImage = await fetchWikipediaShowImage(fallbackTitle);
+        if (fallbackImage) info.image = fallbackImage;
       }
     }
 
@@ -271,6 +327,13 @@ export async function POST(request: NextRequest) {
           else if (d.thumbnail?.source) info.image = d.thumbnail.source;
           info.wikiUrl = `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(pageTitle.replace(/ /g, '_'))}`;
         }
+      }
+      if (!info.image && (isDecor || info.title || showName)) {
+        const fallbackTitle = isDecor && showName
+          ? String(showName)
+          : (info.title || pageTitle || String(showName || ''));
+        const fallbackImage = await fetchWikipediaShowImage(fallbackTitle);
+        if (fallbackImage) info.image = fallbackImage;
       }
     }
 

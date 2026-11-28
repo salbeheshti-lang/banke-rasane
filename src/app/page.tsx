@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { api, setApiBase, getApiBase, getApiUrl, User, authHeaders } from '@/lib/api';
 import { useTheme } from '@/hooks/use-theme';
@@ -37,6 +37,7 @@ interface TalkShow {
   isFilm?: boolean;
   tags?: string[];
   images?: string[];
+  programLogo?: string;
   videos?: string[];
   // Explicit user choice; undefined preserves legacy decor classification.
   decorIncluded?: boolean;
@@ -917,7 +918,7 @@ function HomeInner() {
   // The toggle button calls toggleLang() which switches fa ↔ en and updates
   // <html lang/dir> + persists to localStorage.
   const { lang, toggleLang, t } = useLang();
-  const [currentView, setCurrentView] = useState<'dashboard' | 'programs' | 'genre' | 'reports' | 'add'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'programs' | 'genre' | 'reports' | 'add' | 'suggestions'>('dashboard');
   const [selectedGenre, setSelectedGenre] = useState<Genre | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
@@ -930,6 +931,9 @@ function HomeInner() {
     return () => window.removeEventListener('resize', check);
   }, []);
   const [talkShows, setTalkShows] = useState<TalkShow[]>([]);
+  const [archiveLoading, setArchiveLoading] = useState(false);
+  const [archiveError, setArchiveError] = useState('');
+  const [archiveReloadKey, setArchiveReloadKey] = useState(0);
   // Base archive data loaded from the authenticated shared API.
   const [baseShows, setBaseShows] = useState<TalkShow[]>([]);
   // Recovery-only local overrides retained solely for safe migration of legacy browser edits.
@@ -946,6 +950,10 @@ function HomeInner() {
 
   const [editingShow, setEditingShow] = useState<TalkShow | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  }, []);
   const [publishShows, setPublishShows] = useState<TalkShow[] | null>(null);
   const [showBotConfig, setShowBotConfig] = useState(false);
   const [exportPreview, setExportPreview] = useState<{
@@ -1009,6 +1017,9 @@ function HomeInner() {
   useEffect(() => {
     if (!currentUser) return;
     let cancelled = false;
+    Promise.resolve().then(() => {
+      if (!cancelled) { setArchiveLoading(true); setArchiveError(''); }
+    });
     (async () => {
       const saved = loadOverrides();
       const remaining: Overrides = { added: [], edited: {}, deleted: [] };
@@ -1053,16 +1064,22 @@ function HomeInner() {
         setBaseShows(data);
         setOverrides(remaining);
         setTalkShows(applyOverrides(data, remaining));
+        setArchiveLoading(false);
+        setArchiveError(data.length === 0 ? 'سرور پاسخ داد اما آرشیو خالی است؛ داده‌های اولیه باید در API بارگذاری شوند.' : '');
         if (hasLegacyChanges && !migrationComplete) {
           console.warn('[migration] some legacy changes remain in local recovery storage');
         }
       } catch (error) {
         console.error('[shows] failed to load shared archive:', error);
-        if (!cancelled) showToast('دریافت آرشیو از سرور ناموفق بود؛ اتصال سرور را بررسی کنید');
+        if (!cancelled) {
+          setArchiveError(error instanceof Error ? error.message : 'اتصال به سرویس آرشیو ناموفق بود');
+          showToast('دریافت آرشیو ناموفق بود؛ از دکمه تلاش مجدد استفاده کنید');
+          setArchiveLoading(false);
+        }
       }
     })();
     return () => { cancelled = true; };
-  }, [currentUser?.id, currentUser?.role]);
+  }, [currentUser?.id, currentUser?.role, archiveReloadKey]);
 
   // On Electron desktop, require a fresh sign-in once per application launch.
   // sessionStorage survives in-app reloads but is cleared when the app process exits.
@@ -1082,12 +1099,20 @@ function HomeInner() {
       setAuthLoading(false);
       return;
     }
-    api.getCurrentUser()
+    // A sleeping/free preview API or a stalled network must never leave the
+    // entire application behind the auth splash forever. Bound this bootstrap
+    // request; on timeout, fall back to the normal login screen.
+    const controller = new AbortController();
+    const authTimeout = window.setTimeout(() => controller.abort(), 15000);
+    api.getCurrentUser(controller.signal)
       .then((user) => setCurrentUser(user))
       .catch(() => {
         localStorage.removeItem('bankresaneh_token');
       })
-      .finally(() => setAuthLoading(false));
+      .finally(() => {
+        window.clearTimeout(authTimeout);
+        setAuthLoading(false);
+      });
   }, []);
 
   // Recompute the merged list whenever overrides change (e.g. after an edit).
@@ -1098,10 +1123,6 @@ function HomeInner() {
     }
   }, [baseShows, overrides]);
 
-  function showToast(msg: string) {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  }
 
   // Persist a new set of overrides to state + localStorage in one place.
   const commitOverrides = (next: Overrides) => {
@@ -1170,7 +1191,7 @@ function HomeInner() {
 
   const canGoBack = viewStack.length > 0;
 
-  const handleNavigate = (v: 'dashboard' | 'programs' | 'reports' | 'add') => {
+  const handleNavigate = (v: 'dashboard' | 'programs' | 'reports' | 'add' | 'suggestions') => {
     navigate(v, null);
   };
 
@@ -1317,11 +1338,14 @@ function HomeInner() {
         genres={genres}
       />
 
-      <main key={currentView} className={`animate-view-enter ${isMobile ? 'p-4 pt-24 pb-28' : 'p-8 pt-28'}`}>
+      <main key={currentView} className={`app-content animate-view-enter ${isMobile ? 'p-4 pt-24 pb-52' : 'p-8 pt-28'}`}>
+        {archiveLoading && talkShows.length === 0 && <div role="status" className="max-w-3xl mx-auto mb-5 rounded-xl p-4 text-center" style={{ color: '#f0fdf4', background: 'rgba(0,65,48,.78)', border: '1px solid rgba(167,243,208,.35)' }}>در حال اتصال به سرور و دریافت آرشیو برنامه‌ها…</div>}
+        {!!archiveError && <div role="alert" className="max-w-3xl mx-auto mb-5 rounded-xl p-4" style={{ color: '#fff', background: 'rgba(127,29,29,.78)', border: '1px solid rgba(252,165,165,.55)' }}><p className="font-bold mb-2">بارگذاری آرشیو با مشکل روبه‌رو شد</p><p className="text-sm mb-3" dir="auto">{archiveError}</p><button type="button" disabled={archiveLoading} onClick={() => setArchiveReloadKey(value => value + 1)} className="rounded-lg px-5 py-2 font-bold" style={{ color: '#052e24', background: '#a7f3d0', minHeight: 48 }}>{archiveLoading ? 'در حال تلاش…' : 'تلاش مجدد برای دریافت برنامه‌ها'}</button></div>}
         {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} onEditGenre={handleEditGenre} onDeleteGenre={handleDeleteGenre} onShowClick={setSelectedShow} />}
         {currentView === 'programs' && <ProgramsView talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={(s) => { setEditingShow(s); setPresetGenre(null); setPresetCategory(undefined); navigate('add'); }} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'genre' && selectedGenre && <ProgramsView genre={selectedGenre} talkShows={talkShows} uploadedShows={uploadedShows} setUploadedShows={setUploadedShows} onShowClick={setSelectedShow} onEdit={(s) => { setEditingShow(s); setPresetGenre(null); setPresetCategory(undefined); navigate('add'); }} showToast={showToast} onPublish={setPublishShows} onExport={(shows, fmt) => setExportPreview({ shows, format: fmt })} canEdit={canEdit} onAdd={() => handleAddFromGenre(selectedGenre)} genres={genres} onGenreSelect={(g) => navigate('genre', g)} onNavigate={handleNavigate} />}
         {currentView === 'reports' && <ReportsView talkShows={talkShows} uploadedShows={uploadedShows} showToast={showToast} canManageSettings={hasPermission('manage_settings') || isAdmin} onExport={(shows, format, meta) => setExportPreview({ shows, format, ...meta })} />}
+        {currentView === 'suggestions' && currentUser && <SuggestionsView currentUser={currentUser} showToast={showToast} />}
         {currentView === 'add' && canEdit && <AddEditView key={editingShow?.num ?? 'new'} talkShows={talkShows} onSave={handleSaveShow} editingShow={editingShow} setEditingShow={setEditingShow} onDone={() => { setEditingShow(null); setSelectedGenre(null); setPresetCategory(undefined); setPresetGenre(null); setCurrentView('programs'); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }} showToast={showToast} presetCategory={presetCategory} presetGenre={presetGenre} genres={genres} canManageCapacity={isAdmin} />}
         {currentView === 'add' && !canEdit && (
           <div className="premium-glass p-8 text-center">
@@ -1330,6 +1354,8 @@ function HomeInner() {
           </div>
         )}
       </main>
+
+      <BrandFooter withBottomNav={isMobile} />
 
       {isMobile && (
         <MobileBottomNav
@@ -1445,7 +1471,6 @@ function HomeInner() {
           {toast}
         </div>
       )}
-      <BrandFooter withBottomNav={isMobile} />
     </div>
   );
 }
@@ -1715,9 +1740,9 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
       <div
         className="flex items-center justify-between"
         style={{
-          padding: isMobile ? '12px 16px' : '14px 28px',
+          padding: isMobile ? '10px 12px' : '14px 28px',
           minHeight: '64px',
-          gap: '12px',
+          gap: isMobile ? '6px' : '12px',
         }}
       >
         {/* Hamburger button — 3 lines — opens the drawer from the right */}
@@ -1732,8 +1757,10 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
             color: '#5eead4',
             borderRadius: '14px',
             boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12), 0 2px 10px rgba(0, 30, 25, 0.15)',
-            minWidth: '44px',
-            minHeight: '44px',
+            minWidth: isMobile ? '38px' : '44px',
+            minHeight: isMobile ? '38px' : '44px',
+            padding: isMobile ? '8px' : '10px',
+            flexShrink: 0,
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = 'rgba(45, 212, 191, 0.2)';
@@ -1749,16 +1776,19 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
           </svg>
         </button>
 
-        {/* Center: logo + title */}
+        {/* Logo + title block. On mobile the logo sits right next to the
+            hamburger (flex-start in RTL = right side) instead of being
+            centered, so the brand mark and menu read as one grouped unit.
+            The organization badge returns with a compact layout. */}
         <div
-          className="flex items-center gap-3 flex-1 min-w-0"
-          style={{ justifyContent: 'center' }}
+          className="flex items-center flex-1 min-w-0"
+          style={{ gap: isMobile ? '6px' : '12px', justifyContent: isMobile ? 'flex-start' : 'center' }}
         >
           <Image
             src="/banke-rasane-logo.png"
             alt={t('app.title')}
-            width={isMobile ? 110 : 160}
-            height={isMobile ? 30 : 42}
+            width={isMobile ? 84 : 160}
+            height={isMobile ? 23 : 42}
             priority
             style={{
               /* Brighter, clearer logo — brighter shadow + slight brightness boost */
@@ -1784,17 +1814,33 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               </span>
             </div>
           )}
-          {/* Mobile: compact organization name + logo next to the main logo */}
-          {isMobile && (
-            <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
-              <img src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={26} height={26} style={{ opacity: 0.95, objectFit: 'contain' }} />
-              <span style={{ color: 'rgba(167, 243, 208, 0.85)', fontSize: '8.5px', fontWeight: 700, lineHeight: 1.1, whiteSpace: 'nowrap' }}>{CLIENT_BRANDING.organizationFa}</span>
-            </div>
-          )}
+          {/* Mobile: organization logo was here — moved to the toggle group
+              on the left so it sits next to EN/moon at the same size. */}
         </div>
 
-        {/* Left: theme + language toggles, then back button (when there is history), else status badge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '44px', justifyContent: 'flex-end' }}>
+        {/* Left: theme + language toggles + org logo (mobile), then back button (when there is history), else status badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '8px', minWidth: '44px', justifyContent: 'flex-end' }}>
+          {/* Mobile: organization logo chip — same height/style as EN/moon toggles */}
+          {isMobile && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                width: '32px',
+                height: '32px',
+                borderRadius: '10px',
+                background: 'rgba(255, 255, 255, 0.12)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                border: '1px solid rgba(255, 255, 255, 0.18)',
+              }}
+              title={CLIENT_BRANDING.organizationFa}
+            >
+              <img src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={20} height={20} style={{ opacity: 0.95, objectFit: 'contain' }} />
+            </div>
+          )}
           {/* Language toggle — FA/EN */}
           <button
             onClick={onToggleLang}
@@ -1806,10 +1852,10 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               border: '1px solid rgba(45, 212, 191, 0.25)',
               color: '#5eead4',
               borderRadius: '10px',
-              minWidth: '36px',
-              minHeight: '36px',
+              minWidth: isMobile ? '32px' : '36px',
+              minHeight: isMobile ? '32px' : '36px',
               fontWeight: 800,
-              fontSize: '12px',
+              fontSize: isMobile ? '11px' : '12px',
               padding: '0 8px',
             }}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(45, 212, 191, 0.2)'; }}
@@ -1829,8 +1875,8 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               border: '1px solid rgba(45, 212, 191, 0.25)',
               color: '#5eead4',
               borderRadius: '10px',
-              minWidth: '36px',
-              minHeight: '36px',
+              minWidth: isMobile ? '32px' : '36px',
+              minHeight: isMobile ? '32px' : '36px',
             }}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(45, 212, 191, 0.2)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(45, 212, 191, 0.1)'; }}
@@ -1870,28 +1916,10 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               {!isMobile && <span>{t('nav.backShort')}</span>}
             </button>
           ) : isMobile ? (
-            /* Mobile: small connection-status dot only (the old app.title badge
-               box was redundant next to the main logo and crowded the header). */
-            <span
-              className="flex items-center justify-center"
-              style={{
-                minWidth: '36px',
-                minHeight: '36px',
-              }}
-              title={t('app.connected')}
-              aria-label={t('app.connected')}
-            >
-              <span
-                className="rounded-full"
-                style={{
-                  width: '8px',
-                  height: '8px',
-                  backgroundColor: '#10b981',
-                  boxShadow: '0 0 8px #10b981',
-                  animation: 'pulse 2s ease-in-out infinite',
-                }}
-              />
-            </span>
+            /* Mobile: connection status is implicit (the app loaded = connected).
+               The old 36px dot container wasted space and looked like a stray
+               "big dot". Removed in favor of a cleaner header. */
+            null
           ) : (
             <div
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl"
@@ -1941,7 +1969,7 @@ function DrawerMenu({
   open: boolean;
   onClose: () => void;
   currentView: string;
-  onNavigate: (v: 'dashboard' | 'programs' | 'reports' | 'add') => void;
+  onNavigate: (v: 'dashboard' | 'programs' | 'reports' | 'add' | 'suggestions') => void;
   onGenreSelect: (g: Genre) => void;
   onLogout: () => void;
   onOpenSettings: () => void;
@@ -1959,6 +1987,7 @@ function DrawerMenu({
     { key: 'programs', label: t('view.programs'), icon: 'grid', desc: t('view.programs.desc') + ' — ' + (talkShows.length).toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US') + ' ' + t('dashboard.programs') },
     { key: 'add', label: t('view.add'), icon: 'plus', desc: t('view.add.desc') },
     { key: 'reports', label: t('view.reports'), icon: 'reports', desc: t('view.reports.desc') },
+    { key: 'suggestions', label: 'پیام به مدیر', icon: 'mail', desc: isAdmin ? 'مشاهده و پیگیری پیشنهادهای کاربران' : 'ارسال پیشنهاد و پیام به مدیر یا ادمین' },
   ] as const;
 
   // Don't render anything if not open — keeps DOM clean
@@ -2264,7 +2293,7 @@ function MobileBottomNav({
   genres = GENRES,
 }: {
   currentView: string;
-  onNavigate: (v: 'dashboard' | 'programs' | 'reports' | 'add') => void;
+  onNavigate: (v: 'dashboard' | 'programs' | 'reports' | 'add' | 'suggestions') => void;
   onGenreSelect: (g: Genre) => void;
   onLogout: () => void;
   onOpenDrawer: () => void;
@@ -2351,16 +2380,17 @@ function MobileBottomNav({
         </div>
       )}
 
-      <nav className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3">
+      <nav data-testid="mobile-bottom-nav" aria-label="پیمایش اصلی موبایل" className="fixed bottom-0 left-0 right-0 z-50 px-3 pb-3" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
         <div
           className="flex items-center justify-around no-scrollbar"
           style={{
-            /* Mobile nav: SAME as header */
-            background: 'linear-gradient(90deg, rgba(5, 80, 65, 0.82) 0%, rgba(0, 95, 75, 0.78) 50%, rgba(8, 110, 90, 0.75) 100%)',
-            backdropFilter: 'blur(24px) saturate(135%)',
-            WebkitBackdropFilter: 'blur(24px) saturate(135%)',
+            /* Explicit Liquid Glass dock: translucent surface, bright rim and deep blur. */
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(19,116,100,0.66) 42%, rgba(3,55,48,0.78) 100%)',
+            backdropFilter: 'blur(32px) saturate(185%)',
+            WebkitBackdropFilter: 'blur(32px) saturate(185%)',
+            border: '1px solid rgba(255,255,255,0.34)',
             borderRadius: '30px',
-            boxShadow: '0 4px 18px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.12)',
+            boxShadow: '0 10px 34px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.42), inset 0 -1px 0 rgba(0,0,0,0.12)',
             padding: '8px',
           }}
         >
@@ -2542,7 +2572,7 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
           </div>
           {featuredShows.length > 1 && (
             <div className="featured-dots">
-              {featuredShows.map((_, i) => (<button key={i} className={`featured-dot ${i === currentIdx ? 'active' : ''}`} onClick={() => scrollToCard(i)} aria-label={`برنامه ${i + 1}`} />))}
+              {featuredShows.map((_, i) => (<button key={i} data-compact="true" className={`featured-dot ${i === currentIdx ? 'active' : ''}`} onClick={() => scrollToCard(i)} aria-label={`برنامه ${i + 1}`} />))}
             </div>
           )}
         </>
@@ -2577,6 +2607,7 @@ function UserProfileModal({ user, onClose, showToast }: {
   const [editing, setEditing] = useState(false);
   useEscapeKey(onClose, editing); // don't close on Escape while editing
   const [name, setName] = useState(user.name || '');
+  const [username, setUsername] = useState(user.username || '');
   const [phone, setPhone] = useState(user.phone || '');
   const [jobTitle, setJobTitle] = useState(user.jobTitle || '');
   const [deputy, setDeputy] = useState(user.deputy || '');
@@ -2588,14 +2619,17 @@ function UserProfileModal({ user, onClose, showToast }: {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch(getApiUrl('api/auth/me'), {
+      const res = await fetch(getApiUrl('api/profile'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('bankresaneh_token')}` },
-        body: JSON.stringify({ name, phone, jobTitle, deputy, avatar }),
+        body: JSON.stringify({ username, name, phone, jobTitle, deputy, avatar }),
       });
       if (res.ok) {
+        const savedProfile = await res.clone().json();
+        localStorage.setItem('bankresaneh_user', JSON.stringify(savedProfile));
         showToast(t('settings.profile.saved'));
         setEditing(false);
+        window.location.reload();
       } else {
         showToast(t('toast.error'));
       }
@@ -2710,7 +2744,7 @@ function UserProfileModal({ user, onClose, showToast }: {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
               تغییر عکس
-              <input type="file" accept="image/*" onChange={handleAvatarUpload} style={{ display: 'none' }} />
+              <input type="file" accept="image/*,.heic,.heif,.tif,.tiff,.bmp,.svg,.jxl,.jp2" onChange={handleAvatarUpload} style={{ display: 'none' }} />
             </label>
           )}
           {/* Name + role + username — overlaid ON the image */}
@@ -2723,7 +2757,7 @@ function UserProfileModal({ user, onClose, showToast }: {
               {name || user.username}
             </div>
             <div style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.85)', textShadow: '0 1px 4px rgba(0,0,0,0.6)' }}>
-              @{user.username}
+              @{username}
             </div>
             <span style={{
               fontSize: '12px', fontWeight: 700, padding: '5px 16px', borderRadius: '999px',
@@ -2740,6 +2774,7 @@ function UserProfileModal({ user, onClose, showToast }: {
 
         {/* Contact details — below the banner */}
         <div className="flex-1 overflow-y-auto px-4 pt-4 pb-4 space-y-2">
+          <ContactRow icon="🆔" label="نام کاربری" value={username} editing={editing} onChange={setUsername} placeholder="نام کاربری" dir="ltr" />
           <ContactRow icon="👤" label="نام نمایشی" value={name} editing={editing} onChange={setName} placeholder="نام و نام خانوادگی" />
           <ContactRow icon="📱" label="شماره همراه" value={phone} editing={editing} onChange={setPhone} placeholder="0912xxxxxxx" dir="ltr" />
           <ContactRow icon="💼" label="عنوان شغلی" value={jobTitle} editing={editing} onChange={setJobTitle} placeholder="مثلاً: تهیه‌کننده" />
@@ -4925,8 +4960,9 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
   };
 
   const handleAutoFetch = async () => {
-    if (!fetchUrl) {
-      showToast(t('add.autoFetchNoUrl'));
+    const nameQuery = String(form.name || '').trim();
+    if (!String(fetchUrl || '').trim() && !nameQuery) {
+      showToast('برای دریافت خودکار، نام برنامه یا لینک IMDb/ویکی‌پدیا را وارد کنید.');
       return;
     }
     setFetching(true);
@@ -4945,7 +4981,7 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
       const info = data.info || {};
       let importedImage = info.image;
       if (typeof importedImage === 'string' && /^https:\/\//i.test(importedImage)) {
-        const imageResponse = await fetch('/api/import-image', {
+        const imageResponse = await fetch(getApiUrl('api/import-image'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({ url: importedImage }),
@@ -5114,15 +5150,15 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
           <h4 className="font-bold mb-2" style={{ color: '#f0fdf4' }}>⚡ دریافت خودکار اطلاعات</h4>
           <p className="text-xs mb-3" style={{ color: 'rgba(244, 255, 255, 0.7)' }}>
 {editingShow
-              ? 'لینک IMDb یا ویکی‌پدیا را وارد کنید تا فقط تصویر کاور دریافت و به تصاویر برنامه اضافه شود؛ سایر اطلاعات تغییر نمی‌کنند.'
-              : 'لینک IMDb یا ویکی‌پدیا برنامه را وارد کنید تا نام، توضیحات، تصویر و اطلاعات قابل‌استخراج برای تکمیل فرم دریافت شود.'}
+              ? 'نام برنامه را در فیلد نام وارد کنید یا لینک IMDb، ویکی‌پدیا یا ویکی‌مدیا را بدهید تا فقط تصویر دریافت و به تصاویر برنامه اضافه شود؛ سایر اطلاعات تغییر نمی‌کنند.'
+              : 'نام برنامه یا لینک IMDb، ویکی‌پدیا یا ویکی‌مدیا را وارد کنید تا اطلاعات و تصویر قابل‌استخراج برای تکمیل فرم دریافت شود.'}
           </p>
-          <div className="flex gap-2">
+          <div className="flex gap-2 auto-fetch-row">
             <input
               type="text"
               value={fetchUrl}
               onChange={(e) => setFetchUrl(e.target.value)}
-              placeholder="https://www.imdb.com/title/... یا https://fa.wikipedia.org/..."
+              placeholder="نام برنامه را بالا وارد کنید یا لینک IMDb / Wikipedia / Wikimedia Commons"
               style={{
                 flex: 1,
                 padding: '10px 16px',
@@ -5137,10 +5173,11 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
               }}
             />
             <button
+              type="button"
               onClick={handleAutoFetch}
               disabled={fetching}
-              className="btn-enter-premium"
-              style={{ padding: '10px 24px', fontSize: '14px', whiteSpace: 'nowrap' }}
+              className="btn-enter-premium auto-fetch-button"
+              style={{ padding: '10px 24px', fontSize: '14px', whiteSpace: 'nowrap', minHeight: '48px', fontWeight: 800, boxShadow: '0 4px 16px rgba(16,185,129,0.35)', border: '1px solid rgba(167,243,208,0.75)' }}
             >
               {fetching ? '⏳ در حال دریافت...' : '⚡ دریافت'}
             </button>
@@ -5352,6 +5389,8 @@ function AddEditView({ talkShows, onSave, editingShow, setEditingShow, onDone, s
         <ImageGalleryEditor
           images={form.images || []}
           onChange={(imgs) => setForm({ ...form, images: imgs })}
+          programLogo={form.programLogo || ''}
+          onProgramLogoChange={(logo) => setForm({ ...form, programLogo: logo })}
           showToast={showToast}
         />
 
@@ -5456,9 +5495,11 @@ function FormSelect({ label, value, onChange, options }: {
 // IMAGE GALLERY EDITOR — up to 8 images per show
 // Supports both URL paste and file upload (base64 for offline storage)
 // ============================================
-function ImageGalleryEditor({ images, onChange, showToast }: {
+function ImageGalleryEditor({ images, onChange, programLogo, onProgramLogoChange, showToast }: {
   images: string[];
   onChange: (imgs: string[]) => void;
+  programLogo: string;
+  onProgramLogoChange: (logo: string) => void;
   showToast: (msg: string) => void;
 }) {
   const [urlInput, setUrlInput] = useState('');
@@ -5491,7 +5532,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
 
     setImportingUrl(true);
     try {
-      const response = await fetch('/api/import-image', {
+      const response = await fetch(getApiUrl('api/import-image'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ url: trimmed }),
@@ -5515,53 +5556,6 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
     }
   };
 
-  const compressImageFile = async (file: File): Promise<string> => {
-    if (!file.type.startsWith('image/')) throw new Error('فایل انتخاب‌شده تصویر نیست');
-    if (file.size > 25 * 1024 * 1024) throw new Error('حجم تصویر اولیه نباید بیشتر از ۲۵ مگابایت باشد');
-
-    // createImageBitmap applies EXIF orientation where supported. The scale
-    // calculation preserves the original aspect ratio; no stretching/cropping.
-    const bitmap = await createImageBitmap(file);
-    try {
-      const maxWidth = 1200;
-      const maxHeight = 1800;
-      const scale = Math.min(1, maxWidth / bitmap.width, maxHeight / bitmap.height);
-      const width = Math.max(1, Math.round(bitmap.width * scale));
-      const height = Math.max(1, Math.round(bitmap.height * scale));
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const context = canvas.getContext('2d');
-      if (!context) throw new Error('امکان پردازش تصویر وجود ندارد');
-      context.imageSmoothingEnabled = true;
-      context.imageSmoothingQuality = 'high';
-      context.drawImage(bitmap, 0, 0, width, height);
-
-      const encode = (type: string, quality: number) => new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('تبدیل تصویر ناموفق بود')), type, quality);
-      });
-      let output = await encode('image/webp', 0.84);
-      let mime = output.type === 'image/webp' ? 'image/webp' : 'image/jpeg';
-      if (output.size > 1.2 * 1024 * 1024) {
-        output = await encode(mime, 0.74);
-      }
-      if (output.size > 1.8 * 1024 * 1024) {
-        output = await encode(mime, 0.66);
-      }
-      if (output.size > 2.5 * 1024 * 1024) {
-        throw new Error('حجم تصویر پس از فشرده‌سازی هنوز زیاد است؛ تصویر کوچک‌تری انتخاب کنید');
-      }
-      return await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('خواندن تصویر ناموفق بود'));
-        reader.onerror = () => reject(new Error('خواندن تصویر ناموفق بود'));
-        reader.readAsDataURL(output);
-      });
-    } finally {
-      bitmap.close();
-    }
-  };
-
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -5572,24 +5566,37 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
       showToast(`فقط ${toAdd.length.toLocaleString('fa-IR')} تصویر اضافه می‌شود (حداکثر ${MAX_IMAGES.toLocaleString('fa-IR')})`);
     }
 
-    // Process sequentially so order is deterministic and memory use stays low.
+    // Process sequentially so the selected API backend optimizes each source
+    // format safely without relying on the browser's image decoder.
     for (const file of toAdd) {
       try {
-        const result = await compressImageFile(file);
+        const formData = new FormData();
+        formData.set('file', file, file.name);
+        const response = await fetch(getApiUrl('api/import-image'), {
+          method: 'POST',
+          headers: authHeaders(),
+          body: formData,
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || typeof result.dataUrl !== 'string') {
+          throw new Error(result.error || `پردازش تصویر ${file.name} ناموفق بود`);
+        }
         const current = imagesRef.current;
-        if (current.length < MAX_IMAGES && !current.includes(result)) {
-          onChange([...current, result]);
+        if (current.length < MAX_IMAGES && !current.includes(result.dataUrl)) {
+          onChange([...current, result.dataUrl]);
         }
       } catch (error) {
         showToast(error instanceof Error ? error.message : `خطا در پردازش تصویر: ${file.name}`);
       }
     }
-    showToast('تصاویر بهینه شدند؛ نسبت تصویر حفظ شده و حجم فایل کاهش یافته است.');
+    showToast('تصاویر در سرور انتخاب‌شده به WebP بهینه شدند؛ نسبت تصویر حفظ شده است.');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const removeImage = (idx: number) => {
+    const removed = images[idx];
     onChange(images.filter((_, i) => i !== idx));
+    if (programLogo && programLogo === removed) onProgramLogoChange('');
   };
 
   const moveImage = (idx: number, dir: 'left' | 'right') => {
@@ -5610,7 +5617,9 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
           </span>
         </h4>
         {images.length > 0 && (
-          <span className="text-xs" style={{ color: '#54D9C0' }}>تصویر اول = کاور</span>
+          <span className="text-xs" style={{ color: programLogo ? '#fbbf24' : '#54D9C0' }}>
+            {programLogo ? 'لوگوی برنامه انتخاب شده' : 'برای تعیین لوگوی برنامه، روی تصویر موردنظر بزنید'}
+          </span>
         )}
       </div>
 
@@ -5751,6 +5760,14 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
                   کاور
                 </span>
               )}
+              {programLogo === img && (
+                <span
+                  className="absolute bottom-1 right-1 text-[10px] px-2 py-1 rounded-md font-bold"
+                  style={{ background: '#f59e0b', color: '#1f2937' }}
+                >
+                  لوگوی برنامه
+                </span>
+              )}
               {/* Number badge */}
               <span
                 className="absolute top-1 left-1 text-xs px-1.5 py-0.5 rounded-md font-bold"
@@ -5777,6 +5794,14 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                   </svg>
+                </button>
+                <button
+                  onClick={() => onProgramLogoChange(programLogo === img ? '' : img)}
+                  className="px-2 py-1.5 rounded-lg text-[10px] font-bold"
+                  style={{ background: programLogo === img ? '#f59e0b' : 'rgba(255,255,255,0.9)', color: '#1a2e1a' }}
+                  title={programLogo === img ? 'حذف انتخاب لوگو' : 'انتخاب به‌عنوان لوگوی برنامه'}
+                >
+                  {programLogo === img ? '★ انتخاب شد' : '★ لوگو'}
                 </button>
                 <button
                   onClick={() => removeImage(idx)}
@@ -5832,7 +5857,7 @@ function ImageGalleryEditor({ images, onChange, showToast }: {
 }
 
 // ============================================
-// LOCAL VIDEO CLIP EDITOR — browser-native trim/transcode, max 30 seconds
+// LOCAL VIDEO CLIP EDITOR — authenticated FFmpeg MP4 trim/transcode, max 30 seconds
 function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState('');
@@ -5868,7 +5893,7 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
     const acceptedMime = ['video/mp4', 'video/x-m4v', 'video/quicktime', 'video/webm'].includes(next.type);
     if (!acceptedContainer && !acceptedMime) {
       setFile(null); setPreviewUrl(''); setDuration(0); setStart(0); setEnd(0);
-      setError('این ظرف ویدیویی برای ویرایش مستقیم پشتیبانی نمی‌شود. فایل را به MP4 با کدک H.264 و صدای AAC یا WebM با VP8/VP9 تبدیل کنید؛ فایل‌های MKV و AVI را ابتدا تبدیل کنید.');
+      setError('این فایل در قالب شناخته‌شده ویدیویی نیست. فایل ویدیویی سالم با فرمت‌های رایج را انتخاب کنید.');
       if (inputRef.current) inputRef.current.value = '';
       return;
     }
@@ -6032,116 +6057,33 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
   };
 
   const exportClip = async () => {
-    const video = videoRef.current;
-    if (!video || !previewUrl || busy) return;
+    if (!file || !previewUrl || busy) return;
     const clipLength = end - start;
     if (!Number.isFinite(duration) || duration <= 0 || !(clipLength > 0) || clipLength > 30) {
       setError('مدت کلیپ باید بیشتر از صفر و حداکثر ۳۰ ثانیه باشد.');
       return;
     }
-    const captureStream = (video as HTMLVideoElement & { captureStream?: () => MediaStream }).captureStream;
-    if (typeof MediaRecorder === 'undefined' || typeof captureStream !== 'function') {
-      setError('پردازش ویدیو در این نسخه پشتیبانی نمی‌شود. لطفاً از نسخه دسکتاپ به‌روز استفاده کنید.');
-      return;
-    }
 
     setBusy(true);
     setError('');
-    let stream: MediaStream | null = null;
-    let recorder: MediaRecorder | null = null;
-    let stopTimer: number | undefined;
     try {
-      video.pause();
-      await new Promise<void>((resolve, reject) => {
-        const timeout = window.setTimeout(() => { cleanup(); reject(new Error('آماده‌سازی فریم ویدیو بیش از حد طول کشید.')); }, 12000);
-        const cleanup = () => {
-          window.clearTimeout(timeout);
-          video.removeEventListener('seeked', onSeeked);
-          video.removeEventListener('error', onError);
-        };
-        const onSeeked = () => { cleanup(); resolve(); };
-        const onError = () => { cleanup(); reject(new Error('خواندن فایل ویدیو ناموفق بود.')); };
-        video.addEventListener('seeked', onSeeked, { once: true });
-        video.addEventListener('error', onError, { once: true });
-        if (Math.abs(video.currentTime - start) < 0.02 && video.readyState >= 2) {
-          cleanup();
-          resolve();
-        } else {
-          video.currentTime = start;
-        }
+      const form = new FormData();
+      form.set('file', file, file.name);
+      form.set('start', String(start));
+      form.set('end', String(end));
+      const response = await fetch(getApiUrl('api/video/transcode'), {
+        method: 'POST',
+        headers: authHeaders(),
+        body: form,
       });
-
-      stream = captureStream.call(video);
-      if (!stream.getVideoTracks().length) throw new Error('جریان تصویر از فایل ساخته نشد؛ فایل را دوباره بارگذاری کنید.');
-      const mimeType = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
-        .find(type => MediaRecorder.isTypeSupported(type));
-      if (!mimeType) throw new Error('کدک خروجی WebM در این سیستم پشتیبانی نمی‌شود.');
-      recorder = new MediaRecorder(stream, {
-        mimeType,
-        videoBitsPerSecond: 900000,
-        audioBitsPerSecond: 96000,
-      });
-      const chunks: BlobPart[] = [];
-      const finished = new Promise<Blob>((resolve, reject) => {
-        recorder!.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
-        recorder!.onerror = () => reject(new Error('پردازش ویدیو با خطا متوقف شد.'));
-        recorder!.onstop = () => resolve(new Blob(chunks, { type: mimeType }));
-      });
-
-      const stopped = new Promise<void>((resolve, reject) => {
-        let settled = false;
-        const finish = (err?: Error) => {
-          if (settled) return;
-          settled = true;
-          if (stopTimer) window.clearTimeout(stopTimer);
-          video.removeEventListener('timeupdate', checkEnd);
-          if (err) reject(err); else resolve();
-        };
-        const stop = () => {
-          video.pause();
-          if (recorder && recorder.state !== 'inactive') recorder.stop();
-          finish();
-        };
-        const checkEnd = () => {
-          if (video.currentTime >= end || video.ended) stop();
-        };
-        video.addEventListener('timeupdate', checkEnd);
-        stopTimer = window.setTimeout(() => {
-          // Do not silently save a truncated clip when decoding stalls or playback is throttled.
-          if (video.currentTime < end - 0.25) {
-            video.pause();
-            if (recorder && recorder.state !== 'inactive') recorder.stop();
-            finish(new Error('پردازش پیش از رسیدن به نقطه پایان متوقف شد؛ فایل را دوباره انتخاب یا بازه کوتاه‌تری تعیین کنید.'));
-            return;
-          }
-          stop();
-        }, Math.ceil(clipLength * 1000) + 2500);
-        video.play().then(() => {
-          if (video.currentTime >= end) stop();
-        }).catch(() => finish(new Error('پخش ویدیو برای پردازش آغاز نشد.')));
-      });
-
-      recorder.start(200);
-      await stopped;
-      const blob = await finished;
-      if (!blob.size) throw new Error('فایل خروجی خالی است؛ دوباره تلاش کنید.');
-      if (blob.size > 8 * 1024 * 1024) throw new Error('حجم خروجی بیش از ۸ مگابایت شد. بازه کوتاه‌تری انتخاب کنید.');
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result));
-        reader.onerror = () => reject(new Error('ذخیره فایل پردازش‌شده ناموفق بود.'));
-        reader.readAsDataURL(blob);
-      });
-      setExportedUrl(dataUrl);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'پردازش ویدیو ناموفق بود.');
-    } finally {
-      if (stopTimer) window.clearTimeout(stopTimer);
-      if (recorder && recorder.state !== 'inactive') {
-        try { recorder.stop(); } catch {}
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || typeof result.dataUrl !== 'string' || !result.dataUrl.startsWith('data:video/mp4;base64,')) {
+        throw new Error(result.error || 'تبدیل ویدیو به MP4 ناموفق بود.');
       }
-      if (stream) stream.getTracks().forEach(track => track.stop());
-      if (videoRef.current) videoRef.current.pause();
+      setExportedUrl(result.dataUrl);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'پردازش ویدیو ناموفق بود.');
+    } finally {
       setBusy(false);
     }
   };
@@ -6150,7 +6092,7 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
     <div className="p-3 rounded-xl mb-3" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)' }}>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <strong className="text-sm" style={{ color: '#d1fae5' }}>✂️ ویرایش ویدیو از سیستم (حداکثر ۳۰ ثانیه)</strong>
-        <p className="w-full text-[11px]" style={{ color: 'rgba(209,250,229,.78)' }}>فرمت پیشنهادی: MP4 با H.264 و AAC یا WebM با VP8/VP9. فایل‌های HEVC/H.265، MKV و AVI ممکن است در موتور ویدیویی ویندوز رمزگشایی نشوند؛ در صورت خطا، فقط تغییر پسوند کافی نیست و باید تبدیل واقعی انجام شود.</p>
+        <p className="w-full text-[11px]" style={{ color: 'rgba(209,250,229,.78)' }}>برای پیش‌نمایش، ورودی باید MP4 با H.264/AAC یا WebM با VP8/VP9 باشد؛ خروجی نهایی همیشه MP4 با H.264/AAC است.</p>
         <label className="px-3 py-2 rounded-lg text-xs font-bold cursor-pointer" style={{ background: '#0d7c4a', color: 'white' }}>
           انتخاب فایل ویدیو
           <input ref={inputRef} type="file" accept="video/mp4,video/webm,video/quicktime,.mp4,.m4v,.mov,.webm" onChange={e => chooseFile(e.target.files?.[0] || null)} style={{ display: 'none' }} />
@@ -6271,7 +6213,7 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
             </button>
             <button type="button" onClick={resetEditor} disabled={busy} className="px-3 py-2 rounded-lg text-xs" style={{ background: 'rgba(255,255,255,.12)', color: '#d1fae5' }}>انصراف</button>
           </div>
-          <p className="text-[11px]" style={{ color: 'rgba(209,250,229,.75)' }}>خروجی WebM با حفظ نسبت تصویر و صدای اصلی ساخته می‌شود؛ فایل اصلی تغییر نمی‌کند. حجم ورودی حداکثر ۲۰۰ مگابایت و خروجی حداکثر ۸ مگابایت است. پشتیبانی از فرمت ورودی به کدک‌های نصب‌شده در مرورگر وابسته است.</p>
+          <p className="text-[11px]" style={{ color: 'rgba(209,250,229,.75)' }}>خروجی عمودی MP4 با نسبت ۹:۱۶، کدک H.264 و صدای AAC ساخته می‌شود؛ تصویر اصلی بدون کشیدگی در مرکز می‌ماند و پس‌زمینهٔ محو از همان ویدئو قاب را پر می‌کند. فایل اصلی تغییر نمی‌کند. حجم ورودی حداکثر ۲۰۰ مگابایت و خروجی حداکثر ۸ مگابایت است.</p>
         </div>
       )}
       {exportedUrl && (
@@ -6283,7 +6225,7 @@ function VideoClipEditor({ onAdd }: { onAdd: (dataUrl: string) => void }) {
           <video src={exportedUrl} controls playsInline preload="metadata" style={{ width: '100%', maxHeight: 260, borderRadius: 10, background: '#000', objectFit: 'contain' }} />
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => { onAdd(exportedUrl); resetEditor(); }} className="px-4 py-2 rounded-lg text-sm font-bold" style={{ background: '#0d7c4a', color: 'white' }}>تأیید و افزودن خروجی به برنامه</button>
-            <a href={exportedUrl} download="bankresaneh-edited-clip.webm" className="px-4 py-2 rounded-lg text-sm" style={{ background: 'rgba(255,255,255,.12)', color: '#d1fae5' }}>دانلود فایل خروجی</a>
+            <a href={exportedUrl} download="bankresaneh-edited-clip.mp4" className="px-4 py-2 rounded-lg text-sm" style={{ background: 'rgba(255,255,255,.12)', color: '#d1fae5' }}>دانلود فایل خروجی</a>
             <button type="button" onClick={() => setExportedUrl('')} className="px-4 py-2 rounded-lg text-sm" style={{ color: '#fca5a5' }}>حذف پیش‌نمایش</button>
           </div>
         </div>
@@ -6905,12 +6847,11 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
     : undefined;
   const directVideoUrl = shows.length === 1
     ? (shows[0].videos || []).find((value) => {
-        // Accept clips exported by the in-browser editor (WebM/MP4 data URLs)
-        // as well as direct HTTPS links to .mp4 / .webm files.
-        if (typeof value === 'string' && /^data:video\/(mp4|webm|ogg)/i.test(value)) return true;
+        // Only FFmpeg-transcoded MP4 clips and direct HTTPS MP4 files can be published.
+        if (typeof value === 'string' && /^data:video\/mp4;base64,/i.test(value)) return true;
         try {
           const parsed = new URL(value);
-          return parsed.protocol === 'https:' && /\.(mp4|webm)$/i.test(parsed.pathname);
+          return parsed.protocol === 'https:' && !parsed.username && !parsed.password && /\.mp4$/i.test(parsed.pathname);
         } catch {
           return false;
         }
@@ -6955,6 +6896,221 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
           reader.readAsDataURL(imageBlob);
         });
       }
+      // Normalize approved external image URLs through the selected API backend.
+      // This avoids asking Bale to fetch a temporary or unsupported image format.
+      if (publishImageUrl && /^https:\/\//i.test(publishImageUrl)) {
+        try {
+          const normalizedResponse = await fetch(getApiUrl('api/import-image'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+            body: JSON.stringify({ url: publishImageUrl }),
+          });
+          const normalized = await normalizedResponse.json().catch(() => ({}));
+          if (normalizedResponse.ok && typeof normalized.dataUrl === 'string') {
+            publishImageUrl = normalized.dataUrl;
+          }
+        } catch {
+          // If a legacy external host is not in the safe image allowlist,
+          // retain its HTTPS URL and let Bale fetch it directly.
+        }
+      }
+      // Compose a real vertical 9:16 cover for the video/photo album.
+      // The program image is preferred; if it is missing, use the first MP4 frame.
+      let coverMedia: HTMLImageElement | HTMLVideoElement | null = null;
+      if (publishImageUrl) {
+        try {
+          coverMedia = await new Promise<HTMLImageElement>((resolve, reject) => {
+            const image = document.createElement('img');
+            image.crossOrigin = 'anonymous';
+            image.onload = () => resolve(image);
+            image.onerror = () => reject(new Error('تصویر برای آماده‌سازی انتشار قابل خواندن نیست'));
+            image.src = publishImageUrl!;
+          });
+        } catch {
+          coverMedia = null;
+        }
+      }
+
+      let coverVideo: HTMLVideoElement | null = null;
+      if (!coverMedia && directVideoUrl) {
+        coverVideo = document.createElement('video');
+        coverVideo.muted = true;
+        coverVideo.playsInline = true;
+        coverVideo.preload = 'auto';
+        coverVideo.crossOrigin = 'anonymous';
+        try {
+          await new Promise<void>((resolve, reject) => {
+            const timer = window.setTimeout(() => reject(new Error('video cover timeout')), 9000);
+            coverVideo!.onloadeddata = () => { window.clearTimeout(timer); resolve(); };
+            coverVideo!.onerror = () => { window.clearTimeout(timer); reject(new Error('video cover decode failed')); };
+            coverVideo!.src = directVideoUrl!;
+            coverVideo!.load();
+          });
+          if (coverVideo.videoWidth > 0 && coverVideo.videoHeight > 0) coverMedia = coverVideo;
+        } catch {
+          coverMedia = null;
+        }
+      }
+
+      let programLogoImage: HTMLImageElement | null = null;
+      const selectedProgramLogo = typeof shows[0]?.programLogo === 'string' ? shows[0].programLogo : '';
+      if (selectedProgramLogo) {
+        try {
+          let logoSource = selectedProgramLogo;
+          if (/^https:\/\//i.test(logoSource)) {
+            const logoResponse = await fetch(getApiUrl('api/import-image'), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...authHeaders() },
+              body: JSON.stringify({ url: logoSource }),
+            });
+            const logoResult = await logoResponse.json().catch(() => ({}));
+            if (logoResponse.ok && typeof logoResult.dataUrl === 'string') logoSource = logoResult.dataUrl;
+          }
+          if (logoSource.startsWith('data:image/')) {
+            programLogoImage = await new Promise<HTMLImageElement>((resolve, reject) => {
+              const image = document.createElement('img');
+              image.crossOrigin = 'anonymous';
+              image.onload = () => resolve(image);
+              image.onerror = () => reject(new Error('program logo decode failed'));
+              image.src = logoSource;
+            });
+          }
+        } catch {
+          programLogoImage = null;
+        }
+      }
+      let organizationLogoImage: HTMLImageElement | null = null;
+      try {
+        organizationLogoImage = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const image = document.createElement('img');
+          image.onload = () => resolve(image);
+          image.onerror = () => reject(new Error('organization logo decode failed'));
+          image.src = CLIENT_BRANDING.logoColorPath;
+        });
+      } catch {
+        organizationLogoImage = null;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 1080;
+      canvas.height = 1920;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('امکان آماده‌سازی تصویر عمودی برای انتشار وجود ندارد');
+      context.direction = 'rtl';
+      context.textAlign = 'center';
+
+      const background = context.createLinearGradient(0, 0, 1080, 1920);
+      background.addColorStop(0, '#08291e');
+      background.addColorStop(0.5, '#0d7c4a');
+      background.addColorStop(1, '#061a17');
+      context.fillStyle = background;
+      context.fillRect(0, 0, 1080, 1920);
+
+      // Cover image / first video frame.
+      context.save();
+      context.beginPath();
+      context.roundRect(64, 260, 952, 1010, 56);
+      context.clip();
+      if (coverMedia) {
+        const sw = 'videoWidth' in coverMedia ? coverMedia.videoWidth : coverMedia.naturalWidth;
+        const sh = 'videoHeight' in coverMedia ? coverMedia.videoHeight : coverMedia.naturalHeight;
+        if (sw > 0 && sh > 0) {
+          const scale = Math.max(952 / sw, 1010 / sh);
+          const cropWidth = 952 / scale;
+          const cropHeight = 1010 / scale;
+          context.drawImage(coverMedia, (sw - cropWidth) / 2, (sh - cropHeight) / 2, cropWidth, cropHeight, 64, 260, 952, 1010);
+        }
+      } else {
+        const coverGradient = context.createLinearGradient(64, 260, 1016, 1270);
+        coverGradient.addColorStop(0, 'rgba(26, 165, 115, 0.88)');
+        coverGradient.addColorStop(1, 'rgba(3, 27, 31, 0.98)');
+        context.fillStyle = coverGradient;
+        context.fillRect(64, 260, 952, 1010);
+      }
+      const overlay = context.createLinearGradient(0, 760, 0, 1270);
+      overlay.addColorStop(0, 'rgba(0,0,0,0)');
+      overlay.addColorStop(1, 'rgba(0,0,0,0.58)');
+      context.fillStyle = overlay;
+      context.fillRect(64, 260, 952, 1010);
+      context.restore();
+
+      // Brand, title, description, and category.
+      context.fillStyle = '#f0fdf4';
+      context.font = 'bold 42px Vazirmatn, sans-serif';
+      context.fillText('بانک رسانه', 540, 145);
+      context.fillStyle = 'rgba(240,253,244,0.78)';
+      context.font = '25px Vazirmatn, sans-serif';
+      context.fillText('آرشیو تخصصی برنامه‌های تلویزیونی', 540, 205);
+
+      context.fillStyle = 'rgba(3, 23, 19, 0.84)';
+      context.beginPath();
+      context.roundRect(64, 1310, 952, 490, 46);
+      context.fill();
+      context.strokeStyle = 'rgba(167,243,208,0.35)';
+      context.lineWidth = 2;
+      context.stroke();
+
+      const wrap = (value: string, font: string, maxWidth: number, maxLines: number) => {
+        context.font = font;
+        const words = String(value || '').replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
+        const lines: string[] = [];
+        let line = '';
+        for (const word of words) {
+          const next = line ? line + ' ' + word : word;
+          if (line && context.measureText(next).width > maxWidth) {
+            lines.push(line);
+            line = word;
+            if (lines.length >= maxLines) break;
+          } else line = next;
+        }
+        if (line && lines.length < maxLines) lines.push(line);
+        return lines;
+      };
+      const title = String(shows[0]?.name || 'برنامه منتخب');
+      const titleLines = wrap(title, 'bold 58px Vazirmatn, sans-serif', 830, 2);
+      context.fillStyle = '#ffffff';
+      titleLines.forEach((line, index) => context.fillText(line, 540, 1415 + index * 70));
+
+      const description = String(shows[0]?.descriptionFa || shows[0]?.summary || postText || '');
+      const descriptionLines = wrap(description, '29px Vazirmatn, sans-serif', 830, 3);
+      const descriptionY = 1415 + titleLines.length * 70 + 35;
+      context.fillStyle = 'rgba(240,253,244,0.88)';
+      descriptionLines.forEach((line, index) => context.fillText(line, 540, descriptionY + index * 43));
+
+      const category = String(shows[0]?.category || 'تاک‌شو').replace(/^\d+\.\s*/, '').split('|')[0];
+      context.fillStyle = 'rgba(16,185,129,0.22)';
+      context.beginPath();
+      context.roundRect(330, 1710, 420, 56, 28);
+      context.fill();
+      context.fillStyle = '#d1fae5';
+      context.font = 'bold 25px Vazirmatn, sans-serif';
+      context.fillText(category, 540, 1747);
+
+      // Program and organization marks sit on a white footer rail.
+      const logos = [
+        { image: programLogoImage, side: 'left' as const },
+        { image: organizationLogoImage, side: 'right' as const },
+      ].filter((item): item is { image: HTMLImageElement; side: 'left' | 'right' } => Boolean(item.image));
+      if (logos.length) {
+        context.fillStyle = 'rgba(255,255,255,0.96)';
+        context.beginPath();
+        context.roundRect(64, 1815, 952, 78, 28);
+        context.fill();
+        const badgeWidth = 260;
+        const badgeHeight = 58;
+        for (const item of logos) {
+          const x = item.side === 'left' ? 110 : 710;
+          const scale = Math.min(badgeWidth / item.image.naturalWidth, badgeHeight / item.image.naturalHeight);
+          const width = Math.max(1, item.image.naturalWidth * scale);
+          const height = Math.max(1, item.image.naturalHeight * scale);
+          context.drawImage(item.image, x + (badgeWidth - width) / 2, 1825 + (badgeHeight - height) / 2, width, height);
+        }
+      }
+      publishImageUrl = canvas.toDataURL('image/jpeg', 0.88);
+      if (coverVideo) {
+        coverVideo.removeAttribute('src');
+        coverVideo.load();
+      }
       const res = await fetch('/api/publish-social', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
@@ -6984,108 +7140,203 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
   const handlePublish = async () => {
     if (!selectedPlatform) return;
 
-    // Generate a social card image using canvas
+    // Build a real 9:16 social cover (1080x1920). The MP4 editor exports the
+    // companion video in 720x1280, so the image and video share the same ratio.
     const canvas = document.createElement('canvas');
     canvas.width = 1080;
-    canvas.height = 1080;
+    canvas.height = 1920;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
-    // Background gradient
-    const grad = ctx.createLinearGradient(0, 0, 1080, 1080);
-    grad.addColorStop(0, '#10b981');
-    grad.addColorStop(0.6, '#0d7c4a');
-    grad.addColorStop(1, '#0a1f14');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 1080, 1080);
-
-    // Decorative circles
-    ctx.fillStyle = 'rgba(13, 124, 74, 0.15)';
-    ctx.beginPath();
-    ctx.arc(900, 200, 300, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(200, 900, 250, 0, Math.PI * 2);
-    ctx.fill();
-
-    // "بانک رسانه" branding
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-    ctx.font = 'bold 32px Vazirmatn, sans-serif';
+    ctx.direction = 'rtl';
     ctx.textAlign = 'center';
-    ctx.fillText('بانک رسانه', 540, 100);
 
-    // Show name(s)
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 56px Vazirmatn, sans-serif';
-    if (shows.length === 1) {
-      const name = shows[0].name;
-      ctx.fillText(name.length > 25 ? name.substring(0, 23) + '...' : name, 540, 250);
-    } else {
-      ctx.fillText(`${shows.length} برنامهٔ منتخب`, 540, 250);
-    }
+    const loadImage = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = document.createElement('img');
+      image.crossOrigin = 'anonymous';
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error('image load failed'));
+      image.src = src;
+    });
+    const drawCover = (image: CanvasImageSource, x: number, y: number, width: number, height: number) => {
+      const source = image as HTMLImageElement | HTMLVideoElement;
+      const sw = 'videoWidth' in source ? source.videoWidth : source.naturalWidth;
+      const sh = 'videoHeight' in source ? source.videoHeight : source.naturalHeight;
+      if (!sw || !sh) return;
+      const scale = Math.max(width / sw, height / sh);
+      const cropWidth = width / scale;
+      const cropHeight = height / scale;
+      const sx = (sw - cropWidth) / 2;
+      const sy = (sh - cropHeight) / 2;
+      ctx.drawImage(image, sx, sy, cropWidth, cropHeight, x, y, width, height);
+    };
+    const wrapText = (raw: string, font: string, maxWidth: number, maxLines: number) => {
+      ctx.font = font;
+      const words = String(raw || '').replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
+      const lines: string[] = [];
+      let line = '';
+      for (const word of words) {
+        const candidate = line ? line + ' ' + word : word;
+        if (line && ctx.measureText(candidate).width > maxWidth) {
+          lines.push(line);
+          line = word;
+          if (lines.length >= maxLines) break;
+        } else {
+          line = candidate;
+        }
+      }
+      if (line && lines.length < maxLines) lines.push(line);
+      return lines;
+    };
 
-    // Description
-    ctx.font = '36px Vazirmatn, sans-serif';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-    if (shows.length === 1) {
-      const desc = shows[0].descriptionFa;
-      const lines = desc.match(/.{1,40}/g) || [];
-      lines.slice(0, 4).forEach((line, i) => {
-        ctx.fillText(line, 540, 350 + i * 50);
-      });
-    } else {
-      shows.slice(0, 5).forEach((s, i) => {
-        ctx.fillText(`• ${s.name}`, 540, 350 + i * 50);
-      });
-      if (shows.length > 5) {
-        ctx.fillText(`و ${shows.length - 5} برنامهٔ دیگر...`, 540, 350 + 5 * 50);
+    // Deep green liquid-glass background.
+    const background = ctx.createLinearGradient(0, 0, 1080, 1920);
+    background.addColorStop(0, '#08291e');
+    background.addColorStop(0.48, '#0d7c4a');
+    background.addColorStop(1, '#061a17');
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, 1080, 1920);
+    ctx.fillStyle = 'rgba(72, 220, 166, 0.10)';
+    ctx.beginPath(); ctx.arc(980, 300, 360, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(15, 90, 105, 0.18)';
+    ctx.beginPath(); ctx.arc(80, 1460, 420, 0, Math.PI * 2); ctx.fill();
+
+    // Real program artwork is preferred; if it cannot be decoded, try the
+    // first frame of the exported MP4 and retain the designed background.
+    let coverDrawn = false;
+    const firstShow = shows[0] as any;
+    const imageList = Array.isArray(firstShow?.images) ? firstShow.images : [];
+    const coverSource = (typeof firstShow?.programLogo === 'string' && firstShow.programLogo)
+      || imageList.find((value: unknown) => typeof value === 'string' && value.length > 0);
+    if (typeof coverSource === 'string') {
+      try {
+        const image = await loadImage(coverSource);
+        ctx.save();
+        ctx.beginPath(); ctx.roundRect(64, 300, 952, 870, 56); ctx.clip();
+        drawCover(image, 64, 300, 952, 870);
+        ctx.fillStyle = 'rgba(2, 18, 14, 0.30)';
+        ctx.fillRect(0, 0, 952, 870);
+        ctx.restore();
+        coverDrawn = true;
+      } catch {
+        // Try the actual video frame below.
       }
     }
+    if (!coverDrawn && typeof directVideoUrl === 'string' && directVideoUrl) {
+      const video = document.createElement('video');
+      video.muted = true;
+      video.playsInline = true;
+      video.preload = 'auto';
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const timer = window.setTimeout(() => reject(new Error('video preview timeout')), 9000);
+          video.onloadeddata = () => { window.clearTimeout(timer); resolve(); };
+          video.onerror = () => { window.clearTimeout(timer); reject(new Error('video preview decode failed')); };
+          video.src = directVideoUrl;
+          video.load();
+        });
+        if (video.videoWidth > 0 && video.videoHeight > 0) {
+          ctx.save();
+          ctx.beginPath(); ctx.roundRect(64, 300, 952, 870, 56); ctx.clip();
+          drawCover(video, 64, 300, 952, 870);
+          ctx.fillStyle = 'rgba(2, 18, 14, 0.26)';
+          ctx.fillRect(0, 0, 952, 870);
+          ctx.restore();
+          coverDrawn = true;
+        }
+      } catch {
+        // The branded background remains a valid cover if video decoding fails.
+      } finally {
+        video.removeAttribute('src');
+        video.load();
+      }
+    }
+    if (!coverDrawn) {
+      ctx.save();
+      ctx.beginPath(); ctx.roundRect(64, 300, 952, 870, 56); ctx.clip();
+      const fallback = ctx.createLinearGradient(64, 300, 1016, 1170);
+      fallback.addColorStop(0, 'rgba(24, 150, 105, 0.75)');
+      fallback.addColorStop(1, 'rgba(4, 29, 31, 0.96)');
+      ctx.fillStyle = fallback;
+      ctx.fillRect(64, 300, 952, 870);
+      ctx.restore();
+    }
 
-    // Category badge
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-    ctx.beginPath();
-    ctx.roundRect(340, 700, 400, 60, 30);
-    ctx.fill();
-    ctx.fillStyle = 'white';
+    // Brand header and logo.
+    try {
+      const logo = await loadImage('/banke-rasane-logo.png');
+      const scale = Math.min(220 / logo.naturalWidth, 112 / logo.naturalHeight);
+      const width = logo.naturalWidth * scale;
+      const height = logo.naturalHeight * scale;
+      ctx.drawImage(logo, (1080 - width) / 2, 70, width, height);
+    } catch {
+      ctx.fillStyle = '#f0fdf4';
+      ctx.font = 'bold 44px Vazirmatn, sans-serif';
+      ctx.fillText('بانک رسانه', 540, 140);
+    }
+    ctx.fillStyle = 'rgba(240, 253, 244, 0.78)';
+    ctx.font = '26px Vazirmatn, sans-serif';
+    ctx.fillText('آرشیو تخصصی برنامه‌های تلویزیونی', 540, 230);
+
+    // Dark glass text panel.
+    ctx.fillStyle = 'rgba(3, 23, 19, 0.78)';
+    ctx.beginPath(); ctx.roundRect(64, 1210, 952, 560, 48); ctx.fill();
+    ctx.strokeStyle = 'rgba(167, 243, 208, 0.28)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 64px Vazirmatn, sans-serif';
+    const heading = shows.length === 1 ? String(shows[0]?.name || 'برنامه منتخب') : 'برنامه‌های منتخب';
+    const titleLines = wrapText(heading, 'bold 64px Vazirmatn, sans-serif', 850, 2);
+    titleLines.forEach((line, index) => ctx.fillText(line, 540, 1310 + index * 78));
+
+    ctx.fillStyle = 'rgba(240, 253, 244, 0.88)';
+    const description = shows.length === 1
+      ? String(shows[0]?.descriptionFa || shows[0]?.summary || '')
+      : shows.slice(0, 4).map((show: any) => show.name).join(' • ');
+    const descriptionLines = wrapText(description || postText, '30px Vazirmatn, sans-serif', 840, 4);
+    const descriptionY = 1310 + titleLines.length * 78 + 45;
+    descriptionLines.forEach((line, index) => ctx.fillText(line, 540, descriptionY + index * 44));
+
+    // Genre chip.
+    const category = String(shows[0]?.category || 'تاک‌شو').replace(/^\d+\.\s*/, '').split('|')[0];
+    ctx.fillStyle = 'rgba(16, 185, 129, 0.22)';
+    ctx.beginPath(); ctx.roundRect(280, 1680, 520, 62, 31); ctx.fill();
+    ctx.strokeStyle = 'rgba(167, 243, 208, 0.45)';
+    ctx.stroke();
+    ctx.fillStyle = '#d1fae5';
     ctx.font = 'bold 28px Vazirmatn, sans-serif';
-    const cat = shows[0]?.category?.replace(/^\d+\.\s*/, '') || 'تاک‌شو';
-    ctx.fillText(cat, 540, 740);
+    ctx.fillText(category, 540, 1721);
 
-    // Convert canvas to blob
+    ctx.fillStyle = 'rgba(240, 253, 244, 0.65)';
+    ctx.font = '24px Vazirmatn, sans-serif';
+    ctx.fillText('بانک رسانه  •  BankResaneh', 540, 1840);
+
     canvas.toBlob(async (blob) => {
-      if (!blob) return;
-      const file = new File([blob], 'banke-rasane-card.png', { type: 'image/png' });
+      if (!blob) {
+        setSendResult({ ok: false, msg: 'ساخت تصویر عمودی ناموفق بود؛ دوباره تلاش کنید.' });
+        return;
+      }
+      const file = new File([blob], 'banke-rasane-vertical-post.png', { type: 'image/png' });
 
-      // Try Web Share API first (native share dialog on mobile)
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
-          await navigator.share({
-            title: 'بانک رسانه',
-            text: postText,
-            files: [file],
-          });
+          await navigator.share({ title: 'بانک رسانه', text: postText, files: [file] });
           onConfirm(selectedPlatform);
           return;
-        } catch (e) {
-          // User cancelled or error — fall through to fallback
+        } catch {
+          // User cancelled or the platform share sheet is unavailable.
         }
       }
 
-      // Fallback: download image, copy text, and open platform share URL
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'banke-rasane-card.png';
+      a.download = 'banke-rasane-vertical-post.png';
       a.click();
-      URL.revokeObjectURL(url);
+      window.setTimeout(() => URL.revokeObjectURL(url), 30000);
 
-      // Copy text to clipboard
-      try {
-        await navigator.clipboard.writeText(postText);
-      } catch {}
-
-      // Open platform-specific share URL
+      try { await navigator.clipboard.writeText(postText); } catch {}
       const platformUrls: Record<string, string> = {
         'تلگرام': `https://t.me/share/url?url=${encodeURIComponent(shows[0]?.youtube || 'https://github.com/salbeheshti-lang/banke-rasane')}&text=${encodeURIComponent(postText)}`,
         'بله': 'https://ble.ir/',
@@ -7095,11 +7346,8 @@ function PublishModal({ shows, canManageBotConfig, onClose, onConfirm, onOpenBot
         'اینستاگرام': 'https://www.instagram.com/',
       };
       const shareUrl = platformUrls[selectedPlatform];
-      if (shareUrl) {
-        window.open(shareUrl, '_blank');
-      }
-
-      onConfirm(selectedPlatform + ' — تصویر دانلود شد، متن کپی شد، پلتفرم باز شد');
+      if (shareUrl) window.open(shareUrl, '_blank');
+      onConfirm(selectedPlatform + ' — تصویر عمودی دانلود شد، متن کپی شد، پلتفرم باز شد');
     }, 'image/png');
   };
 
@@ -7522,105 +7770,250 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
   const { t, lang } = useLang();
   useEscapeKey(onClose);
   const [downloading, setDownloading] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState('');
-  const [previewError, setPreviewError] = useState('');
+  const [downloadError, setDownloadError] = useState('');
+  const [pdfPreviewBlob, setPdfPreviewBlob] = useState<Blob | null>(null);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState('');
+  const [pdfPreviewError, setPdfPreviewError] = useState('');
+  const [pdfPreviewKey, setPdfPreviewKey] = useState('');
+  const pdfObjectUrlRef = useRef<string | null>(null);
+  const [savedReportSettings, setSavedReportSettings] = useState<{ title?: string; subtitle?: string; organization?: string } | null>(null);
+  const [excelPage, setExcelPage] = useState(0);
+
+  const fallbackTitle = t('reports.report1Title');
+  const fallbackSubtitle = t('app.tagline');
+  const reportTitle = title || savedReportSettings?.title || fallbackTitle;
+  const reportSubtitle = subtitle || savedReportSettings?.subtitle || fallbackSubtitle;
+  const reportOrganization = organization || savedReportSettings?.organization || 'بانک رسانه';
+  const previewKey = useMemo(
+    () => JSON.stringify({ shows, title, subtitle, organization, fallbackTitle, fallbackSubtitle }),
+    [shows, title, subtitle, organization, fallbackTitle, fallbackSubtitle],
+  );
+  const pdfReady = format === 'pdf' && !!pdfPreviewBlob && !!pdfPreviewUrl && pdfPreviewKey === previewKey;
+  const pdfPreviewLoading = format === 'pdf' && !pdfReady && !pdfPreviewError;
+
+  const makePdfThumbnail = async (blob: Blob): Promise<string | null> => {
+    const objectUrl = URL.createObjectURL(blob);
+    try {
+      const image = new window.Image();
+      await new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error('تصویر برنامه قابل خواندن نیست'));
+        image.src = objectUrl;
+      });
+      if (!image.naturalWidth || !image.naturalHeight) return null;
+      const scale = Math.min(1, 96 / image.naturalWidth, 96 / image.naturalHeight);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const context = canvas.getContext('2d');
+      if (!context) return null;
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL('image/jpeg', 0.76);
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
+  };
+
+  const preparePdfShows = async (sourceShows: TalkShow[], signal: AbortSignal): Promise<TalkShow[]> => {
+    // Keep the request payload small: archive rows may carry large base64 images.
+    // Only the first 24 rows are eligible for thumbnails; strip image payloads
+    // from every remaining row while retaining all text and metadata.
+    const prepared: TalkShow[] = sourceShows.map((show) => ({
+      ...show,
+      programLogo: undefined, // Not used in the archive PDF and may be a large inline image.
+      images: [], // Only compact thumbnails created below are sent to the PDF endpoint.
+    }));
+    const candidates = sourceShows.slice(0, 24);
+    for (let offset = 0; offset < candidates.length; offset += 6) {
+      const batch = candidates.slice(offset, offset + 6);
+      await Promise.all(batch.map(async (show, batchIndex) => {
+        const targetIndex = offset + batchIndex;
+        try {
+          const inlineImage = (show.images || []).find((image) => image.startsWith('data:image/'));
+          let imageBlob: Blob | null = null;
+          if (inlineImage) {
+            const response = await fetch(inlineImage, { signal });
+            if (response.ok) imageBlob = await response.blob();
+          } else if (show.imageSource) {
+            const imageUrl = getApiUrl('api/image/' + show.num + '?v=' + encodeURIComponent(show.imageSource));
+            const response = await fetch(imageUrl, { cache: 'no-store', signal });
+            if (response.ok) imageBlob = await response.blob();
+          }
+          if (imageBlob) {
+            const thumbnail = await makePdfThumbnail(imageBlob);
+            if (thumbnail) prepared[targetIndex] = { ...show, images: [thumbnail] };
+          }
+        } catch {
+          // A missing image must not prevent the complete text report from being generated.
+        }
+      }));
+      if (signal.aborted) break;
+    }
+    return prepared;
+  };
+
   useEffect(() => {
     if (format !== 'pdf') return;
-    let cancelled = false;
-    let objectUrl = '';
+
+    const controller = new AbortController();
+    let timedOut = false;
+    const timeoutId = window.setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 55_000);
     (async () => {
       try {
+        let saved: { title?: string; subtitle?: string; organization?: string } = {};
+        const settingsResponse = await fetch('/api/settings/report', {
+          headers: authHeaders(),
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+        if (settingsResponse.ok) {
+          saved = await settingsResponse.json();
+          if (!controller.signal.aborted) setSavedReportSettings(saved);
+        }
+        if (!controller.signal.aborted) {
+          setPdfPreviewBlob(null);
+          setPdfPreviewUrl('');
+          setPdfPreviewError('');
+        }
+
+        const effectiveTitle = title || saved.title || fallbackTitle;
+        const effectiveSubtitle = subtitle || saved.subtitle || fallbackSubtitle;
+        const effectiveOrganization = organization || saved.organization || 'بانک رسانه';
+        const preparedShows = await preparePdfShows(shows, controller.signal);
         const response = await fetch('/api/export-pdf-file', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders() },
-          body: JSON.stringify({ shows, title, subtitle, organization }),
+          body: JSON.stringify({
+            shows: preparedShows,
+            title: effectiveTitle,
+            subtitle: effectiveSubtitle,
+            organization: effectiveOrganization,
+          }),
+          signal: controller.signal,
         });
         if (!response.ok) {
           const error = await response.json().catch(() => ({}));
           throw new Error(error.error || 'ساخت پیش‌نمایش PDF ناموفق بود');
         }
         const blob = await response.blob();
-        if (blob.type !== 'application/pdf' || blob.size < 8) throw new Error('پیش‌نمایش PDF معتبر نیست');
-        objectUrl = URL.createObjectURL(blob);
-        if (!cancelled) setPreviewUrl(objectUrl);
+        if (blob.type !== 'application/pdf' || blob.size < 8) {
+          throw new Error('فایل PDF معتبر برای پیش‌نمایش دریافت نشد');
+        }
+        const objectUrl = URL.createObjectURL(blob);
+        if (!controller.signal.aborted) {
+          if (pdfObjectUrlRef.current) URL.revokeObjectURL(pdfObjectUrlRef.current);
+          pdfObjectUrlRef.current = objectUrl;
+          setPdfPreviewBlob(blob);
+          setPdfPreviewUrl(objectUrl);
+          setPdfPreviewKey(previewKey);
+        } else {
+          URL.revokeObjectURL(objectUrl);
+        }
       } catch (error) {
-        if (!cancelled) setPreviewError(error instanceof Error ? error.message : 'ساخت پیش‌نمایش PDF ناموفق بود');
+        if (!controller.signal.aborted || timedOut) {
+          setPdfPreviewError(timedOut
+            ? 'ساخت پیش‌نمایش PDF بیش از ۵۵ ثانیه طول کشید. اتصال API یا حجم تصاویر را بررسی کنید و دوباره تلاش کنید.'
+            : error instanceof Error ? error.message : 'ساخت پیش‌نمایش PDF ناموفق بود');
+        }
+      } finally {
+        window.clearTimeout(timeoutId);
       }
     })();
-    return () => {
-      cancelled = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [format, shows, title, subtitle, organization]);
 
-  // Resolve the effective report metadata — caller-provided overrides win,
-  // otherwise we fall back to the canonical defaults used by the API.
-  const reportTitle = title || t('reports.report1Title');
-  const reportSubtitle = subtitle || t('app.tagline');
+    return () => {
+      window.clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [format, shows, title, subtitle, organization, fallbackTitle, fallbackSubtitle, previewKey]);
+
+  useEffect(() => () => {
+    if (pdfObjectUrlRef.current) URL.revokeObjectURL(pdfObjectUrlRef.current);
+  }, []);
+
+  const excelHeaders = [
+    'ردیف', 'شماره برنامه', 'نام برنامه', 'ژانر', 'کشور', 'منبع', 'اندازه', 'تماشاگر',
+    'سبک', 'جلوه‌ها', 'چیدمان', 'عناصر', 'مصالح', 'رنگ‌ها', 'نورپردازی',
+    'ظرفیت بهره‌برداری', 'خلاصه', 'توضیحات فارسی', 'برچسب‌ها', 'لینک یوتیوب',
+    'IMDb', 'ویکی‌پدیا', 'متن انتشار', 'تصاویر', 'ویدئوها', 'فیلم', 'در ژانر دکور',
+  ];
+  const excelRows = shows.map((s, index) => [
+    index + 1,
+    s.num ?? '',
+    s.name || '',
+    (s.category || '').replace(/^\d+\.\s*/, ''),
+    s.country || '',
+    s.source || '',
+    s.size || '',
+    s.viewers || '',
+    s.style || '',
+    s.effects || '',
+    s.layout || '',
+    s.elements || '',
+    s.materials || '',
+    s.colors || '',
+    s.lighting || '',
+    s.operationalCapacity || '',
+    s.summary || '',
+    s.descriptionFa || '',
+    (s.tags || []).join('، '),
+    s.youtube || '',
+    s.imdb || '',
+    s.wikipedia || '',
+    s.socialPost || '',
+    (s.images || []).map((image) => image.startsWith('data:') ? 'تصویر ذخیره‌شده' : image).join(' | ') || (s.imageSource ? 'تصویر ذخیره‌شده (' + s.imageSource + ')' : ''),
+    (s.videos || []).join(' | '),
+    s.isFilm ? 'بله' : 'خیر',
+    s.decorIncluded === undefined ? 'نامشخص' : s.decorIncluded ? 'بله' : 'خیر',
+  ]);
+  const excelPageSize = 20;
+  const excelPageCount = Math.max(1, Math.ceil(excelRows.length / excelPageSize));
+  const visibleExcelRows = excelRows.slice(excelPage * excelPageSize, (excelPage + 1) * excelPageSize);
+  const excelColumnName = (number: number) => {
+    let value = number;
+    let name = '';
+    while (value > 0) {
+      const remainder = (value - 1) % 26;
+      name = String.fromCharCode(65 + remainder) + name;
+      value = Math.floor((value - 1) / 26);
+    }
+    return name;
+  };
 
   const handleDownload = async () => {
     setDownloading(true);
+    setDownloadError('');
     try {
       if (format === 'pdf') {
-        // Call API to generate professional PDF report — pass through any
-        // caller-provided overrides so the rendered PDF matches the preview.
-        const res = await fetch('/api/export-pdf-file', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...authHeaders() },
-          body: JSON.stringify({ shows, title, subtitle, organization }),
-        });
-        if (!res.ok) {
-          const error = await res.json().catch(() => ({}));
-          throw new Error(error.error || 'ساخت فایل PDF ناموفق بود');
-        }
-        const blob = await res.blob();
-        if (blob.type !== 'application/pdf' || blob.size < 8) {
-          throw new Error('فایل PDF معتبر از سرور دریافت نشد');
-        }
-        const url = URL.createObjectURL(blob);
+        if (!pdfReady || !pdfPreviewBlob) throw new Error('پیش‌نمایش واقعی PDF هنوز برای همین انتخاب آماده نشده است');
+        const url = URL.createObjectURL(pdfPreviewBlob);
         const anchor = document.createElement('a');
         anchor.href = url;
-        anchor.download = `bankresaneh-report-${Date.now()}.pdf`;
+        anchor.download = 'bankresaneh-report-' + Date.now() + '.pdf';
         anchor.click();
         window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       } else {
-        // Excel: generate proper XLSX using SheetJS-style XML
-        const headers = ['شماره', 'نام برنامه', 'دسته‌بندی', 'منبع', 'اندازه', 'تماشاگر', 'سبک', 'جلوه‌ها', 'چیدمان', 'عناصر', 'متریال', 'رنگ‌آمیزی', 'نورپردازی', 'توضیحات'];
-        const rows = shows.map((s, i) => [
-          i + 1,
-          s.name,
-          (s.category || '').replace(/^\d+\.\s*/, ''),
-          s.source || '',
-          s.size || '',
-          s.viewers || '',
-          s.style || '',
-          s.effects || '',
-          s.layout || '',
-          s.elements || '',
-          s.materials || '',
-          s.colors || '',
-          s.lighting || '',
-          (s.descriptionFa || s.summary || '').substring(0, 500),
-        ]);
-        // Build a standards-compliant OOXML workbook (not HTML disguised as .xls).
         const ExcelJS = await import('exceljs');
         const workbook = new ExcelJS.Workbook();
         workbook.creator = 'بانک رسانه';
         workbook.subject = 'آرشیو تخصصی برنامه‌های تلویزیونی';
-        workbook.title = 'گزارش آرشیو بانک رسانه';
+        workbook.title = 'گزارش کامل آرشیو بانک رسانه';
         workbook.created = new Date();
         const sheet = workbook.addWorksheet('آرشیو برنامه‌ها', {
           views: [{ state: 'frozen', ySplit: 1, rightToLeft: true }],
         });
-        sheet.columns = headers.map((header, index) => ({
+        sheet.columns = excelHeaders.map((header, index) => ({
           header,
           key: 'column' + index,
           width: Math.min(54, Math.max(14, header.length + 4)),
         }));
-        sheet.addRows(rows);
-        sheet.autoFilter = { from: 'A1', to: String.fromCharCode(64 + headers.length) + Math.max(1, rows.length + 1) };
+        sheet.addRows(excelRows);
+        sheet.autoFilter = { from: 'A1', to: excelColumnName(excelHeaders.length) + Math.max(1, excelRows.length + 1) };
+        sheet.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
         const headerRow = sheet.getRow(1);
-        headerRow.height = 30;
+        headerRow.height = 34;
         headerRow.eachCell((cell) => {
           cell.font = { name: 'Vazirmatn', bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF075B3B' } };
@@ -7629,7 +8022,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
         });
         sheet.eachRow((row, rowNumber) => {
           if (rowNumber === 1) return;
-          row.height = 34;
+          row.height = 42;
           row.eachCell((cell) => {
             cell.font = { name: 'Vazirmatn', size: 10, color: { argb: 'FF172B22' } };
             cell.alignment = { horizontal: 'right', vertical: 'top', wrapText: true };
@@ -7639,15 +8032,15 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `bankresaneh-${Date.now()}.xlsx`;
-        a.click();
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = 'bankresaneh-' + Date.now() + '.xlsx';
+        anchor.click();
         window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
       onDownload();
-    } catch (e) {
-      console.error('Download error:', e);
+    } catch (error) {
+      setDownloadError(error instanceof Error ? error.message : 'ساخت فایل گزارش ناموفق بود');
     } finally {
       setDownloading(false);
     }
@@ -7655,8 +8048,7 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-content animate-modal-enter" style={{ maxWidth: '800px' }} onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
+      <div className="modal-content animate-modal-enter" style={{ maxWidth: '1100px' }} onClick={(e) => e.stopPropagation()}>
         <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(13, 124, 74,0.1)' }}>
           <h2 className="text-xl font-bold" style={{ color: '#f0fdf4' }}>
             {format === 'pdf' ? '📄 ' + t('export.previewPDF') : '📊 ' + t('export.previewExcel')}
@@ -7668,80 +8060,105 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
           </button>
         </div>
 
-        <div className="p-6">
-          {/* Summary */}
+        <div className="p-5">
           <div className="mb-4 p-4 rounded-xl" style={{ background: 'rgba(13, 124, 74,0.08)', border: '1px solid rgba(13, 124, 74,0.2)' }}>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
               <div>
                 <div className="text-sm" style={{ color: '#99f6e4' }}>{t('export.programCount')}</div>
                 <div className="text-2xl font-bold" style={{ color: '#54D9C0' }}>{shows.length.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US')}</div>
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm" style={{ color: '#99f6e4' }}>عنوان گزارش</div>
+                <div className="text-base font-bold" style={{ color: '#f0fdf4' }}>{reportTitle}</div>
+                <div className="text-xs" style={{ color: 'rgba(244,255,255,0.7)' }}>{reportSubtitle} — {reportOrganization}</div>
               </div>
               <div>
                 <div className="text-sm" style={{ color: '#99f6e4' }}>{t('export.format')}</div>
                 <div className="text-2xl font-bold" style={{ color: format === 'pdf' ? '#dc2626' : '#0d7c4a' }}>{format.toUpperCase()}</div>
               </div>
-              <div>
-                <div className="text-sm" style={{ color: '#99f6e4' }}>{t('export.date')}</div>
-                <div className="text-2xl font-bold" style={{ color: '#f0fdf4' }}>{new Date().toLocaleDateString(lang === 'fa' ? 'fa-IR' : 'en-US')}</div>
-              </div>
             </div>
           </div>
 
-          {/* PDF preview renders the exact authenticated PDF bytes that the Download button saves. */}
           {format === 'pdf' && (
-            <div className="mb-4 rounded-2xl overflow-hidden" style={{ border: '2px solid #0d7c4a', boxShadow: '0 8px 24px rgba(13, 124, 74, 0.15)' }}>
-              {previewUrl ? (
-                <iframe title="پیش‌نمایش واقعی گزارش PDF" src={previewUrl} style={{ width: '100%', height: 'min(72vh, 760px)', border: 0, background: '#fff' }} />
-              ) : (
-                <div className="p-8 text-center" style={{ background: '#f8faf9', color: '#0d7c4a' }}>
-                  {previewError ? previewError : 'در حال ساخت پیش‌نمایش واقعی PDF با لوگوها و متن ذخیره‌شده...'}
+            <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(13,124,74,0.25)', background: '#fff' }}>
+              {pdfPreviewLoading && (
+                <div className="p-12 text-center text-sm" style={{ color: '#166534' }}>
+                  در حال ساخت پیش‌نمایش از فایل PDF واقعی؛ این همان فایلی است که دانلود می‌شود…
                 </div>
+              )}
+              {pdfPreviewError && (
+                <div role="alert" className="p-5 text-sm" style={{ color: '#b91c1c', background: '#fef2f2' }}>
+                  {pdfPreviewError}
+                </div>
+              )}
+              {pdfReady && !pdfPreviewLoading && (
+                <iframe
+                  title="پیش‌نمایش واقعی PDF گزارش"
+                  src={pdfPreviewUrl}
+                  style={{ display: 'block', width: '100%', height: '68vh', border: 0, background: '#fff' }}
+                />
               )}
             </div>
           )}
 
-          {/* Excel preview */}
           {format === 'excel' && (
-            <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(0,0,0,0.1)' }}>
-              <div className="p-3 text-center" style={{ background: 'linear-gradient(135deg, #006B50 0%, #22B99A 100%)', border: '1px solid rgba(255, 255, 255, 0.3)', color: 'white' }}>
-                <div className="text-lg font-bold">بانک رسانه — خروجی Excel</div>
-                <div className="text-xs opacity-80">{shows.length.toLocaleString('fa-IR')} برنامه</div>
+            <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(13,124,74,0.25)' }}>
+              <div className="p-3 flex items-center justify-between gap-3 flex-wrap" style={{ background: '#075B3B', color: '#fff' }}>
+                <div className="font-bold">پیش‌نمایش واقعی داده‌های فایل Excel</div>
+                <div className="text-xs">{excelRows.length.toLocaleString('fa-IR')} ردیف · {excelHeaders.length.toLocaleString('fa-IR')} ستون</div>
               </div>
-              <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
-                <table className="w-full" style={{ fontSize: '12px' }}>
-                  <thead style={{ position: 'sticky', top: 0, background: '#f5efe0', zIndex: 1 }}>
+              <div style={{ maxHeight: '55vh', overflow: 'auto', background: '#fff' }}>
+                <table style={{ minWidth: '1900px', width: '100%', borderCollapse: 'collapse', fontSize: '11px', color: '#172B22' }}>
+                  <thead style={{ position: 'sticky', top: 0, zIndex: 2, background: '#E8F5EE' }}>
                     <tr>
-                      <th className="text-right p-2 font-bold" style={{ color: '#0d7c4a' }}>#</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#0d7c4a' }}>نام</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#0d7c4a' }}>دسته</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#0d7c4a' }}>سبک</th>
-                      <th className="text-right p-2 font-bold" style={{ color: '#0d7c4a' }}>اندازه</th>
+                      {excelHeaders.map((header, index) => (
+                        <th key={index} className="p-2 text-right font-bold" style={{ border: '1px solid #DCE5DF', whiteSpace: 'nowrap' }}>{header}</th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {shows.slice(0, 50).map((s, i) => (
-                      <tr key={s.num} style={{ borderBottom: '1px solid rgba(0, 0, 0, 0.08)', background: i % 2 === 0 ? 'white' : '#f9f9f9' }}>
-                        <td className="p-2" style={{ color: '#4a5d52' }}>{(i + 1).toLocaleString('fa-IR')}</td>
-                        <td className="p-2 font-medium" style={{ color: '#1a2e1a', direction: 'ltr', textAlign: 'right' }}>{s.name}</td>
-                        <td className="p-2" style={{ color: '#4a5d52' }}>{s.category.replace(/^\d+\.\s*/, '').substring(0, 20)}</td>
-                        <td className="p-2" style={{ color: '#4a5d52' }}>{s.style}</td>
-                        <td className="p-2" style={{ color: '#4a5d52' }}>{s.size}</td>
+                    {visibleExcelRows.map((row, rowIndex) => (
+                      <tr key={excelPage * excelPageSize + rowIndex} style={{ background: rowIndex % 2 ? '#F8FAFC' : '#fff' }}>
+                        {row.map((value, columnIndex) => (
+                          <td key={columnIndex} className="p-2 align-top" style={{ border: '1px solid #E2E8F0', maxWidth: 280, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+                            {String(value ?? '—')}
+                          </td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+              <div className="p-3 flex items-center justify-between gap-3" style={{ background: '#F8FAFC', color: '#334155' }}>
+                <button
+                  onClick={() => setExcelPage((page) => Math.max(0, page - 1))}
+                  disabled={excelPage === 0}
+                  className="px-3 py-2 rounded-lg text-xs font-bold"
+                  style={{ background: excelPage === 0 ? '#E2E8F0' : '#D1FAE5', color: '#075B3B', opacity: excelPage === 0 ? 0.5 : 1 }}
+                >صفحه قبل</button>
+                <div className="text-xs">{'صفحه ' + (excelPage + 1).toLocaleString('fa-IR') + ' از ' + excelPageCount.toLocaleString('fa-IR') + ' — همهٔ ردیف‌ها در فایل خروجی هستند'}</div>
+                <button
+                  onClick={() => setExcelPage((page) => Math.min(excelPageCount - 1, page + 1))}
+                  disabled={excelPage >= excelPageCount - 1}
+                  className="px-3 py-2 rounded-lg text-xs font-bold"
+                  style={{ background: excelPage >= excelPageCount - 1 ? '#E2E8F0' : '#D1FAE5', color: '#075B3B', opacity: excelPage >= excelPageCount - 1 ? 0.5 : 1 }}
+                >صفحه بعد</button>
+              </div>
             </div>
           )}
 
-          {/* Download button */}
+          {downloadError && (
+            <p role="alert" className="mt-3 text-sm" style={{ color: '#fca5a5' }}>{downloadError}</p>
+          )}
+
           <div className="mt-6 flex gap-3">
             <button
               onClick={handleDownload}
-              disabled={downloading}
+              disabled={downloading || (format === 'pdf' && (pdfPreviewLoading || !pdfReady))}
               className="btn-enter-premium flex-1"
+              style={{ opacity: downloading || (format === 'pdf' && (pdfPreviewLoading || !pdfReady)) ? 0.5 : 1 }}
             >
-              {downloading ? t('common.loading') : `⬇ ${format === 'pdf' ? t('export.downloadPDF') : t('export.downloadExcel')}`}
+              {downloading ? t('common.loading') : '⬇ ' + (format === 'pdf' ? t('export.downloadPDF') : t('export.downloadExcel'))}
             </button>
             <button
               onClick={onClose}
@@ -7753,12 +8170,86 @@ function ExportPreviewModal({ shows, format, onClose, onDownload, title, subtitl
           </div>
           {format === 'pdf' && (
             <p className="mt-3 text-xs text-center" style={{ color: 'rgba(244, 255, 255, 0.7)', lineHeight: 1.7 }}>
-              گزارش شامل ۸ بخش است: صفحهٔ عنوان، فهرست مطالب، خلاصهٔ اجرایی، روش تحقیق، نمای آماری، تحلیل ژانرها، تحلیل دکور، و معرفی تفصیلی برنامه‌ها.<br />
-              {lang === 'fa' ? 'پس از کلیک روی دانلود، پنجره چاپ باز می‌شود — مقاس «A4» و «Save as PDF» را انتخاب کنید.' : 'After clicking download, the print dialog opens — select A4 size and "Save as PDF".'}
+              پیش‌نمایش بالا فایل PDF نهایی است؛ چیدمان، صفحات، متن‌ها و لوگوها دقیقاً از همان خروجی دانلودی نمایش داده می‌شوند.
             </p>
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ============================================
+// USER SUGGESTIONS — submit for all users, inbox for administrators
+// ============================================
+function SuggestionsView({ currentUser, showToast }: { currentUser: User; showToast: (msg: string) => void }) {
+  const isAdmin = currentUser.role === 'admin' || currentUser.isSuperAdmin === true;
+  const [message, setMessage] = useState('');
+  const [category, setCategory] = useState('پیشنهاد');
+  const [sending, setSending] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [items, setItems] = useState<Array<{ id: number; username: string; message: string; category: string; status: string; adminNote: string; createdAt: number }>>([]);
+  const [notes, setNotes] = useState<Record<number, string>>({});
+  const [savingId, setSavingId] = useState<number | null>(null);
+  const statusLabels: Record<string, string> = { new: 'جدید', reviewing: 'در حال بررسی', resolved: 'رسیدگی شد', rejected: 'رد شد' };
+  const load = useCallback(async () => {
+    if (!isAdmin) return;
+    setLoading(true);
+    try {
+      const result = await api.getSuggestions(150);
+      setItems(result.suggestions || []);
+      setNotes(Object.fromEntries((result.suggestions || []).map(item => [item.id, item.adminNote || ''])));
+    } catch (error) { showToast(error instanceof Error ? error.message : 'دریافت پیام‌ها ناموفق بود'); }
+    finally { setLoading(false); }
+  }, [isAdmin, showToast]);
+  useEffect(() => { Promise.resolve().then(() => { void load(); }); }, [load]);
+  const submit = async () => {
+    if (message.trim().length < 8) { showToast('متن پیام را کامل‌تر بنویسید (حداقل ۸ نویسه)'); return; }
+    setSending(true);
+    try {
+      const result = await api.submitSuggestion({ message: message.trim(), category });
+      setMessage('');
+      showToast(result.message || 'پیام برای مدیر ثبت شد');
+      if (isAdmin) await load();
+    } catch (error) { showToast(error instanceof Error ? error.message : 'ثبت پیام ناموفق بود'); }
+    finally { setSending(false); }
+  };
+  const update = async (item: typeof items[number], status: string) => {
+    setSavingId(item.id);
+    try {
+      await api.updateSuggestion(item.id, { status, adminNote: notes[item.id] || '' });
+      setItems(prev => prev.map(row => row.id === item.id ? { ...row, status, adminNote: notes[item.id] || '' } : row));
+      showToast('وضعیت پیام ذخیره شد');
+    } catch (error) { showToast(error instanceof Error ? error.message : 'ذخیره تغییرات ناموفق بود'); }
+    finally { setSavingId(null); }
+  };
+  return (
+    <div className="max-w-5xl mx-auto space-y-5">
+      <section className="premium-glass rounded-2xl p-5 sm:p-7">
+        <div className="flex items-center gap-3 mb-2"><span className="text-2xl">✉️</span><h2 className="text-xl font-extrabold" style={{ color: '#f0fdf4' }}>پیام و پیشنهاد به مدیر</h2></div>
+        <p className="text-sm mb-5" style={{ color: '#c8f7e8', lineHeight: 1.9 }}>پیشنهاد، گزارش مشکل یا درخواست خود را مستقیم برای مدیر یا ادمین بفرستید. پیام در سامانه ثبت می‌شود تا قابل پیگیری باشد.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-3 mb-3">
+          <select value={category} onChange={e => setCategory(e.target.value)} className="rounded-xl px-3 py-3" style={{ color: '#f0fdf4', background: 'rgba(0,45,37,.55)', border: '1px solid rgba(255,255,255,.25)', minHeight: 48 }}>
+            <option value="پیشنهاد">پیشنهاد قابلیت</option><option value="گزارش مشکل">گزارش مشکل</option><option value="درخواست">درخواست</option><option value="سایر">سایر</option>
+          </select>
+          <textarea value={message} onChange={e => setMessage(e.target.value)} rows={4} maxLength={5000} placeholder="پیام خود را اینجا بنویسید…" className="w-full rounded-xl p-3" style={{ color: '#f0fdf4', background: 'rgba(0,45,37,.55)', border: '1px solid rgba(255,255,255,.25)', minHeight: 112 }} />
+        </div>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <span className="text-xs" style={{ color: '#b6e8d7' }}>{message.length.toLocaleString('fa-IR')} / ۵۰۰۰</span>
+          <button type="button" disabled={sending || message.trim().length < 8} onClick={() => void submit()} className="rounded-xl px-6 py-3 font-bold disabled:opacity-50" style={{ color: '#052e24', background: '#6ee7b7', minHeight: 48 }}>{sending ? 'در حال ارسال…' : 'ارسال پیام به مدیر'}</button>
+        </div>
+      </section>
+      {isAdmin && <section className="premium-glass rounded-2xl p-5 sm:p-7">
+        <div className="flex items-center justify-between gap-3 mb-4"><h3 className="font-extrabold text-lg" style={{ color: '#f0fdf4' }}>صندوق پیام کاربران ({items.length.toLocaleString('fa-IR')})</h3><button type="button" onClick={() => void load()} disabled={loading} className="rounded-lg px-4 py-2 font-bold" style={{ background: 'rgba(255,255,255,.16)', color: '#fff', minHeight: 42 }}>{loading ? 'در حال دریافت…' : 'به‌روزرسانی'}</button></div>
+        {loading && <p style={{ color: '#d1fae5' }}>در حال دریافت پیام‌ها…</p>}
+        {!loading && items.length === 0 && <p className="text-sm" style={{ color: '#c8f7e8' }}>هنوز پیامی ثبت نشده است.</p>}
+        <div className="space-y-4">{items.map(item => <article key={item.id} className="rounded-xl p-4" style={{ background: 'rgba(0,35,30,.42)', border: '1px solid rgba(255,255,255,.16)' }}>
+          <div className="flex items-center justify-between gap-2 flex-wrap mb-2"><strong style={{ color: '#fff' }}>{item.category} — {item.username}</strong><span className="text-xs" style={{ color: '#a7f3d0' }}>#{item.id} · {statusLabels[item.status] || item.status}</span></div>
+          <p className="whitespace-pre-wrap text-sm" style={{ color: '#f0fdf4', lineHeight: 1.9 }}>{item.message}</p>
+          <textarea value={notes[item.id] || ''} onChange={e => setNotes(prev => ({ ...prev, [item.id]: e.target.value }))} rows={2} placeholder="یادداشت مدیر (اختیاری)" className="w-full rounded-lg p-2 mt-3" style={{ color: '#fff', background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.2)' }} />
+          <div className="flex flex-wrap gap-2 mt-3">{(['new','reviewing','resolved','rejected'] as const).map(status => <button key={status} type="button" disabled={savingId === item.id || item.status === status} onClick={() => void update(item, status)} className="rounded-lg px-3 py-2 text-xs font-bold disabled:opacity-40" style={{ background: status === 'resolved' ? 'rgba(16,185,129,.35)' : 'rgba(255,255,255,.12)', color: '#fff', minHeight: 40 }}>{savingId === item.id ? '…' : statusLabels[status]}</button>)}<button type="button" disabled={savingId === item.id} onClick={() => void update(item, item.status)} className="rounded-lg px-3 py-2 text-xs font-bold disabled:opacity-40" style={{ background: 'rgba(59,130,246,.35)', color: '#fff', minHeight: 40 }}>{savingId === item.id ? '…' : 'ذخیره یادداشت'}</button></div>
+        </article>)}</div>
+      </section>}
     </div>
   );
 }
@@ -8247,6 +8738,7 @@ function ProfileTab({ currentUser, showToast }: { currentUser: User; showToast: 
   const { t } = useLang();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(currentUser.name || '');
+  const [username, setUsername] = useState(currentUser.username || '');
   const [phone, setPhone] = useState(currentUser.phone || '');
   const [jobTitle, setJobTitle] = useState(currentUser.jobTitle || '');
   const [deputy, setDeputy] = useState(currentUser.deputy || '');
@@ -8258,21 +8750,16 @@ function ProfileTab({ currentUser, showToast }: { currentUser: User; showToast: 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch(getApiUrl('api/auth/me'), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('bankresaneh_token')}` },
-        body: JSON.stringify({ name, phone, jobTitle, deputy, avatar }),
-      });
-      if (res.ok) {
-        showToast(t('settings.profile.saved'));
-        setEditing(false);
-      } else {
-        showToast('خطا در بروزرسانی');
-      }
-    } catch {
-      showToast('خطا در ارتباط با سرور');
+      const savedProfile = await api.updateProfile({ username: username.trim(), name, phone, jobTitle, deputy, avatar });
+      localStorage.setItem('bankresaneh_user', JSON.stringify(savedProfile));
+      showToast(t('settings.profile.saved'));
+      setEditing(false);
+      window.location.reload();
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'ذخیره پروفایل ناموفق بود');
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -8338,7 +8825,7 @@ function ProfileTab({ currentUser, showToast }: { currentUser: User; showToast: 
         </div>
         <div className="text-center">
           <div style={{ fontSize: '20px', fontWeight: 800, color: '#f0fdf4' }}>{name || currentUser.username}</div>
-          <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '2px' }}>@{currentUser.username}</div>
+          <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '2px' }}>@{username}</div>
         </div>
         <span
           style={{
@@ -8353,6 +8840,15 @@ function ProfileTab({ currentUser, showToast }: { currentUser: User; showToast: 
 
       {/* Info fields — iPhone Contacts style rows */}
       <div className="space-y-3">
+        <ProfileField
+          icon="🆔"
+          label="نام کاربری"
+          value={username}
+          isEditing={editing}
+          onChange={setUsername}
+          placeholder="نام کاربری"
+          dir="ltr"
+        />
         <ProfileField
           icon="👤"
           label="نام نمایشی"
@@ -8406,7 +8902,7 @@ function ProfileTab({ currentUser, showToast }: { currentUser: User; showToast: 
               {saving ? 'در حال ذخیره...' : '✓ ذخیره'}
             </button>
             <button
-              onClick={() => { setEditing(false); setName(currentUser.name || ''); setPhone(currentUser.phone || ''); setJobTitle(currentUser.jobTitle || ''); setDeputy(currentUser.deputy || ''); setAvatar(currentUser.avatar || ''); }}
+              onClick={() => { setEditing(false); setUsername(currentUser.username || ''); setName(currentUser.name || ''); setPhone(currentUser.phone || ''); setJobTitle(currentUser.jobTitle || ''); setDeputy(currentUser.deputy || ''); setAvatar(currentUser.avatar || ''); }}
               style={{
                 flex: 1, padding: '12px', borderRadius: '14px',
                 background: 'rgba(255, 255, 255, 0.1)',
@@ -8947,6 +9443,7 @@ const PERMISSION_LABELS: Record<string, { fa: string; en: string }> = {
   manage_settings: { fa: 'مدیریت تنظیمات',       en: 'Manage settings' },
   view_activity:   { fa: 'مشاهده گزارش فعالیت',  en: 'View activity log' },
   export_reports:  { fa: 'خروجی گزارش',          en: 'Export reports' },
+  view_user_phone: { fa: 'مشاهده شماره همراه کاربران', en: 'View users’ phone numbers' },
 };
 
 function PermissionsPanel({ user, currentUser, onSaved }: {
@@ -9073,6 +9570,10 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
   const handleCreate = async () => {
     if (!newUser.username.trim() || !newUser.password) {
       showToast(t('settings.username'));
+      return;
+    }
+    if (!newUser.phone.trim()) {
+      showToast('وارد کردن شماره همراه برای ایجاد کاربر الزامی است');
       return;
     }
     if (newUser.password.length < 8) {
@@ -9236,6 +9737,7 @@ function SettingsUsersTab({ currentUser, showToast }: { currentUser: User; showT
           <input
             type="tel"
             dir="ltr"
+            required
             placeholder="شماره همراه (0912xxxxxxx)"
             value={newUser.phone}
             onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}

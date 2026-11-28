@@ -1,5 +1,5 @@
 /* eslint @typescript-eslint/no-require-imports: off */
-const { spawn } = require('node:child_process');
+const { spawn, execFileSync } = require('node:child_process');
 const { mkdtempSync, mkdirSync, writeFileSync, rmSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const path = require('node:path');
@@ -181,10 +181,18 @@ async function main() {
   const deniedReady = await request(nextBase, '/api/internal/ready');
   assert(deniedReady.status === 404, 'Next.js private readiness endpoint hides itself without the startup token');
 
+  // Image import is hosted by the selected Bun API backend so Sharp never runs inside Cloudflare Workers.
+  const anonymousImageImport = await request(apiBase, '/api/import-image', { method: 'POST', body: { url: 'https://upload.wikimedia.org/test.png' } });
+  assert(anonymousImageImport.status === 401, 'Bun image import rejects anonymous requests before fetching an image');
+
+
+  // The video transcoder is hosted by the selected Bun API backend, not a Next.js route.
+  const anonymousTranscode = await request(apiBase, '/api/video/transcode', { method: 'POST', body: {} });
+  assert(anonymousTranscode.status === 401, 'Bun video transcoder rejects anonymous uploads before reading multipart data');
+
   // Next.js route auth: anonymous callers must be rejected before side effects.
   const guardedRoutes = [
     ['/api/fetch-show-info', 'POST', { url: 'not-a-url' }],
-    ['/api/import-image', 'POST', { url: 'https://example.com/image.jpg' }],
     ['/api/translate', 'POST', { fields: {} }],
     ['/api/publish-social', 'POST', { platform: 'invalid', token: 'bad' }],
     ['/api/export-pdf', 'POST', { shows: [{ num: 1, name: 'Auth probe' }] }],
@@ -215,6 +223,22 @@ async function main() {
   });
   assert(changed.status === 200 && !!changed.data.token, 'admin password change rotates the session token');
   const adminToken = changed.data.token;
+
+  const invalidImageImport = await request(apiBase, '/api/import-image', {
+    method: 'POST', token: adminToken, body: { url: 'https://example.com/not-allowed.png' },
+  });
+  assert(invalidImageImport.status === 400, 'Bun image import rejects unapproved hosts before fetching');
+  const imageUploadForm = new FormData();
+  imageUploadForm.set('file', new Blob([
+    '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80"><rect width="120" height="80" fill="#167a50"/></svg>',
+  ], { type: 'image/svg+xml' }), 'program-logo.svg');
+  const imageUploadResponse = await fetch(`${apiBase}/api/import-image`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${adminToken}` },
+    body: imageUploadForm,
+  });
+  const imageUploadResult = await imageUploadResponse.json().catch(() => ({}));
+  assert(imageUploadResponse.status === 200 && typeof imageUploadResult.dataUrl === 'string' && imageUploadResult.dataUrl.startsWith('data:image/webp;base64,'), 'authenticated SVG upload is optimized to WebP on the API service');
 
   // A second, independent API instance proves that Next.js authentication
   // follows the selected backend rather than the frontend's default server.
@@ -262,6 +286,12 @@ async function main() {
     body: { platform: 'bale', token: fakeBotToken, chatId: '@bankresane_test', text: 'video', videoUrl: 'https://cdn.example.com/video.mov' },
   });
   assert(invalidVideoUrl.status === 400, 'direct publishing rejects non-MP4 and non-direct video links before contacting the bot API');
+
+  const invalidVideoDataUrl = await request(nextBase, '/api/publish-social', {
+    method: 'POST', token: adminToken,
+    body: { platform: 'bale', token: fakeBotToken, chatId: '@bankresane_test', text: 'video', videoUrl: 'data:video/webm;base64,d2VibQ==' },
+  });
+  assert(invalidVideoDataUrl.status === 400, 'direct publishing rejects edited WebM data URLs instead of mislabeling them as MP4');
   const oversizedMediaCaption = await request(nextBase, '/api/publish-social', {
     method: 'POST', token: adminToken,
     body: { platform: 'bale', token: fakeBotToken, chatId: '@bankresane_test', text: 'x'.repeat(1025), videoUrl: 'https://cdn.example.com/video.mp4' },
@@ -270,9 +300,10 @@ async function main() {
 
   // Admin success paths for local Next.js features; external services are not contacted.
   const unsafeImageSource = await request(nextBase, '/api/import-image', {
-    method: 'POST', token: adminToken, body: { url: 'https://example.com/untrusted.jpg' },
+    method: 'POST', token: adminToken, body: { url: 'not-a-url' },
   });
-  assert(unsafeImageSource.status === 400, 'image importer rejects untrusted hosts even for authenticated admins');
+  assert(unsafeImageSource.status === 400 && /لینک.*معتبر/.test(String(unsafeImageSource.data?.error || '')),
+    'Next.js image-import route forwards authenticated requests to the selected Bun API service and returns its validation response');
 
   const translateValidation = await request(nextBase, '/api/translate', {
     method: 'POST', token: adminToken, body: { fields: {} },
@@ -308,6 +339,15 @@ async function main() {
   });
   assert(editorLogin.status === 200, 'manager/editor can authenticate');
   const editorToken = editorLogin.data.token;
+  const profileUpdated = await request(nextBase, '/api/profile', {
+    method: 'PUT', token: editorToken,
+    body: { username: 'route_manager_renamed', name: 'Updated Route Manager' },
+  });
+  assert(profileUpdated.status === 200 && profileUpdated.data.username === 'route_manager_renamed',
+    'authenticated manager can update their own username through the selected API backend');
+  const profileRead = await request(nextBase, '/api/profile', { token: editorToken });
+  assert(profileRead.status === 200 && profileRead.data.username === 'route_manager_renamed',
+    'updated profile username persists and is returned by the authenticated profile route');
   const editorReportSaved = await request(nextBase, '/api/settings/report', {
     method: 'POST', token: editorToken,
     body: { title: 'Manager report', subtitle: 'Manager route test', organization: 'BankResaneh Manager' },
@@ -341,17 +381,42 @@ async function main() {
 
   const binaryPdf = await request(nextBase, '/api/export-pdf-file', {
     method: 'POST', token: adminToken,
-    body: { shows: [{ num: 1, name: 'برنامه آزمایشی', category: 'گفتگو', descriptionFa: 'متن فارسی برای آزمون PDF' }] },
+    body: { shows: [{
+      num: 990001, name: 'برنامه آزمایشی', category: 'گفتگو', source: 'آزمون CI',
+      descriptionFa: 'متن فارسی برای آزمون PDF', summary: 'خلاصه آزمون',
+      country: 'ایران', operationalCapacity: 'ظرفیت آزمون',
+      tags: ['آزمون'], videos: [], images: ['data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j8xkAAAAASUVORK5CYII='],
+      isFilm: false, decorIncluded: true,
+    }] },
   });
   assert(binaryPdf.status === 200 && binaryPdf.contentType.includes('application/pdf') &&
     Buffer.isBuffer(binaryPdf.data) && binaryPdf.data.subarray(0, 4).toString() === '%PDF',
     'PDF export returns a real binary PDF with a valid PDF signature');
+  assert(binaryPdf.data.includes(Buffer.from('/Subtype /Image')),
+    'PDF export embeds a real program-image thumbnail in the generated PDF');
 
   const importValidation = await request(nextBase, '/api/fetch-show-info', {
     method: 'POST', token: adminToken,
     body: { url: 'not-a-url', category: 'تاک‌شوی مصاحبه‌محور', showName: 'Integration Show', isDecor: true },
   });
   assert(importValidation.status === 400, 'authorized IMDb/Wikipedia import route validates URL before external lookup');
+
+  if (process.env.BANKRESANE_TEST_EXTERNAL_IMPORTS === '1') {
+    // Live, authenticated smoke test: real IMDb page fallback to Wikimedia and
+    // real Wikipedia article image download + Sharp WebP optimization.
+    execFileSync(process.execPath, [path.join(root, 'scripts', 'test-decor-image-fallback.cjs')], {
+      env: {
+        ...process.env,
+        BANKRESANE_TEST_URL: apiBase,
+        BANKRESANE_TEST_NEXT_URL: nextBase,
+        BANKRESANE_TEST_API_URL: apiBase,
+        BANKRESANE_TEST_SHOW_NAME: 'Top Gear',
+        BANKRESANE_TEST_TOKEN: adminToken,
+      },
+      stdio: 'inherit',
+      timeout: 120000,
+    });
+  }
 
   const socialValidation = await request(nextBase, '/api/publish-social', {
     method: 'POST', token: adminToken,

@@ -38,25 +38,29 @@ jobs:
               throw new Error(`Selected SHA ${context.sha} is not current main ${main.commit.sha}; refresh main and rerun`);
             }
             const required = [
-              { name: 'Quality checks', id: 403337967 },
-              { name: 'Security tests', id: 406811866 },
-              { name: 'Windows desktop build', id: 404056691 },
+              { name: 'Quality checks', id: 403337967, event: 'push' },
+              { name: 'Security tests', id: 406811866, event: 'push' },
+              { name: 'Windows desktop build', id: 404056691, event: 'push' },
+              { name: 'Cloudflare Preview', event: 'push' },
+              { name: 'Build Windows installer', id: 394923824, event: 'workflow_run' },
             ];
             for (const workflow of required) {
-              const { data } = await github.rest.actions.listWorkflowRuns({
-                owner, repo, workflow_id: workflow.id,
-                branch: 'main', head_sha: context.sha, per_page: 100,
-              });
+              const request = {
+                owner, repo, branch: 'main', head_sha: context.sha, per_page: 100,
+              };
+              if (workflow.id) request.workflow_id = workflow.id;
+              const { data } = await github.rest.actions.listWorkflowRuns(request);
               const passing = data.workflow_runs.some(run =>
                 run.head_sha === context.sha &&
-                run.event === 'push' &&
+                run.event === workflow.event &&
+                (!workflow.id || run.name === workflow.name) &&
                 run.status === 'completed' &&
                 run.conclusion === 'success'
               );
               if (!passing) {
-                throw new Error(`Required workflow "${workflow.name}" has no successful push run for exact SHA ${context.sha}`);
+                throw new Error(`Required workflow "${workflow.name}" has no successful ${workflow.event} run for exact SHA ${context.sha}`);
               }
-              core.info(`Verified ${workflow.name} on ${context.sha}`);
+              core.info(`Verified ${workflow.name} (${workflow.event}) on ${context.sha}`);
             }
 
       - name: Validate requested tag against package version and reject existing tags

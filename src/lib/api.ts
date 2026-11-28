@@ -3,9 +3,10 @@
 const TOKEN_KEY = 'bankresaneh_token';
 
 function isHostedPreview(): boolean {
-  return typeof window !== 'undefined'
-    && window.location.hostname.endsWith('.workers.dev')
-    && /bankresaneh-(?:visual-)?preview/i.test(window.location.hostname);
+  if (typeof window === 'undefined') return false;
+  const hostname = window.location.hostname.toLowerCase();
+  const isPreviewHost = hostname.endsWith('.workers.dev') || hostname.endsWith('.onrender.com');
+  return isPreviewHost && /bankresaneh-(?:visual-)?preview/i.test(hostname);
 }
 
 function configuredHostedApiBase(): string {
@@ -13,11 +14,15 @@ function configuredHostedApiBase(): string {
 }
 
 function defaultApiBase(): string {
+  // Hosted Cloudflare preview must call its same-origin Worker proxy. Never
+  // expose the Render origin to browsers or let stale build-time API settings
+  // bypass the authenticated proxy/CORS boundary.
+  if (isHostedPreview()) return typeof window !== 'undefined' ? window.location.origin : '';
+
   const configured = configuredHostedApiBase();
   if (configured) return configured;
 
   if (typeof window !== 'undefined') {
-    if (isHostedPreview()) return 'https://bankresaneh-preview-api.onrender.com';
     const currentPort = window.location.port;
     const currentHost = window.location.hostname;
     if (currentPort === '81' || currentPort === '' || currentPort === '443' || currentHost.includes('space-z.ai')) return window.location.origin;
@@ -250,13 +255,31 @@ export const api = {
     );
   },
   async getUsers() { const data = await request<{ users: User[] }>(getApiUrl('api/users')); return data.users || []; },
-  async getCurrentUser(): Promise<User | null> {
+  async getCurrentUser(signal?: AbortSignal): Promise<User | null> {
     if (typeof window === 'undefined' || !localStorage.getItem(TOKEN_KEY)) return null;
-    try { return await request<User>(getApiUrl('api/auth/me')); } catch { return null; }
+    try {
+      const response = await fetch(getApiUrl('api/auth/me'), {
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        signal,
+      });
+      if (!response.ok) return null;
+      return await response.json() as User;
+    } catch {
+      return null;
+    }
   },
   async updateUser(id: number, data: any) { return request(getApiUrl('api/users?id=' + encodeURIComponent(id)), { method: 'PUT', body: JSON.stringify(data) }); },
   async deleteUser(id: number) { return request(getApiUrl('api/users?id=' + encodeURIComponent(id)), { method: 'DELETE' }); },
   async createUser(data: any) { return request(getApiUrl('api/users'), { method: 'POST', body: JSON.stringify(data) }); },
+  async submitSuggestion(data: { message: string; category?: string }) {
+    return request<{ success: boolean; id: number; message: string }>(getApiUrl('api/suggestions'), { method: 'POST', body: JSON.stringify(data) });
+  },
+  async getSuggestions(limit = 100) {
+    return request<{ suggestions: Array<{ id: number; userId: number; username: string; message: string; category: string; status: string; adminNote: string; createdAt: number; updatedAt: number }> }>(getApiUrl('api/suggestions?limit=' + limit));
+  },
+  async updateSuggestion(id: number, data: { status: string; adminNote?: string }) {
+    return request<{ success: boolean }>(getApiUrl('api/suggestions?id=' + encodeURIComponent(id)), { method: 'PUT', body: JSON.stringify(data) });
+  },
   async getActivity(limit?: number) {
     const url = getApiUrl('api/activity') + (limit ? '?limit=' + limit : '');
     const data = await request<{ logs: any[] }>(url);

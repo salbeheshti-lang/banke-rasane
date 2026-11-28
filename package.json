@@ -8,6 +8,7 @@
     "build": "next build && node scripts/copy-standalone.cjs",
     "start": "node scripts/start-standalone.cjs",
     "lint": "eslint .",
+    "db:push": "echo [db:push] no prisma schema present, skipping",
     "electron:dev": "electron electron/main.js",
     "electron:build": "npm run build && npm run typecheck && electron-builder --win --x64 --publish never",
     "electron:dist": "npm run electron:build",

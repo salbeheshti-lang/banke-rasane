@@ -3,10 +3,10 @@ name: Build Windows installer
 on:
   pull_request:
     branches: [main]
-  push:
+  workflow_run:
+    workflows: ["Cloudflare Preview"]
+    types: [completed]
     branches: [main]
-    tags:
-      - 'v*'
   workflow_dispatch:
 
 permissions:
@@ -18,11 +18,14 @@ concurrency:
 
 jobs:
   build-windows:
+    if: vars.ENABLE_WINDOWS_BUILDS == 'true' && (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success') && (github.event_name != 'workflow_dispatch' || github.ref_type == 'tag')
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
-      - name: Checkout
+      - name: Checkout exact tested source
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.ref }}
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
