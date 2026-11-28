@@ -38,16 +38,14 @@ export function BrandFooter({ variant = 'dark', withBottomNav = false }: { varia
       dir="rtl"
       style={{
         marginTop: 'auto',
-        marginBottom: withBottomNav ? '110px' : '0',
         width: '100%',
         background: isLogin ? 'transparent' : bg,
         borderTop: isLogin ? 'none' : `1px solid ${borderColor}`,
         backdropFilter: isLogin ? 'none' : 'blur(8px)',
         WebkitBackdropFilter: isLogin ? 'none' : 'blur(8px)',
         padding: isLogin ? '1rem 1rem calc(1rem + env(safe-area-inset-bottom))' : isCompact ? '0.6rem 1rem' : '0.9rem 1.25rem',
-        zIndex: 20,
-        position: 'relative',
-        paddingBottom: isLogin ? 'calc(1rem + env(safe-area-inset-bottom))' : withBottomNav ? '0.9rem' : 'max(0.6rem, env(safe-area-inset-bottom))',
+        zIndex: 30,
+        paddingBottom: isLogin ? 'calc(1rem + env(safe-area-inset-bottom))' : withBottomNav ? 'calc(84px + env(safe-area-inset-bottom))' : 'max(0.6rem, env(safe-area-inset-bottom))',
       }}
     >
       {isLogin ? (
@@ -99,26 +97,25 @@ export function BrandFooter({ variant = 'dark', withBottomNav = false }: { varia
         </div>
       ) : (
       <div
+        className="flex flex-col sm:flex-row items-center justify-between"
+        data-testid="app-brand-footer"
         style={{
           maxWidth: '1400px',
           margin: '0 auto',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: withBottomNav ? '0.4rem' : '0.75rem',
+          gap: '0.75rem',
           flexWrap: 'wrap',
         }}
       >
         {/* Right side (RTL start): BankResaneh mark */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: withBottomNav ? '0.35rem' : '0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Image
             src="/banke-rasane-logo.png"
             alt={t('app.title')}
-            width={withBottomNav ? 84 : (isCompact ? 90 : 110)}
-            height={withBottomNav ? 22 : (isCompact ? 24 : 30)}
+            width={isCompact ? 90 : 110}
+            height={isCompact ? 24 : 30}
             style={{ filter: isLight ? 'none' : 'brightness(1.1) saturate(1.1)' }}
           />
-          {!isCompact && !withBottomNav && (
+          {!isCompact && (
             <span style={{ color: subTextColor, fontSize: '0.7rem', fontWeight: 500 }}>
               {t('footer.copyright').replace('{year}', currentYear)}
             </span>
@@ -127,9 +124,9 @@ export function BrandFooter({ variant = 'dark', withBottomNav = false }: { varia
 
         {/* Center divider */}
         <div
+          className="w-10 h-px sm:w-px sm:h-7"
+          aria-hidden="true"
           style={{
-            width: '1px',
-            height: withBottomNav ? '18px' : (isCompact ? '20px' : '28px'),
             background: dividerColor,
             flexShrink: 0,
           }}
@@ -142,15 +139,15 @@ export function BrandFooter({ variant = 'dark', withBottomNav = false }: { varia
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: withBottomNav ? '0.15rem' : '0.28rem',
-            minWidth: withBottomNav ? '90px' : (isCompact ? '112px' : '180px'),
+            gap: '0.28rem',
+            minWidth: isCompact ? '112px' : '180px',
           }}
         >
           <Image
             src={isLight ? CLIENT_BRANDING.logoColorPath : CLIENT_BRANDING.logoWhitePath}
             alt={CLIENT_BRANDING.organizationFa}
-            width={withBottomNav ? 26 : (isCompact ? 34 : 48)}
-            height={withBottomNav ? 26 : (isCompact ? 34 : 48)}
+            width={isCompact ? 34 : 48}
+            height={isCompact ? 34 : 48}
             style={{
               display: 'block',
               opacity: isLight ? 1 : 1,
@@ -162,13 +159,13 @@ export function BrandFooter({ variant = 'dark', withBottomNav = false }: { varia
             style={{
               display: 'block',
               color: textColor,
-              fontSize: withBottomNav ? '0.58rem' : (isCompact ? '0.62rem' : '0.76rem'),
+              fontSize: isCompact ? '0.62rem' : '0.76rem',
               fontWeight: 700,
-              lineHeight: withBottomNav ? 1.4 : 1.65,
+              lineHeight: 1.65,
               textAlign: 'center',
               whiteSpace: 'normal',
               textWrap: 'balance',
-              maxWidth: withBottomNav ? '110px' : (isCompact ? '132px' : '220px'),
+              maxWidth: isCompact ? '132px' : '220px',
             }}
           >
             {CLIENT_BRANDING.organizationFa}

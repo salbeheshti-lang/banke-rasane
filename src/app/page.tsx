@@ -1338,7 +1338,7 @@ function HomeInner() {
         genres={genres}
       />
 
-      <main key={currentView} className={`app-content animate-view-enter ${isMobile ? 'p-4 pt-24 pb-52' : 'p-8 pt-28'}`}>
+      <main key={currentView} className={`app-content animate-view-enter ${isMobile ? 'p-4 pt-24 pb-28' : 'p-8 pt-28'}`}>
         {archiveLoading && talkShows.length === 0 && <div role="status" className="max-w-3xl mx-auto mb-5 rounded-xl p-4 text-center" style={{ color: '#f0fdf4', background: 'rgba(0,65,48,.78)', border: '1px solid rgba(167,243,208,.35)' }}>در حال اتصال به سرور و دریافت آرشیو برنامه‌ها…</div>}
         {!!archiveError && <div role="alert" className="max-w-3xl mx-auto mb-5 rounded-xl p-4" style={{ color: '#fff', background: 'rgba(127,29,29,.78)', border: '1px solid rgba(252,165,165,.55)' }}><p className="font-bold mb-2">بارگذاری آرشیو با مشکل روبه‌رو شد</p><p className="text-sm mb-3" dir="auto">{archiveError}</p><button type="button" disabled={archiveLoading} onClick={() => setArchiveReloadKey(value => value + 1)} className="rounded-lg px-5 py-2 font-bold" style={{ color: '#052e24', background: '#a7f3d0', minHeight: 48 }}>{archiveLoading ? 'در حال تلاش…' : 'تلاش مجدد برای دریافت برنامه‌ها'}</button></div>}
         {currentView === 'dashboard' && <Dashboard onGenreClick={(g) => navigate('genre', g)} talkShows={talkShows} uploadedCount={uploadedShows.length} onAdd={() => { setPresetCategory(undefined); setPresetGenre(null); setEditingShow(null); navigate('add'); }} canEdit={canEdit} isAdmin={isAdmin} genres={genres} onAddGenre={handleAddGenre} onEditGenre={handleEditGenre} onDeleteGenre={handleDeleteGenre} onShowClick={setSelectedShow} />}
@@ -1354,8 +1354,6 @@ function HomeInner() {
           </div>
         )}
       </main>
-
-      <BrandFooter withBottomNav={isMobile} />
 
       {isMobile && (
         <MobileBottomNav
@@ -1471,6 +1469,7 @@ function HomeInner() {
           {toast}
         </div>
       )}
+      <BrandFooter withBottomNav={isMobile} />
     </div>
   );
 }
@@ -1740,13 +1739,15 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
       <div
         className="flex items-center justify-between"
         style={{
-          padding: isMobile ? '10px 12px' : '14px 28px',
+          padding: isMobile ? '12px 16px' : '14px 28px',
           minHeight: '64px',
-          gap: isMobile ? '6px' : '12px',
+          gap: '12px',
         }}
       >
         {/* Hamburger button — 3 lines — opens the drawer from the right */}
         <button
+          type="button"
+          data-testid="top-hamburger"
           onClick={onMenuClick}
           aria-label={t('nav.openMenu')}
           className="flex flex-col justify-center items-center p-2.5 transition-all"
@@ -1757,10 +1758,8 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
             color: '#5eead4',
             borderRadius: '14px',
             boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12), 0 2px 10px rgba(0, 30, 25, 0.15)',
-            minWidth: isMobile ? '38px' : '44px',
-            minHeight: isMobile ? '38px' : '44px',
-            padding: isMobile ? '8px' : '10px',
-            flexShrink: 0,
+            minWidth: '44px',
+            minHeight: '44px',
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = 'rgba(45, 212, 191, 0.2)';
@@ -1776,19 +1775,16 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
           </svg>
         </button>
 
-        {/* Logo + title block. On mobile the logo sits right next to the
-            hamburger (flex-start in RTL = right side) instead of being
-            centered, so the brand mark and menu read as one grouped unit.
-            The organization badge returns with a compact layout. */}
+        {/* Center: logo + title */}
         <div
-          className="flex items-center flex-1 min-w-0"
-          style={{ gap: isMobile ? '6px' : '12px', justifyContent: isMobile ? 'flex-start' : 'center' }}
+          className="flex items-center gap-3 flex-1 min-w-0"
+          style={{ justifyContent: 'center' }}
         >
           <Image
             src="/banke-rasane-logo.png"
             alt={t('app.title')}
-            width={isMobile ? 84 : 160}
-            height={isMobile ? 23 : 42}
+            width={isMobile ? 110 : 160}
+            height={isMobile ? 30 : 42}
             priority
             style={{
               /* Brighter, clearer logo — brighter shadow + slight brightness boost */
@@ -1808,39 +1804,23 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               <span style={{ color: '#54D9C0', fontSize: '11px', marginTop: '2px' }}>
                 {t('app.title')} — {totalShows?.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US') || '0'} {t('dashboard.programs')} {t('dashboard.stripTitle').includes('ژانر') ? 'در' : 'in'} {totalGenres?.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US') || '0'} {t('drawer.genres')}
               </span>
-              <span className="flex items-center gap-1.5" style={{ marginTop: '4px', opacity: 0.95 }} title={CLIENT_BRANDING.organizationFa}>
-                <span style={{ color: 'rgba(167, 243, 208, 0.9)', fontSize: '10px', fontWeight: 700, lineHeight: 1.2 }}>{CLIENT_BRANDING.organizationFa}</span>
-                <img src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={32} height={32} style={{ opacity: 0.95, objectFit: 'contain' }} />
-              </span>
+              <div title={CLIENT_BRANDING.organizationFa} data-testid="header-organization-brand" dir="rtl" style={{ marginTop: '4px', display: 'flex', flexDirection: 'row-reverse', alignItems: 'flex-start', justifyContent: 'flex-start', gap: '6px', opacity: 0.98 }}>
+                <img src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={30} height={30} style={{ opacity: 1, objectFit: 'contain', display: 'block', flexShrink: 0 }} />
+                <span style={{ color: 'rgba(167, 243, 208, 0.96)', fontSize: '10px', fontWeight: 700, lineHeight: 1.35, textAlign: 'right', whiteSpace: 'normal' }}>{CLIENT_BRANDING.organizationFa}</span>
+              </div>
             </div>
           )}
-          {/* Mobile: organization logo was here — moved to the toggle group
-              on the left so it sits next to EN/moon at the same size. */}
+          {/* Mobile: compact organization name + logo next to the main logo */}
+          {isMobile && (
+            <div data-testid="header-organization-brand" dir="rtl" style={{ display: 'flex', flexDirection: 'row-reverse', alignItems: 'flex-start', justifyContent: 'flex-start', flexShrink: 0, gap: '5px', maxWidth: '112px' }}>
+              <img src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={25} height={25} style={{ opacity: 1, objectFit: 'contain', display: 'block', flexShrink: 0 }} />
+              <span style={{ color: 'rgba(167, 243, 208, 0.96)', fontSize: '8px', fontWeight: 700, lineHeight: 1.2, whiteSpace: 'normal', textAlign: 'right' }}>{CLIENT_BRANDING.organizationFa}</span>
+            </div>
+          )}
         </div>
 
-        {/* Left: theme + language toggles + org logo (mobile), then back button (when there is history), else status badge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '8px', minWidth: '44px', justifyContent: 'flex-end' }}>
-          {/* Mobile: organization logo chip — same height/style as EN/moon toggles */}
-          {isMobile && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                width: '32px',
-                height: '32px',
-                borderRadius: '10px',
-                background: 'rgba(255, 255, 255, 0.12)',
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
-                border: '1px solid rgba(255, 255, 255, 0.18)',
-              }}
-              title={CLIENT_BRANDING.organizationFa}
-            >
-              <img src={CLIENT_BRANDING.logoWhitePath} alt={CLIENT_BRANDING.organizationFa} width={20} height={20} style={{ opacity: 0.95, objectFit: 'contain' }} />
-            </div>
-          )}
+        {/* Left: theme + language toggles, then back button (when there is history), else status badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '44px', justifyContent: 'flex-end' }}>
           {/* Language toggle — FA/EN */}
           <button
             onClick={onToggleLang}
@@ -1852,10 +1832,10 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               border: '1px solid rgba(45, 212, 191, 0.25)',
               color: '#5eead4',
               borderRadius: '10px',
-              minWidth: isMobile ? '32px' : '36px',
-              minHeight: isMobile ? '32px' : '36px',
+              minWidth: '36px',
+              minHeight: '36px',
               fontWeight: 800,
-              fontSize: isMobile ? '11px' : '12px',
+              fontSize: '12px',
               padding: '0 8px',
             }}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(45, 212, 191, 0.2)'; }}
@@ -1875,8 +1855,8 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               border: '1px solid rgba(45, 212, 191, 0.25)',
               color: '#5eead4',
               borderRadius: '10px',
-              minWidth: isMobile ? '32px' : '36px',
-              minHeight: isMobile ? '32px' : '36px',
+              minWidth: '36px',
+              minHeight: '36px',
             }}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(45, 212, 191, 0.2)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(45, 212, 191, 0.1)'; }}
@@ -1916,10 +1896,28 @@ function TopAppBar({ onMenuClick, isMobile, currentView, onBack, canGoBack, tota
               {!isMobile && <span>{t('nav.backShort')}</span>}
             </button>
           ) : isMobile ? (
-            /* Mobile: connection status is implicit (the app loaded = connected).
-               The old 36px dot container wasted space and looked like a stray
-               "big dot". Removed in favor of a cleaner header. */
-            null
+            /* Mobile: small connection-status dot only (the old app.title badge
+               box was redundant next to the main logo and crowded the header). */
+            <span
+              className="flex items-center justify-center"
+              style={{
+                minWidth: '36px',
+                minHeight: '36px',
+              }}
+              title={t('app.connected')}
+              aria-label={t('app.connected')}
+            >
+              <span
+                className="rounded-full"
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  backgroundColor: '#10b981',
+                  boxShadow: '0 0 8px #10b981',
+                  animation: 'pulse 2s ease-in-out infinite',
+                }}
+              />
+            </span>
           ) : (
             <div
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl"
@@ -2380,7 +2378,7 @@ function MobileBottomNav({
         </div>
       )}
 
-      <nav data-testid="mobile-bottom-nav" aria-label="پیمایش اصلی موبایل" className="fixed bottom-0 left-0 right-0 z-50 px-3 pb-3" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
+      <nav data-testid="mobile-bottom-nav" aria-label="پیمایش اصلی موبایل" className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
         <div
           className="flex items-center justify-around no-scrollbar"
           style={{
@@ -2572,7 +2570,7 @@ function FeaturedCarousel({ talkShows, onShowClick, isAdmin }: {
           </div>
           {featuredShows.length > 1 && (
             <div className="featured-dots">
-              {featuredShows.map((_, i) => (<button key={i} data-compact="true" className={`featured-dot ${i === currentIdx ? 'active' : ''}`} onClick={() => scrollToCard(i)} aria-label={`برنامه ${i + 1}`} />))}
+              {featuredShows.map((_, i) => (<button key={i} className={`featured-dot ${i === currentIdx ? 'active' : ''}`} onClick={() => scrollToCard(i)} aria-label={`برنامه ${i + 1}`} />))}
             </div>
           )}
         </>
