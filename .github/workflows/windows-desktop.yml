@@ -2,7 +2,7 @@ name: Windows desktop build
 
 on:
   push:
-    branches: [main, 'fix/**', 'feat/**']
+    branches: [main, 'fix/**', 'feat/**', 'preview/visual-only']
   pull_request:
     branches: [main, 'fix/**', 'feat/**']
   workflow_dispatch:
