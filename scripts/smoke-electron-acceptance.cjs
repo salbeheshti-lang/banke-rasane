@@ -131,13 +131,36 @@ async function run() {
     await expect(footer).toBeVisible({ timeout: 30_000 });
     await expect(footer.getByRole('img', { name: ORG_LABEL })).toBeVisible();
     await expect(page.locator('header img[alt="' + ORG_LABEL + '"]')).toBeVisible();
+    const desktopBrandLayout = await page.locator('[data-testid="header-organization-brand"]').evaluate(el => {
+      const logo = el.querySelector('img')?.getBoundingClientRect();
+      const label = el.querySelector('span')?.getBoundingClientRect();
+      return { logoRight: logo?.right, labelLeft: label?.left, logoTop: logo?.top, labelTop: label?.top };
+    });
+    if (!(desktopBrandLayout.logoRight <= desktopBrandLayout.labelLeft + 1
+      && Math.abs(desktopBrandLayout.logoTop - desktopBrandLayout.labelTop) < 3)) {
+      throw new Error('Desktop organization logo must sit to the right of its name, aligned at the top: ' + JSON.stringify(desktopBrandLayout));
+    }
 
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.locator('[data-testid="header-organization-brand"] img[alt="' + ORG_LABEL + '"]')).toBeVisible();
+    const mobileBrandLayout = await page.locator('[data-testid="header-organization-brand"]').evaluate(el => {
+      const logo = el.querySelector('img')?.getBoundingClientRect();
+      const label = el.querySelector('span')?.getBoundingClientRect();
+      return { logoRight: logo?.right, labelLeft: label?.left, logoTop: logo?.top, labelTop: label?.top };
+    });
+    if (!(mobileBrandLayout.logoRight <= mobileBrandLayout.labelLeft + 1
+      && Math.abs(mobileBrandLayout.logoTop - mobileBrandLayout.labelTop) < 3)) {
+      throw new Error('Mobile organization logo must sit to the right of its name, aligned at the top: ' + JSON.stringify(mobileBrandLayout));
+    }
     await expect(page.locator('[data-testid="mobile-bottom-nav"]')).toBeVisible();
     await expect(footer.getByText(ORG_LABEL)).toBeVisible();
 
     await page.getByRole('button', { name: 'برنامه‌ها', exact: true }).click();
+    // Search the paginated archive; a newly created fixture is not guaranteed
+    // to be among the first 60 cards rendered by the initial archive view.
+    const archiveSearch = page.locator('input[type="text"][placeholder*="جستجوی برنامه"]').first();
+    await expect(archiveSearch).toBeVisible({ timeout: 30_000 });
+    await archiveSearch.fill(FIXTURE_NAME);
     const fixtureHeading = page.getByRole('heading', { name: FIXTURE_NAME, exact: true });
     await expect(fixtureHeading).toBeVisible({ timeout: 30_000 });
     await fixtureHeading.click();
