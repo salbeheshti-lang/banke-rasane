@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - preview/visual-only
       - cloudflare/full-preview
       - fix/audit-hardening-5.4.5
       - preview/release-ready-2026-11-27

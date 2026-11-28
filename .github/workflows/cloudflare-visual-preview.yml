@@ -1,0 +1,66 @@
+name: Visual-only Cloudflare Preview
+
+# Live Worker deployment is now owned by the main-branch Cloudflare Preview
+# workflow. Keep manual dispatch for one-off visual checks without racing it.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bankresaneh-visual-only-preview
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - name: Install dependencies
+        run: bun install --no-save
+
+      - name: Build visual preview
+        run: bun run cloudflare:build
+        env:
+          DATABASE_URL: file:./db/custom.db
+          NEXT_PUBLIC_BANKRESANEH_API_BASE: ${{ vars.BANKRESANEH_API_BASE || 'https://bankresaneh-preview-api.onrender.com' }}
+
+      - name: Verify exact branding and bundled logos in the local build
+        run: node scripts/test-preview-branding.cjs
+
+      - name: Test local Cloudflare Worker preview
+        run: bun run test:cloudflare-preview
+        env:
+          DATABASE_URL: file:./db/custom.db
+          BANKRESANEH_API_BASE: http://127.0.0.1:3002
+          BANKRESANEH_ALLOWED_API_ORIGINS: http://127.0.0.1:3002
+
+      - name: Deploy isolated visual-only Worker
+        run: >-
+          bunx wrangler deploy --name bankresaneh-visual-preview
+          --var "BANKRESANEH_API_BASE:${BANKRESANEH_API_BASE}"
+          --var "BANKRESANEH_ALLOWED_API_ORIGINS:https://bankresaneh-visual-preview.ginx11x5frrby9mvb.workers.dev"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          BANKRESANEH_API_BASE: ${{ vars.BANKRESANEH_API_BASE || 'https://bankresaneh-preview-api.onrender.com' }}
+
+      - name: Verify deployed branding, logos, and live archive API
+        run: |
+          set -euo pipefail
+          node scripts/test-preview-branding.cjs --url "$WORKER_URL"
+          curl --fail --silent --show-error "$WORKER_URL/manifest.webmanifest" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const m=JSON.parse(s);if(m.name!=='بانک رسانه'||m.display!=='standalone')process.exit(1);});"
+          curl --fail --silent --show-error -H "Origin: $WORKER_URL" "$BANKRESANEH_API_BASE/api/health" -o /tmp/bankresaneh-api-health.json -D /tmp/bankresaneh-api-headers.txt
+          grep -Fqi "access-control-allow-origin: $WORKER_URL" /tmp/bankresaneh-api-headers.txt
+          node -e "const h=require('/tmp/bankresaneh-api-health.json');if(h.status!=='ok'||!Number.isFinite(h.showsCount)||h.showsCount<1302)process.exit(1);console.log('Live archive API ready: '+h.showsCount+' shows; CORS origin verified.');"
+        env:
+          WORKER_URL: https://bankresaneh-visual-preview.ginx11x5frrby9mvb.workers.dev
+          BANKRESANEH_API_BASE: ${{ vars.BANKRESANEH_API_BASE || 'https://bankresaneh-preview-api.onrender.com' }}

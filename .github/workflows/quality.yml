@@ -2,7 +2,7 @@ name: Quality checks
 
 on:
   push:
-    branches: [main, 'fix/**', 'feat/**']
+    branches: [main, 'fix/**', 'feat/**', 'preview/**']
   pull_request:
     branches: [main, 'fix/**', 'feat/**']
 
@@ -108,6 +108,9 @@ jobs:
         run: bun run cloudflare:build
         env:
           DATABASE_URL: file:./db/custom.db
+
+      - name: Verify preview branding and required UI features in compiled bundles
+        run: node scripts/test-preview-branding.cjs
 
       - name: Smoke-test local Cloudflare Worker preview
         run: bun run test:cloudflare-preview
